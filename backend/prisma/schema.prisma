@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PlatformRole {
+  USER
+  SUPER_ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum OrganizationRole {
+  MEMBER
+  VOLUNTEER
+  ORG_ADMIN
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+}
+
+model UserProfile {
+  id         String @id @default(uuid()) @db.Uuid
+  authUserId String @unique @map("auth_user_id") @db.Uuid
+
+  email    String @unique
+  fullName String @map("full_name")
+
+  platformRole PlatformRole @default(USER) @map("platform_role")
+  status       AccountStatus @default(ACTIVE)
+
+  memberships OrganizationMember[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([platformRole, status])
+  @@map("user_profiles")
+}
+
+model Organization {
+  id String @id @default(uuid()) @db.Uuid
+
+  name String
+  slug String @unique
+
+  description  String?
+  contactEmail String? @map("contact_email")
+
+  status OrganizationStatus @default(ACTIVE)
+
+  memberships OrganizationMember[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([status])
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id String @id @default(uuid()) @db.Uuid
+
+  organizationId String @map("organization_id") @db.Uuid
+  userId         String @map("user_id") @db.Uuid
+
+  role   OrganizationRole @default(MEMBER)
+  status MembershipStatus @default(ACTIVE)
+
+  organization Organization @relation(
+    fields: [organizationId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  user UserProfile @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, userId])
+  @@index([userId, status])
+  @@index([organizationId, role, status])
+  @@map("organization_members")
+}
