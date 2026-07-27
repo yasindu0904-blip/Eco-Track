@@ -41,7 +41,7 @@ model UserProfile {
   email    String @unique
   fullName String @map("full_name")
 
-  platformRole PlatformRole @default(USER) @map("platform_role")
+  platformRole PlatformRole  @default(USER) @map("platform_role")
   status       AccountStatus @default(ACTIVE)
 
   memberships OrganizationMember[]
@@ -82,17 +82,8 @@ model OrganizationMember {
   role   OrganizationRole @default(MEMBER)
   status MembershipStatus @default(ACTIVE)
 
-  organization Organization @relation(
-    fields: [organizationId],
-    references: [id],
-    onDelete: Cascade
-  )
-
-  user UserProfile @relation(
-    fields: [userId],
-    references: [id],
-    onDelete: Cascade
-  )
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         UserProfile  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)

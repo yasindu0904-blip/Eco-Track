@@ -1,0 +1,116 @@
+EcoTrack Technical Decision Notes
+Short summary for sharing with the group before writing the project proposal
+
+1. Final Architecture Direction
+- Do not use microservices for this semester project.
+- Use a modular monolithic backend.
+- Web app: React + TypeScript + Vite.
+- Mobile app: React Native + Expo + TypeScript.
+- Backend: Node.js + Express.js + TypeScript.
+- Database: Supabase PostgreSQL + PostGIS.
+- ORM: Prisma.
+- Cache/Queue: Redis.
+
+2. Ports and Deployment View
+- React web app: 5173.
+- Backend API: 5000.
+- Redis: 6379.
+- Prisma Studio: 5555, optional.
+- Supabase Postgres: hosted, usually no local port.
+- In production, only web and API should be public. Database and Redis should be internal/private.
+
+3. REST, WebSockets, and Notifications
+- WebSockets are not required for MVP.
+- REST APIs are enough for normal actions: create report, assign task, update status.
+- Expo Push Notifications are enough for MVP mobile notifications.
+- WebSockets are advanced/optional only for live admin dashboard updates.
+- Direct Firebase Cloud Messaging can be tried later as advanced notification work.
+
+4. How Expo Push Notifications Work
+- Mobile app asks for notification permission.
+- Expo gives an ExpoPushToken.
+- Mobile app sends this token to the backend.
+- Backend stores the token with the user ID.
+- When something happens, backend sends a notification to Expo Push Service.
+- Expo sends it to Android/iOS.
+- Phone shows notification in top bar with sound/vibration.
+- App does not need to keep running in the background like WhatsApp.
+
+5. Supabase PostgreSQL, Maps, and PostGIS
+- Supabase PostgreSQL is good because the database is hosted from the start.
+- Save latitude and longitude for easy frontend map display.
+- Also use PostGIS geography(Point, 4326) for nearby search and distance queries.
+- Prisma can handle normal tables. For PostGIS-specific functions, raw SQL may be needed.
+
+6. Supabase Auth, JWT, Cookies, and Role Security
+- Use Supabase Auth for login/signup/invites.
+- Frontend sends Supabase access token to backend as Bearer token.
+- Backend verifies token and gets user ID from token subject.
+- Do not store role in a normal editable cookie.
+- Store roles in organization_members table: user_id, organization_id, role.
+- Use Redis to cache role/membership checks for a short time, such as 5 minutes.
+- Use Secure HttpOnly cookies only if handling trusted session/token data.
+
+7. Backend Middleware Design
+- Use Route -> Middleware -> Controller -> Service.
+- auth.middleware.ts: validates Supabase JWT and attaches req.user.
+- tenant.middleware.ts: checks organization/tenant and user membership.
+- role.middleware.ts: checks whether the user can perform the action.
+- error.middleware.ts: handles errors in one place.
+- Flow: Request -> auth -> tenant -> role -> controller -> service -> response.
+
+8. Route, Controller, and Service Style
+- Keep separate files for each task/API.
+- Controller reads request, calls service, returns response.
+- Service contains business logic and database work.
+- Middleware handles security checks before controller.
+
+Example:
+router.post(
+  "/organizations/:orgId/admins",
+  authMiddleware,
+  tenantMiddleware,
+  roleMiddleware(["ORG_ADMIN"]),
+  addOrgAdminController
+);
+
+9. Mobile Navigation and Frontend Cache
+- After login, everyone has citizen/volunteer side.
+- Citizen/volunteer side includes my reports, nearby incidents, assigned tasks, joined organizations.
+- Admin users also get organization/admin side.
+- TanStack Query frontend cache is basic/good practice.
+- SecureStore for sensitive tokens/session data is basic security.
+- AsyncStorage offline drafts are advanced.
+- Example cache times: profile 5 minutes, organizations 5 minutes, dashboard 1-2 minutes, incident list 30-60 seconds.
+
+10. Prisma with Supabase PostgreSQL
+- Supabase Auth handles auth.
+- Prisma handles project database tables.
+- Use prisma.userProfile.findUnique(), prisma.incident.findMany(), create(), update(), transaction().
+- Prisma improves readability and type safety and helps avoid SQL injection when used correctly.
+- Use raw SQL only for special PostGIS functions.
+
+Example:
+const existingProfile = await prisma.userProfile.findUnique({
+  where: { email },
+});
+
+const incidents = await prisma.incident.findMany({
+  where: { organizationId, status: "REPORTED" },
+  orderBy: { createdAt: "desc" },
+});
+
+11. MVP vs Advanced
+- Notifications: MVP Expo Push Notifications; advanced FCM + Redis/BullMQ queue.
+- Realtime updates: MVP REST + optional polling; advanced WebSockets.
+- Caching: MVP TanStack Query + Redis role cache; advanced offline drafts and queue strategy.
+- Maps: MVP lat/lng markers; advanced PostGIS nearby search, clustering, heatmap.
+- Security: MVP Supabase JWT + DB role checks; advanced audit logs and rate limiting.
+
+12. 3-Member Development Split
+- Member 1: Mobile app - citizen/volunteer UI, reporting, location/photo submission, task view, notifications.
+- Member 2: Web admin app - dashboard, incident verification, task assignment, volunteers, analytics.
+- Member 3: Backend + database + DevOps - Express API, middleware, Supabase Auth, Prisma, Redis, CI/CD/deployment.
+
+Final Memory Line
+EcoTrack should be presented as a scalable multi-tenant SaaS system, not an AI project. The technical strength is multi-tenant data isolation, geospatial reporting with PostGIS, Redis-backed performance/security, clean modular backend design, Expo push notifications, and a practical React/React Native/Express/Prisma/Supabase stack.

@@ -1,0 +1,886 @@
+EcoTrack - Full Project Planning Guide Before Proposal
+Extracted source text from PDF for upload/reference.
+
+--- PAGE 1 ---
+EcoTrack - Full Project Planning Guide Before Proposal
+Page 1
+EcoTrack
+Full Project Planning Guide Before Writing the
+Proposal
+For PID 8: A Multi-Tenant SaaS Platform for Community-Driven Hyper-Local Environmental
+Monitoring and Cleanup Coordination
+Prepared as a pre-proposal planning document for a 3-member Software Engineering Project
+group.
+Purpose of this document
+This document is not the final project proposal. It is a complete planning guide to decide exactly what to build, what to
+keep in scope, what to present as the project's speciality, how to divide work among three members, and how to
+describe the technical plan in the proposal.
+Main recommendation
+Make the speciality of the project: scalable multi-tenant SaaS architecture, low-bandwidth mobile-first
+environmental reporting, geospatial task coordination, Redis-based performance optimization, and
+CI/CD-supported deployment.
+Do not force an AI feature. The project can be strong as a software engineering system because the module expects
+a working system, clear module separation, realistic planning, software engineering artefacts, and practical
+implementation.
+
+--- PAGE 2 ---
+EcoTrack - Full Project Planning Guide Before Proposal
+Page 2
+1. Project Understanding
+The proposed project is an EcoTrack platform for community-driven environmental incident reporting and cleanup
+coordination. Citizens report environmental problems such as illegal dumping, water pollution, blocked drainage, or
+unsafe waste areas using a mobile application. Organization administrators verify these reports, convert valid reports
+into cleanup tasks or events, assign volunteers, and track progress through a web dashboard.
+The system is designed as a Software-as-a-Service platform. This means multiple independent environmental
+organizations can use the same platform while keeping their data separated. For example, a lake protection group, a
+coastal cleanup group, and a university green club can all use the same system, but each organization sees only its
+own reports, volunteers, tasks, and dashboards.
+1.1 Main Problem
+- Environmental reports are currently scattered across social media groups, phone calls, paper notes, and messaging
+apps.
+- Useful reports can be lost in long chat threads.
+- Community groups struggle to verify reports and convert them into real cleanup actions.
+- There is no clear record of who was assigned, what happened, when a cleanup was completed, and what impact
+was achieved.
+- Existing environmental management systems can be too complex, expensive, or government-focused for small local
+organizations.
+1.2 Proposed Solution in Simple Words
+EcoTrack will act as a shared digital workspace for environmental organizations. The public can submit geo-tagged
+incident reports with photos. Administrators can review, verify, assign, and monitor work. Volunteers can view
+assigned cleanup tasks and update progress. The platform stores all activity in a structured, searchable, and
+auditable way.
+1.3 Final Project Identity
+Item
+Recommended Decision
+Project name
+EcoTrack
+Project type
+Mobile app + web admin dashboard + backend SaaS platform
+Core domain
+Environmental incident reporting and cleanup coordination
+Main speciality
+Scalable multi-tenant SaaS with geospatial workflows and low-bandwidth mobile-first design
+Main technical strengths
+Multi-tenancy, PostgreSQL/PostGIS, Redis caching, role-based access control, CI/CD,
+Docker, map-based reporting, configurable workflows
+Not the speciality
+AI, IoT sensors, satellite image analysis, payment systems
+2. What Makes This Project Special
+The project should not be presented as only a simple reporting app. It should be presented as a scalable SaaS
+coordination platform for environmental organizations. The strongest speciality is software architecture and practical
+deployment readiness.
+2.1 Speciality 1 - Multi-Tenant SaaS
+Multiple organizations can use the same backend and database, while tenant isolation ensures each organization
+only accesses its own data. This is more advanced than a single NGO app.
+- Each incident belongs to one organization.
+
+--- PAGE 3 ---
+EcoTrack - Full Project Planning Guide Before Proposal
+Page 3
+- Each user belongs to an organization and has a role.
+- Admins can manage only their own organization's data.
+- Future expansion is possible without deploying a separate system for every organization.
+2.2 Speciality 2 - Geospatial Incident and Task Coordination
+Incidents are not just text records. They are location-based environmental events. The platform should use maps,
+coordinates, and location filtering to support practical cleanup planning.
+- Citizens mark incident location on a map or use current GPS location.
+- Admins can view incidents on a map and filter by category, status, severity, and region.
+- Volunteers can view nearby or assigned tasks.
+- Future analytics can show incident density and cleanup impact by area.
+2.3 Speciality 3 - Low-Bandwidth and Low-End Device Support
+This is important for community users. Redis does not run on low-power phones. Redis runs on the server.
+Low-end-device support should be achieved through careful mobile design and efficient backend responses.
+- Compress photos before upload.
+- Use offline report drafts, so a user can prepare a report even with weak internet.
+- Use retry upload when connectivity returns.
+- Use pagination and small API responses.
+- Cache frequently used data on the mobile app where suitable.
+- Use Redis on the server to make dashboard and map queries faster.
+2.4 Speciality 4 - Configurable Workflows
+Different organizations may use different reporting and cleanup processes. Instead of hardcoding statuses, allow
+organization admins to configure status stages.
+Example workflow 1:
+Reported -> Verified -> Cleanup Scheduled -> In Progress -> Resolved
+Example workflow 2:
+New -> Under Review -> Assigned -> Completed -> Closed
+2.5 Speciality 5 - DevOps and Industry Practices
+CI/CD, Docker, automated testing, API documentation, and Redis are not extra decoration. They show that the group
+understands modern software engineering practice and can build a system that is maintainable and deployable.
+3. Recommended Technology Stack
+Because you are comfortable with React and TypeScript and not familiar with NestJS, the recommended backend
+should be Express.js with TypeScript instead of NestJS. Express is simpler and still acceptable if the codebase is
+modular and well organized.
+Layer
+Recommended Technology
+Reason
+Mobile app
+React Native + Expo + TypeScript
+One codebase for Android-focused development, supports
+camera, location, and push notifications.
+Web app
+React + TypeScript + Vite
+Simple and fast for an admin dashboard; no need for Next.js
+unless SEO or server-side rendering is needed.
+Backend
+Node.js + Express.js + TypeScript
+Easier learning curve than NestJS while still allowing a
+structured modular backend.
+
+--- PAGE 4 ---
+EcoTrack - Full Project Planning Guide Before Proposal
+Page 4
+Layer
+Recommended Technology
+Reason
+Database
+PostgreSQL + PostGIS
+Stores structured SaaS data and supports location-based
+queries.
+ORM
+Prisma
+Simplifies database access, migrations, and schema
+management.
+Cache/queue
+Redis
+Useful for dashboard cache, nearby incident cache, rate
+limiting, and notification queues.
+File storage
+Firebase Storage, Supabase
+Storage, Cloudinary, or
+S3-compatible storage
+Stores incident photos and task completion images
+separately from the database.
+Maps
+OpenStreetMap + Leaflet/React
+Leaflet
+Affordable map-based reporting and dashboard map views.
+Testing
+Jest + Supertest
+Backend unit and API integration testing.
+CI/CD
+GitHub Actions + Docker
+Automated linting, testing, building, and deployment.
+3.1 Final Stack Statement for Proposal
+The project will use React with TypeScript and Vite for the web administration dashboard, React Native with Expo
+and TypeScript for the mobile application, and Node.js with Express.js and TypeScript for the backend API.
+PostgreSQL with PostGIS will store structured and geospatial data, Redis will be used for caching and queue-based
+processing, and Docker with GitHub Actions will support CI/CD-based deployment.
+4. System Users and Roles
+Role
+Main Purpose
+Key Permissions
+Citizen
+Reports environmental incidents.
+Create reports, upload photos, mark location, view own
+report status.
+Volunteer
+Participates in cleanup tasks.
+View assigned tasks, accept tasks, update progress, upload
+completion evidence.
+Organization Admin
+Manages reports, tasks, volunteers,
+workflows, and analytics for one
+organization.
+Verify/reject reports, create tasks, assign volunteers,
+configure statuses, view organization dashboard.
+Platform/Super Admin
+Optional SaaS-level management
+role.
+Create organizations, manage tenants, view platform
+health. This can be a simple backend/admin feature for
+demo.
+5. Complete Feature Scope
+The following scope is separated into must-complete MVP features and advanced features. The MVP should be
+finished first. Advanced features should be added only after the main flow works end-to-end.
+5.1 Core MVP - Must Complete
+A. Citizen and Volunteer Mobile App
+Feature
+Details
+Priority
+Register/login
+Users can create accounts and log in securely. Role determines what
+they can access.
+Must
+User profile
+Basic name, contact, organization selection/invitation, volunteer
+availability.
+Must
+
+--- PAGE 5 ---
+EcoTrack - Full Project Planning Guide Before Proposal
+Page 5
+Feature
+Details
+Priority
+Submit incident
+Citizen submits title, description, category, severity, photo, and
+location.
+Must
+Photo upload
+Upload one or more photos; compress image before upload for
+low-bandwidth support.
+Must
+Location marking
+Use GPS or map pin to add latitude and longitude.
+Must
+View own reports
+Citizen can see submitted reports and current status.
+Must
+Volunteer task list
+Volunteer sees tasks assigned by admin.
+Must
+Task status update
+Volunteer can mark accepted, in progress, or completed, depending
+on workflow.
+Must
+Completion evidence
+Volunteer can upload after-cleanup photos or notes.
+Should
+B. Admin Web App
+Feature
+Details
+Priority
+Admin login
+Organization admin logs in to the dashboard.
+Must
+Dashboard overview
+Counts for pending reports, verified reports, active tasks, resolved
+incidents, volunteer count.
+Must
+Incident list
+View, search, sort, and filter reports by status, category, severity,
+date, and location.
+Must
+Incident detail page
+View description, reporter details if allowed, photo evidence, map
+location, and history.
+Must
+Verify/reject report
+Admin reviews a citizen report and accepts it as valid or rejects it with
+a reason.
+Must
+Create cleanup task
+Convert a verified report into a cleanup task/event with date, location,
+instructions, and required volunteers.
+Must
+Assign volunteers
+Assign registered volunteers to tasks.
+Must
+Track progress
+View status of tasks and update statuses if needed.
+Must
+Volunteer management
+View volunteers, roles, contact info, task history, and availability.
+Should
+Basic analytics
+Show simple charts for reports by category/status and completed
+cleanups.
+Should
+C. Backend and Database
+Feature
+Details
+Priority
+Authentication
+Login, signup/invite, password hashing, JWT-based access tokens.
+Must
+Role-based access control
+Citizen, volunteer, admin, and optional super admin permissions.
+Must
+Multi-tenant data isolation
+Every tenant-specific record includes organization_id and APIs
+enforce tenant filtering.
+Must
+REST API
+API endpoints for mobile and web apps.
+Must
+PostgreSQL schema
+Tables for organizations, users, incidents, tasks, assignments,
+workflows, photos, notifications, audit logs.
+Must
+Photo storage integration
+Upload file metadata to database and image files to storage service.
+Must
+Status tracking
+Store current status and status history for reports and tasks.
+Must
+
+--- PAGE 6 ---
+EcoTrack - Full Project Planning Guide Before Proposal
+Page 6
+Feature
+Details
+Priority
+Validation and error
+handling
+Clean request validation and understandable API errors.
+Must
+API documentation
+Swagger/OpenAPI or Postman collection.
+Should
+5.2 Advanced Features - Add After MVP
+Advanced Feature
+What It Adds
+Why It Strengthens the Project
+Redis cache for nearby
+incidents
+Cache common map/nearby queries for a
+short period.
+Shows performance optimization and
+scalability.
+Redis cache for dashboard
+statistics
+Store dashboard counts and analytics
+summaries for quick loading.
+Improves admin dashboard response time.
+Configurable workflow
+statuses
+Admin can define custom stages such as
+Reported, Verified, Scheduled, Resolved.
+Makes the project feel like true SaaS, not a
+hardcoded app.
+Real-time notifications
+Notify admins about new reports and
+volunteers about assigned tasks.
+Improves coordination speed.
+Incident heatmap
+Show density of reports by area.
+Adds visual environmental impact analysis.
+Volunteer task
+recommendation by location
+Suggest nearby volunteers or nearby tasks
+based on coordinates.
+Adds intelligent but non-AI practical value.
+Offline report saving
+Save report drafts on the phone and upload
+later.
+Supports low-bandwidth users and low-end
+devices.
+CI/CD pipeline
+Automated test, build, and deployment
+pipeline using GitHub Actions.
+Shows industry development practice.
+Load testing and performance
+comparison
+Compare response time with/without Redis
+under sample load.
+Creates a measurable evaluation section for
+the final report.
+Audit logs/activity history
+Track who changed status, assigned
+volunteers, or closed a task.
+Improves accountability and security.
+5.3 Optional Features - Only If Time Allows
+- Organization invitation links for volunteers and admins.
+- Comment thread under each incident or task.
+- Before-and-after cleanup gallery.
+- Export cleanup reports as PDF or CSV.
+- Public read-only impact page for each organization.
+- Admin moderation tools for duplicate/spam reports.
+- Notification preference settings.
+- Basic email notifications in addition to push notifications.
+5.4 Clearly Out of Scope
+- Machine learning pollution detection.
+- Satellite image analysis.
+- IoT water or air quality sensors.
+- Donation/payment processing.
+- Full government-level environmental management system.
+- Complex route optimization for cleanup teams.
+
+--- PAGE 7 ---
+EcoTrack - Full Project Planning Guide Before Proposal
+Page 7
+- Fully offline map system for all regions.
+6. End-to-End MVP Demo Flow
+The MVP should be planned around one clean demo scenario. This is the flow your group must make work before
+adding advanced features.
+Step
+Actor
+Action
+System Output
+1
+Platform/admin setup
+Create demo organization: Bolgoda Lake Cleanup
+Group.
+Organization tenant is created.
+2
+Admin
+Create or invite volunteers.
+Volunteer accounts are linked to
+organization.
+3
+Citizen
+Report illegal dumping with photo and location.
+Incident is created with status
+Reported.
+4
+Admin
+View new report in web dashboard.
+Incident appears in pending list
+and map.
+5
+Admin
+Verify the report.
+Status changes to Verified.
+6
+Admin
+Create cleanup task from the report.
+Task is created and linked to
+incident.
+7
+Admin
+Assign volunteer(s).
+Volunteers receive task
+assignment.
+8
+Volunteer
+Open mobile app and view assigned task.
+Task details, map, and
+instructions are shown.
+9
+Volunteer
+Update task as in progress and then completed with
+evidence photo.
+Task progress is updated.
+10
+Admin
+Review completion and close incident.
+Incident status becomes
+Resolved and dashboard
+analytics update.
+7. High-Level System Architecture
+React Native Mobile App       React + TypeScript Web Dashboard
+          |                                      |
+          +--------------- HTTPS REST API -------+
+                          |
+              Express.js + TypeScript Backend
+                          |
+      +-------------------+-------------------+
+      |                   |                   |
+PostgreSQL + PostGIS     Redis          File Storage
+Main structured data     Cache/queue    Incident/task photos
+Geospatial queries       Rate limit     Evidence images
+7.1 Backend Module Design
+Backend Module
+Responsibility
+Auth module
+Login, registration/invitation, JWT handling, password hashing.
+Organization module
+Tenant creation, organization profile, membership management.
+User/role module
+User profiles, role assignment, permission checks.
+Incident module
+Create, list, view, verify, reject, update incident reports.
+Photo module
+Upload image metadata, connect to file storage.
+
+--- PAGE 8 ---
+EcoTrack - Full Project Planning Guide Before Proposal
+Page 8
+Backend Module
+Responsibility
+Task module
+Create cleanup tasks, assign volunteers, update task progress.
+Workflow module
+Manage status definitions and status transitions per organization.
+Notification module
+Queue and send task assignment or status notifications.
+Analytics module
+Dashboard statistics, basic charts, impact metrics.
+Audit module
+Record important actions for accountability.
+7.2 Suggested Backend Folder Structure
+backend/
+  src/
+    modules/
+      auth/
+        auth.routes.ts
+        auth.controller.ts
+        auth.service.ts
+      organizations/
+      users/
+      incidents/
+      tasks/
+      volunteers/
+      workflows/
+      notifications/
+      analytics/
+      audit/
+    middleware/
+      auth.middleware.ts
+      tenant.middleware.ts
+      role.middleware.ts
+      error.middleware.ts
+    database/
+      prisma.ts
+    app.ts
+    server.ts
+8. Database Design Plan
+The database should be designed around tenant isolation. Most business tables should include organization_id, so
+the backend can restrict access by organization.
+Table
+Purpose
+Important Fields
+organizations
+Stores tenants/NGOs/groups.
+id, name, address, contact_email, created_at
+users
+Stores all users.
+id, organization_id, name, email, password_hash,
+role, status
+incidents
+Citizen environmental reports.
+id, organization_id, reported_by, category, title,
+description, latitude, longitude, severity, status,
+created_at
+incident_photos
+Images attached to reports.
+id, incident_id, file_url, uploaded_by, created_at
+tasks
+Cleanup tasks/events created from
+incidents.
+id, organization_id, incident_id, title, description,
+scheduled_date, location, status
+task_assignments
+Volunteers assigned to tasks.
+id, task_id, volunteer_id, assignment_status
+workflow_statuses
+Configurable statuses per organization.
+id, organization_id, entity_type, status_name,
+display_order, is_final
+status_history
+History of status changes.
+id, organization_id, entity_type, entity_id,
+from_status, to_status, changed_by, changed_at
+
+--- PAGE 9 ---
+EcoTrack - Full Project Planning Guide Before Proposal
+Page 9
+Table
+Purpose
+Important Fields
+notifications
+Notifications to users.
+id, organization_id, user_id, title, message, read_at
+audit_logs
+Important admin/system actions.
+id, organization_id, actor_id, action, entity_type,
+entity_id, created_at
+8.1 Multi-Tenant Isolation Rule
+Every API request must know the authenticated user's organization_id. The backend must automatically filter
+tenant-owned data by organization_id. The frontend should not be trusted to send organization_id for
+security-sensitive filtering.
+Example rule:
+Admin from Organization A requests /api/incidents
+Backend returns only incidents where incidents.organization_id = admin.organization_id
+Never allow:
+Admin from Organization A directly accessing Organization B incident by changing URL id
+9. REST API Plan
+Area
+Example Endpoints
+Auth
+POST /auth/register, POST /auth/login, POST /auth/logout, GET /auth/me
+Organizations
+GET /organizations/me, PATCH /organizations/me, POST /organizations/invite
+Incidents
+POST /incidents, GET /incidents, GET /incidents/:id, PATCH /incidents/:id/status, POST
+/incidents/:id/photos
+Map/nearby
+GET /incidents/nearby?lat=&lng;=&radius;=, GET /incidents/map
+Tasks
+POST /tasks, GET /tasks, GET /tasks/:id, PATCH /tasks/:id/status, POST /tasks/:id/assign
+Volunteers
+GET /volunteers, GET /volunteers/:id, PATCH /volunteers/:id
+Workflows
+GET /workflows, POST /workflows/statuses, PATCH /workflows/statuses/:id
+Notifications
+GET /notifications, PATCH /notifications/:id/read
+Analytics
+GET /analytics/dashboard, GET /analytics/incidents-by-category, GET
+/analytics/monthly-cleanups
+10. Redis Usage Plan
+Redis should be positioned as a backend performance and coordination component. It should not be described as
+something that runs on low-power user devices.
+Redis Use Case
+How It Works
+Benefit
+Nearby incident cache
+Cache map/nearby query results for short
+time windows.
+Faster map loading and lower database
+load.
+Dashboard statistics cache
+Cache totals such as pending incidents,
+active tasks, and resolved tasks.
+Dashboard loads faster for admins.
+Rate limiting
+Limit repeated login attempts or spam report
+submissions.
+Improves security and prevents abuse.
+Notification queue
+Queue task assignment notifications or
+email/push jobs.
+Keeps API response fast and supports
+asynchronous work.
+Token blacklist
+Store invalidated JWT identifiers until expiry.
+Supports logout and session control.
+
+--- PAGE 10 ---
+EcoTrack - Full Project Planning Guide Before Proposal
+Page 10
+11. Low-Bandwidth and Low-End Device Plan
+Problem
+Planned Solution
+Large photo uploads are slow
+Compress images before upload; limit maximum image size; upload in background
+with progress.
+Internet connection may drop
+Save incident reports as offline drafts and retry upload later.
+Old phones may struggle with heavy
+UI
+Use simple screens, avoid unnecessary animations, paginate lists, and lazy-load
+images.
+Map loading can be heavy
+Load only nearby incidents; use marker clustering; avoid loading all national data at
+once.
+Repeated API requests consume
+data
+Use local caching and Redis-backed backend caching for common requests.
+12. Web App Plan - React + TypeScript
+Using React with TypeScript is a good decision for the web app. The web app is an internal admin dashboard, so
+React + Vite is enough. Next.js is not required unless you need SEO or server-side rendering.
+Page/Screen
+Purpose
+Login
+Admin login.
+Dashboard
+Overview of incidents, tasks, volunteers, and impact metrics.
+Incidents
+Table/list of reports with filters and status labels.
+Incident details
+Photo, location map, reporter info, status history, verify/reject actions.
+Tasks
+Cleanup task list and task status tracking.
+Create task
+Convert a verified incident into a cleanup task.
+Volunteers
+Volunteer database and assignment management.
+Workflow settings
+Configure status names and transitions.
+Analytics
+Basic charts and summary reports.
+13. Mobile App Plan - React Native + Expo
+Screen
+Purpose
+Login/Register
+Citizen and volunteer access.
+Home
+Quick access to report issue, my reports, and assigned tasks.
+Report incident
+Form for category, description, photo, and location.
+Map picker
+Select or confirm incident location.
+My reports
+View submitted report status and history.
+Task list
+Volunteer sees assigned tasks.
+Task details
+View cleanup instructions, location, date, and assigned team.
+Update progress
+Volunteer updates task status and uploads completion evidence.
+Notifications
+New assignments and status updates.
+
+--- PAGE 11 ---
+EcoTrack - Full Project Planning Guide Before Proposal
+Page 11
+14. Work Division for 3 Members
+The group has only three members, so the work must be divided into low-coupled modules. Each member should
+have an individually evaluatable contribution, but the modules must integrate into one working system.
+Member
+Main Responsibility
+Individual Deliverables
+Integration Points
+Member 1
+Mobile app - citizen and
+volunteer module
+React Native app, incident submission,
+photo/location capture, my reports,
+volunteer task list, task progress update,
+offline draft support if time allows.
+Uses backend auth, incident,
+task, photo, and notification
+APIs.
+Member 2
+Web app - admin dashboard
+module
+React admin dashboard, incident
+verification, task creation, volunteer
+assignment, workflow settings, analytics
+pages.
+Uses backend auth, incident,
+task, workflow, volunteer, and
+analytics APIs.
+Member 3
+Backend, database, Redis,
+DevOps
+Express TypeScript API,
+PostgreSQL/PostGIS schema, Prisma
+migrations, RBAC, tenant isolation, Redis
+caching, CI/CD, Docker, API docs.
+Provides APIs and
+deployment environment for
+mobile and web apps.
+14.1 Minimum Contribution Evidence for Each Member
+- Member 1 should show mobile screens, API integration, photo/location handling, and volunteer task workflow.
+- Member 2 should show admin dashboard screens, verification flow, task assignment flow, and analytics/workflow UI.
+- Member 3 should show database schema, API endpoints, authorization rules, Redis usage, test results, and
+deployment/CI pipeline.
+15. Development Milestones
+Milestone
+Target Output
+Responsible Members
+M1 - Requirements and
+design
+Use cases, user roles, feature list, ER diagram, architecture
+diagram, UI wireframes.
+All
+M2 - Backend foundation
+Auth, roles, organizations, database schema, initial APIs.
+Member 3
+M3 - Basic mobile app
+Login, report incident, upload photo/location, view own reports.
+Member 1
+M4 - Basic web dashboard
+Admin login, incident list/detail, verify/reject report.
+Member 2
+M5 - Task coordination
+Create cleanup task, assign volunteers, volunteer task list,
+progress update.
+All
+M6 - Multi-tenancy and
+security
+Tenant filtering, role permission tests, protected routes.
+Member 3 with all
+M7 - Advanced features
+Redis cache, notifications, workflow settings, analytics, offline
+draft if time allows.
+All
+M8 - Testing and deployment
+Automated tests, CI/CD, Docker, deployed demo, final
+documentation.
+All, led by Member 3
+16. Feasibility and Risk Planning
+The project should be kept feasible. The group should finish the MVP before advanced features. The final proposal
+should show that the chosen technology can be implemented within the time, skill, and cost constraints.
+Risk
+Impact
+Mitigation
+Too many features
+MVP may not be completed.
+Prioritize the end-to-end demo flow first.
+
+--- PAGE 12 ---
+EcoTrack - Full Project Planning Guide Before Proposal
+Page 12
+Risk
+Impact
+Mitigation
+Learning curve of backend
+Slow progress if using unfamiliar
+frameworks.
+Use Express.js + TypeScript instead of NestJS.
+Map/location complexity
+Geospatial bugs and poor
+performance.
+Start with basic lat/lng storage, then add PostGIS
+queries.
+Photo upload issues
+Large files can slow the app.
+Compress photos and store files outside the
+database.
+Weak module integration
+Three separate pieces may not work
+together.
+Define API contracts early and use shared
+Postman/OpenAPI documentation.
+Multi-tenancy security mistakes
+Data leakage between organizations.
+Enforce organization_id filtering in backend
+middleware/services and test it.
+Redis overuse
+Added complexity without benefit.
+Use Redis only for clear use cases: cache, rate
+limit, queue.
+17. Testing and Evaluation Plan
+Evaluation Area
+How to Evaluate
+Functional testing
+Test each user flow: report creation, verification, task assignment, volunteer progress
+update, closure.
+Tenant isolation testing
+Create Organization A and Organization B, then confirm users cannot access each
+other's incidents/tasks.
+Role-based access testing
+Confirm citizens cannot access admin endpoints and volunteers cannot verify reports.
+Performance testing
+Compare dashboard/nearby incident response time with Redis disabled and enabled.
+Usability testing
+Ask sample users to submit a report and measure time taken and number of steps.
+Low-bandwidth testing
+Test image compression and offline draft upload behavior.
+Deployment testing
+Run CI pipeline, Docker build, and deployment verification.
+18. What to Write in the Proposal
+The final proposal should be concise, but it should be based on this full plan. Use the following structure.
+Proposal Section
+What to Include
+1. Title
+EcoTrack: A Scalable Multi-Tenant SaaS Platform for Community-Driven Environmental
+Monitoring and Cleanup Coordination.
+2. Overview
+Explain citizen reporting, admin verification, cleanup task creation, volunteer assignment,
+and progress tracking.
+3. Inputs and outputs
+Inputs: user details, incident details, photos, geolocation, task updates. Outputs: verified
+reports, tasks, dashboards, notifications, analytics.
+4. Objectives
+Design and implement mobile, web, backend, multi-tenancy, workflows, and evaluation.
+5. Need/usefulness
+Explain why social media/manual coordination causes lost reports and weak tracking.
+6. Scope
+Separate mobile app, web app, backend services, included and out-of-scope features.
+7. Deliverables
+Working mobile app, web dashboard, backend API, database schema, documentation,
+deployed prototype, evaluation report.
+8. Existing systems
+Briefly compare with related civic/environmental reporting tools after verifying references.
+
+--- PAGE 13 ---
+EcoTrack - Full Project Planning Guide Before Proposal
+Page 13
+Proposal Section
+What to Include
+9. Technology stack
+React TS, React Native Expo TS, Express TS, PostgreSQL/PostGIS, Redis, Docker,
+GitHub Actions.
+10. References
+Include official docs and any similar systems researched.
+18.1 Strong Proposal Wording
+Use this style of wording in the proposal:
+This project proposes a scalable multi-tenant SaaS platform for community-driven environmental monitoring and cle
+19. What Not to Do
+- Do not describe the project as only a garbage reporting app.
+- Do not promise AI, IoT, satellite analysis, or payments unless the group is really going to build them.
+- Do not use NestJS if the team is not ready for its learning curve.
+- Do not put all backend code in one large file. Keep modules separated.
+- Do not skip tenant isolation testing. Multi-tenancy is the project's main speciality.
+- Do not add advanced features before the MVP demo flow works.
+20. Final Recommended Scope for the 3-Member Group
+The best final scope is:
+Mobile app for citizens and volunteers + React TypeScript web dashboard for admins + Express
+TypeScript backend with PostgreSQL/PostGIS, Redis, file storage, role-based access, multi-tenant
+isolation, configurable workflows, basic analytics, CI/CD, and Dockerized deployment.
+This scope is strong enough for a Software Engineering Project because it includes a real working product, separate
+modules for individual evaluation, proper software engineering design, industry technologies, deployment practices,
+and a measurable evaluation plan.

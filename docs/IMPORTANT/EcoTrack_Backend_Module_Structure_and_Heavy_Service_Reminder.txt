@@ -1,0 +1,580 @@
+EcoTrack Backend Module Structure and Heavy-Service Reminder
+===========================================================
+
+Purpose
+-------
+This file records the agreed backend module structure for EcoTrack so that future coding work keeps the same hierarchy.
+
+Main Architecture
+-----------------
+EcoTrack should use:
+
+- A modular monolith for the main backend.
+- Domain-based modules such as auth, users, organizations, incidents, tasks, workflows, notifications, analytics, and audit.
+- A layered structure for normal CRUD and medium-complexity operations.
+- Vertical-slice use-case folders only for operations that become complex.
+- Separate Redis-backed worker processes for heavy asynchronous jobs.
+- Separate HTTP services only when a feature truly needs synchronous isolation, independent deployment, or independent scaling.
+
+Architecture Name
+-----------------
+The recommended architecture can be described as:
+
+"A modular monolith with layered domain modules, selective vertical slices for complex use cases, and separate background workers for heavy asynchronous processing."
+
+Standard Request Flow
+---------------------
+Route
+  -> Middleware
+  -> Controller
+  -> Service
+  -> Repository
+  -> Prisma / Supabase / Redis
+
+Recommended Tasks Module Structure
+----------------------------------
+backend/
+└── src/
+    └── modules/
+        └── tasks/
+            ├── tasks.routes.ts
+            │
+            ├── controllers/
+            │   ├── getTask.controller.ts
+            │   ├── listTasks.controller.ts
+            │   └── deleteTask.controller.ts
+            │
+            ├── services/
+            │   ├── getTask.service.ts
+            │   ├── listTasks.service.ts
+            │   └── deleteTask.service.ts
+            │
+            ├── use-cases/
+            │   ├── create-task/
+            │   │   ├── createTask.controller.ts
+            │   │   ├── createTask.service.ts
+            │   │   └── createTask.schema.ts
+            │   │
+            │   └── assign-volunteers/
+            │       ├── assignVolunteers.controller.ts
+            │       ├── assignVolunteers.service.ts
+            │       └── assignVolunteers.schema.ts
+            │
+            ├── repositories/
+            │   └── task.repository.ts
+            │
+            ├── schemas/
+            │   └── updateTaskStatus.schema.ts
+            │
+            ├── tasks.types.ts
+            └── tasks.constants.ts
+
+How to Use This Structure
+-------------------------
+1. Keep simple read and delete operations in the normal controllers and services folders.
+
+Examples:
+- getTask
+- listTasks
+- deleteTask
+- small status changes
+- simple filters
+
+2. Move a feature into use-cases when it has several business steps or multiple side effects.
+
+Examples:
+- create-task
+- assign-volunteers
+- complete-task-with-evidence
+- close-incident-from-task
+- bulk-task-assignment
+
+3. Keep database access reusable and centralized in repositories where practical.
+
+Example:
+tasks/repositories/task.repository.ts
+
+4. Keep shared module types and constants at the module root.
+
+Examples:
+- tasks.types.ts
+- tasks.constants.ts
+
+5. Do not make a separate folder for every tiny CRUD action unless the action becomes complex.
+
+When a Use Case Is Considered Complex
+-------------------------------------
+A use case should move into its own folder when several of these are true:
+
+- It performs multiple database operations.
+- It needs a transaction.
+- It calls another module.
+- It creates notifications.
+- It writes audit logs.
+- It validates several business rules.
+- It queues background work.
+- It contains many branches or status transitions.
+- It has its own tests and types.
+- It is becoming difficult to understand inside one large service file.
+
+Example: Assign Volunteers
+--------------------------
+assignVolunteers may need to:
+
+1. Verify the authenticated organization admin.
+2. Check that the task belongs to the organization.
+3. Check the task status.
+4. Check each volunteer's organization membership.
+5. Check volunteer eligibility or availability.
+6. Create task assignment records.
+7. Create notification records.
+8. Add notification jobs to Redis.
+9. Write audit logs.
+10. Return the created assignments.
+
+Because this is a multi-step operation, it belongs in:
+
+tasks/use-cases/assign-volunteers/
+
+Heavy Work Reminder
+-------------------
+Do not run long or expensive work inside the normal API request when the user does not need the final result immediately.
+
+Use a background worker for:
+
+- Sending many Expo push notifications.
+- Image resizing and thumbnail generation.
+- Large CSV or PDF export generation.
+- Bulk email sending.
+- Rebuilding analytics summaries.
+- Scheduled reminders.
+- Large cleanup jobs.
+- Retryable third-party API calls.
+
+Recommended background structure:
+
+backend/
+└── src/
+    ├── queues/
+    │   ├── notification.queue.ts
+    │   ├── imageProcessing.queue.ts
+    │   └── export.queue.ts
+    │
+    └── workers/
+        ├── notification.worker.ts
+        ├── imageProcessing.worker.ts
+        └── export.worker.ts
+
+Worker Flow
+-----------
+API request
+  -> Validate request
+  -> Save important database records
+  -> Add job to Redis queue
+  -> Return response quickly
+
+Worker process
+  -> Receive job from Redis
+  -> Perform heavy work
+  -> Retry on temporary failure
+  -> Save result or status
+  -> Record logs
+
+Important Port Rule
+-------------------
+A background worker normally does not need a public HTTP port.
+
+Example:
+- Main Express API: port 5000
+- Redis: port 6379
+- Notification worker: no public port
+- Image worker: no public port
+- Export worker: no public port
+
+A different port alone does not provide true resource isolation. Real isolation requires a separate process, Docker container, server, or independently scalable deployment.
+
+When to Create a Separate HTTP Service
+--------------------------------------
+Create another HTTP service only when all or most of the following are true:
+
+- The result is required synchronously.
+- The feature is CPU-heavy or memory-heavy.
+- It needs a different runtime or language.
+- It needs independent scaling.
+- It can fail independently.
+- It has a clearly separate responsibility.
+- It is large enough to justify separate deployment and monitoring.
+
+Possible future examples:
+- Dedicated machine-learning inference service.
+- Dedicated routing or geospatial engine.
+- Large document conversion service.
+- Specialized image-analysis service.
+
+Do Not Extract These Too Early
+------------------------------
+Keep these inside the modular monolith for the semester project:
+
+- auth
+- users
+- organizations
+- incidents
+- tasks
+- volunteers
+- workflows
+- notifications API
+- analytics API
+- audit
+
+Only extract heavy execution, not normal domain logic.
+
+new stuff = important
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Authentication and Authorization Roadmap
+-----------------------------------------
+
+EcoTrack will introduce authentication and authorization in phases.
+
+Phase 1 - Initial Login Implementation
+--------------------------------------
+Use:
+
+- Supabase Auth for login, password management, access tokens, refresh tokens, and authenticated user identity.
+- Prisma for reading EcoTrack user profiles, platform roles, organization memberships, and account status.
+- Simple Express middleware for the initial super-admin login.
+
+Initial request flow:
+
+Frontend login
+  -> Supabase Auth verifies email and password
+  -> Supabase returns access token
+  -> Frontend sends Bearer access token to backend
+  -> auth.middleware.ts verifies the token
+  -> Backend gets the Supabase auth user ID
+  -> Prisma loads the EcoTrack user profile
+  -> requireSuperAdmin.middleware.ts checks platformRole
+  -> Controller continues only when the user is a valid SUPER_ADMIN
+
+Initial authorization condition:
+
+platformRole === SUPER_ADMIN
+and
+account status === ACTIVE
+
+CASL is not required for the first super-admin login because the first permission check is simple.
+
+Phase 2 - Add CASL Before Main Domain Modules
+--------------------------------------------
+Before implementing organizations, incidents, tasks, volunteers, and workflows, add:
+
+- @casl/ability
+- @casl/prisma
+
+CASL will become the main authorization rule engine.
+
+Prisma will remain the database query tool.
+
+Supabase Auth will remain the authentication provider.
+
+Responsibility split:
+
+Supabase Auth
+  -> Who is the authenticated user?
+
+Prisma
+  -> What profile, memberships, roles, assignments, and records exist?
+
+CASL
+  -> What actions can this user perform on those resources?
+
+Express middleware
+  -> Runs the authentication and authorization checks before controllers
+
+Recommended authorization files:
+
+backend/
+└── src/
+    ├── authorization/
+    │   ├── actions.ts
+    │   ├── subjects.ts
+    │   ├── ability.types.ts
+    │   ├── ability.factory.ts
+    │   └── permission.constants.ts
+    │
+    └── middleware/
+        ├── auth.middleware.ts
+        ├── tenant.middleware.ts
+        ├── ability.middleware.ts
+        ├── authorize.middleware.ts
+        └── error.middleware.ts
+
+Authorization request flow:
+
+Request
+  -> auth.middleware.ts
+  -> tenant.middleware.ts
+  -> ability.middleware.ts
+  -> authorize.middleware.ts
+  -> Controller
+  -> Service
+  -> Repository
+  -> Prisma
+
+auth.middleware.ts
+------------------
+Responsibilities:
+
+- Read the Bearer access token.
+- Verify the token using Supabase Auth.
+- Attach the authenticated Supabase user ID to the request.
+- Reject missing, invalid, or expired tokens with 401 Unauthorized.
+
+tenant.middleware.ts
+--------------------
+Responsibilities:
+
+- Read the active organization ID from the route or trusted request context.
+- Use Prisma to find the user's organization membership.
+- Confirm the membership is ACTIVE.
+- Attach the active organization and membership to the request.
+- Reject cross-organization access with 403 Forbidden.
+
+ability.middleware.ts
+---------------------
+Responsibilities:
+
+- Load the user's platform role.
+- Load relevant organization memberships.
+- Build a CASL ability object for the current user.
+- Attach the ability object to the request.
+
+authorize.middleware.ts
+-----------------------
+Responsibilities:
+
+- Check whether the CASL ability allows the requested action and subject.
+- Reject unauthorized actions with 403 Forbidden.
+- Keep route-level authorization rules outside controllers.
+
+Recommended Actions
+-------------------
+CASL actions should include:
+
+- manage
+- create
+- read
+- update
+- delete
+- verify
+- reject
+- assign
+- accept
+- start
+- complete
+- close
+- invite
+- suspend
+
+Recommended Subjects
+--------------------
+CASL subjects should include:
+
+- Platform
+- Organization
+- UserProfile
+- OrganizationMember
+- Incident
+- IncidentPhoto
+- Task
+- TaskAssignment
+- Workflow
+- Notification
+- AuditLog
+- all
+
+Example Permission Rules
+------------------------
+
+SUPER_ADMIN:
+
+- Can manage all platform resources.
+- Can create, suspend, and manage organizations.
+- Can manage platform users.
+- Can view platform health and analytics.
+
+ORG_ADMIN:
+
+- Can manage incidents belonging to their organization.
+- Can verify or reject incidents belonging to their organization.
+- Can create tasks for incidents belonging to their organization.
+- Can assign volunteers belonging to their organization.
+- Can manage organization workflows.
+- Cannot access another organization's data.
+
+VOLUNTEER:
+
+- Can read tasks assigned to them.
+- Can accept assigned tasks.
+- Can update progress for their own assignments.
+- Can upload completion evidence for their own assignments.
+- Cannot verify incidents or assign other volunteers.
+
+MEMBER or CITIZEN:
+
+- Can create incident reports.
+- Can read their own reports.
+- Can update an allowed draft report.
+- Cannot access organization-admin operations.
+
+Route-Level and Record-Level Authorization
+------------------------------------------
+
+EcoTrack must use both route-level and record-level authorization.
+
+Route-level authorization asks:
+
+- Can this type of user perform this action at all?
+
+Example:
+
+ORG_ADMIN can use the incident verification endpoint.
+
+Record-level authorization asks:
+
+- Can this user perform the action on this exact record?
+
+Example:
+
+An ORG_ADMIN from Organization A must not verify an incident belonging to Organization B.
+
+Correct repository query:
+
+where: {
+  id: incidentId,
+  organizationId: authorizedOrganizationId
+}
+
+Incorrect repository query:
+
+where: {
+  id: incidentId
+}
+
+CASL and Prisma Integration
+---------------------------
+Use @casl/prisma to convert supported CASL conditions into Prisma filters.
+
+Repository queries should combine:
+
+- CASL permission filter
+- Organization tenant filter
+- Record status conditions
+- Soft-delete conditions
+
+Conceptual query:
+
+where: {
+  AND: [
+    caslPermissionFilter,
+    {
+      organizationId: authorizedOrganizationId,
+      deletedAt: null
+    }
+  ]
+}
+
+Do not depend only on frontend-hidden buttons.
+
+The backend must always enforce authorization.
+
+Phase 3 - Redis Authorization Cache
+-----------------------------------
+Add Redis only after Prisma-based authentication and CASL authorization work correctly.
+
+Redis may cache:
+
+- User profile context
+- Platform role
+- Organization membership
+- Membership status
+- Frequently used permission-building data
+
+Example keys:
+
+ecotrack:{environment}:user-context:{userId}
+
+ecotrack:{environment}:membership:{userId}:{organizationId}
+
+Suggested expiry:
+
+3 to 5 minutes
+
+Redis should improve performance, but PostgreSQL remains the permanent source of truth.
+
+Cache Invalidation
+------------------
+Delete relevant Redis authorization cache when:
+
+- Platform role changes
+- Organization role changes
+- Membership status changes
+- User joins or leaves an organization
+- User is suspended
+- Organization is suspended
+- Super-admin permission changes
+
+Important Security Rule
+-----------------------
+Never trust:
+
+- A role sent by the frontend
+- An organization ID without backend membership verification
+- A hidden frontend button as authorization
+- Cached authorization data after a known role change
+
+Final Authorization Decision
+----------------------------
+EcoTrack will use:
+
+Initial login:
+Supabase Auth + Prisma + simple middleware
+
+Before organizations, incidents, and tasks:
+CASL + @casl/prisma + authorization middleware
+
+Later performance optimization:
+Redis membership and permission-context caching
+
+Final responsibility split:
+
+Supabase Auth
+  -> Identity and sessions
+
+Prisma
+  -> Database access and authorization-related data
+
+CASL
+  -> Permission rules and record conditions
+
+Express middleware
+  -> Authentication and authorization enforcement
+
+Redis
+  -> Short-lived authorization cache
+
+
+
+
+
+
+Final Rule to Remember
+----------------------
+Start with the modular monolith.
+
+Use the layered folders for normal operations.
+
+Use a use-case folder when one operation becomes complex.
+
+Use a Redis-backed worker when work is heavy, slow, retryable, or asynchronous.
+
+Use a separate HTTP service only when the feature needs synchronous independent deployment or scaling.
