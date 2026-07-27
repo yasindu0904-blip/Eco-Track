@@ -1,0 +1,196 @@
+EcoTrack — Instructions for Codex
+================================
+
+Role and workflow
+-----------------
+The user uses ChatGPT for research, architecture discussions, explanations, and technical decisions.
+Codex is responsible for repository inspection, coding, file edits, commands, migrations, tests, and implementation verification.
+
+Before making any change
+------------------------
+1. Read this file and the relevant files under docs/IMPORTANT.
+2. Inspect the current repository tree and the current contents of every file that will be changed.
+3. Treat the repository as the source of truth; do not assume a file still matches an older chat snippet.
+4. Preserve npm-installed dependency versions unless an upgrade is explicitly requested.
+5. Explain any conflict between the requested change and the current repository before applying destructive changes.
+
+Project identity
+----------------
+EcoTrack is a multi-tenant SaaS platform for community-driven environmental reporting and cleanup coordination.
+
+Applications:
+- backend/: Node.js + Express + TypeScript REST API
+- web/: React + TypeScript + Vite admin dashboard
+- mobile/: React Native + Expo + TypeScript
+
+Backend architecture:
+"A modular monolith with layered domain modules, selective vertical slices for complex use cases, and separate background workers for heavy asynchronous processing."
+
+Standard request flow:
+Route
+  -> Middleware
+  -> Controller
+  -> Service
+  -> Repository
+  -> Prisma / Supabase / Redis
+
+Core technology decisions
+-------------------------
+- Supabase Auth: identity, login, passwords, access tokens, refresh tokens.
+- Supabase PostgreSQL: permanent database.
+- Prisma 7 + @prisma/adapter-pg + pg: ORM, migrations, and database access.
+- Zod: runtime validation.
+- CASL + @casl/prisma: authorization before main domain modules are implemented.
+- Redis later: short-lived cache, rate limits, queues, locks, delayed/retryable work.
+- PostGIS later: geospatial queries.
+- Expo Push Notifications for MVP notifications.
+
+Strict coding guidance
+----------------------
+- Give project-specific implementation only.
+- Use exact file names, locations, hierarchy, and complete code for created/changed files.
+- Do not include routine Git commit/push instructions unless explicitly requested.
+- Do not create generic placeholder architecture that is unrelated to the active task.
+- Do not add large sets of empty folders prematurely.
+- Keep TypeScript strict.
+- The backend uses ESM:
+  package.json -> "type": "module"
+  tsconfig -> module/moduleResolution "NodeNext"
+- Local TypeScript imports must use runtime .js extensions.
+- Reuse one PrismaClient singleton per process.
+- Controllers should not normally call Prisma directly.
+- Repositories contain Prisma queries and mandatory tenant filters.
+- Services/use cases contain business rules and transaction orchestration.
+- Zod schemas validate untrusted HTTP request data at runtime.
+- Keep external HTTP calls and queue operations outside long-running database transactions.
+- Do not expose raw Prisma/database errors to frontends.
+
+Security rules
+--------------
+- Never write secrets into source files, tests, logs, documentation, or generated examples.
+- Never expose DATABASE_URL or privileged database credentials to web/ or mobile/.
+- Never expose a Supabase service-role key to frontend code.
+- Never trust a role or organizationId supplied by the frontend.
+- Resolve organization access using authenticated backend context and database membership.
+- Every organization-owned query must include authorized organizationId.
+- Frontend route hiding is UX only; backend authorization is mandatory.
+- Test cross-tenant access using Organization A and Organization B.
+- RLS is enabled on public application tables.
+- anon and authenticated direct table privileges have been revoked for the initial tables.
+- EcoTrack application data is currently accessed through Express + Prisma, not direct Supabase Data API queries.
+
+Migration rules
+---------------
+- Use Prisma Migrate for schema history.
+- Use meaningful migration names.
+- Review generated SQL.
+- Never edit an applied migration.
+- When custom SQL is required (RLS, functions, triggers, PostGIS, specialized indexes), add it to a new reviewed migration.
+- Never run prisma migrate reset against existing data without explicit user approval.
+- If Prisma reports an applied migration was modified, restore the original migration and create a new migration for the additional SQL.
+- Regenerate Prisma Client after schema changes.
+- Do not use prisma db push as a substitute for migration history unless explicitly requested for a throwaway experiment.
+
+Current initial data model
+--------------------------
+- UserProfile
+- Organization
+- OrganizationMember
+
+Role separation:
+- PlatformRole: USER, SUPER_ADMIN
+- OrganizationRole: MEMBER, VOLUNTEER, ORG_ADMIN
+- A user can have different roles in different organizations.
+- The first SUPER_ADMIN is a platform role and does not require an organization membership.
+
+Authentication roadmap
+-----------------------
+Initial:
+- Supabase Auth verifies Bearer access tokens.
+- Prisma loads EcoTrack profile and status.
+- Simple middleware checks active SUPER_ADMIN.
+
+Before main domain modules:
+- Install and configure CASL.
+- Add ability.middleware.ts and authorize.middleware.ts.
+- Enforce route-level and record-level authorization.
+
+Later:
+- Redis may cache user context and memberships for approximately 3–5 minutes.
+- Invalidate cache immediately when roles, memberships, account status, or organization status changes.
+
+Module structure rules
+----------------------
+Use normal controllers/services for small operations.
+
+Use a use-cases/<operation>/ folder when an operation:
+- performs multiple database writes,
+- needs a transaction,
+- calls another module,
+- creates notifications,
+- writes audit logs,
+- queues work,
+- has complex branching/status transitions.
+
+Example:
+backend/src/modules/tasks/
+├── tasks.routes.ts
+├── controllers/
+├── services/
+├── use-cases/
+├── repositories/
+├── schemas/
+├── tasks.types.ts
+└── tasks.constants.ts
+
+Infrastructure placement
+------------------------
+Shared clients live outside domain modules:
+- backend/src/config/env.ts
+- backend/src/config/supabase.ts
+- backend/src/config/redis.ts (later)
+- backend/src/database/prisma.ts
+- backend/src/queues/ (later)
+- backend/src/workers/ (later)
+
+Domain modules import shared clients; they do not create new Prisma/Supabase/Redis clients.
+
+Current foundation files
+------------------------
+- backend/prisma/schema.prisma
+- backend/prisma/migrations/
+- backend/prisma/seed.ts
+- backend/src/config/env.ts
+- backend/src/config/supabase.ts
+- backend/src/database/prisma.ts
+- backend/src/generated/prisma/
+- backend/src/scripts/checkDatabase.ts
+- backend/prisma.config.ts
+- backend/tsconfig.json
+- backend/package.json
+- .editorconfig
+
+Verification after relevant edits
+---------------------------------
+Use only commands relevant to the change, such as:
+- npm run typecheck
+- npm run build
+- npx prisma format
+- npx prisma validate
+- npx prisma migrate status
+- npm run prisma:generate
+- npm run db:check
+
+When reporting completed work
+-----------------------------
+Always state:
+1. Files inspected.
+2. Files created or changed.
+3. What was implemented.
+4. Commands run.
+5. Verification results.
+6. Any unresolved issue or assumption.
+
+Do not claim a command passed unless it was actually run successfully.
+Do not hide failures.
+Do not make destructive changes without explicit approval.
