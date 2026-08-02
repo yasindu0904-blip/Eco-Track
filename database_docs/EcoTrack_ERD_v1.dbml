@@ -1,0 +1,752 @@
+Project EcoTrack_ERD_v1 {
+  database_type: 'PostgreSQL'
+  Note: '''
+  EcoTrack draft ERD v1.
+  - Supabase Auth is passwordless email/magic-link authentication.
+  - All normal users have citizen + volunteer capabilities; there is no separate volunteer role table.
+  - Incidents are shared platform records. Organization visibility is calculated spatially from service areas.
+  - Cleanup tasks are tenant-owned records and only one active task may exist per incident.
+  - PostgreSQL + PostGIS is the target database; Prisma is the ORM.
+  '''
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+Enum platform_role {
+  USER
+  SUPER_ADMIN
+}
+
+Enum account_status {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+Enum organization_status {
+  PENDING_REVIEW
+  ACTIVE
+  DECLINED
+  SUSPENDED
+  ARCHIVED
+}
+
+Enum document_review_status {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+Enum membership_role {
+  ORG_MEMBER
+  ORG_ADMIN
+}
+
+Enum membership_status {
+  ACTIVE
+  SUSPENDED
+  LEFT
+  REMOVED
+}
+
+Enum membership_request_status {
+  PENDING
+  APPROVED
+  DECLINED
+  WITHDRAWN
+}
+
+Enum membership_source {
+  REQUEST_APPROVED
+  ADMIN_ADDED
+  FIRST_ADMIN
+}
+
+Enum incident_severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+Enum incident_global_status {
+  OPEN
+  ACTIVE_CLEANUP
+  RESOLVED
+  ARCHIVED
+}
+
+Enum workflow_scope {
+  INCIDENT_REVIEW
+  CLEANUP_TASK
+}
+
+Enum task_participant_status {
+  JOINED
+  WITHDRAWN
+  REMOVED
+}
+
+Enum task_session_status {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+Enum session_assignment_status {
+  PLANNED
+  ATTENDED
+  ABSENT
+  REMOVED
+}
+
+Enum evidence_type {
+  BEFORE
+  PROGRESS
+  AFTER
+}
+
+Enum notification_type {
+  REPORT_STATUS_CHANGED
+  TASK_CREATED
+  TASK_UPDATED
+  TASK_CANCELLED
+  SESSION_ASSIGNED
+  MEMBERSHIP_REQUEST_UPDATED
+  ORGANIZATION_REVIEW_UPDATED
+  ACHIEVEMENT_AWARDED
+  GENERAL
+}
+
+Enum issue_status {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+Enum contribution_event_type {
+  VERIFIED_INCIDENT_REPORT
+  TASK_SESSION_ATTENDED
+  TASK_COMPLETED
+  SPECIAL_CONTRIBUTION
+}
+
+// ============================================================
+// IDENTITY AND AUTHENTICATION
+// ============================================================
+
+Table auth.users [note: 'External table managed by Supabase Auth. No password is stored in EcoTrack tables.'] {
+  id uuid [pk]
+  email varchar [not null, unique]
+  email_confirmed_at timestamp
+  created_at timestamp [not null, default: `now()`]
+}
+
+Table user_profiles [headerColor: #4C78A8] {
+  id uuid [pk]
+  auth_user_id uuid [not null, unique]
+  full_name varchar [not null]
+  phone_number varchar [not null]
+  platform_role platform_role [not null, default: 'USER']
+  account_status account_status [not null, default: 'ACTIVE']
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+  deleted_at timestamp
+
+  Note: 'Every normal profile automatically has citizen and volunteer capabilities.'
+}
+
+// ============================================================
+// ORGANIZATION ONBOARDING, AREAS, AND MEMBERSHIP
+// ============================================================
+
+Table organizations [headerColor: #59A14F] {
+  id uuid [pk]
+  requested_by_user_id uuid [not null]
+  name varchar [not null]
+  slug varchar [not null, unique]
+  registration_number varchar
+  description text
+  official_email varchar [not null]
+  official_phone varchar [not null]
+  official_address text [not null]
+  status organization_status [not null, default: 'PENDING_REVIEW']
+  reviewed_by_user_id uuid
+  reviewed_at timestamp
+  review_notes text
+  activated_at timestamp
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+  archived_at timestamp
+
+  Note: 'Represents an existing real-world organization requesting a verified EcoTrack presence.'
+}
+
+Table organization_verification_documents [headerColor: #59A14F] {
+  id uuid [pk]
+  organization_id uuid [not null]
+  document_type varchar [not null]
+  storage_path varchar [not null]
+  original_file_name varchar [not null]
+  review_status document_review_status [not null, default: 'PENDING']
+  reviewed_by_user_id uuid
+  reviewed_at timestamp
+  review_notes text
+  uploaded_at timestamp [not null, default: `now()`]
+}
+
+Table organization_status_history [headerColor: #59A14F] {
+  id uuid [pk]
+  organization_id uuid [not null]
+  from_status organization_status
+  to_status organization_status [not null]
+  changed_by_user_id uuid [not null]
+  notes text
+  changed_at timestamp [not null, default: `now()`]
+}
+
+Table organization_service_areas [headerColor: #59A14F] {
+  id uuid [pk]
+  organization_id uuid [not null]
+  area_name varchar [not null]
+  boundary geography [not null, note: 'PostGIS geography(MultiPolygon, 4326) or geometry equivalent.']
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    organization_id
+  }
+
+  Note: 'An active organization must have at least one active service area. Enforce before activation/publishing.'
+}
+
+Table organization_memberships [headerColor: #59A14F] {
+  id uuid [pk]
+  organization_id uuid [not null]
+  user_id uuid [not null]
+  role membership_role [not null, default: 'ORG_MEMBER']
+  status membership_status [not null, default: 'ACTIVE']
+  source membership_source [not null]
+  source_request_id uuid [unique]
+  added_or_approved_by_membership_id uuid
+  joined_at timestamp [not null, default: `now()`]
+  ended_at timestamp
+
+  indexes {
+    (organization_id, user_id) [unique]
+    (organization_id, role, status)
+  }
+
+  Note: 'A citizen may request only ORG_MEMBER. ORG_ADMIN is granted only by an existing authorized admin or during first-admin creation.'
+}
+
+Table organization_membership_requests [headerColor: #59A14F] {
+  id uuid [pk]
+  organization_id uuid [not null]
+  requester_user_id uuid [not null]
+  message text
+  status membership_request_status [not null, default: 'PENDING']
+  reviewed_by_membership_id uuid
+  reviewed_at timestamp
+  review_notes text
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (organization_id, requester_user_id, status)
+  }
+
+  Note: 'Request is always for ORG_MEMBER; users cannot request ORG_ADMIN.'
+}
+
+// ============================================================
+// CONFIGURABLE WORKFLOWS
+// ============================================================
+
+Table workflow_definitions [headerColor: #B279A2] {
+  id uuid [pk]
+  organization_id uuid [not null]
+  scope workflow_scope [not null]
+  name varchar [not null]
+  is_default boolean [not null, default: false]
+  is_active boolean [not null, default: true]
+  created_by_membership_id uuid [not null]
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (organization_id, scope, name) [unique]
+  }
+}
+
+Table workflow_statuses [headerColor: #B279A2] {
+  id uuid [pk]
+  workflow_id uuid [not null]
+  code varchar [not null]
+  label varchar [not null]
+  position int [not null]
+  is_initial boolean [not null, default: false]
+  is_final boolean [not null, default: false]
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (workflow_id, code) [unique]
+    (workflow_id, position) [unique]
+  }
+}
+
+Table workflow_transitions [headerColor: #B279A2] {
+  id uuid [pk]
+  workflow_id uuid [not null]
+  from_status_id uuid [not null]
+  to_status_id uuid [not null]
+
+  indexes {
+    (workflow_id, from_status_id, to_status_id) [unique]
+  }
+}
+
+Table workflow_transition_roles [headerColor: #B279A2] {
+  transition_id uuid [not null]
+  allowed_role membership_role [not null]
+
+  indexes {
+    (transition_id, allowed_role) [pk]
+  }
+}
+
+// ============================================================
+// SHARED INCIDENT REPORTING
+// ============================================================
+
+Table incident_categories [headerColor: #F28E2B] {
+  id uuid [pk]
+  name varchar [not null, unique]
+  description text
+  is_active boolean [not null, default: true]
+}
+
+Table incidents [headerColor: #F28E2B] {
+  id uuid [pk]
+  reporter_user_id uuid [not null]
+  category_id uuid [not null]
+  title varchar [not null]
+  description text [not null]
+  severity incident_severity [not null]
+  global_status incident_global_status [not null, default: 'OPEN']
+  latitude decimal(9,6) [not null]
+  longitude decimal(9,6) [not null]
+  geo_point geography [not null, note: 'PostGIS geography(Point, 4326); generated or synchronized from latitude/longitude.']
+  address_text text
+  reported_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+  resolved_at timestamp
+  archived_at timestamp
+
+  indexes {
+    (global_status, reported_at)
+    category_id
+    reporter_user_id
+  }
+
+  Note: 'Shared platform record. It has no organization_id. Visibility is derived by spatial intersection with organization_service_areas.'
+}
+
+Table incident_photos [headerColor: #F28E2B] {
+  id uuid [pk]
+  incident_id uuid [not null]
+  storage_path varchar [not null]
+  caption varchar
+  sort_order int [not null, default: 0]
+  uploaded_at timestamp [not null, default: `now()`]
+}
+
+Table incident_global_status_history [headerColor: #F28E2B] {
+  id uuid [pk]
+  incident_id uuid [not null]
+  from_status incident_global_status
+  to_status incident_global_status [not null]
+  changed_by_user_id uuid [not null]
+  notes text
+  changed_at timestamp [not null, default: `now()`]
+}
+
+Table incident_organization_states [headerColor: #F28E2B] {
+  id uuid [pk]
+  incident_id uuid [not null]
+  organization_id uuid [not null]
+  workflow_id uuid [not null]
+  current_status_id uuid [not null]
+  first_viewed_at timestamp [not null, default: `now()`]
+  updated_by_membership_id uuid [not null]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (incident_id, organization_id) [unique]
+  }
+
+  Note: 'Optional per-organization review/workflow state. It is not the visibility mapping.'
+}
+
+Table incident_organization_state_history [headerColor: #F28E2B] {
+  id uuid [pk]
+  incident_organization_state_id uuid [not null]
+  from_status_id uuid
+  to_status_id uuid [not null]
+  changed_by_membership_id uuid [not null]
+  notes text
+  changed_at timestamp [not null, default: `now()`]
+}
+
+// ============================================================
+// ORGANIZATION-OWNED CLEANUP TASKS
+// ============================================================
+
+Table cleanup_tasks [headerColor: #E15759] {
+  id uuid [pk]
+  incident_id uuid [not null]
+  organization_id uuid [not null]
+  workflow_id uuid [not null]
+  current_status_id uuid [not null]
+  created_by_membership_id uuid [not null]
+  title varchar [not null]
+  description text [not null]
+  public_instructions text
+  meeting_latitude decimal(9,6)
+  meeting_longitude decimal(9,6)
+  meeting_geo_point geography [note: 'PostGIS geography(Point, 4326).']
+  meeting_address text
+  published_at timestamp
+  completed_at timestamp
+  cancelled_at timestamp
+  cancellation_reason text
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    incident_id [note: 'Implement a PostgreSQL partial UNIQUE index so one incident has at most one non-cancelled/non-completed active task.']
+    (organization_id, current_status_id)
+  }
+
+  Note: 'Task belongs to exactly one organization and exactly one shared incident.'
+}
+
+Table task_sessions [headerColor: #E15759] {
+  id uuid [pk]
+  task_id uuid [not null]
+  session_date date [not null]
+  start_time time [not null]
+  end_time time [not null]
+  capacity int
+  status task_session_status [not null, default: 'SCHEDULED']
+  notes text
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (task_id, session_date, start_time) [unique]
+  }
+
+  Note: 'A published task must have at least one session. Multi-day tasks use multiple rows.'
+}
+
+Table task_coordinators [headerColor: #E15759] {
+  id uuid [pk]
+  task_id uuid [not null]
+  membership_id uuid [not null]
+  assigned_by_membership_id uuid [not null]
+  assigned_at timestamp [not null, default: `now()`]
+  removed_at timestamp
+
+  indexes {
+    (task_id, membership_id) [unique]
+  }
+
+  Note: 'The membership must belong to the same organization as the task. Coordinators are task-specific; this does not promote them to ORG_ADMIN.'
+}
+
+Table task_participants [headerColor: #E15759] {
+  id uuid [pk]
+  task_id uuid [not null]
+  user_id uuid [not null]
+  status task_participant_status [not null, default: 'JOINED']
+  joined_at timestamp [not null, default: `now()`]
+  withdrawn_at timestamp
+  removed_at timestamp
+  removed_by_membership_id uuid
+  removal_reason text
+
+  indexes {
+    (task_id, user_id) [unique]
+  }
+
+  Note: 'Created immediately when a citizen presses Join; there is no application/approval process.'
+}
+
+Table task_participant_availability [headerColor: #E15759] {
+  participant_id uuid [not null]
+  session_id uuid [not null]
+  marked_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (participant_id, session_id) [pk]
+  }
+
+  Note: 'A row means the volunteer declared availability for that task session.'
+}
+
+Table task_session_assignments [headerColor: #E15759] {
+  id uuid [pk]
+  participant_id uuid [not null]
+  session_id uuid [not null]
+  assigned_by_membership_id uuid [not null]
+  status session_assignment_status [not null, default: 'PLANNED']
+  assigned_at timestamp [not null, default: `now()`]
+  attendance_marked_by_membership_id uuid
+  attendance_marked_at timestamp
+  notes text
+
+  indexes {
+    (participant_id, session_id) [unique]
+  }
+
+  Note: 'Org admins/coordinators divide joined volunteers across the days for which they are available.'
+}
+
+Table task_notes [headerColor: #E15759] {
+  id uuid [pk]
+  task_id uuid [not null]
+  author_membership_id uuid [not null]
+  note_text text [not null]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp
+
+  Note: 'Only task coordinators/admins write these notes; only joined volunteers and authorized organization members read them.'
+}
+
+Table task_status_history [headerColor: #E15759] {
+  id uuid [pk]
+  task_id uuid [not null]
+  from_status_id uuid
+  to_status_id uuid [not null]
+  changed_by_membership_id uuid [not null]
+  notes text
+  changed_at timestamp [not null, default: `now()`]
+}
+
+Table task_evidence [headerColor: #E15759] {
+  id uuid [pk]
+  task_id uuid [not null]
+  session_id uuid
+  uploaded_by_user_id uuid [not null]
+  evidence_type evidence_type [not null]
+  storage_path varchar [not null]
+  caption text
+  uploaded_at timestamp [not null, default: `now()`]
+}
+
+// ============================================================
+// REWARDS AND ACHIEVEMENTS
+// ============================================================
+
+Table contribution_events [headerColor: #EDC948] {
+  id uuid [pk]
+  user_id uuid [not null]
+  event_type contribution_event_type [not null]
+  incident_id uuid
+  session_assignment_id uuid
+  points int [not null]
+  recorded_by_user_id uuid
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (user_id, created_at)
+  }
+
+  Note: 'Exactly one source should be used when relevant: incident_id for verified reports or session_assignment_id for attendance. Enforce with a CHECK constraint.'
+}
+
+Table achievement_definitions [headerColor: #EDC948] {
+  id uuid [pk]
+  code varchar [not null, unique]
+  name varchar [not null]
+  description text [not null]
+  threshold_points int
+  highlight_on_map boolean [not null, default: false]
+  is_active boolean [not null, default: true]
+}
+
+Table user_achievements [headerColor: #EDC948] {
+  id uuid [pk]
+  user_id uuid [not null]
+  achievement_id uuid [not null]
+  awarded_from_event_id uuid
+  awarded_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (user_id, achievement_id) [unique]
+  }
+}
+
+// ============================================================
+// NOTIFICATIONS, SUPPORT, AND AUDIT
+// ============================================================
+
+Table user_devices [headerColor: #76B7B2] {
+  id uuid [pk]
+  user_id uuid [not null]
+  expo_push_token varchar [not null, unique]
+  platform varchar [not null]
+  is_active boolean [not null, default: true]
+  registered_at timestamp [not null, default: `now()`]
+  last_seen_at timestamp
+}
+
+Table notifications [headerColor: #76B7B2] {
+  id uuid [pk]
+  user_id uuid [not null]
+  organization_id uuid
+  type notification_type [not null]
+  title varchar [not null]
+  message text [not null]
+  data jsonb
+  read_at timestamp
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (user_id, read_at, created_at)
+  }
+}
+
+Table issue_reports [headerColor: #76B7B2] {
+  id uuid [pk]
+  reporter_user_id uuid [not null]
+  organization_id uuid
+  category varchar [not null]
+  description text [not null]
+  app_platform varchar
+  app_version varchar
+  status issue_status [not null, default: 'OPEN']
+  handled_by_user_id uuid
+  resolution_notes text
+  created_at timestamp [not null, default: `now()`]
+  resolved_at timestamp
+}
+
+Table issue_report_attachments [headerColor: #76B7B2] {
+  id uuid [pk]
+  issue_report_id uuid [not null]
+  storage_path varchar [not null]
+  uploaded_at timestamp [not null, default: `now()`]
+}
+
+Table audit_logs [headerColor: #76B7B2] {
+  id uuid [pk]
+  actor_user_id uuid [not null]
+  organization_id uuid
+  action varchar [not null]
+  entity_type varchar [not null]
+  entity_id uuid [not null]
+  metadata jsonb
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (organization_id, created_at)
+    (entity_type, entity_id)
+    (actor_user_id, created_at)
+  }
+}
+
+// ============================================================
+// RELATIONSHIPS / FOREIGN KEYS
+// ============================================================
+
+Ref: auth.users.id - user_profiles.auth_user_id [delete: cascade]
+
+Ref: organizations.requested_by_user_id > user_profiles.id [delete: restrict]
+Ref: organizations.reviewed_by_user_id > user_profiles.id [delete: set null]
+Ref: organization_verification_documents.organization_id > organizations.id [delete: cascade]
+Ref: organization_verification_documents.reviewed_by_user_id > user_profiles.id [delete: set null]
+Ref: organization_status_history.organization_id > organizations.id [delete: cascade]
+Ref: organization_status_history.changed_by_user_id > user_profiles.id [delete: restrict]
+Ref: organization_service_areas.organization_id > organizations.id [delete: cascade]
+
+Ref: organization_memberships.organization_id > organizations.id [delete: restrict]
+Ref: organization_memberships.user_id > user_profiles.id [delete: restrict]
+Ref: organization_membership_requests.id - organization_memberships.source_request_id [delete: set null]
+Ref: organization_memberships.added_or_approved_by_membership_id > organization_memberships.id [delete: set null]
+Ref: organization_membership_requests.organization_id > organizations.id [delete: cascade]
+Ref: organization_membership_requests.requester_user_id > user_profiles.id [delete: cascade]
+Ref: organization_membership_requests.reviewed_by_membership_id > organization_memberships.id [delete: set null]
+
+Ref: workflow_definitions.organization_id > organizations.id [delete: cascade]
+Ref: workflow_definitions.created_by_membership_id > organization_memberships.id [delete: restrict]
+Ref: workflow_statuses.workflow_id > workflow_definitions.id [delete: cascade]
+Ref: workflow_transitions.workflow_id > workflow_definitions.id [delete: cascade]
+Ref: workflow_transitions.from_status_id > workflow_statuses.id [delete: restrict]
+Ref: workflow_transitions.to_status_id > workflow_statuses.id [delete: restrict]
+Ref: workflow_transition_roles.transition_id > workflow_transitions.id [delete: cascade]
+
+Ref: incidents.reporter_user_id > user_profiles.id [delete: restrict]
+Ref: incidents.category_id > incident_categories.id [delete: restrict]
+Ref: incident_photos.incident_id > incidents.id [delete: cascade]
+Ref: incident_global_status_history.incident_id > incidents.id [delete: cascade]
+Ref: incident_global_status_history.changed_by_user_id > user_profiles.id [delete: restrict]
+Ref: incident_organization_states.incident_id > incidents.id [delete: cascade]
+Ref: incident_organization_states.organization_id > organizations.id [delete: cascade]
+Ref: incident_organization_states.workflow_id > workflow_definitions.id [delete: restrict]
+Ref: incident_organization_states.current_status_id > workflow_statuses.id [delete: restrict]
+Ref: incident_organization_states.updated_by_membership_id > organization_memberships.id [delete: restrict]
+Ref: incident_organization_state_history.incident_organization_state_id > incident_organization_states.id [delete: cascade]
+Ref: incident_organization_state_history.from_status_id > workflow_statuses.id [delete: set null]
+Ref: incident_organization_state_history.to_status_id > workflow_statuses.id [delete: restrict]
+Ref: incident_organization_state_history.changed_by_membership_id > organization_memberships.id [delete: restrict]
+
+Ref: cleanup_tasks.incident_id > incidents.id [delete: restrict]
+Ref: cleanup_tasks.organization_id > organizations.id [delete: restrict]
+Ref: cleanup_tasks.workflow_id > workflow_definitions.id [delete: restrict]
+Ref: cleanup_tasks.current_status_id > workflow_statuses.id [delete: restrict]
+Ref: cleanup_tasks.created_by_membership_id > organization_memberships.id [delete: restrict]
+Ref: task_sessions.task_id > cleanup_tasks.id [delete: cascade]
+Ref: task_coordinators.task_id > cleanup_tasks.id [delete: cascade]
+Ref: task_coordinators.membership_id > organization_memberships.id [delete: restrict]
+Ref: task_coordinators.assigned_by_membership_id > organization_memberships.id [delete: restrict]
+Ref: task_participants.task_id > cleanup_tasks.id [delete: cascade]
+Ref: task_participants.user_id > user_profiles.id [delete: restrict]
+Ref: task_participants.removed_by_membership_id > organization_memberships.id [delete: set null]
+Ref: task_participant_availability.participant_id > task_participants.id [delete: cascade]
+Ref: task_participant_availability.session_id > task_sessions.id [delete: cascade]
+Ref: task_session_assignments.participant_id > task_participants.id [delete: cascade]
+Ref: task_session_assignments.session_id > task_sessions.id [delete: cascade]
+Ref: task_session_assignments.assigned_by_membership_id > organization_memberships.id [delete: restrict]
+Ref: task_session_assignments.attendance_marked_by_membership_id > organization_memberships.id [delete: set null]
+Ref: task_notes.task_id > cleanup_tasks.id [delete: cascade]
+Ref: task_notes.author_membership_id > organization_memberships.id [delete: restrict]
+Ref: task_status_history.task_id > cleanup_tasks.id [delete: cascade]
+Ref: task_status_history.from_status_id > workflow_statuses.id [delete: set null]
+Ref: task_status_history.to_status_id > workflow_statuses.id [delete: restrict]
+Ref: task_status_history.changed_by_membership_id > organization_memberships.id [delete: restrict]
+Ref: task_evidence.task_id > cleanup_tasks.id [delete: cascade]
+Ref: task_evidence.session_id > task_sessions.id [delete: set null]
+Ref: task_evidence.uploaded_by_user_id > user_profiles.id [delete: restrict]
+
+Ref: contribution_events.user_id > user_profiles.id [delete: cascade]
+Ref: contribution_events.incident_id > incidents.id [delete: set null]
+Ref: contribution_events.session_assignment_id > task_session_assignments.id [delete: set null]
+Ref: contribution_events.recorded_by_user_id > user_profiles.id [delete: set null]
+Ref: user_achievements.user_id > user_profiles.id [delete: cascade]
+Ref: user_achievements.achievement_id > achievement_definitions.id [delete: restrict]
+Ref: user_achievements.awarded_from_event_id > contribution_events.id [delete: set null]
+
+Ref: user_devices.user_id > user_profiles.id [delete: cascade]
+Ref: notifications.user_id > user_profiles.id [delete: cascade]
+Ref: notifications.organization_id > organizations.id [delete: set null]
+Ref: issue_reports.reporter_user_id > user_profiles.id [delete: restrict]
+Ref: issue_reports.organization_id > organizations.id [delete: set null]
+Ref: issue_reports.handled_by_user_id > user_profiles.id [delete: set null]
+Ref: issue_report_attachments.issue_report_id > issue_reports.id [delete: cascade]
+Ref: audit_logs.actor_user_id > user_profiles.id [delete: restrict]
+Ref: audit_logs.organization_id > organizations.id [delete: set null]

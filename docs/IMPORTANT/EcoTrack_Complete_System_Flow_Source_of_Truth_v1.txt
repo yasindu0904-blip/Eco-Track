@@ -1,0 +1,249 @@
+ECOTRACK COMPLETE SYSTEM FLOW AND CURRENT SOURCE OF TRUTH
+Version 1.0
+Purpose: Shared reference for ChatGPT, Codex, the SRS, the Design Document, database design, API design, frontend implementation, backend implementation, and team review.
+
+IMPORTANT PRECEDENCE RULE
+
+This document records the latest agreed EcoTrack behavior. It keeps the original PID 8 project identity—a multi-tenant SaaS platform for community-driven environmental incident reporting and cleanup coordination—but it replaces older wording where the project proposal or earlier planning notes used passwords, separate citizen and volunteer roles, volunteer applications, forced task assignment, one-organization incident ownership, or Super Admin incident assignment. When an older source conflicts with this document, this document is the current source of truth until the team explicitly changes it.
+
+1. SYSTEM IDENTITY AND CORE PRINCIPLES
+
+EcoTrack is a free community coordination service that helps citizens report environmental problems, helps verified real-world environmental organizations discover reports within their service areas, helps an interested organization create and coordinate a cleanup event, and helps citizens voluntarily join those events. It is not an employment system, government enforcement system, payment system, donation system, or platform that forces citizens or organizations to perform work. Participation is always voluntary. The platform replaces fragmented posters, social-media posts, messaging groups, calls, and manual volunteer lists with a structured map-based workflow, notifications, history, and organization-specific coordination tools.
+
+The platform is a multi-tenant SaaS system. Multiple independent environmental organizations use the same backend and database, but organization-owned information such as members, coordinators, participant contact details, internal notes, workflows, and analytics remains isolated by organization. Environmental incidents are an important exception: a newly reported incident is a shared platform record whose visibility is calculated from location. It is not owned by one organization when first submitted. Cleanup events are organization-owned records.
+
+The product should use the user-facing term “Cleanup Event.” Existing technical notes or database code may use “Cleanup Task.” For consistency, both terms refer to the same domain object, but the user interface and SRS should prefer “Cleanup Event,” while code may use a model such as CleanupTask or a table such as cleanup_tasks if the team keeps that naming convention.
+
+2. CURRENT APPLICATIONS, UI/UX TOOL, AND TECHNOLOGY DIRECTION
+
+The citizen and volunteer field experience is provided through a React Native and Expo mobile application written in TypeScript. The organization and platform management experience is provided through a React, TypeScript, and Vite web application. Both applications use the same Node.js, Express.js, and TypeScript REST API. Figma is used only for UI/UX design and prototypes; Figma is not the mobile implementation technology. The Figma screens will be inserted into SRS Section 3.9.1 as interface figures and placeholders.
+
+The backend follows a modular monolith, not microservices, for the semester project. The standard request flow is Route -> Authentication Middleware -> Tenant/Context Middleware -> Ability/Authorization Middleware -> Controller -> Service or Use Case -> Repository -> Prisma/PostgreSQL, with Redis used only where caching, rate limiting, locking, idempotency, or queued background work provides a clear benefit. Supabase PostgreSQL with PostGIS is the permanent source of structured and geospatial data. Prisma is the main ORM and database-access layer. CASL with @casl/prisma is the intended authorization-rule engine. OpenStreetMap-based mapping is used for map presentation. Expo Push Notifications are sufficient for MVP notifications. WebSockets are not required for the MVP; REST plus refresh/polling and push notifications are sufficient.
+
+3. ACCOUNT MODEL AND ROLE MODEL
+
+EcoTrack uses one account per person. A person must not create separate citizen, volunteer, organization-member, and organization-admin accounts. Every normal registered user automatically receives the complete Citizen and Volunteer capability set. There is no separate volunteer registration, volunteer activation, skills profile, job profile, application process, wage, or payment. “Citizen” and “Volunteer” describe two ways the same base account can use the platform: the person acts as a citizen when reporting or browsing and acts as a volunteer when joining a cleanup event.
+
+Organization membership is additional organization-scoped access attached to the same account. A user may be an ORG_MEMBER in one organization and an ORG_ADMIN in another while still retaining all normal citizen and volunteer functions. Task coordination is not a permanent platform role. It is a task-specific assignment given to one or more active members of the organization that owns the cleanup event. A Task Coordinator can manage only the cleanup events to which that membership has been assigned, subject to the organization’s permission rules.
+
+SUPER_ADMIN is a platform role granted through controlled administrative provisioning. It cannot be requested by a citizen, organization member, or organization admin. A Super Admin is not automatically an organization member and does not participate in daily cleanup coordination. Super Admin authority is limited to platform oversight, viewing platform information, reviewing real-organization onboarding requests and proof documents, approving or declining organization access, and handling platform-level safety or support actions. Super Admin must not assign incidents, choose which organization should act, create ordinary cleanup events for organizations, allocate volunteers, remove volunteers from events, or control normal task progress.
+
+4. PASSWORDLESS MAGIC-LINK AUTHENTICATION
+
+EcoTrack uses Supabase passwordless email authentication with magic links. The application does not ask the user to create or enter a password. The user enters an email address, Supabase sends a secure one-time magic link, and selecting the link verifies the email and creates or restores the Supabase session. For the mobile application, the authentication callback must be configured using an Expo/React Native deep link or an approved universal/app link so that selecting the email link opens the EcoTrack mobile application automatically. For the web application, the magic link uses an approved HTTPS callback to return the user to the EcoTrack web interface.
+
+After Supabase creates the session, the frontend receives a Supabase access token and sends it to the Express API as a Bearer token. The backend verifies the token through the configured Supabase authentication client, reads the authenticated Supabase user ID, loads or provisions the EcoTrack UserProfile through Prisma, checks the account status, loads the platform role and organization memberships, builds the CASL ability, and returns the user context. Long-lived sign-in behavior is managed by Supabase sessions and refresh-token handling. EcoTrack must never store a password because passwords are not part of the selected authentication method.
+
+A first-time verified user receives a UserProfile and automatically has citizen and volunteer capabilities. Name and phone number may be completed as profile fields after the first magic-link verification. Roles sent by the frontend, editable cookies, local storage values, or hidden buttons must never be treated as authorization evidence. The backend is the authority.
+
+5. MAP ACCESS AND ROLE-SPECIFIC MAP VIEWS
+
+Citizens and volunteers open a low-bandwidth mobile map centered on the current location when permission is granted, or on a selected default area when permission is not granted. The user may pan and zoom the map. Moving the map triggers a bounded or debounced request for the visible map area rather than downloading all national data. Markers should be clustered at low zoom levels and expanded into individual incidents and cleanup events as the user zooms in. Images should use thumbnails, lists should be paginated, and API responses should select only the fields needed by the current screen.
+
+A citizen primarily sees nearby active incidents, published cleanup events, their own reports, joined cleanup events, and resolved-history information appropriate for public display. An Org Admin or assigned Org Member uses the web application to see incidents that intersect the organization’s approved service areas and organization-owned cleanup events. A Super Admin may view platform-wide map and aggregate information for oversight but does not use the map to assign work.
+
+Location permission is requested only when needed for current-location reporting or navigation. The app must not continuously track the user. A citizen can always choose a location manually on the map.
+
+6. REAL ORGANIZATION ONBOARDING
+
+EcoTrack does not create a new real-world organization. It gives an already existing real environmental organization, NGO, community group, society, club, or similar body a verified presence and management workspace on the platform. A normal EcoTrack user submits an organization onboarding request containing the organization’s official information, one or more proposed service areas, contact details, address, registration or identifying information, and copies of required proof documents. The exact list of legally acceptable government or organizational documents will be researched and finalized later; the data model and SRS should leave room for multiple document types, review status, reviewer notes, and expiry dates where relevant.
+
+The Super Admin reviews the organization request and its documents. Approval creates or activates the organization’s EcoTrack tenant/workspace and grants the authorized requester the first ORG_ADMIN membership. Declining the request must record a reason. Duplicate organization applications should be detected using normalized organization name, registration number, official contact details, and manual document review. A duplicate request should not create a second tenant for the same real organization.
+
+Every active organization must have at least one approved active service area. An organization may have one service area or several separate areas. Because service areas determine which shared incidents the organization can discover, the initial areas should be reviewed as part of organization approval, and later area changes should require platform review or another controlled approval process. An organization must not be allowed to expand its service area through an unverified frontend request simply to access unrelated reports.
+
+Organization removal should normally use SUSPENDED or ARCHIVED status rather than immediate hard deletion so historical tasks, incident relationships, achievements, and audit records are preserved. A suspended organization cannot create new events or manage active operations until restored.
+
+7. ORGANIZATION MEMBERSHIP AND ADMINISTRATION
+
+A citizen may already be a real-life member of a registered organization even though the EcoTrack Org Admin has not added that person. The citizen can therefore request EcoTrack membership in the organization. This request is only for ORG_MEMBER. A citizen cannot request ORG_ADMIN, and an ORG_MEMBER cannot request promotion to ORG_ADMIN through a self-service promotion request.
+
+An Org Admin reviews the membership request and verifies whether the person is genuinely connected to the real organization. Approval creates an active organization membership; decline records a reason. An Org Admin may also add or invite an existing EcoTrack user where supported. An existing Org Admin may promote an active ORG_MEMBER to ORG_ADMIN. The promotion must be authorized, audited, and followed by authorization-cache invalidation. A user must not be allowed to promote themselves. The system should prevent removal or demotion of the final active Org Admin unless another active admin is first assigned.
+
+An ORG_MEMBER does not automatically manage every organization event. The member can access the organization workspace and the limited functions granted by policy, but operational permissions for a particular cleanup event are obtained when an Org Admin assigns the membership as a Task Coordinator for that event. The same person remains a citizen/volunteer and can independently join public events as a volunteer if desired.
+
+8. ORGANIZATION SERVICE AREAS AND OVERLAPPING-AREA RESOLUTION
+
+Each organization has one or more active geospatial service areas. The recommended implementation is a PostGIS Polygon or MultiPolygon for each area, with a spatial index. When a citizen submits an incident point, the system finds every active organization with at least one active service-area geometry that covers the point. A boundary-inclusive function such as ST_Covers should be preferred over a strict interior-only function so an incident exactly on an area boundary is not accidentally excluded.
+
+Overlapping service areas are expected and are not an error. If Organization A, Organization B, and Organization C all cover the incident location, the same shared incident becomes visible to all three. The system must not duplicate the incident into three separate incident records, and the citizen must not choose an organization. The incident remains one platform record with independent per-organization review records.
+
+The visibility relationship is derived from geometry, not from an organization_id on the incident. A unique organization-review row may be created when an organization first views or responds to the incident. That row stores only that organization’s review state and notes. The organization’s private review notes remain tenant-protected. An organization’s FALSE decision does not hide or reject the incident for other organizations. An organization’s VALID decision does not force another organization to act.
+
+If no approved organization covers the location, the incident may still be accepted and shown to the reporter and on the public map according to visibility rules, with an “No registered organization currently covers this area” or “Unaddressed” state. The Super Admin does not assign the incident to an organization. The platform must preserve the voluntary nature of the service.
+
+If service areas are changed while an incident is active, discovery can be recalculated against the current active areas. Existing historical organization-review records must not be deleted. An organization that already owns a cleanup event linked to that incident retains access to its own event even if service-area boundaries later change.
+
+9. INCIDENT REPORTING FLOW
+
+A citizen starts an incident report from the map. The user selects the current GPS location or manually places and confirms a map pin. The selected point must be shown clearly before submission so incorrect GPS positions can be corrected. The citizen then enters the incident title, description, category, severity, and photo evidence as required by the finalized SRS. The mobile app should compress images, enforce file-count and size limits, show upload progress, and provide safe retry behavior for weak connections. An offline draft may be an advanced feature after the online MVP is stable.
+
+When the report is submitted, the backend validates the input, rate-limits abusive submissions, stores the incident as a shared platform record, stores photo metadata, records status history, and calculates the currently covering organizations. The citizen does not choose an organization and cannot force an organization to act. The reporter can view the report and its global status history.
+
+The system should reduce obvious duplicate reports without incorrectly merging legitimate separate incidents. When a user places a pin, the application may show recent nearby incidents with a similar category and allow the user to view them before submitting. The backend may flag probable duplicates using distance, time, and category, but it should not automatically merge reports solely because they are nearby. A moderator or organization can review a suspected duplicate while preserving the original submission and audit history.
+
+10. INCIDENT VISIBILITY PERIOD AND EXPIRY RULE
+
+A two-hour visibility period is too short for volunteer organizations because admins may not continuously monitor the platform, and reports submitted at night, during work hours, or on holidays could disappear before review. The recommended working rule is therefore a configurable 48-hour active/highlight period. During the first 48 hours, the incident is shown prominently as NEW or ACTIVE to covering organizations and on the relevant public map. This value must be stored as configuration rather than scattered as a hard-coded number so the team can later change it after testing.
+
+The end of the 48-hour period must not delete the report. If no cleanup event was created, the incident moves from the strongly highlighted feed to an UNADDRESSED or EXPIRED state and remains in history. A practical default is to keep it searchable in the ordinary active/unaddressed view for up to seven days and then archive it from the default map while preserving the record. The team may later adjust the seven-day period. A report that already has an active cleanup event remains visible through its event lifecycle regardless of the original highlight timeout.
+
+A global incident lifecycle can use OPEN or ACTIVE, CLEANUP_ORGANIZED, RESOLVED, EXPIRED/UNADDRESSED, and ARCHIVED. The shared global status is controlled by platform business rules and cleanup-event lifecycle, not by one organization’s private review decision.
+
+11. INDEPENDENT ORGANIZATION REVIEW AND FALSE COUNTS
+
+Each covering organization can independently review the incident using states such as NOT_REVIEWED, VIEWED, VALID, and FALSE. The organization may change its own review state when new information becomes available. There must be at most one current review state per organization per incident. Changing from FALSE to VALID updates the organization’s existing state; it must not count as two separate organizations.
+
+The system displays the number of distinct active organizations that currently marked the report FALSE. This false count is informational and should normally be displayed without exposing private organization notes. For example, the map or incident detail may show “Marked false by 2 organizations.” The count is not a majority vote, is not a global rejection threshold, and does not remove the report. Another organization may still mark the incident VALID and create a cleanup event while the incident is within the permitted active/available lifecycle.
+
+The platform may also display how many covering organizations have reviewed the incident, but review counts must not force action. If an organization marked the report FALSE and another organization creates a cleanup event, the false count remains part of the history while the global incident state changes to CLEANUP_ORGANIZED. The organization that marked FALSE is not required to participate.
+
+Organizations should record an internal reason when marking a report FALSE, such as location incorrect, no issue found, duplicate, insufficient evidence, or outside the organization’s practical capability. Public users may receive a generalized status, while private notes remain visible only to authorized organization users and platform oversight where legally justified.
+
+12. CREATING A CLEANUP EVENT FROM AN INCIDENT
+
+A covering organization that independently considers the incident valid and is willing to organize a cleanup may create a cleanup event linked to that incident. This is voluntary. The system must not say that the organization was “assigned” the incident. The Org Admin creates the event and provides the title, public description, cleanup location, meeting location where applicable, instructions, equipment guidance, session dates and times, and other event details. The Org Admin assigns one or more active organization memberships as Task Coordinators.
+
+Only one active cleanup event may be linked to one incident at a time for the semester MVP. This avoids duplicate public volunteer recruitment for the same report. Several organizations may mark the incident valid, but the first organization that successfully commits the active cleanup-event creation becomes the owner of that event. The event belongs only to that organization; its internal notes, coordinators, participants, and analytics are tenant-owned.
+
+The overlapping-organization race condition must be solved at the database level, not only by disabling a button. Event creation must run in a database transaction and use a constraint such as a PostgreSQL partial unique index or equivalent locking rule that permits at most one non-cancelled, non-completed active event per incident. If Organization A and Organization B submit at nearly the same time, the first valid transaction succeeds and the second receives a conflict response such as HTTP 409 with a message that an active cleanup event already exists. Both organizations then see the created public event.
+
+When an active event is created, the incident changes to CLEANUP_ORGANIZED and is no longer available for another active event. If the event is cancelled before completion, the linked incident may return to ACTIVE or UNADDRESSED, depending on the time window, and may become available for another organization to create a replacement event. The cancelled event remains in history. When the event is completed and the cleanup outcome is confirmed, the linked incident becomes RESOLVED. If the cleanup was incomplete, an authorized organization user may reopen the incident or create a follow-up event according to the finalized workflow and audit rules.
+
+Cross-organization collaboration on one event is not part of the initial MVP unless the team explicitly adds it later. For the MVP, one event has one owning organization even though volunteers may come from the general citizen population.
+
+13. CREATING A DIRECT CLEANUP EVENT WITHOUT AN INCIDENT
+
+An Org Admin may create a cleanup event without using a citizen incident report. This supports planned beach cleanups, lake cleanups, drainage cleanups, tree-planting or restoration activities, regular community events, and issues discovered through channels outside EcoTrack. In this path, incident_id is absent or NULL. The event still belongs to exactly one organization, must be within or relevant to the organization’s approved operational area according to policy, and follows the same publishing, session, coordinator, volunteer, progress, evidence, completion, and notification flow.
+
+Direct events do not claim or modify unrelated incident reports. If an Org Admin creates a direct event near an existing active incident, the interface should show a warning and nearby records so the admin can choose to link the event to the report when appropriate. The system should not automatically link by distance because multiple legitimate activities may occur in the same area. Similarly, two different organizations may have legitimate direct events near each other. The system may warn about highly similar same-time, same-location events, but it should not block them unless they are both trying to claim the same incident. Duplicate submissions from the same organization and request should be prevented using idempotency keys or unique business constraints.
+
+14. CLEANUP EVENT SESSIONS AND MULTI-DAY SCHEDULING
+
+A cleanup event may contain one session, several sessions on the same day, or sessions across several days. The event record stores the overall event information, while each actual date and time is stored as a separate Event Session or Task Session. For example, a three-day cleanup from 9:00 a.m. to 10:00 a.m. each day creates three session rows rather than storing a comma-separated date list. Each session has a date, start time, end time, location or inherited event location, capacity where applicable, session status, and notes.
+
+A draft event may temporarily have no sessions while being edited. A published event must have at least one valid session and at least one authorized coordinator. Session end time must be later than start time. Event publication should validate that the owning organization is active, the creator is an active Org Admin, the coordinators belong to that organization, and the event location and public details are complete.
+
+Default event statuses may include DRAFT, PUBLISHED or JOINABLE, SCHEDULED, IN_PROGRESS, COMPLETION_SUBMITTED where needed, COMPLETED, and CANCELLED. Organizations may configure additional workflow labels or allowed transitions, but the platform must protect required initial and final states and must not allow a workflow configuration to bypass authorization or corrupt the shared incident lifecycle.
+
+15. VOLUNTEER JOINING FLOW
+
+A citizen sees a published cleanup event on the map or event list and voluntarily selects Join Cleanup. This creates the task-participant relationship immediately. There is no job application, interview, volunteer approval queue, payment, employment obligation, or requirement to prove skills. A person can join an event regardless of whether they are an organization member, provided the account is active and the event is open for joining.
+
+For a one-session event, the volunteer can confirm availability for that session. For a multi-session event, the volunteer selects every day/session on which they are available. Availability means the person is willing and able to attend that session; it is not yet a compulsory assignment. The same participant must not be added to the same event twice, and availability for the same session must not be duplicated.
+
+An Org Admin or assigned Task Coordinator views the joined volunteers and their selected availability and divides them across suitable sessions. This is coordination or allocation, not employment assignment. The coordinator should normally allocate a volunteer only to a session that the volunteer marked as available. If a change is needed, the volunteer should be notified and allowed to accept the update or withdraw. Session capacity should be enforced where the event defines a limit.
+
+A volunteer may withdraw from the event or from selected sessions because the service is voluntary. The interface should encourage withdrawal before the session so coordinators have accurate numbers, but there is no monetary penalty. If a volunteer does not participate, an authorized coordinator or Org Admin may mark the session assignment ABSENT or remove the person from the event. Removal applies only to that event and does not suspend the user’s EcoTrack account. The system should record who removed the participant, when, and why. No-show users simply do not receive participation rewards for that session; negative points are not required for the free-service model.
+
+16. TASK COORDINATORS, NOTES, PARTICIPANT ACCESS, AND PROGRESS
+
+When the Org Admin creates or edits an event, the admin assigns one or more active members of the same organization as Task Coordinators. Org Admins may also coordinate directly. Coordinator assignment is event-specific and must not promote the member to ORG_ADMIN.
+
+Authorized coordinators can view the joined participants and their availability, divide participants among sessions, add participant-visible operational notes, update permitted event or session statuses, record attendance, add progress information, upload organization evidence, and remove or mark absent volunteers when necessary. The exact status transitions available to ORG_MEMBER coordinators and ORG_ADMIN users must be expressed as authorization rules and workflow transitions.
+
+Before joining, a citizen sees only public event information needed to decide whether to participate, including organization name, event title, public description, general location, date and time, public instructions, and current event status. After joining, the participant can see participant-specific notes, meeting instructions, schedule allocations, changes, and progress updates for that event. Joined volunteers do not gain access to unrelated organization tasks, organization member lists, private incident-review notes, workflow configuration, or organization analytics.
+
+Participant phone numbers and private contact details must not be public. They may be visible only to the owning organization’s authorized admins/coordinators when operationally necessary. Volunteers may receive an official organization or coordinator contact method after joining. Other volunteers should not automatically see each other’s personal phone numbers.
+
+17. EVENT COMPLETION, INCIDENT RESOLUTION, AND HISTORY
+
+During an event, coordinators update session and event progress. Evidence may include before, progress, and after photos and notes. Heavy image processing, thumbnail generation, and mass notification sending should occur in Redis-backed workers after the permanent database transaction is committed, not while the API holds an open transaction.
+
+When all required sessions are completed, an Org Admin or permitted coordinator submits the event for completion or marks it completed according to the organization workflow. Attendance records and evidence are preserved. If the event is linked to an incident and the cleanup outcome is accepted, the global incident status changes to RESOLVED in the same coordinated business transaction, with status history and audit records. External push sending happens after commit.
+
+Public history may show completed events and resolved incidents with organization name, general location, category, dates, summary, and approved before/after evidence. Public history must not expose private reporter contact details, private notes, participant phone numbers, government documents, or other tenant-confidential information. Organization dashboards show detailed statistics only for their own organization. Super Admin dashboards may show platform-wide aggregates and necessary oversight data.
+
+18. CONTRIBUTION REWARDS AND MAP HIGHLIGHTING
+
+EcoTrack may provide non-monetary rewards such as points, badges, achievement levels, verified-contributor labels, completed-event counts, and community-contribution milestones. Rewards recognize useful participation but do not create employment, payment, legal entitlement, administrative authority, or priority over other volunteers.
+
+A citizen should not receive full report-contribution points merely for submitting any report because this would encourage spam. A report can produce a verified contribution event when at least one authorized organization marks it valid, when it leads to a cleanup event, or when another finalized verification rule confirms its usefulness. A volunteer receives participation credit only after an authorized coordinator or Org Admin records actual attendance or verified completion for a session. Reward creation should use permanent contribution-event records so the system can explain why points were granted and prevent duplicate awards.
+
+A user who earns a qualifying achievement may receive a special public marker or label. For privacy, the map may display “Reported by a verified community contributor” or an achievement icon instead of automatically exposing the user’s full name. The false-count system, rewards, and achievements must never change authorization. A highly rewarded citizen still cannot verify incidents, manage an organization, or coordinate an event unless they hold the appropriate membership and event assignment.
+
+19. NOTIFICATIONS
+
+The mobile application requests push-notification permission and obtains an ExpoPushToken. The token is sent to the backend and stored against the authenticated user and device. Notification records are written to PostgreSQL and remain visible in the in-app notification list. Expo Push Notification delivery is an alert mechanism, not the permanent source of truth. If a push is delayed, disabled, or fails, the event, schedule, membership, and report changes must still be visible when the user opens the app.
+
+Useful notification events include magic-link authentication email, incident status changes, a new incident in an organization’s service area where configured, cleanup event publication, successful event joining, session allocation, schedule change, participant removal, event cancellation, event completion, membership-request approval or decline, organization-onboarding approval or decline, role changes, and achievement awards. Notification payloads should carry safe identifiers such as eventId, incidentId, organizationId, or sessionId so selecting the notification opens the correct screen.
+
+Mass or retryable push work should be queued through Redis and processed by a worker. Invalid device tokens should be deactivated and delivery failures logged. Sensitive private notes should not be placed directly in lock-screen notification text.
+
+20. SUPER ADMIN BOUNDARIES
+
+The Super Admin can view platform organizations, organization application statuses, submitted proof documents, approved service areas, platform-level statistics, support issues, and necessary audit information. The Super Admin can approve or decline organization access, suspend or archive fraudulent or invalid organization tenants, and manage platform-level account safety where justified.
+
+The Super Admin must not select an organization for an incident, force an organization to accept a report, create a normal cleanup event on behalf of an organization, allocate citizens to sessions, mark ordinary attendance, remove ordinary volunteers from an event, approve organization membership requests, promote organization members, or control normal event statuses. The platform exists to make voluntary cleanup coordination easier, not to centrally command volunteer organizations.
+
+Any exceptional Super Admin access to private tenant records for support, security, moderation, or legal reasons must be limited, logged, and auditable. The normal Super Admin dashboard should prefer aggregate data over unrestricted browsing of personal information.
+
+21. AUTHORIZATION AND MULTI-TENANT DATA ISOLATION
+
+Supabase Auth answers who the user is. Prisma reads the UserProfile, platform role, organization memberships, coordinator assignments, event participation, and record state. CASL defines what actions the user may perform on which subjects and records. Express middleware enforces these decisions before the controller. Redis may cache short-lived user and membership context only after database-backed authorization works correctly; PostgreSQL remains the source of truth.
+
+The protected backend flow is Authentication -> Account Status -> Organization/Tenant Context where applicable -> Ability Construction -> Action and Record Authorization -> Controller -> Service/Use Case -> Repository -> Prisma. Every organization-owned query must include the authorized organization context derived from verified membership, not an organization ID trusted from the frontend. Hiding a frontend button is not authorization.
+
+Shared incidents require different handling from tenant-owned events. An organization may read a shared incident only when the incident point is covered by one of its approved active service areas, when it has a preserved authorized historical interaction, or when it owns the linked cleanup event. The organization’s private review record is tenant-owned. Cleanup events, coordinators, participant operational data, task notes, organization workflows, and organization analytics always belong to one organization and require organization filtering.
+
+Authorization cache must be invalidated immediately when platform role, membership role, membership status, coordinator assignment, user status, organization status, or service-area authorization changes. Cross-tenant tests must always create at least Organization A and Organization B and verify that direct object-ID manipulation cannot expose the other tenant’s private records.
+
+22. DATABASE OWNERSHIP AND IMPORTANT CONSTRAINTS
+
+Supabase Auth manages the external authentication user. EcoTrack UserProfile links to the Supabase user ID. Core permanent entities include UserProfile, Organization, OrganizationVerificationDocument, OrganizationServiceArea, OrganizationMembership, OrganizationMembershipRequest, Incident, IncidentPhoto, IncidentOrganizationReview, CleanupEvent, EventSession, TaskCoordinator, TaskParticipant, ParticipantAvailability, SessionAllocation or SessionAssignment, TaskNote, TaskEvidence, WorkflowDefinition and Status, Notification, UserDevice, ContributionEvent, Achievement, IssueReport, StatusHistory, and AuditLog.
+
+An Incident has no mandatory organization_id because it is shared and location-routed. A Cleanup Event has a mandatory owning organization_id and an optional incident_id. A direct event has incident_id NULL. An event linked to a report has exactly one incident. One incident may have zero or many historical events across cancellation or follow-up, but only zero or one active event at a time for the MVP.
+
+Important uniqueness and integrity rules include one UserProfile per Supabase auth user, one membership per user and organization, one current review per incident and organization, one participant row per user and event, one availability row per participant and session, one allocation per participant and session, one current active event per incident, valid session times, valid latitude and longitude, organization/coordinator consistency, participant/session event consistency, required active service areas before organization activation, and required sessions and coordinators before event publication.
+
+Transactions are required for operations such as organization approval plus first admin creation, event creation plus incident claim plus history, participant allocation plus notification records, completion plus incident resolution plus audit, and role changes plus audit. External network calls, image processing, email, or push delivery must occur after the transaction commits.
+
+Optimistic concurrency or conditional updates should protect status changes so two admins cannot unknowingly overwrite each other. Idempotency keys should protect retried event creation, incident submission, device-token registration, and other retryable operations. Soft deletion or archival should preserve historical integrity.
+
+23. STATUS MODEL
+
+The platform should keep global shared-incident status separate from each organization’s private review status and from cleanup-event workflow status.
+
+Recommended global incident statuses are ACTIVE or OPEN, CLEANUP_ORGANIZED, RESOLVED, EXPIRED or UNADDRESSED, and ARCHIVED. These states describe the platform-wide lifecycle.
+
+Recommended organization review statuses are NOT_REVIEWED, VIEWED, VALID, and FALSE. One organization changes only its own review state. False counts are calculated from distinct current organization states.
+
+Recommended cleanup-event statuses are DRAFT, PUBLISHED or JOINABLE, SCHEDULED, IN_PROGRESS, COMPLETION_SUBMITTED where needed, COMPLETED, and CANCELLED. Event-session statuses may be SCHEDULED, IN_PROGRESS, COMPLETED, and CANCELLED. Participant-event states may be JOINED, WITHDRAWN, and REMOVED. Session-allocation or attendance states may be PLANNED, ATTENDED, ABSENT, and REMOVED.
+
+Organizations may configure workflow labels and transitions, but required starting, cancellation, completion, and incident-linking behavior must remain protected. Every status change should record who changed it, when, the previous state, the new state, and an optional reason.
+
+24. LOW-BANDWIDTH, PERFORMANCE, AND RELIABILITY BEHAVIOR
+
+The mobile application is intended to work acceptably on lower-performance devices and weaker networks. It should request map data by current bounding box or radius, cluster markers, use stable pagination, return small response shapes, compress images, use thumbnails, display progress, and retry safe operations. TanStack Query may cache frontend data. Redis may cache short-lived dashboard, membership, and map-query results, rate-limit abuse, prevent duplicate submissions, provide distributed locks for active-event claims, and queue notifications or image work. Redis must never replace PostgreSQL as permanent truth.
+
+Map and geospatial queries should use PostGIS spatial indexes. Frequently filtered organization-owned records should have indexes including organization, status, and date. Notification failures must not hide state. Database errors must not expose raw internals. The system should log request IDs, authorization failures, status transitions, important moderation actions, and slow queries without logging secrets or magic-link tokens.
+
+25. UI/UX PROTOTYPES FOR SRS SECTION 3.9.1
+
+Figma will be used to create the UI/UX designs. SRS Section 3.9.1 should reserve labeled figure space for approximately eight important interfaces: passwordless magic-link login, citizen/volunteer map, incident reporting and map-pin confirmation, cleanup-event details and Join flow, multi-day availability selection, organization dashboard, incident review plus cleanup-event creation and volunteer scheduling, and Super Admin organization-document review. Each figure should include a caption, a placeholder or inserted Figma image, an explanation of controls and displayed information, and references to related functional requirements.
+
+26. OUT-OF-SCOPE OR NOT REQUIRED FOR THE MVP
+
+The MVP does not include financial transactions, donations, wages, paid jobs, compulsory assignments, automated satellite analysis, machine learning pollution detection, IoT sensor integration, unrestricted cross-organization collaboration, or a microservices architecture. Direct Firebase Cloud Messaging, WebSockets, full offline synchronization, heatmaps, advanced recommendations, and separate specialized services are optional future work only after the complete core flow is stable.
+
+27. COMPLETE END-TO-END FLOW
+
+A user enters an email address and receives a Supabase magic link. Selecting the link opens EcoTrack, verifies the email, creates the session, and provisions or loads the UserProfile. The account automatically has citizen and volunteer capabilities. The user opens the mobile map, uses the current location or manually confirms a map pin, enters incident information, attaches compressed photo evidence, and submits. The backend stores one shared incident and uses PostGIS to find all active organizations whose approved service areas cover the point. The citizen does not choose an organization, and the Super Admin does not assign one.
+
+Every covering organization can independently view and review the same incident. One may mark it FALSE, another may mark it FALSE, and a third may mark it VALID. The map can show the current number of organizations that marked it false, but the count does not delete the incident or prevent another organization from acting. The incident remains strongly highlighted for a recommended configurable 48-hour period. If no cleanup event is created, it moves to an unaddressed/expired state rather than being deleted, remains searchable for a further configured period such as seven days, and is then archived from the default map while history is preserved.
+
+An interested organization voluntarily creates a cleanup event from the valid incident. A transaction and database uniqueness rule allow only the first active event for that incident. The event belongs only to the organization that created it. Alternatively, an Org Admin can create a direct cleanup event without any incident report. The admin defines one or more sessions and assigns one or more active organization members as coordinators. The event is published publicly.
+
+Citizens voluntarily press Join. There is no application or approval. For multi-day events, each volunteer selects available sessions. The Org Admin or assigned coordinators organize the joined volunteers across suitable sessions, publish participant notes, and send schedule updates. Volunteers can withdraw. Coordinators can mark attendance, remove a non-participant from the event, update progress, and add evidence. Joined volunteers can see the event’s participant notes and their schedule but cannot see unrelated tenant data.
+
+When the event is completed, authorized organization users record attendance and evidence and complete the event according to the workflow. If linked to an incident, the incident becomes resolved. Verified reports and attended sessions create contribution events and may award non-monetary points, badges, or a privacy-safe map highlight. Notifications inform relevant users, but application records remain the source of truth. Super Admin observes platform health and approves real organizations but never controls ordinary incident acceptance, volunteer participation, or cleanup operations.
+
+28. NON-NEGOTIABLE RULES FOR CHATGPT AND CODEX
+
+Any future SRS, design document, ERD, Prisma schema, API, UI, or implementation generated from this source must preserve the following rules: one account per person; every normal account is automatically citizen plus volunteer; passwordless Supabase magic link with app deep linking; no password; citizen does not choose an organization; incident is shared and has no initial tenant owner; service-area overlap means all covering organizations see the same incident; each organization reviews independently; false count is informational and not a vote; no Super Admin incident assignment; organizations act voluntarily; one active event per incident; event belongs to the organization that creates it; direct events without reports are allowed; volunteers join immediately without application or approval; multi-day availability is chosen by volunteers and coordinated by authorized organization users; task coordinators are assigned organization members, not permanent new roles; no payment or employment; rewards are non-monetary and verified; Super Admin only oversees the platform and organization onboarding; organization members can request membership but cannot request admin; tenant-owned data must be filtered by verified backend context; frontend role claims are never trusted; Figma is only the UI/UX design tool; React Native/Expo remains the mobile implementation.
+
+29. KNOWN ITEMS TO FINALIZE LATER
+
+The exact government or legal proof documents required for organization onboarding remain to be researched. The 48-hour highlight period and seven-day unaddressed period are recommended configurable defaults and may be adjusted after stakeholder review or prototype testing. The exact default workflow labels, mandatory incident-photo count, detailed reward thresholds, and whether a future version supports formal multi-organization collaboration can be finalized later without changing the core flow above.
+
+END OF SOURCE OF TRUTH
