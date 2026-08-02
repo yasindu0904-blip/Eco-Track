@@ -1,0 +1,759 @@
+Project EcoTrack_ERD_v2_Simplified {
+  database_type: 'PostgreSQL'
+  Note: '''
+  EcoTrack ERD v2 - simplified MVP-focused design.
+
+  Main rules:
+  - Supabase Auth manages passwordless magic-link identity.
+  - Every normal account has both Citizen and Volunteer capabilities.
+  - Incidents are shared platform records; organization visibility is derived from PostGIS service-area coverage.
+  - Each organization reviews an incident independently as VIEWED, VALID, or FALSE.
+  - Cleanup events belong to one organization and may optionally link to one incident.
+  - Only one active cleanup event may exist for an incident at a time.
+  - Volunteers join immediately; availability and actual session allocation are separate.
+  - Audit logs replace several separate status-history tables that were not needed for the MVP.
+  - Cleanup workflow configuration is simplified to organization-specific statuses and transitions.
+  '''
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+Enum platform_role {
+  USER
+  SUPER_ADMIN
+}
+
+Enum account_status {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+Enum organization_status {
+  PENDING_REVIEW
+  ACTIVE
+  DECLINED
+  SUSPENDED
+  ARCHIVED
+}
+
+Enum document_review_status {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+Enum service_area_status {
+  PENDING_REVIEW
+  ACTIVE
+  REJECTED
+  INACTIVE
+}
+
+Enum membership_role {
+  ORG_MEMBER
+  ORG_ADMIN
+}
+
+Enum membership_status {
+  ACTIVE
+  SUSPENDED
+  LEFT
+  REMOVED
+}
+
+Enum membership_request_status {
+  PENDING
+  APPROVED
+  DECLINED
+  WITHDRAWN
+}
+
+Enum membership_source {
+  REQUEST_APPROVED
+  ADMIN_ADDED
+  FIRST_ADMIN
+}
+
+Enum incident_severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+Enum incident_status {
+  ACTIVE
+  CLEANUP_ORGANIZED
+  RESOLVED
+  EXPIRED
+  ARCHIVED
+}
+
+Enum incident_review_status {
+  VIEWED
+  VALID
+  FALSE
+}
+
+Enum cleanup_lifecycle_status {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETION_SUBMITTED
+  COMPLETED
+  CANCELLED
+}
+
+Enum session_status {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+Enum participant_status {
+  JOINED
+  WITHDRAWN
+  REMOVED
+}
+
+Enum allocation_status {
+  PLANNED
+  ATTENDED
+  ABSENT
+  REMOVED
+}
+
+Enum note_visibility {
+  PARTICIPANTS
+  INTERNAL
+}
+
+Enum evidence_type {
+  BEFORE
+  PROGRESS
+  AFTER
+}
+
+Enum notification_type {
+  INCIDENT_STATUS_CHANGED
+  NEW_INCIDENT_IN_AREA
+  EVENT_PUBLISHED
+  EVENT_JOINED
+  SESSION_ALLOCATED
+  EVENT_UPDATED
+  EVENT_CANCELLED
+  EVENT_COMPLETED
+  MEMBERSHIP_UPDATED
+  ORGANIZATION_REVIEW_UPDATED
+  ACHIEVEMENT_AWARDED
+  GENERAL
+}
+
+Enum issue_status {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+Enum contribution_type {
+  VERIFIED_INCIDENT_REPORT
+  SESSION_ATTENDED
+  EVENT_COMPLETED
+  SPECIAL_CONTRIBUTION
+}
+
+// ============================================================
+// AUTHENTICATION AND USER PROFILE
+// ============================================================
+
+Table auth.users [note: 'External Supabase Auth table. Passwordless magic-link identity and sessions are managed by Supabase.'] {
+  id uuid [pk]
+  email varchar [not null, unique]
+  email_confirmed_at timestamp
+  created_at timestamp [not null, default: `now()`]
+}
+
+Table public.user_profiles [headerColor: #4C78A8] {
+  id uuid [pk]
+  auth_user_id uuid [not null, unique]
+  full_name varchar
+  phone_number varchar
+  platform_role platform_role [not null, default: 'USER']
+  account_status account_status [not null, default: 'ACTIVE']
+  profile_completed_at timestamp
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+  archived_at timestamp
+
+  Note: 'Every normal profile automatically has Citizen and Volunteer capabilities. No separate citizen or volunteer table is required.'
+}
+
+// ============================================================
+// ORGANIZATION ONBOARDING, AREAS, AND MEMBERSHIP
+// ============================================================
+
+Table public.organizations [headerColor: #59A14F] {
+  id uuid [pk]
+  requested_by_user_id uuid [not null]
+  name varchar [not null]
+  slug varchar [not null, unique]
+  registration_number varchar
+  description text
+  official_email varchar [not null]
+  official_phone varchar [not null]
+  official_address text [not null]
+  status organization_status [not null, default: 'PENDING_REVIEW']
+  reviewed_by_user_id uuid
+  reviewed_at timestamp
+  review_notes text
+  activated_at timestamp
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+  archived_at timestamp
+
+  Note: 'Represents an existing real-world organization requesting an EcoTrack workspace; EcoTrack does not create the real organization itself.'
+}
+
+Table public.organization_verification_documents [headerColor: #59A14F] {
+  id uuid [pk]
+  organization_id uuid [not null]
+  document_type varchar [not null]
+  storage_path varchar [not null]
+  original_file_name varchar [not null]
+  review_status document_review_status [not null, default: 'PENDING']
+  reviewed_by_user_id uuid
+  reviewed_at timestamp
+  review_notes text
+  expires_at date
+  uploaded_at timestamp [not null, default: `now()`]
+
+  Note: 'Separate table is required because one organization can upload several proof documents.'
+}
+
+Table public.organization_service_areas [headerColor: #59A14F] {
+  id uuid [pk]
+  organization_id uuid [not null]
+  area_name varchar [not null]
+  boundary geography [not null, note: 'PostGIS geography(MultiPolygon, 4326) or geometry equivalent.']
+  status service_area_status [not null, default: 'PENDING_REVIEW']
+  reviewed_by_user_id uuid
+  reviewed_at timestamp
+  review_notes text
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    organization_id
+  }
+
+  Note: 'An active organization must have at least one ACTIVE service area. The boundary determines which shared incidents the organization can discover.'
+}
+
+Table public.organization_memberships [headerColor: #59A14F] {
+  id uuid [pk]
+  organization_id uuid [not null]
+  user_id uuid [not null]
+  role membership_role [not null, default: 'ORG_MEMBER']
+  status membership_status [not null, default: 'ACTIVE']
+  source membership_source [not null]
+  source_request_id uuid [unique]
+  added_or_approved_by_membership_id uuid
+  joined_at timestamp [not null, default: `now()`]
+  ended_at timestamp
+
+  indexes {
+    (organization_id, user_id) [unique]
+    (organization_id, role, status)
+  }
+
+  Note: 'A user can be a member/admin in several organizations. Citizens may request only ORG_MEMBER; ORG_ADMIN is granted by an authorized admin or as the first admin.'
+}
+
+Table public.organization_membership_requests [headerColor: #59A14F] {
+  id uuid [pk]
+  organization_id uuid [not null]
+  requester_user_id uuid [not null]
+  message text
+  status membership_request_status [not null, default: 'PENDING']
+  reviewed_by_membership_id uuid
+  reviewed_at timestamp
+  review_notes text
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (organization_id, requester_user_id, status)
+  }
+
+  Note: 'Request is always for ORG_MEMBER. A partial unique index should prevent more than one PENDING request for the same user and organization.'
+}
+
+// ============================================================
+// SIMPLIFIED ORGANIZATION CLEANUP WORKFLOW
+// ============================================================
+
+Table public.cleanup_workflow_statuses [headerColor: #B279A2] {
+  id uuid [pk]
+  organization_id uuid [not null]
+  code varchar [not null]
+  label varchar [not null]
+  mapped_lifecycle_status cleanup_lifecycle_status [not null]
+  position int [not null]
+  is_initial boolean [not null, default: false]
+  is_final boolean [not null, default: false]
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (organization_id, code) [unique]
+    (organization_id, position) [unique]
+  }
+
+  Note: 'Each organization has one cleanup-event workflow for the MVP. This replaces the older workflow_definitions table.'
+}
+
+Table public.cleanup_workflow_transitions [headerColor: #B279A2] {
+  id uuid [pk]
+  from_status_id uuid [not null]
+  to_status_id uuid [not null]
+
+  indexes {
+    (from_status_id, to_status_id) [unique]
+  }
+
+  Note: 'Defines which organization-specific cleanup statuses may follow one another. Role permissions remain in CASL/application authorization, not in another database table.'
+}
+
+// ============================================================
+// SHARED INCIDENT REPORTING AND ORGANIZATION REVIEW
+// ============================================================
+
+Table public.incident_categories [headerColor: #F28E2B] {
+  id uuid [pk]
+  name varchar [not null, unique]
+  description text
+  is_active boolean [not null, default: true]
+}
+
+Table public.incidents [headerColor: #F28E2B] {
+  id uuid [pk]
+  reporter_user_id uuid [not null]
+  category_id uuid [not null]
+  title varchar [not null]
+  description text [not null]
+  severity incident_severity [not null]
+  status incident_status [not null, default: 'ACTIVE']
+  latitude decimal(9,6) [not null]
+  longitude decimal(9,6) [not null]
+  geo_point geography [not null, note: 'PostGIS geography(Point, 4326).']
+  address_text text
+  highlight_until timestamp [not null, note: 'Calculated from the configured highlight duration when the report is created.']
+  archive_after timestamp [not null, note: 'Calculated from the configured unaddressed/archive duration when the report is created.']
+  reported_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+  resolved_at timestamp
+  archived_at timestamp
+
+  indexes {
+    (status, reported_at)
+    category_id
+    reporter_user_id
+  }
+
+  Note: 'Shared platform record with no organization_id. Covering organizations are derived by spatially comparing geo_point with ACTIVE organization_service_areas.'
+}
+
+Table public.incident_photos [headerColor: #F28E2B] {
+  id uuid [pk]
+  incident_id uuid [not null]
+  storage_path varchar [not null]
+  thumbnail_path varchar
+  caption varchar
+  sort_order int [not null, default: 0]
+  uploaded_at timestamp [not null, default: `now()`]
+}
+
+Table public.incident_reviews [headerColor: #F28E2B] {
+  id uuid [pk]
+  incident_id uuid [not null]
+  organization_id uuid [not null]
+  status incident_review_status [not null]
+  reason_code varchar
+  private_notes text
+  reviewed_by_membership_id uuid [not null]
+  first_viewed_at timestamp [not null, default: `now()`]
+  reviewed_at timestamp
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (incident_id, organization_id) [unique]
+    (incident_id, status)
+  }
+
+  Note: 'One current review per organization per incident. FALSE count is derived by counting distinct current FALSE rows; it is never stored on incidents.'
+}
+
+Table public.incident_status_history [headerColor: #F28E2B] {
+  id uuid [pk]
+  incident_id uuid [not null]
+  from_status incident_status
+  to_status incident_status [not null]
+  changed_by_user_id uuid
+  related_cleanup_event_id uuid
+  reason text
+  changed_at timestamp [not null, default: `now()`]
+
+  Note: 'Stores the reporter-visible shared lifecycle history: ACTIVE, CLEANUP_ORGANIZED, RESOLVED, EXPIRED, and ARCHIVED. Organization review changes are recorded in audit_logs instead of a second review-history table.'
+}
+
+// ============================================================
+// ORGANIZATION-OWNED CLEANUP EVENTS
+// ============================================================
+
+Table public.cleanup_events [headerColor: #E15759] {
+  id uuid [pk]
+  organization_id uuid [not null]
+  incident_id uuid [note: 'NULL for a direct cleanup event.']
+  current_workflow_status_id uuid [not null]
+  lifecycle_status cleanup_lifecycle_status [not null, default: 'DRAFT']
+  created_by_membership_id uuid [not null]
+  title varchar [not null]
+  description text [not null]
+  public_instructions text
+  event_latitude decimal(9,6) [not null]
+  event_longitude decimal(9,6) [not null]
+  event_geo_point geography [not null, note: 'PostGIS geography(Point, 4326).']
+  event_address text
+  meeting_latitude decimal(9,6)
+  meeting_longitude decimal(9,6)
+  meeting_geo_point geography
+  meeting_address text
+  published_at timestamp
+  completed_at timestamp
+  cancelled_at timestamp
+  cancellation_reason text
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    incident_id [note: 'Add a PostgreSQL partial UNIQUE index so one incident has at most one active event.']
+    (organization_id, lifecycle_status, created_at)
+  }
+
+  Note: 'Belongs to exactly one organization. It may be linked to one incident or be created directly with incident_id NULL.'
+}
+
+Table public.event_sessions [headerColor: #E15759] {
+  id uuid [pk]
+  cleanup_event_id uuid [not null]
+  session_date date [not null]
+  start_time time [not null]
+  end_time time [not null]
+  capacity int
+  status session_status [not null, default: 'SCHEDULED']
+  location_latitude decimal(9,6)
+  location_longitude decimal(9,6)
+  location_geo_point geography
+  location_address text
+  notes text
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (cleanup_event_id, session_date, start_time) [unique]
+  }
+
+  Note: 'One row per real date/time period. Multi-day events therefore use several rows rather than a date list in cleanup_events.'
+}
+
+Table public.event_coordinators [headerColor: #E15759] {
+  id uuid [pk]
+  cleanup_event_id uuid [not null]
+  membership_id uuid [not null]
+  assigned_by_membership_id uuid [not null]
+  assigned_at timestamp [not null, default: `now()`]
+  removed_at timestamp
+
+  indexes {
+    (cleanup_event_id, membership_id) [unique]
+  }
+
+  Note: 'Task-specific responsibility for an active member of the owning organization. It does not promote the member to ORG_ADMIN.'
+}
+
+Table public.event_participants [headerColor: #E15759] {
+  id uuid [pk]
+  cleanup_event_id uuid [not null]
+  user_id uuid [not null]
+  status participant_status [not null, default: 'JOINED']
+  joined_at timestamp [not null, default: `now()`]
+  withdrawn_at timestamp
+  removed_at timestamp
+  removed_by_membership_id uuid
+  removal_reason text
+
+  indexes {
+    (cleanup_event_id, user_id) [unique]
+  }
+
+  Note: 'Created immediately when a citizen presses Join. There is no volunteer application or approval table.'
+}
+
+Table public.participant_session_availability [headerColor: #E15759] {
+  participant_id uuid [not null]
+  session_id uuid [not null]
+  marked_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (participant_id, session_id) [pk]
+  }
+
+  Note: 'A row means the volunteer selected that session as available.'
+}
+
+Table public.session_allocations [headerColor: #E15759] {
+  id uuid [pk]
+  participant_id uuid [not null]
+  session_id uuid [not null]
+  allocated_by_membership_id uuid [not null]
+  status allocation_status [not null, default: 'PLANNED']
+  allocated_at timestamp [not null, default: `now()`]
+  attendance_marked_by_membership_id uuid
+  attendance_marked_at timestamp
+  notes text
+
+  indexes {
+    (participant_id, session_id) [unique]
+  }
+
+  Note: 'Stores the organization\'s actual scheduling decision and later attendance. This is separate from volunteer-selected availability.'
+}
+
+Table public.event_notes [headerColor: #E15759] {
+  id uuid [pk]
+  cleanup_event_id uuid [not null]
+  author_membership_id uuid [not null]
+  visibility note_visibility [not null, default: 'PARTICIPANTS']
+  note_text text [not null]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp
+
+  Note: 'PARTICIPANTS notes are visible to joined volunteers; INTERNAL notes remain organization-only.'
+}
+
+Table public.event_evidence [headerColor: #E15759] {
+  id uuid [pk]
+  cleanup_event_id uuid [not null]
+  session_id uuid
+  uploaded_by_user_id uuid [not null]
+  type evidence_type [not null]
+  storage_path varchar [not null]
+  thumbnail_path varchar
+  caption text
+  uploaded_at timestamp [not null, default: `now()`]
+}
+
+Table public.event_status_history [headerColor: #E15759] {
+  id uuid [pk]
+  cleanup_event_id uuid [not null]
+  from_workflow_status_id uuid
+  to_workflow_status_id uuid [not null]
+  changed_by_membership_id uuid [not null]
+  notes text
+  changed_at timestamp [not null, default: `now()`]
+
+  Note: 'Stores the cleanup-event status timeline shown to participants and organization users.'
+}
+
+// ============================================================
+// REWARDS, NOTIFICATIONS, SUPPORT, AND AUDIT
+// ============================================================
+
+Table public.contribution_events [headerColor: #EDC948] {
+  id uuid [pk]
+  user_id uuid [not null]
+  type contribution_type [not null]
+  incident_id uuid
+  session_allocation_id uuid
+  cleanup_event_id uuid
+  points int [not null]
+  recorded_by_user_id uuid
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (user_id, created_at)
+  }
+
+  Note: 'Immutable reason for points. A CHECK constraint should ensure the source column matches the contribution type and prevent duplicate awards.'
+}
+
+Table public.achievement_definitions [headerColor: #EDC948] {
+  id uuid [pk]
+  code varchar [not null, unique]
+  name varchar [not null]
+  description text [not null]
+  threshold_points int
+  highlight_on_map boolean [not null, default: false]
+  is_active boolean [not null, default: true]
+}
+
+Table public.user_achievements [headerColor: #EDC948] {
+  id uuid [pk]
+  user_id uuid [not null]
+  achievement_id uuid [not null]
+  awarded_from_contribution_id uuid
+  awarded_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (user_id, achievement_id) [unique]
+  }
+}
+
+Table public.user_devices [headerColor: #76B7B2] {
+  id uuid [pk]
+  user_id uuid [not null]
+  expo_push_token varchar [not null, unique]
+  platform varchar [not null]
+  is_active boolean [not null, default: true]
+  registered_at timestamp [not null, default: `now()`]
+  last_seen_at timestamp
+}
+
+Table public.notifications [headerColor: #76B7B2] {
+  id uuid [pk]
+  user_id uuid [not null]
+  organization_id uuid
+  type notification_type [not null]
+  title varchar [not null]
+  message text [not null]
+  data jsonb
+  read_at timestamp
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (user_id, read_at, created_at)
+  }
+
+  Note: 'Permanent in-app notification record. Expo push is only a delivery mechanism.'
+}
+
+Table public.issue_reports [headerColor: #76B7B2] {
+  id uuid [pk]
+  reporter_user_id uuid [not null]
+  organization_id uuid
+  category varchar [not null]
+  description text [not null]
+  screenshot_path varchar
+  app_platform varchar
+  app_version varchar
+  status issue_status [not null, default: 'OPEN']
+  handled_by_user_id uuid
+  resolution_notes text
+  created_at timestamp [not null, default: `now()`]
+  resolved_at timestamp
+
+  Note: 'MVP allows one optional screenshot, so a separate issue-report attachments table is not required.'
+}
+
+Table public.audit_logs [headerColor: #76B7B2] {
+  id uuid [pk]
+  actor_user_id uuid
+  organization_id uuid
+  action varchar [not null]
+  entity_type varchar [not null]
+  entity_id uuid [not null]
+  metadata jsonb
+  created_at timestamp [not null, default: `now()`]
+
+  indexes {
+    (organization_id, created_at)
+    (entity_type, entity_id)
+    (actor_user_id, created_at)
+  }
+
+  Note: 'Generic audit trail for organization status changes, service-area changes, review changes, membership role changes, suspensions, and other security-significant actions. This removes the need for several separate history tables.'
+}
+
+// ============================================================
+// RELATIONSHIPS / FOREIGN KEYS
+// ============================================================
+
+Ref: auth.users.id - public.user_profiles.auth_user_id [delete: cascade]
+
+Ref: public.organizations.requested_by_user_id > public.user_profiles.id [delete: restrict]
+Ref: public.organizations.reviewed_by_user_id > public.user_profiles.id [delete: set null]
+Ref: public.organization_verification_documents.organization_id > public.organizations.id [delete: cascade]
+Ref: public.organization_verification_documents.reviewed_by_user_id > public.user_profiles.id [delete: set null]
+Ref: public.organization_service_areas.organization_id > public.organizations.id [delete: cascade]
+Ref: public.organization_service_areas.reviewed_by_user_id > public.user_profiles.id [delete: set null]
+Ref: public.organization_memberships.organization_id > public.organizations.id [delete: restrict]
+Ref: public.organization_memberships.user_id > public.user_profiles.id [delete: restrict]
+Ref: public.organization_membership_requests.id - public.organization_memberships.source_request_id [delete: set null]
+Ref: public.organization_memberships.added_or_approved_by_membership_id > public.organization_memberships.id [delete: set null]
+Ref: public.organization_membership_requests.organization_id > public.organizations.id [delete: cascade]
+Ref: public.organization_membership_requests.requester_user_id > public.user_profiles.id [delete: cascade]
+Ref: public.organization_membership_requests.reviewed_by_membership_id > public.organization_memberships.id [delete: set null]
+
+Ref: public.cleanup_workflow_statuses.organization_id > public.organizations.id [delete: cascade]
+Ref: public.cleanup_workflow_transitions.from_status_id > public.cleanup_workflow_statuses.id [delete: cascade]
+Ref: public.cleanup_workflow_transitions.to_status_id > public.cleanup_workflow_statuses.id [delete: cascade]
+
+Ref: public.incidents.reporter_user_id > public.user_profiles.id [delete: restrict]
+Ref: public.incidents.category_id > public.incident_categories.id [delete: restrict]
+Ref: public.incident_photos.incident_id > public.incidents.id [delete: cascade]
+Ref: public.incident_reviews.incident_id > public.incidents.id [delete: cascade]
+Ref: public.incident_reviews.organization_id > public.organizations.id [delete: cascade]
+Ref: public.incident_reviews.reviewed_by_membership_id > public.organization_memberships.id [delete: restrict]
+Ref: public.incident_status_history.incident_id > public.incidents.id [delete: cascade]
+Ref: public.incident_status_history.changed_by_user_id > public.user_profiles.id [delete: set null]
+
+Ref: public.cleanup_events.organization_id > public.organizations.id [delete: restrict]
+Ref: public.cleanup_events.incident_id > public.incidents.id [delete: set null]
+Ref: public.cleanup_events.current_workflow_status_id > public.cleanup_workflow_statuses.id [delete: restrict]
+Ref: public.cleanup_events.created_by_membership_id > public.organization_memberships.id [delete: restrict]
+Ref: public.incident_status_history.related_cleanup_event_id > public.cleanup_events.id [delete: set null]
+Ref: public.event_sessions.cleanup_event_id > public.cleanup_events.id [delete: cascade]
+Ref: public.event_coordinators.cleanup_event_id > public.cleanup_events.id [delete: cascade]
+Ref: public.event_coordinators.membership_id > public.organization_memberships.id [delete: restrict]
+Ref: public.event_coordinators.assigned_by_membership_id > public.organization_memberships.id [delete: restrict]
+Ref: public.event_participants.cleanup_event_id > public.cleanup_events.id [delete: cascade]
+Ref: public.event_participants.user_id > public.user_profiles.id [delete: restrict]
+Ref: public.event_participants.removed_by_membership_id > public.organization_memberships.id [delete: set null]
+Ref: public.participant_session_availability.participant_id > public.event_participants.id [delete: cascade]
+Ref: public.participant_session_availability.session_id > public.event_sessions.id [delete: cascade]
+Ref: public.session_allocations.participant_id > public.event_participants.id [delete: cascade]
+Ref: public.session_allocations.session_id > public.event_sessions.id [delete: cascade]
+Ref: public.session_allocations.allocated_by_membership_id > public.organization_memberships.id [delete: restrict]
+Ref: public.session_allocations.attendance_marked_by_membership_id > public.organization_memberships.id [delete: set null]
+Ref: public.event_notes.cleanup_event_id > public.cleanup_events.id [delete: cascade]
+Ref: public.event_notes.author_membership_id > public.organization_memberships.id [delete: restrict]
+Ref: public.event_evidence.cleanup_event_id > public.cleanup_events.id [delete: cascade]
+Ref: public.event_evidence.session_id > public.event_sessions.id [delete: set null]
+Ref: public.event_evidence.uploaded_by_user_id > public.user_profiles.id [delete: restrict]
+Ref: public.event_status_history.cleanup_event_id > public.cleanup_events.id [delete: cascade]
+Ref: public.event_status_history.from_workflow_status_id > public.cleanup_workflow_statuses.id [delete: set null]
+Ref: public.event_status_history.to_workflow_status_id > public.cleanup_workflow_statuses.id [delete: restrict]
+Ref: public.event_status_history.changed_by_membership_id > public.organization_memberships.id [delete: restrict]
+
+Ref: public.contribution_events.user_id > public.user_profiles.id [delete: cascade]
+Ref: public.contribution_events.incident_id > public.incidents.id [delete: set null]
+Ref: public.contribution_events.session_allocation_id > public.session_allocations.id [delete: set null]
+Ref: public.contribution_events.cleanup_event_id > public.cleanup_events.id [delete: set null]
+Ref: public.contribution_events.recorded_by_user_id > public.user_profiles.id [delete: set null]
+Ref: public.user_achievements.user_id > public.user_profiles.id [delete: cascade]
+Ref: public.user_achievements.achievement_id > public.achievement_definitions.id [delete: restrict]
+Ref: public.user_achievements.awarded_from_contribution_id > public.contribution_events.id [delete: set null]
+Ref: public.user_devices.user_id > public.user_profiles.id [delete: cascade]
+Ref: public.notifications.user_id > public.user_profiles.id [delete: cascade]
+Ref: public.notifications.organization_id > public.organizations.id [delete: set null]
+Ref: public.issue_reports.reporter_user_id > public.user_profiles.id [delete: restrict]
+Ref: public.issue_reports.organization_id > public.organizations.id [delete: set null]
+Ref: public.issue_reports.handled_by_user_id > public.user_profiles.id [delete: set null]
+Ref: public.audit_logs.actor_user_id > public.user_profiles.id [delete: set null]
+Ref: public.audit_logs.organization_id > public.organizations.id [delete: set null]
