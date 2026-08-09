@@ -55,7 +55,7 @@ async function main(): Promise<void> {
       email,
       fullName,
       platformRole: PlatformRole.SUPER_ADMIN,
-      status: AccountStatus.ACTIVE,
+      accountStatus: AccountStatus.ACTIVE,
     },
 
     create: {
@@ -63,18 +63,32 @@ async function main(): Promise<void> {
       email,
       fullName,
       platformRole: PlatformRole.SUPER_ADMIN,
-      status: AccountStatus.ACTIVE,
+      accountStatus: AccountStatus.ACTIVE,
+    },
+
+    select: {
+      platformRole: true,
+      accountStatus: true,
+    },
+  });
+
+  const platformSettings = await prisma.platformSettings.upsert({
+    where: {
+      id: 1,
+    },
+
+    update: {},
+
+    create: {
+      id: 1,
+      incidentHighlightHours: 48,
+      incidentUnaddressedDays: 7,
     },
 
     select: {
       id: true,
-      authUserId: true,
-      email: true,
-      fullName: true,
-      platformRole: true,
-      status: true,
-      createdAt: true,
-      updatedAt: true,
+      incidentHighlightHours: true,
+      incidentUnaddressedDays: true,
     },
   });
 
@@ -82,7 +96,10 @@ async function main(): Promise<void> {
 
   console.log(
     JSON.stringify(
-      superAdminProfile,
+      {
+        superAdminProfile,
+        platformSettings,
+      },
       null,
       2,
     ),

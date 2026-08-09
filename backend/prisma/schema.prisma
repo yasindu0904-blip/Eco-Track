@@ -15,81 +15,219 @@ enum PlatformRole {
 enum AccountStatus {
   ACTIVE
   SUSPENDED
+  ARCHIVED
 }
 
 enum OrganizationStatus {
+  PENDING_REVIEW
   ACTIVE
+  DECLINED
   SUSPENDED
+  ARCHIVED
 }
 
-enum OrganizationRole {
-  MEMBER
-  VOLUNTEER
+enum DocumentReviewStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum MembershipRole {
+  ORG_MEMBER
   ORG_ADMIN
 }
 
 enum MembershipStatus {
-  INVITED
   ACTIVE
   SUSPENDED
+  LEFT
+  REMOVED
+}
+
+enum MembershipRequestStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  WITHDRAWN
+}
+
+enum MembershipSource {
+  REQUEST_APPROVED
+  ADMIN_ADDED
+  FIRST_ADMIN
 }
 
 model UserProfile {
   id         String @id @default(uuid()) @db.Uuid
   authUserId String @unique @map("auth_user_id") @db.Uuid
+  email      String @unique
 
-  email    String @unique
-  fullName String @map("full_name")
+  fullName           String?   @map("full_name")
+  phoneNumber        String?   @map("phone_number")
+  profileCompletedAt DateTime? @map("profile_completed_at") @db.Timestamptz(6)
 
-  platformRole PlatformRole  @default(USER) @map("platform_role")
-  status       AccountStatus @default(ACTIVE)
+  platformRole  PlatformRole  @default(USER) @map("platform_role")
+  accountStatus AccountStatus @default(ACTIVE) @map("account_status")
 
-  memberships OrganizationMember[]
+  memberships                   OrganizationMembership[]
+  membershipRequests            OrganizationMembershipRequest[]    @relation("MembershipRequester")
+  requestedOrganizations        Organization[]                     @relation("OrganizationRequester")
+  reviewedOrganizations         Organization[]                     @relation("OrganizationReviewer")
+  reviewedVerificationDocuments OrganizationVerificationDocument[] @relation("VerificationDocumentReviewer")
+  settingsUpdates               PlatformSettings[]
+  auditLogs                     AuditLog[]                         @relation("AuditActor")
+
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(6)
+
+  @@index([platformRole, accountStatus])
+  @@map("user_profiles")
+}
+
+model PlatformSettings {
+  id Int @id @default(1)
+
+  incidentHighlightHours  Int     @default(48) @map("incident_highlight_hours")
+  incidentUnaddressedDays Int     @default(7) @map("incident_unaddressed_days")
+  updatedByUserId         String? @map("updated_by_user_id") @db.Uuid
+
+  updatedBy UserProfile? @relation(fields: [updatedByUserId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@index([platformRole, status])
-  @@map("user_profiles")
+  @@map("platform_settings")
 }
 
 model Organization {
   id String @id @default(uuid()) @db.Uuid
 
-  name String
-  slug String @unique
+  requestedByUserId String  @map("requested_by_user_id") @db.Uuid
+  reviewedByUserId  String? @map("reviewed_by_user_id") @db.Uuid
 
-  description  String?
-  contactEmail String? @map("contact_email")
+  name               String
+  slug               String  @unique
+  registrationNumber String? @map("registration_number")
+  description        String?
+  officialEmail      String  @map("official_email")
+  officialPhone      String  @map("official_phone")
+  officialAddress    String  @map("official_address")
 
-  status OrganizationStatus @default(ACTIVE)
+  status      OrganizationStatus @default(PENDING_REVIEW)
+  reviewedAt  DateTime?          @map("reviewed_at") @db.Timestamptz(6)
+  reviewNotes String?            @map("review_notes")
+  activatedAt DateTime?          @map("activated_at") @db.Timestamptz(6)
 
-  memberships OrganizationMember[]
+  requestedBy UserProfile  @relation("OrganizationRequester", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  reviewedBy  UserProfile? @relation("OrganizationReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  verificationDocuments OrganizationVerificationDocument[]
+  memberships           OrganizationMembership[]
+  membershipRequests    OrganizationMembershipRequest[]
+  auditLogs             AuditLog[]
+
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(6)
 
   @@index([status])
+  @@index([requestedByUserId, status])
   @@map("organizations")
 }
 
-model OrganizationMember {
-  id String @id @default(uuid()) @db.Uuid
+model OrganizationVerificationDocument {
+  id               String  @id @default(uuid()) @db.Uuid
+  organizationId   String  @map("organization_id") @db.Uuid
+  reviewedByUserId String? @map("reviewed_by_user_id") @db.Uuid
 
-  organizationId String @map("organization_id") @db.Uuid
-  userId         String @map("user_id") @db.Uuid
-
-  role   OrganizationRole @default(MEMBER)
-  status MembershipStatus @default(ACTIVE)
+  documentType     String               @map("document_type")
+  storagePath      String               @map("storage_path")
+  originalFileName String               @map("original_file_name")
+  reviewStatus     DocumentReviewStatus @default(PENDING) @map("review_status")
+  reviewedAt       DateTime?            @map("reviewed_at") @db.Timestamptz(6)
+  reviewNotes      String?              @map("review_notes")
+  expiresAt        DateTime?            @map("expires_at") @db.Date
+  uploadedAt       DateTime             @default(now()) @map("uploaded_at") @db.Timestamptz(6)
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         UserProfile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy   UserProfile? @relation("VerificationDocumentReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  @@index([organizationId, reviewStatus])
+  @@map("organization_verification_documents")
+}
+
+model OrganizationMembership {
+  id String @id @default(uuid()) @db.Uuid
+
+  organizationId                String  @map("organization_id") @db.Uuid
+  userId                        String  @map("user_id") @db.Uuid
+  sourceRequestId               String? @unique @map("source_request_id") @db.Uuid
+  addedOrApprovedByMembershipId String? @map("added_or_approved_by_membership_id") @db.Uuid
+
+  role   MembershipRole   @default(ORG_MEMBER)
+  status MembershipStatus @default(ACTIVE)
+  source MembershipSource
+
+  organization  Organization                   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  user          UserProfile                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  sourceRequest OrganizationMembershipRequest? @relation("ApprovedMembership", fields: [sourceRequestId], references: [id], onDelete: SetNull)
+
+  addedOrApprovedBy   OrganizationMembership?         @relation("MembershipApprover", fields: [addedOrApprovedByMembershipId], references: [id], onDelete: SetNull)
+  approvedMemberships OrganizationMembership[]        @relation("MembershipApprover")
+  reviewedRequests    OrganizationMembershipRequest[] @relation("MembershipRequestReviewer")
+
+  joinedAt DateTime  @default(now()) @map("joined_at") @db.Timestamptz(6)
+  endedAt  DateTime? @map("ended_at") @db.Timestamptz(6)
 
   @@unique([organizationId, userId])
+  @@unique([organizationId, id])
   @@index([userId, status])
   @@index([organizationId, role, status])
-  @@map("organization_members")
+  @@map("organization_memberships")
+}
+
+model OrganizationMembershipRequest {
+  id String @id @default(uuid()) @db.Uuid
+
+  organizationId         String  @map("organization_id") @db.Uuid
+  requesterUserId        String  @map("requester_user_id") @db.Uuid
+  reviewedByMembershipId String? @map("reviewed_by_membership_id") @db.Uuid
+
+  message     String?
+  status      MembershipRequestStatus @default(PENDING)
+  reviewedAt  DateTime?               @map("reviewed_at") @db.Timestamptz(6)
+  reviewNotes String?                 @map("review_notes")
+  createdAt   DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization       Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requester          UserProfile             @relation("MembershipRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  reviewedBy         OrganizationMembership? @relation("MembershipRequestReviewer", fields: [reviewedByMembershipId], references: [id], onDelete: SetNull)
+  approvedMembership OrganizationMembership? @relation("ApprovedMembership")
+
+  @@index([organizationId, requesterUserId, status])
+  @@index([requesterUserId, status])
+  @@map("organization_membership_requests")
+}
+
+model AuditLog {
+  id String @id @default(uuid()) @db.Uuid
+
+  actorUserId    String? @map("actor_user_id") @db.Uuid
+  organizationId String? @map("organization_id") @db.Uuid
+
+  action     String
+  entityType String @map("entity_type")
+  entityId   String @map("entity_id") @db.Uuid
+  metadata   Json?
+
+  actor        UserProfile?  @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([organizationId, createdAt])
+  @@index([entityType, entityId])
+  @@index([actorUserId, createdAt])
+  @@map("audit_logs")
 }
