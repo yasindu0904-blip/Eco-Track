@@ -1,0 +1,59 @@
+import cors from "cors";
+import express, {
+  type Express,
+} from "express";
+import helmet from "helmet";
+
+import { errorMiddleware } from "./middleware/error.middleware.js";
+import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
+
+import { createAuthRouter } from "./modules/auth/auth.routes.js";
+
+import type { AuthenticationDependencies } from "./modules/auth/auth.types.js";
+
+type CreateAppOptions = {
+  webOrigin?: string;
+};
+
+export function createApp(
+  authenticationDependencies: AuthenticationDependencies,
+  options: CreateAppOptions = {},
+): Express {
+  const app = express();
+
+  app.disable("x-powered-by");
+
+  app.use(helmet());
+
+  app.use(
+    cors({
+      origin:
+        options.webOrigin ??
+        "http://localhost:5173",
+    }),
+  );
+
+  app.use(
+    express.json({
+      limit: "1mb",
+    }),
+  );
+
+  app.get("/health", (_request, response) => {
+    response.status(200).json({
+      status: "ok",
+      service: "ecotrack-backend",
+    });
+  });
+
+  app.use(
+    "/api/v1",
+    createAuthRouter(authenticationDependencies),
+  );
+
+  app.use(notFoundMiddleware);
+
+  app.use(errorMiddleware);
+
+  return app;
+}

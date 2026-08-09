@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>EcoTrack Member 1 - Authorization and Integration Plan</title>
+  <link rel="stylesheet" href="pdf-style.css" />
+</head>
+<body>
+  <section class="cover">
+    <div class="kicker">EcoTrack Team Execution Plan</div>
+    <h1>Member 1: Authorization and Integration</h1>
+    <p class="subtitle">A detailed implementation, ownership, testing, and integration plan for CASL authorization, tenant protection, shared composition files, and cross-organization security.</p>
+    <dl class="meta">
+      <dt>Primary owner</dt><dd>Team lead / Member 1</dd>
+      <dt>Primary branch</dt><dd>feature/authorization-integration</dd>
+      <dt>Base branch</dt><dd>integration/organization-onboarding</dd>
+      <dt>Milestone</dt><dd>Organization onboarding and Super Admin review</dd>
+      <dt>Prepared</dt><dd>10 August 2026</dd>
+      <dt>Status</dt><dd>Implementation-ready</dd>
+    </dl>
+  </section>
+
+  <section class="toc">
+    <h1>Contents</h1>
+    <ol>
+      <li>Mission and success definition</li>
+      <li>Mandatory sources of truth</li>
+      <li>Branch and ownership rules</li>
+      <li>Dependencies and baseline checks</li>
+      <li>Authorization architecture</li>
+      <li>Actions, subjects, and ability types</li>
+      <li>Ability factory rules</li>
+      <li>Middleware and request context</li>
+      <li>Route authorization contracts</li>
+      <li>Shared backend integration</li>
+      <li>Shared frontend integration</li>
+      <li>Testing strategy</li>
+      <li>Handoffs and merge order</li>
+      <li>Definition of done</li>
+      <li>Reference material</li>
+    </ol>
+  </section>
+
+  <h2>1. Mission and success definition</h2>
+  <p>Member 1 owns the authorization foundation and the final integration of the team’s isolated feature modules. Authentication is already complete: Supabase verifies identity, the backend synchronizes the EcoTrack profile through Prisma, the web sends bearer tokens, role-aware login works, and the existing Super Admin check is proven. This work must extend that foundation without replacing it.</p>
+
+  <div class="callout"><strong>Core outcome:</strong> every organization application, Super Admin review, notification, and future organization-scoped request is allowed or denied by backend authorization built from trusted profile and membership data. Frontend visibility is never treated as security.</div>
+
+  <h3>Deliverables</h3>
+  <ul>
+    <li>Install and configure <code>@casl/ability</code> and <code>@casl/prisma</code>.</li>
+    <li>Define stable application actions and subjects.</li>
+    <li>Create typed ability rules from platform role and organization membership.</li>
+    <li>Create ability-building and authorization middleware.</li>
+    <li>Create tenant/membership middleware for organization-scoped operations.</li>
+    <li>Extend Express request typing without weakening existing authentication types.</li>
+    <li>Write negative and cross-organization tests.</li>
+    <li>Integrate Member 2 and Member 3 routers into <code>backend/src/app.ts</code>.</li>
+    <li>Integrate Member 2 and Member 3 pages into the real authenticated web flow.</li>
+    <li>Run complete integration checks and protect shared files during merge.</li>
+  </ul>
+
+  <h2>2. Mandatory sources of truth</h2>
+  <p>Read these before implementation and again before approving team pull requests:</p>
+  <ul>
+    <li><code>docs/IMPORTANT/EcoTrack_Backend_Module_Structure_and_Heavy_Service_Reminder.txt</code></li>
+    <li><code>docs/IMPORTANT/EcoTrack_Complete_System_Flow_Source_of_Truth_v1.txt</code></li>
+    <li><code>docs/IMPORTANT/EcoTrack_Technical_Decision_Notes.txt</code></li>
+    <li><code>docs/IMPORTANT/EcoTrack_Sri_Lanka_Service_Area_Boundaries_Guide.md</code></li>
+    <li><code>database_docs/EcoTrack_Database_v2_Finalization_and_Codex_Instructions.txt</code></li>
+    <li><code>database_docs/EcoTrack_ERD_v2_Final.dbml</code></li>
+    <li><code>backend/prisma/schema.prisma</code> and all applied migrations</li>
+  </ul>
+  <div class="callout warning"><strong>Scope boundary:</strong> do not implement incidents, latitude/longitude entry, point-to-GN matching, organization incident dashboards, or maps in this milestone. GN boundaries are used only for organization service-area selection and review.</div>
+
+  <h2>3. Branch and ownership rules</h2>
+  <h3>Branch</h3>
+  <pre>git fetch origin
+git switch integration/organization-onboarding
+git pull --ff-only origin integration/organization-onboarding
+git switch -c feature/authorization-integration</pre>
+
+  <h3>Owned paths</h3>
+  <pre>backend/src/authorization/**
+backend/src/middleware/tenant.middleware.ts
+backend/src/middleware/ability.middleware.ts
+backend/src/middleware/authorize.middleware.ts
+backend/src/types/express.d.ts (coordinated extension only)
+backend/src/tests/authorization*.test.ts
+backend/src/app.ts (integration owner only)
+web/src/App.tsx (integration owner only)</pre>
+
+  <h3>Non-negotiable collaboration rules</h3>
+  <ul>
+    <li>Do not delete or silently rewrite Member 2 or Member 3 feature files.</li>
+    <li>Do not restore/apply the existing stash.</li>
+    <li>Do not edit Member 2’s migration files.</li>
+    <li>Do not allow feature members to push directly to the integration branch.</li>
+    <li>Keep shared-file wiring in a separate, reviewable commit.</li>
+    <li>Use comments to explain authorization intent and security constraints, not authorship.</li>
+  </ul>
+
+  <h2>4. Dependencies and baseline checks</h2>
+  <p>Install CASL from the backend directory. This is a shared package change owned by Member 1:</p>
+  <pre>cd C:\campus\projects\Eco-Track\backend
+npm install @casl/ability @casl/prisma
+npm run typecheck
+npm test
+npm run build</pre>
+  <p>Commit <code>package.json</code> and <code>package-lock.json</code> together. Never edit the lock file manually. The current <code>@casl/prisma</code> package supports modern Prisma clients and is installed together with <code>@casl/ability</code>.</p>
+
+  <div class="callout danger"><strong>Do not:</strong> remove the existing <code>requireActiveSuperAdmin</code> middleware until equivalent CASL routes are implemented, tested, and reviewed. Migration to CASL should be incremental, never a security gap.</div>
+
+  <h2>5. Authorization architecture</h2>
+  <div class="flow">Supabase Auth
+  -> proves identity and returns a verified user
+
+Prisma repositories
+  -> load profile, platform role, organization membership and status
+
+CASL ability factory
+  -> converts trusted context into permitted actions and subjects
+
+Express middleware
+  -> enforces the ability before controllers
+
+Service and repository
+  -> revalidate business invariants and scope database writes</div>
+
+  <h3>Required request order</h3>
+  <table>
+    <thead><tr><th>Route type</th><th>Required middleware order</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr><td>Citizen creates organization application</td><td>authenticate -> ability -> authorize Create -> controller</td><td>No organization tenant exists yet; identity/profile is enough.</td></tr>
+      <tr><td>Citizen reads own application</td><td>authenticate -> ability -> authorize ReadOwn -> controller</td><td>Repository must also filter by authenticated profile ID.</td></tr>
+      <tr><td>Super Admin pending/review route</td><td>authenticate -> ability -> authorize Review/Approve/Decline -> controller</td><td>Platform-scoped authorization; no organization membership is required.</td></tr>
+      <tr><td>Future organization-owned route</td><td>authenticate -> tenant -> ability -> authorize -> controller</td><td>Membership and organization equality must be verified before access.</td></tr>
+      <tr><td>User notifications</td><td>authenticate -> ability -> authorize ReadOwn -> controller</td><td>Repository filters by authenticated recipient ID.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. Actions, subjects, and ability types</h2>
+  <h3>Recommended file structure</h3>
+  <pre>backend/src/authorization/
+  actions.ts
+  subjects.ts
+  ability.types.ts
+  ability.factory.ts
+  permission.constants.ts</pre>
+
+  <h3>Actions</h3>
+  <p>Use stable application vocabulary rather than route names. A suitable starting set is:</p>
+  <pre>export const Actions = {
+  Create: "create",
+  Read: "read",
+  ReadOwn: "readOwn",
+  Update: "update",
+  Review: "review",
+  Approve: "approve",
+  Decline: "decline",
+  ManageMembership: "manageMembership",
+} as const;</pre>
+
+  <h3>Subjects</h3>
+  <pre>export const Subjects = {
+  OrganizationApplication: "OrganizationApplication",
+  Organization: "Organization",
+  OrganizationServiceArea: "OrganizationServiceArea",
+  OrganizationMembership: "OrganizationMembership",
+  Notification: "Notification",
+} as const;</pre>
+
+  <div class="callout info"><strong>Important:</strong> do not use <code>manage all</code> as a shortcut for Super Admin. Project rules state that Super Admin handles platform governance and organization review, not ordinary organization cleanup work.</div>
+
+  <h2>7. Ability factory rules</h2>
+  <h3>Trusted inputs</h3>
+  <p>The ability factory may use only data loaded by backend authentication/repositories:</p>
+  <ul>
+    <li>Authenticated EcoTrack profile ID</li>
+    <li>Platform role and account status</li>
+    <li>Active organization memberships</li>
+    <li>Membership role and membership status</li>
+    <li>Verified active organization/tenant context when present</li>
+  </ul>
+
+  <h3>Initial policy matrix</h3>
+  <table>
+    <thead><tr><th>Principal</th><th>Allowed</th><th>Explicitly not allowed</th></tr></thead>
+    <tbody>
+      <tr><td>Active USER</td><td>Create an application; read own application; read own notifications</td><td>Review other applications; approve/decline; create own ORG_ADMIN role</td></tr>
+      <tr><td>Active SUPER_ADMIN</td><td>List/review pending applications; approve/decline; view verification/service-area details; platform governance</td><td>Act as an organization admin without a real membership; ordinary tenant cleanup work</td></tr>
+      <tr><td>Active ORG_ADMIN membership</td><td>Future organization-scoped administration for that organization only</td><td>Access another organization by changing an ID; platform Super Admin review</td></tr>
+      <tr><td>Suspended/archived profile</td><td>Nothing protected</td><td>All protected operations</td></tr>
+      <tr><td>Suspended/left/removed membership</td><td>No organization-scoped operations</td><td>All tenant actions using that membership</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Defense in depth</h3>
+  <p>CASL answers whether an action is generally allowed. Repositories/services still scope queries using trusted IDs. For example, “read own application” must query using both application ID and <code>requestedByUserId = request.authentication.profile.id</code>. Never load by application ID and rely only on a frontend comparison.</p>
+
+  <h2>8. Middleware and request context</h2>
+  <h3>Ability middleware</h3>
+  <ul>
+    <li>Requires <code>request.authentication</code>.</li>
+    <li>Loads any additional memberships needed for the request.</li>
+    <li>Builds the ability through the factory.</li>
+    <li>Attaches the typed ability to the request.</li>
+    <li>Forwards unexpected errors to central error middleware.</li>
+  </ul>
+
+  <h3>Authorize middleware</h3>
+  <ul>
+    <li>Accepts a required action and subject.</li>
+    <li>Calls the request ability.</li>
+    <li>Returns a consistent <code>403 FORBIDDEN</code> ApplicationError when denied.</li>
+    <li>Contains no Prisma queries and no response-shaping controller logic.</li>
+  </ul>
+
+  <h3>Tenant middleware</h3>
+  <p>Tenant middleware is required only when a route is truly organization-scoped. It must:</p>
+  <ol>
+    <li>Read the organization ID from the route or another trusted route context.</li>
+    <li>Validate ID format.</li>
+    <li>Query a membership using authenticated profile ID plus organization ID.</li>
+    <li>Require active membership and a usable organization status.</li>
+    <li>Attach organization and membership context to the request.</li>
+    <li>Reject direct-ID attacks with 403 without revealing private tenant data.</li>
+  </ol>
+
+  <h3>Express type augmentation</h3>
+  <p>Extend the existing declaration rather than replace it:</p>
+  <pre>declare global {
+  namespace Express {
+    interface Request {
+      authentication: AuthenticationContext;
+      ability?: AppAbility;
+      tenant?: OrganizationTenantContext;
+    }
+  }
+}</pre>
+  <p>Type declarations describe properties; middleware creates the actual runtime values.</p>
+
+  <h2>9. Route authorization contracts</h2>
+  <table>
+    <thead><tr><th>Endpoint</th><th>Permission</th><th>Additional backend scope</th></tr></thead>
+    <tbody>
+      <tr><td>POST /api/v1/organization-applications</td><td>Create OrganizationApplication</td><td>Requester ID comes from auth context; selected areas must exist and be active references.</td></tr>
+      <tr><td>GET /api/v1/organization-applications/me</td><td>ReadOwn OrganizationApplication</td><td>Filter by authenticated profile ID.</td></tr>
+      <tr><td>GET /api/v1/super-admin/organization-applications</td><td>Review OrganizationApplication</td><td>SUPER_ADMIN and active account.</td></tr>
+      <tr><td>GET /api/v1/super-admin/organization-applications/:id</td><td>Review OrganizationApplication</td><td>Return review-safe details.</td></tr>
+      <tr><td>POST .../:id/approve</td><td>Approve OrganizationApplication</td><td>Conditional pending-state transaction.</td></tr>
+      <tr><td>POST .../:id/decline</td><td>Decline OrganizationApplication</td><td>Conditional pending-state transaction and required review notes policy.</td></tr>
+      <tr><td>GET /api/v1/notifications</td><td>ReadOwn Notification</td><td>Recipient filter from auth context.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10. Shared backend integration</h2>
+  <p><code>backend/src/app.ts</code> remains a composition root. Preserve this order:</p>
+  <pre>security middleware
+cors
+json parser
+health
+versioned routers
+notFoundMiddleware
+errorMiddleware</pre>
+  <p>Member 2 and Member 3 export router factories and dependency objects. Member 1 mounts them. Do not import repositories directly into <code>app.ts</code>; routers receive dependencies or import their module dependency object.</p>
+
+  <h3>Integration review checklist</h3>
+  <ul class="checklist">
+    <li>No duplicate <code>/api/v1</code> prefix.</li>
+    <li>Authentication runs before ability/tenant middleware.</li>
+    <li>Authorization runs before the controller.</li>
+    <li>Controller delegates business rules to the service.</li>
+    <li>Service delegates database operations to repository/transaction helpers.</li>
+    <li>notFound and error middleware remain last.</li>
+    <li>No route trusts body-supplied actor IDs or roles.</li>
+  </ul>
+
+  <h2>11. Shared frontend integration</h2>
+  <p>The current web authentication state must remain intact. Member 1 integrates exported pages into the signed-in experience and routes users by capability:</p>
+  <div class="flow">Authenticated USER
+  -> organization application/status UI
+
+Authenticated SUPER_ADMIN
+  -> pending organization review UI
+
+Unauthorized frontend state
+  -> hide action for UX
+  -> backend still rejects direct calls</div>
+  <p>Use the existing <code>apiClient.ts</code> so bearer tokens and backend errors remain consistent. Do not put CASL alone in the browser and treat it as enforcement. Browser authorization is presentation only.</p>
+
+  <h2>12. Testing strategy</h2>
+  <h3>Authorization unit tests</h3>
+  <ul>
+    <li>Active USER can create application.</li>
+    <li>USER cannot review/approve/decline.</li>
+    <li>Active SUPER_ADMIN can review/approve/decline.</li>
+    <li>Suspended SUPER_ADMIN cannot perform review.</li>
+    <li>ORG_ADMIN rules contain organization conditions.</li>
+    <li>Suspended/left membership produces no tenant capability.</li>
+  </ul>
+
+  <h3>Middleware tests</h3>
+  <ul>
+    <li>Missing authentication produces 401.</li>
+    <li>Missing ability context fails safely.</li>
+    <li>Denied action produces stable 403 JSON.</li>
+    <li>Tenant middleware rejects membership from another organization.</li>
+    <li>Tenant middleware rejects suspended organization/membership.</li>
+  </ul>
+
+  <h3>Cross-organization tests</h3>
+  <div class="callout danger">Cross-organization tests are mandatory. A successful same-organization test does not prove tenant security.</div>
+  <ul>
+    <li>Organization A admin cannot read or update Organization B private records by changing an ID.</li>
+    <li>A membership for A cannot authorize a route for B.</li>
+    <li>Frontend-supplied role and actor IDs are ignored.</li>
+    <li>A normal user cannot call Super Admin endpoints directly even if the button is hidden.</li>
+    <li>Review queries never leak documents/notes to unauthorized accounts.</li>
+  </ul>
+
+  <h3>Final commands</h3>
+  <pre>cd backend
+npm run typecheck
+npm test
+npx tsx --test src/tests/authorization.integration.test.ts
+npm run build
+npx prisma validate
+npx prisma migrate status
+npm run db:check
+
+cd ..\web
+npm run build
+npm run lint
+
+cd ..
+git diff --check
+git status --short</pre>
+
+  <h2>13. Handoffs and merge order</h2>
+  <ol>
+    <li>Publish action/subject names and middleware contract to Members 2 and 3 early.</li>
+    <li>Merge CASL dependency and base authorization types before feature route integration.</li>
+    <li>Review Member 2 schema/migration and organization application module.</li>
+    <li>Merge/apply Member 2 migration before Member 3 real Prisma review repository.</li>
+    <li>Review Member 3 transaction for conditional state transitions, membership creation, audit, and notification.</li>
+    <li>Mount routers in <code>app.ts</code> and pages in web integration.</li>
+    <li>Run all auth, authorization, organization, review, and web checks.</li>
+  </ol>
+
+  <h2>14. Definition of done</h2>
+  <ul class="checklist">
+    <li>CASL dependencies installed and lockfile committed.</li>
+    <li>Typed actions, subjects, ability and middleware implemented.</li>
+    <li>USER and SUPER_ADMIN policy matrix covered by tests.</li>
+    <li>Tenant middleware has Organization A vs Organization B tests.</li>
+    <li>Member 2 and Member 3 routes use agreed authorization middleware.</li>
+    <li>Shared <code>app.ts</code> order remains correct.</li>
+    <li>Web pages remain connected to real authentication and bearer API client.</li>
+    <li>No secret, environment file, stash content, or unrelated edit is included.</li>
+    <li>Backend tests/typecheck/build and web build/lint pass.</li>
+    <li>Database validates and migration status is current.</li>
+    <li>Pull requests include setup, API contracts, tests, and limitations.</li>
+  </ul>
+
+  <h2>15. Reference material</h2>
+  <ul class="source-list">
+    <li>Local source: <code>docs/IMPORTANT/EcoTrack_Backend_Module_Structure_and_Heavy_Service_Reminder.txt</code></li>
+    <li>Local source: <code>database_docs/EcoTrack_Database_v2_Finalization_and_Codex_Instructions.txt</code></li>
+    <li>CASL ability package: <a href="https://www.npmjs.com/package/@casl/ability">https://www.npmjs.com/package/@casl/ability</a></li>
+    <li>CASL Prisma package: <a href="https://www.npmjs.com/package/@casl/prisma">https://www.npmjs.com/package/@casl/prisma</a></li>
+  </ul>
+
+  <p class="footer-note">EcoTrack team plan - Member 1. This document defines the current milestone only. Any change to role semantics, tenant ownership, schema responsibilities, or excluded incident/map scope requires a documented team decision before implementation.</p>
+</body>
+</html>

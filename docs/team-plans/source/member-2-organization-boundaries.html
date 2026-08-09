@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>EcoTrack Member 2 - Organization Application and GN Boundaries Plan</title>
+  <link rel="stylesheet" href="pdf-style.css" />
+</head>
+<body>
+  <section class="cover">
+    <div class="kicker">EcoTrack Team Execution Plan</div>
+    <h1>Member 2: Organization Application and GN Boundaries</h1>
+    <p class="subtitle">A detailed database, PostGIS, backend, web, testing, migration, and handoff plan for citizen organization applications and official Grama Niladhari Division service-area selection.</p>
+    <dl class="meta">
+      <dt>Primary owner</dt><dd>Team Member 2</dd>
+      <dt>Primary branch</dt><dd>feature/organization-application-boundaries</dd>
+      <dt>Base branch</dt><dd>integration/organization-onboarding</dd>
+      <dt>Schema owner</dt><dd>Member 2 only for this milestone</dd>
+      <dt>Prepared</dt><dd>10 August 2026</dd>
+      <dt>Status</dt><dd>Implementation-ready</dd>
+    </dl>
+  </section>
+
+  <section class="toc">
+    <h1>Contents</h1>
+    <ol>
+      <li>Mission and scope</li>
+      <li>Mandatory sources and collaboration rules</li>
+      <li>Branch and owned files</li>
+      <li>Current schema baseline</li>
+      <li>Administrative-area reference design</li>
+      <li>Organization service-area design</li>
+      <li>Notification schema coordination</li>
+      <li>GN boundary acquisition and import</li>
+      <li>Migration workflow and validation</li>
+      <li>Organization application API</li>
+      <li>Backend module design</li>
+      <li>Citizen web pages</li>
+      <li>Security and authorization contract</li>
+      <li>Testing strategy</li>
+      <li>Handoff to Member 3</li>
+      <li>Definition of done</li>
+    </ol>
+  </section>
+
+  <h2>1. Mission and scope</h2>
+  <p>Member 2 owns the citizen-facing organization application flow and the database structures/reference data that allow applicants to select official Sri Lankan Grama Niladhari (GN) Divisions as organization service areas. Member 2 is also the only person who changes <code>backend/prisma/schema.prisma</code> and creates migrations during this milestone.</p>
+
+  <div class="callout"><strong>Core outcome:</strong> an authenticated citizen can submit valid organization details and one or more GN Division IDs. The backend creates a <code>PENDING_REVIEW</code> organization and pending service-area links. It does not approve the organization and does not create an ORG_ADMIN membership.</div>
+
+  <h3>Included</h3>
+  <ul>
+    <li>Reusable administrative-area table with GN names, codes, hierarchy, source metadata, and PostGIS boundary.</li>
+    <li>Organization-to-administrative-area service links.</li>
+    <li>Official GN reference-data import and validation.</li>
+    <li>Prisma schema and migrations needed by Members 2 and 3.</li>
+    <li>Citizen organization application endpoint and own-status endpoint.</li>
+    <li>Citizen web application/status pages in the EcoTrack mockup style.</li>
+  </ul>
+
+  <h3>Explicitly excluded</h3>
+  <ul>
+    <li>Super Admin approve/decline implementation (Member 3).</li>
+    <li>First ORG_ADMIN membership creation (Member 3).</li>
+    <li>Incident latitude/longitude submission.</li>
+    <li>Point-to-GN lookup and organization incident visibility.</li>
+    <li>Maps and incident dashboards.</li>
+  </ul>
+
+  <h2>2. Mandatory sources and collaboration rules</h2>
+  <p>Read before schema design or importing spatial data:</p>
+  <ul>
+    <li><code>docs/IMPORTANT/EcoTrack_Sri_Lanka_Service_Area_Boundaries_Guide.md</code></li>
+    <li><code>docs/IMPORTANT/EcoTrack_Backend_Module_Structure_and_Heavy_Service_Reminder.txt</code></li>
+    <li><code>docs/IMPORTANT/EcoTrack_Complete_System_Flow_Source_of_Truth_v1.txt</code></li>
+    <li><code>database_docs/EcoTrack_Database_v2_Finalization_and_Codex_Instructions.txt</code></li>
+    <li><code>database_docs/EcoTrack_ERD_v2_Final.dbml</code></li>
+    <li><code>backend/prisma/schema.prisma</code> and existing applied migrations</li>
+    <li><code>docs/team-plans/VERY_IMPORTANT_TEAM_COLLABORATION_RULES.txt</code></li>
+  </ul>
+
+  <div class="callout danger"><strong>Never:</strong> delete/recreate existing organization tables; edit an already-applied migration; commit raw credentials; invent GN boundaries without recorded source metadata; or create the requester’s ORG_ADMIN membership during submission.</div>
+
+  <h2>3. Branch and owned files</h2>
+  <pre>git fetch origin
+git switch integration/organization-onboarding
+git pull --ff-only origin integration/organization-onboarding
+git switch -c feature/organization-application-boundaries</pre>
+
+  <h3>Owned areas</h3>
+  <pre>backend/prisma/schema.prisma
+backend/prisma/migrations/&lt;new-milestone-migrations&gt;/**
+backend/src/modules/administrativeAreas/**
+backend/src/modules/organizations/application/**
+backend/src/scripts/importAdministrativeAreas.ts (agreed location)
+web/src/features/organizations/application/**</pre>
+
+  <h3>Do not directly change</h3>
+  <pre>backend/src/app.ts
+backend/package.json (request dependency changes from Member 1)
+web/src/App.tsx
+backend/src/authorization/**
+backend/src/modules/organizations/review/**
+mobile/**</pre>
+
+  <p>For local testing, mount the feature router inside an integration-test Express app. If temporary production wiring is necessary, keep it in a separate branch-only commit for Member 1 to review.</p>
+
+  <h2>4. Current schema baseline</h2>
+  <p>The schema already provides these models and they must be reused:</p>
+  <table>
+    <thead><tr><th>Existing model</th><th>Purpose in this milestone</th></tr></thead>
+    <tbody>
+      <tr><td>UserProfile</td><td>Trusted requester profile; requester ID comes from authenticated request context.</td></tr>
+      <tr><td>Organization</td><td>Stores application details, requester, slug, review status and reviewer fields.</td></tr>
+      <tr><td>OrganizationVerificationDocument</td><td>Stores verification-document metadata if upload is included.</td></tr>
+      <tr><td>OrganizationMembership</td><td>Used later by Member 3 for FIRST_ADMIN; not created during submission.</td></tr>
+      <tr><td>OrganizationMembershipRequest</td><td>For joining an existing organization; not the organization-creation request.</td></tr>
+      <tr><td>AuditLog</td><td>Submission may log an application-created event; review logs are Member 3.</td></tr>
+    </tbody>
+  </table>
+
+  <p>The existing <code>Organization</code> defaults to <code>PENDING_REVIEW</code> and already records <code>requestedByUserId</code>. Preserve its unique slug and requester/reviewer relations.</p>
+
+  <h2>5. Administrative-area reference design</h2>
+  <p>The team selected the scalable reference-table option from the boundary guide: store each official GN Division once, then link organizations to it by ID.</p>
+
+  <h3>Recommended conceptual model</h3>
+  <table>
+    <thead><tr><th>Field</th><th>Requirement</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr><td>id</td><td>UUID primary key</td><td>Stable application identifier.</td></tr>
+      <tr><td>level</td><td>Enum/value identifying GN</td><td>Allows future province/district/DS levels without ambiguity.</td></tr>
+      <tr><td>officialCode</td><td>Required, stable, unique with level/source</td><td>Idempotent imports and authoritative identity.</td></tr>
+      <tr><td>nameEn</td><td>Required</td><td>Current web display/search.</td></tr>
+      <tr><td>nameSi / nameTa</td><td>Nullable initially, preferred</td><td>Sri Lankan multilingual support.</td></tr>
+      <tr><td>districtName/code</td><td>Required when source provides it</td><td>Filtering and disambiguation.</td></tr>
+      <tr><td>divisionalSecretariatName/code</td><td>Required when available</td><td>GN hierarchy and user selection.</td></tr>
+      <tr><td>boundary</td><td>PostGIS geography/geometry MultiPolygon, SRID 4326</td><td>Official spatial representation and future lookup.</td></tr>
+      <tr><td>sourceName</td><td>Required</td><td>Provenance.</td></tr>
+      <tr><td>sourceVersion/date</td><td>Required</td><td>Boundary changes must be auditable.</td></tr>
+      <tr><td>sourceUrl / license</td><td>Record when available</td><td>Legal and verification trace.</td></tr>
+      <tr><td>isActive</td><td>Default true</td><td>Retire references without deleting history.</td></tr>
+      <tr><td>importedAt / updatedAt</td><td>Timestamptz</td><td>Operational trace.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Required constraints and indexes</h3>
+  <ul>
+    <li>Unique stable area identity, such as <code>UNIQUE(level, official_code, source_version)</code> or an agreed source-independent official code constraint.</li>
+    <li>GiST index on <code>boundary</code>.</li>
+    <li>Normal indexes for district/DS/name selection filters.</li>
+    <li>Boundary must be valid and SRID 4326.</li>
+    <li>Do not rely on name alone as a unique key.</li>
+  </ul>
+
+  <div class="callout warning"><strong>Schema decision required before migration:</strong> choose whether a source-version update creates a new reference row or updates boundary/version metadata while retaining an import history. Do not silently replace geometry without an auditable decision.</div>
+
+  <h2>6. Organization service-area design</h2>
+  <p>This table links one organization to one selected GN reference. It does not duplicate the polygon.</p>
+  <table>
+    <thead><tr><th>Field</th><th>Requirement</th></tr></thead>
+    <tbody>
+      <tr><td>id</td><td>UUID primary key</td></tr>
+      <tr><td>organizationId</td><td>FK to Organization</td></tr>
+      <tr><td>administrativeAreaId</td><td>FK to AdministrativeArea</td></tr>
+      <tr><td>status</td><td>PENDING_REVIEW / ACTIVE / DECLINED / SUSPENDED (agree exact enum)</td></tr>
+      <tr><td>reviewedByUserId</td><td>Nullable FK to UserProfile</td></tr>
+      <tr><td>reviewedAt</td><td>Nullable timestamptz</td></tr>
+      <tr><td>reviewNotes</td><td>Nullable</td></tr>
+      <tr><td>createdAt / updatedAt</td><td>Required timestamps</td></tr>
+    </tbody>
+  </table>
+  <p>Required constraint:</p>
+  <pre>UNIQUE (organization_id, administrative_area_id)</pre>
+  <p>Submission creates links in the pending state. Member 3 activates or declines them in the organization review transaction.</p>
+
+  <h2>7. Notification schema coordination</h2>
+  <p>Member 3 owns notification behavior, but Member 2 owns the milestone schema. Agree on a minimal generic notification model before creating the migration:</p>
+  <table>
+    <thead><tr><th>Field</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>id</td><td>UUID</td></tr>
+      <tr><td>recipientUserId</td><td>Authenticated EcoTrack UserProfile recipient</td></tr>
+      <tr><td>type</td><td>Stable event type such as ORGANIZATION_APPROVED / ORGANIZATION_DECLINED</td></tr>
+      <tr><td>title</td><td>Short UI title</td></tr>
+      <tr><td>message</td><td>Safe user-facing content</td></tr>
+      <tr><td>entityType / entityId</td><td>Optional navigation/reference to organization</td></tr>
+      <tr><td>readAt</td><td>Nullable timestamp</td></tr>
+      <tr><td>createdAt</td><td>Required timestamp</td></tr>
+    </tbody>
+  </table>
+  <p>Add indexes for recipient plus read/created state. Do not store access tokens or secrets in notification metadata.</p>
+
+  <h2>8. GN boundary acquisition and import</h2>
+  <h3>Source requirements</h3>
+  <ol>
+    <li>Prefer official Sri Lankan NSDI/Survey Department or another officially documented administrative dataset.</li>
+    <li>Record source URL, publisher, date/version, license, and original coordinate reference system.</li>
+    <li>Verify exact GN names and codes against the authoritative source.</li>
+    <li>Keep the raw source outside normal runtime code if licensing/size requires it, but document reproducible acquisition.</li>
+    <li>Never label community boundaries as legally official without verification.</li>
+  </ol>
+
+  <h3>Import pipeline</h3>
+  <div class="flow">Acquire source file
+  -> record checksum and metadata
+  -> inspect CRS and attributes
+  -> transform to EPSG:4326
+  -> repair/validate geometry where justified
+  -> normalize Polygon to MultiPolygon
+  -> validate GN code/name/hierarchy
+  -> idempotent upsert by official key
+  -> verify counts, nulls, duplicates, SRID and validity
+  -> build/verify GiST index</div>
+
+  <h3>Import safety</h3>
+  <ul>
+    <li>Import must be rerunnable without duplicate areas.</li>
+    <li>Use a transaction or staged import where practical.</li>
+    <li>Reject rows without stable codes or usable geometry into an error report.</li>
+    <li>Log inserted, updated, skipped and failed counts.</li>
+    <li>Do not perform a destructive full replacement against a shared database without explicit team approval.</li>
+    <li>Test with a small known GN subset before importing the full dataset.</li>
+  </ul>
+
+  <h2>9. Migration workflow and validation</h2>
+  <ol>
+    <li>Update <code>schema.prisma</code> with agreed models/enums/relations.</li>
+    <li>Create a clearly named new migration.</li>
+    <li>Inspect SQL, especially PostGIS column type and GiST index.</li>
+    <li>Apply to the intended development database.</li>
+    <li>Generate Prisma client.</li>
+    <li>Run validation/status/database checks.</li>
+    <li>Commit schema, migration, generated client policy output, import code, and documentation together as agreed.</li>
+  </ol>
+  <pre>cd backend
+npx prisma validate
+npx prisma migrate dev --name add_administrative_areas_and_service_areas
+npx prisma generate
+npx prisma migrate status
+npm run db:check
+npm run typecheck
+npm test
+npm run build</pre>
+  <div class="callout danger"><strong>Shared database caution:</strong> confirm the target database and migration plan with the team before running <code>migrate dev</code>. Never reset the shared Supabase database and never edit an already-applied migration.</div>
+
+  <h2>10. Organization application API</h2>
+  <h3>Proposed endpoints</h3>
+  <table>
+    <thead><tr><th>Endpoint</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>GET /api/v1/administrative-areas</td><td>Search/filter active GN references for selection.</td></tr>
+      <tr><td>POST /api/v1/organization-applications</td><td>Create pending organization and pending service-area links.</td></tr>
+      <tr><td>GET /api/v1/organization-applications/me</td><td>List/read applications submitted by authenticated user.</td></tr>
+      <tr><td>GET /api/v1/organization-applications/me/:id</td><td>Read own application details/status if needed.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Submission input</h3>
+  <pre>{
+  "name": "Example Environmental Society",
+  "registrationNumber": "...",
+  "description": "...",
+  "officialEmail": "...",
+  "officialPhone": "...",
+  "officialAddress": "...",
+  "administrativeAreaIds": ["uuid", "uuid"]
+}</pre>
+  <p>Do not accept these from the body:</p>
+  <pre>requestedByUserId
+platformRole
+organization status
+reviewedByUserId
+reviewedAt
+membership role
+membership status</pre>
+
+  <h3>Submission service transaction</h3>
+  <div class="flow">Authenticated active USER
+  -> validate DTO with Zod
+  -> normalize names/email/phone as agreed
+  -> validate selected area IDs exist and are active GN references
+  -> generate/check slug
+  -> transaction:
+       create Organization(PENDING_REVIEW, requestedBy = auth profile)
+       create pending OrganizationServiceArea rows
+       create application-submitted AuditLog if required
+  -> return safe application DTO</div>
+
+  <p>Do not create an OrganizationMembership. Member 3 creates the FIRST_ADMIN only after approval.</p>
+
+  <h3>Business cases to decide/document</h3>
+  <ul>
+    <li>Minimum/maximum number of GN areas per application.</li>
+    <li>Whether one requester may have multiple simultaneous pending organization applications.</li>
+    <li>Uniqueness/normalization policy for registration number and official email.</li>
+    <li>Slug collision policy.</li>
+    <li>Whether verification documents are required for this semester milestone.</li>
+    <li>Whether applicants can edit pending applications; do not implement silently.</li>
+  </ul>
+
+  <h2>11. Backend module design</h2>
+  <pre>backend/src/modules/organizations/application/
+  application.types.ts
+  application.validation.ts
+  application.dependencies.ts
+  application.routes.ts
+  controllers/
+    createOrganizationApplication.controller.ts
+    listMyOrganizationApplications.controller.ts
+  services/
+    createOrganizationApplication.service.ts
+    listMyOrganizationApplications.service.ts
+  repositories/
+    organizationApplication.repository.ts
+  application.integration.test.ts
+
+backend/src/modules/administrativeAreas/
+  administrativeArea.routes.ts
+  administrativeArea.controller.ts
+  administrativeArea.service.ts
+  administrativeArea.repository.ts
+  administrativeArea.types.ts</pre>
+
+  <h3>Responsibility boundaries</h3>
+  <table>
+    <thead><tr><th>Layer</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td>Route</td><td>Defines HTTP method/path and middleware order.</td></tr>
+      <tr><td>Controller</td><td>Reads validated request context/body, calls service, returns status/DTO.</td></tr>
+      <tr><td>Service</td><td>Business rules: selection validation, pending state, duplicates, slug policy.</td></tr>
+      <tr><td>Repository</td><td>Prisma queries and transactions only.</td></tr>
+      <tr><td>Validation</td><td>Zod schemas and normalized DTOs.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>12. Citizen web pages</h2>
+  <p>Use <code>ecotrack-srs-mockup</code> for the green EcoTrack design system, layout language, cards, fields, badges and responsive behavior. Do not copy mock-only logic.</p>
+  <h3>Pages/components</h3>
+  <ul>
+    <li>Organization application form</li>
+    <li>GN Division search/filter and multi-select</li>
+    <li>Selected service-area summary</li>
+    <li>Submission confirmation</li>
+    <li>My organization applications/status page</li>
+    <li>Pending/declined/active status badges and review-note display where safe</li>
+  </ul>
+
+  <h3>Frontend rules</h3>
+  <ul>
+    <li>Use the existing Supabase session and bearer <code>apiClient.ts</code>.</li>
+    <li>Never send requester ID, approval status, reviewer ID or role.</li>
+    <li>Disable double submission while request is running.</li>
+    <li>Display backend validation errors safely.</li>
+    <li>Use accessible labels, keyboard-operable multi-selection and responsive layout.</li>
+    <li>Export pages for Member 1; do not replace production <code>App.tsx</code>.</li>
+  </ul>
+
+  <h2>13. Security and authorization contract</h2>
+  <p>Member 1 provides CASL actions/subjects. Member 2’s route must use those contracts. The backend requester is always:</p>
+  <pre>request.authentication.profile.id</pre>
+  <p>Own-application reads must include requester scope in the repository query. Searching active GN references may be available to authenticated users, but modification/import endpoints must not be public.</p>
+
+  <div class="callout info"><strong>No tenant middleware on creation:</strong> a citizen creating a new organization has no membership in that organization yet. Use authentication plus Create OrganizationApplication ability. Tenant middleware becomes relevant after an approved membership exists.</div>
+
+  <h2>14. Testing strategy</h2>
+  <h3>Schema/import tests</h3>
+  <ul>
+    <li>Schema validates and migration applies cleanly.</li>
+    <li>GN official identity key is unique.</li>
+    <li>Import rerun creates no duplicates.</li>
+    <li>All imported geometry uses SRID 4326 and expected MultiPolygon type.</li>
+    <li>Invalid/null geometry is reported, not silently inserted.</li>
+    <li>GiST index exists.</li>
+    <li>District/DS/GN counts and known samples are verified.</li>
+  </ul>
+
+  <h3>Application tests</h3>
+  <ul>
+    <li>Missing/invalid bearer token rejected.</li>
+    <li>Valid user can create pending application.</li>
+    <li>Requester ID in body is ignored/rejected.</li>
+    <li>Unknown/inactive area ID rejected.</li>
+    <li>Duplicate area IDs rejected or normalized deterministically.</li>
+    <li>Empty or excessive selection rejected by agreed policy.</li>
+    <li>Slug collision handled safely.</li>
+    <li>Transaction rollback leaves no orphan organization/service-area rows.</li>
+    <li>No membership is created on submission.</li>
+    <li>User can read only their own applications.</li>
+  </ul>
+
+  <h3>Test without production app.ts</h3>
+  <pre>const app = express();
+app.use(express.json());
+app.use("/api/v1", createOrganizationApplicationRouter(testDependencies));
+app.use(errorMiddleware);</pre>
+  <p>Run directly:</p>
+  <pre>npx tsx --test src/modules/organizations/application/application.integration.test.ts</pre>
+
+  <h2>15. Handoff to Member 3</h2>
+  <p>Member 3 must not write the real Prisma review repository until this checklist is complete:</p>
+  <ul class="checklist">
+    <li>Schema models/enums reviewed by Member 1 and Member 3.</li>
+    <li>Migration committed and applied successfully.</li>
+    <li>Prisma client generated.</li>
+    <li>Administrative-area import documented and sample/full import completed as agreed.</li>
+    <li>Organization application creates PENDING_REVIEW organization.</li>
+    <li>Selected service areas are pending and linked by IDs.</li>
+    <li>Notification model required by Member 3 is present.</li>
+    <li>Exact status enums and transaction expectations documented.</li>
+    <li>Member 3 receives commands to update branch and verify migration status.</li>
+  </ul>
+
+  <h3>Member 3 may then use, but not alter</h3>
+  <pre>prisma.organization
+prisma.organizationServiceArea
+prisma.organizationMembership
+prisma.auditLog
+prisma.notification</pre>
+
+  <h2>16. Definition of done</h2>
+  <ul class="checklist">
+    <li>Correct feature branch and no unrelated edits.</li>
+    <li>Existing organization models reused.</li>
+    <li>Administrative-area and service-area designs documented and migrated.</li>
+    <li>Official GN source/version/license metadata preserved.</li>
+    <li>Import is idempotent and spatial validations pass.</li>
+    <li>Citizen application creates only pending records.</li>
+    <li>No ORG_ADMIN membership is created before approval.</li>
+    <li>Own-application access is scoped by authenticated profile.</li>
+    <li>Citizen web pages use real API and EcoTrack style.</li>
+    <li>Member 1 receives exported router/page contracts.</li>
+    <li>Member 3 receives the completed migration handoff.</li>
+    <li>Prisma validate/status, database check, tests, typecheck, build and web lint pass.</li>
+    <li>No incident/map work or secrets included.</li>
+  </ul>
+
+  <h2>Reference material</h2>
+  <ul class="source-list">
+    <li>Local source: <code>docs/IMPORTANT/EcoTrack_Sri_Lanka_Service_Area_Boundaries_Guide.md</code></li>
+    <li>Local source: <code>database_docs/EcoTrack_Database_v2_Finalization_and_Codex_Instructions.txt</code></li>
+    <li>Local source: <code>database_docs/EcoTrack_ERD_v2_Final.dbml</code></li>
+    <li>Local collaboration guide: <code>docs/team-plans/VERY_IMPORTANT_TEAM_COLLABORATION_RULES.txt</code></li>
+  </ul>
+
+  <p class="footer-note">EcoTrack team plan - Member 2. Database reference data must be traceable, migrations are immutable after application, and Member 3 depends on this documented schema handoff.</p>
+</body>
+</html>
