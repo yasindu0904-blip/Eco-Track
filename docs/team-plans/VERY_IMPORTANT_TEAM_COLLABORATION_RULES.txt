@@ -1,0 +1,374 @@
+ECOTRACK - VERY IMPORTANT TEAM COLLABORATION RULES
+==================================================
+
+Purpose
+-------
+This file is mandatory reading for all three team members before beginning the
+organization-onboarding milestone. It explains ownership, branches, shared
+files, testing, integration, database migrations, and the rules that prevent
+one member from damaging another member's work.
+
+This plan is subordinate to the project sources of truth:
+
+1. docs/IMPORTANT/
+2. database_docs/
+3. The current Prisma schema and applied migrations
+4. The current working authentication implementation
+
+If a proposed implementation conflicts with those sources, stop and discuss it
+before writing code.
+
+
+NON-NEGOTIABLE RULES
+--------------------
+
+1. Work only on the branch assigned to your task.
+2. Do not commit directly to main, authentication, or the shared integration
+   branch.
+3. Do not delete another member's file.
+4. Do not silently rewrite another member's function or business rule.
+5. Do not restore or apply the existing Git stash.
+6. Never commit .env, .env.local, passwords, service-role keys, SMTP passwords,
+   database URLs, Android signing secrets, or Supabase secret keys.
+7. Never expose a Supabase secret/service-role key to web or Android code. Only
+   the publishable key is allowed in public clients.
+8. Never trust a frontend-supplied platform role, organization role, requester
+   user ID, reviewer user ID, or organization authorization decision.
+9. Existing applied Prisma migration files are immutable. Never edit them.
+10. Only the assigned database owner changes schema.prisma and creates migrations
+    during this milestone.
+11. Git history and pull-request descriptions record who changed code. Source
+    comments must explain the business rule, not say only "updated by member".
+12. Before handing off work, run the relevant typecheck, tests, build, lint, and
+    database validation commands.
+
+
+BRANCH PLAN
+-----------
+
+The integration owner first creates a shared milestone branch from the completed
+authentication branch:
+
+  integration/organization-onboarding
+
+Each member creates a feature branch from that integration branch:
+
+  Member 1 / Authorization and integration:
+    feature/authorization-integration
+
+  Member 2 / Organization application and GN boundaries:
+    feature/organization-application-boundaries
+
+  Member 3 / Super Admin organization review:
+    feature/super-admin-organization-review
+
+  Member 3 / Android authentication (separate concern and separate branch):
+    feature/android-authentication
+
+Suggested branch-start procedure:
+
+  git fetch origin
+  git switch integration/organization-onboarding
+  git pull --ff-only origin integration/organization-onboarding
+  git switch -c <assigned-feature-branch>
+
+Do not create a feature branch from an old local commit. Confirm the branch name
+with `git branch --show-current` before editing.
+
+
+OWNERSHIP SUMMARY
+-----------------
+
+Member 1 owns:
+
+  backend/src/authorization/**
+  backend/src/middleware/tenant.middleware.ts
+  backend/src/middleware/ability.middleware.ts
+  backend/src/middleware/authorize.middleware.ts
+  CASL and cross-organization authorization tests
+  Final shared backend route integration
+  Final shared web route/page integration
+
+Member 2 owns:
+
+  backend/src/modules/organizations/application/**
+  backend/src/modules/administrativeAreas/** (or the agreed equivalent)
+  web/src/features/organizations/application/**
+  GN reference-data import scripts and source metadata
+  schema.prisma changes and all migrations for this milestone
+
+Member 3 owns:
+
+  backend/src/modules/organizations/review/**
+  backend/src/modules/notifications/** if assigned by the integration owner
+  web/src/features/organizations/review/**
+  mobile/** for Android authentication
+  Super Admin review services, repositories, pages, audit creation, and
+  notification creation
+
+Member 3 uses Member 2's Prisma models. Member 3 does not create competing
+migrations. If a field/table is missing, Member 3 sends the requirement to
+Member 2, who makes the schema change and migration.
+
+
+THE FOUR CRITICAL SHARED FILES
+==============================
+
+1. backend/src/app.ts
+---------------------
+
+This is the backend composition root. It connects global Express middleware and
+feature routers. It must not contain domain business rules, Prisma queries,
+approval logic, boundary-import logic, or authorization policy definitions.
+
+Only the integration owner changes the production app.ts on the shared
+integration branch.
+
+Correct order inside app.ts:
+
+  A. Create Express application
+  B. Global security middleware (Helmet)
+  C. CORS
+  D. JSON/body parsing with limits
+  E. Public health route
+  F. Versioned feature routers under /api/v1
+  G. notFoundMiddleware
+  H. errorMiddleware (always last)
+
+The existing order must be preserved:
+
+  app.use(helmet())
+  app.use(cors(...))
+  app.use(express.json(...))
+  app.get("/health", ...)
+  app.use("/api/v1", featureRouter)
+  app.use(notFoundMiddleware)
+  app.use(errorMiddleware)
+
+Feature members must export routers rather than starting servers:
+
+  export function createOrganizationApplicationRouter(dependencies) {
+    const router = Router();
+    // Feature routes only.
+    return router;
+  }
+
+  export function createOrganizationReviewRouter(dependencies) {
+    const router = Router();
+    // Feature routes only.
+    return router;
+  }
+
+Feature files must not call app.listen(). server.ts remains the only production
+HTTP startup entry point.
+
+The integration owner mounts exported routers additively:
+
+  app.use(
+    "/api/v1",
+    createOrganizationApplicationRouter(applicationDependencies),
+  );
+
+  app.use(
+    "/api/v1",
+    createOrganizationReviewRouter(reviewDependencies),
+  );
+
+Do not repeat /api/v1 inside feature route paths. If app.ts mounts /api/v1 and a
+router defines /organization-applications, the final URL is:
+
+  /api/v1/organization-applications
+
+Middleware order is part of security. Examples:
+
+  Citizen application:
+    authenticate -> ability middleware -> authorize create -> controller
+
+  Super Admin review:
+    authenticate -> ability middleware -> authorize review -> controller
+
+  Organization-scoped route (future):
+    authenticate -> tenant middleware -> ability middleware -> authorize -> controller
+
+Calling next() advances to the next middleware/controller. Calling next(error)
+skips normal handlers and reaches errorMiddleware.
+
+How members test without changing production app.ts:
+
+  - Create a small Express app inside the feature integration test.
+  - Mount only the feature router under /api/v1.
+  - Supply fake dependencies where appropriate.
+  - Add errorMiddleware last.
+  - Run the test directly with npx tsx --test <test-file>.
+
+A feature member may make a temporary app.ts wiring commit only on their isolated
+feature branch for manual testing. Keep it in a separate commit. The integration
+owner decides whether to reproduce or discard that wiring during merge.
+
+
+2. backend/package.json (and package-lock.json)
+------------------------------------------------
+
+Only the integration owner installs shared dependencies and commits package
+changes unless ownership is explicitly delegated.
+
+For this milestone, Member 1 requests/installs:
+
+  @casl/ability
+  @casl/prisma
+
+Run npm install only from the correct package folder:
+
+  C:\campus\projects\Eco-Track\backend
+
+Never edit package-lock.json manually. npm updates it together with package.json.
+
+Do not add a package when the standard library or an installed package already
+solves the problem. Do not add per-feature test scripts just to run one test.
+Instead use:
+
+  npx tsx --test path/to/feature.integration.test.ts
+
+If Member 2 needs a boundary-import dependency or Member 3 needs an Android/web
+dependency, they submit the exact package, purpose, and target workspace to the
+integration owner. Backend and web have separate package.json files; installing
+in the wrong directory is an error.
+
+After dependency changes, run:
+
+  npm run typecheck
+  npm test
+  npm run build
+
+
+3. web/src/App.tsx
+------------------
+
+App.tsx is the shared web composition point. It currently coordinates the real
+Supabase session, backend profile, role-aware UI, errors, and sign-out. Feature
+members must not replace this authentication flow with mock authentication.
+
+Only the integration owner changes the production App.tsx on the integration
+branch.
+
+Member 2 exports citizen-facing pages/components from their feature folder.
+Member 3 exports Super Admin pages/components from their feature folder. Pages
+must accept typed props or use an agreed feature API/hook; they must not contain
+hard-coded access tokens, roles, user IDs, or organization IDs.
+
+For visual testing, members may do either of the following on their feature
+branch:
+
+  A. Temporarily render their page from App.tsx in a clearly separate commit.
+  B. Add a feature-specific Vite preview entry that renders mock props/data.
+
+The integration owner connects final pages to authentication and routing. The
+frontend may hide unauthorized actions for user experience, but the backend must
+always perform the real CASL/tenant check.
+
+The ecotrack-srs-mockup folder is a visual reference only. Do not copy its fake
+authentication, fake authorization, static success responses, or fake database
+data into production web code.
+
+After web integration, run from web/:
+
+  npm run build
+  npm run lint
+
+
+4. backend/prisma/schema.prisma
+--------------------------------
+
+Member 2 is the single schema/migration owner for this milestone.
+
+Member 2 must reuse the existing Organization, OrganizationVerificationDocument,
+OrganizationMembership, OrganizationMembershipRequest, AuditLog, and UserProfile
+models. Do not duplicate these tables under new names.
+
+Expected missing structures include the agreed equivalents of:
+
+  administrative_areas
+  organization_service_areas
+  notifications
+
+The administrative-area boundary must use SRID 4326, support MultiPolygon data,
+record authoritative source/version metadata, and have a PostGIS GiST index.
+Because Prisma may represent geography as Unsupported, PostGIS column types,
+constraints, and indexes may require reviewed SQL inside the migration.
+
+Migration rules:
+
+  - Create a new migration; never edit an applied migration.
+  - Use clear migration names.
+  - Inspect generated SQL before applying it.
+  - Preserve unique organization slug and membership constraints.
+  - Add unique (organization_id, administrative_area_id) for service-area links.
+  - Import GN reference data idempotently using official codes as stable keys.
+  - Do not silently overwrite changed boundary source versions.
+  - Run Prisma validation, migration status, database check, and relevant tests.
+
+Required handoff from Member 2 to Member 3:
+
+  - Committed schema and migration
+  - Migration applied successfully
+  - Prisma client generated
+  - Model/enums documented
+  - A PENDING_REVIEW organization can be created
+  - Pending service-area links can be created
+  - Notification fields required by review are available
+  - Test/reference data instructions are documented
+
+Member 3 may use Prisma repositories and transactions after this handoff. Schema
+ownership does not mean Member 3 is forbidden from using the database. It means
+Member 3 does not change the structure.
+
+
+INTEGRATION AND HANDOFF ORDER
+-----------------------------
+
+1. Authentication baseline remains unchanged and green.
+2. Member 1 establishes CASL actions, subjects, ability types, and middleware
+   contracts.
+3. Member 2 creates schema/migrations, GN import, application module, and citizen
+   pages.
+4. Member 2's database migration is reviewed and merged before Member 3 writes
+   real Prisma review queries.
+5. Member 3 implements review repositories/transactions and Android auth while
+   respecting Member 1's authorization contracts.
+6. The integration owner mounts routers and pages in shared composition files.
+7. Cross-feature and end-to-end tests run on the integration branch.
+
+
+MINIMUM HANDOFF CHECKLIST FOR EVERY MEMBER
+------------------------------------------
+
+[ ] Correct feature branch used
+[ ] Required docs read
+[ ] No secrets or local environment files committed
+[ ] No unrelated files changed
+[ ] No other member's file deleted
+[ ] Business rules are in services, not controllers or app.ts
+[ ] Database access is in repositories/transactions, not controllers
+[ ] Authorization is enforced by backend middleware/service rules
+[ ] Errors use ApplicationError and central errorMiddleware
+[ ] Relevant tests pass
+[ ] Backend typecheck/build or web build/lint passes
+[ ] Git diff reviewed
+[ ] README/PR includes setup, commands, API contract, and known limitations
+[ ] Shared-file wiring isolated for integration owner
+
+
+CURRENT MILESTONE EXCLUSIONS
+----------------------------
+
+Do not implement these in this milestone:
+
+  - Incident latitude/longitude submission
+  - Point-to-GN spatial lookup for incidents
+  - Organization incident visibility/dashboard
+  - Web or mobile map
+  - Incident workflow
+
+GN boundary data is included only so organization applicants can select official
+service areas and Super Admins can review those selections.
+

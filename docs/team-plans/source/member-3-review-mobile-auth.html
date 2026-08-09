@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>EcoTrack Member 3 - Super Admin Review and Android Authentication Plan</title>
+  <link rel="stylesheet" href="pdf-style.css" />
+</head>
+<body>
+  <section class="cover">
+    <div class="kicker">EcoTrack Team Execution Plan</div>
+    <h1>Member 3: Super Admin Review and Android Authentication</h1>
+    <p class="subtitle">A detailed backend transaction, authorization, audit, notification, web review, and Android Supabase authentication plan that consumes—but does not modify—Member 2’s database schema.</p>
+    <dl class="meta">
+      <dt>Primary owner</dt><dd>Team Member 3</dd>
+      <dt>Review branch</dt><dd>feature/super-admin-organization-review</dd>
+      <dt>Mobile branch</dt><dd>feature/android-authentication</dd>
+      <dt>Database dependency</dt><dd>Wait for Member 2 migration handoff</dd>
+      <dt>Prepared</dt><dd>10 August 2026</dd>
+      <dt>Status</dt><dd>Parallel-start with gated DB integration</dd>
+    </dl>
+  </section>
+
+  <section class="toc">
+    <h1>Contents</h1>
+    <ol>
+      <li>Mission and scope</li>
+      <li>Mandatory sources and rules</li>
+      <li>Branches and ownership</li>
+      <li>What can start immediately</li>
+      <li>Database handoff gate</li>
+      <li>Super Admin API contracts</li>
+      <li>Review backend module</li>
+      <li>Approval transaction</li>
+      <li>Decline transaction</li>
+      <li>Audit and notification behavior</li>
+      <li>Authorization and security</li>
+      <li>Super Admin web pages</li>
+      <li>Android project and Supabase client</li>
+      <li>Android magic-link/PKCE flow</li>
+      <li>Android backend API integration</li>
+      <li>Testing strategy</li>
+      <li>Handoff and definition of done</li>
+    </ol>
+  </section>
+
+  <h2>1. Mission and scope</h2>
+  <p>Member 3 owns two separate concerns and therefore uses two separate branches:</p>
+  <ol>
+    <li>Super Admin organization review on the backend and web.</li>
+    <li>Supabase authentication in the empty <code>mobile</code> Android Studio project.</li>
+  </ol>
+
+  <div class="callout"><strong>Core review outcome:</strong> an active SUPER_ADMIN can list and inspect pending organization applications, approve or decline exactly once, record reviewer/audit information, notify the requester, and create the requester’s first active ORG_ADMIN membership only on approval.</div>
+  <div class="callout info"><strong>Core mobile outcome:</strong> Android uses the same Supabase project and passwordless identity model, securely handles deep-link/PKCE sessions, sends the Supabase access token as a bearer token to the existing Express backend, loads <code>/auth/me</code>, persists session state, and signs out correctly.</div>
+
+  <h3>Excluded</h3>
+  <ul>
+    <li>Database schema and migration ownership.</li>
+    <li>Citizen organization application submission.</li>
+    <li>GN boundary import.</li>
+    <li>Incidents, coordinates, point-to-GN lookup, dashboards and maps.</li>
+  </ul>
+
+  <h2>2. Mandatory sources and rules</h2>
+  <ul>
+    <li><code>docs/team-plans/VERY_IMPORTANT_TEAM_COLLABORATION_RULES.txt</code></li>
+    <li><code>docs/IMPORTANT/EcoTrack_Backend_Module_Structure_and_Heavy_Service_Reminder.txt</code></li>
+    <li><code>docs/IMPORTANT/EcoTrack_Complete_System_Flow_Source_of_Truth_v1.txt</code></li>
+    <li><code>database_docs/EcoTrack_Database_v2_Finalization_and_Codex_Instructions.txt</code></li>
+    <li><code>backend/prisma/schema.prisma</code> after Member 2 handoff</li>
+    <li>Current web authentication implementation under <code>web/src/features/auth</code></li>
+    <li>Current backend authentication routes/middleware/services/repositories</li>
+  </ul>
+
+  <div class="callout danger"><strong>Do not:</strong> change <code>schema.prisma</code>, create migrations, edit Member 2’s migration, create approval seeds as a substitute for runtime logic, trust a frontend role, put a Supabase secret/service-role key in Android, or implement review without CASL permission from Member 1.</div>
+
+  <h2>3. Branches and ownership</h2>
+  <h3>Review branch</h3>
+  <pre>git fetch origin
+git switch integration/organization-onboarding
+git pull --ff-only origin integration/organization-onboarding
+git switch -c feature/super-admin-organization-review</pre>
+
+  <h3>Android branch</h3>
+  <pre>git fetch origin
+git switch integration/organization-onboarding
+git pull --ff-only origin integration/organization-onboarding
+git switch -c feature/android-authentication</pre>
+
+  <p>Do not combine Android build files and backend review changes in one branch or pull request. They have different dependencies, test commands and merge risks.</p>
+
+  <h3>Owned paths</h3>
+  <pre>backend/src/modules/organizations/review/**
+backend/src/modules/notifications/** (if assigned)
+web/src/features/organizations/review/**
+mobile/**</pre>
+
+  <h3>Shared/not-owned paths</h3>
+  <pre>backend/prisma/schema.prisma              -> Member 2
+backend/prisma/migrations/**             -> Member 2
+backend/src/authorization/**             -> Member 1
+backend/src/app.ts                       -> Member 1 integration
+backend/package.json                     -> Member 1 integration
+web/src/App.tsx                          -> Member 1 integration
+web/src/features/organizations/application/** -> Member 2</pre>
+
+  <h2>4. What can start immediately</h2>
+  <p>Member 3 does not need to remain idle while Member 2 creates the schema. These tasks can proceed with agreed interfaces and fake data:</p>
+  <ul>
+    <li>Create API request/response types for pending list, details, approve and decline.</li>
+    <li>Create route/controller/service interfaces with fake repository dependencies.</li>
+    <li>Write service tests against fake repositories.</li>
+    <li>Create Super Admin list/detail web pages using typed mock data.</li>
+    <li>Create confirmation dialogs and loading/success/error states.</li>
+    <li>Create the Android Studio project under <code>mobile</code>.</li>
+    <li>Implement Android Supabase client, login UI, deep-link handling, session state, backend profile request and sign-out.</li>
+  </ul>
+
+  <p>Wait for Member 2 only before writing the real Prisma review repository and database transaction.</p>
+
+  <h2>5. Database handoff gate</h2>
+  <p>Do not begin real review repository code until Member 2 confirms:</p>
+  <ul class="checklist">
+    <li>New schema and migration are committed.</li>
+    <li>Migration applies successfully and status is current.</li>
+    <li>Prisma client is generated.</li>
+    <li>Organization application creates a PENDING_REVIEW Organization.</li>
+    <li>Selected GN links exist as pending OrganizationServiceArea records.</li>
+    <li>AdministrativeArea and service-area model/enums are documented.</li>
+    <li>Notification model required by review exists.</li>
+    <li>A safe test/application setup procedure exists.</li>
+  </ul>
+
+  <p>After pulling the merged schema:</p>
+  <pre>cd backend
+npx prisma validate
+npx prisma generate
+npx prisma migrate status
+npm run typecheck
+npm run db:check</pre>
+  <p>These commands consume/check Member 2’s migration; they do not authorize Member 3 to create another migration.</p>
+
+  <h2>6. Super Admin API contracts</h2>
+  <table>
+    <thead><tr><th>Endpoint</th><th>Purpose</th><th>Permission</th></tr></thead>
+    <tbody>
+      <tr><td>GET /api/v1/super-admin/organization-applications</td><td>Paginated/filterable pending list</td><td>Review OrganizationApplication</td></tr>
+      <tr><td>GET /api/v1/super-admin/organization-applications/:organizationId</td><td>Review-safe details, documents and selected GN areas</td><td>Review OrganizationApplication</td></tr>
+      <tr><td>POST /api/v1/super-admin/organization-applications/:organizationId/approve</td><td>Approve in one transaction</td><td>Approve OrganizationApplication</td></tr>
+      <tr><td>POST /api/v1/super-admin/organization-applications/:organizationId/decline</td><td>Decline with notes in one transaction</td><td>Decline OrganizationApplication</td></tr>
+      <tr><td>GET /api/v1/notifications</td><td>Requester reads own notifications</td><td>ReadOwn Notification</td></tr>
+      <tr><td>PATCH /api/v1/notifications/:notificationId/read</td><td>Requester marks own notification read (optional milestone)</td><td>Update own Notification</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Safe response fields</h3>
+  <p>Return organization application data, requester display/contact data required for review, GN area names/codes, document metadata required for review, status/review notes and timestamps. Never return Supabase tokens, auth secrets, storage service credentials, internal stack traces, or unrelated profiles.</p>
+
+  <h2>7. Review backend module</h2>
+  <pre>backend/src/modules/organizations/review/
+  review.types.ts
+  review.validation.ts
+  review.dependencies.ts
+  review.routes.ts
+  controllers/
+    listPendingOrganizationApplications.controller.ts
+    getOrganizationApplicationForReview.controller.ts
+    approveOrganizationApplication.controller.ts
+    declineOrganizationApplication.controller.ts
+  services/
+    listPendingOrganizationApplications.service.ts
+    getOrganizationApplicationForReview.service.ts
+    approveOrganizationApplication.service.ts
+    declineOrganizationApplication.service.ts
+  repositories/
+    organizationReview.repository.ts
+  review.integration.test.ts</pre>
+
+  <h3>Layer responsibilities</h3>
+  <table>
+    <thead><tr><th>Layer</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td>Route</td><td>Method/path plus authenticate, ability and authorize middleware order.</td></tr>
+      <tr><td>Controller</td><td>Parse route/body, call service, return 200 and safe DTO.</td></tr>
+      <tr><td>Validation</td><td>UUID, review notes and filter/pagination validation through Zod.</td></tr>
+      <tr><td>Service</td><td>State-transition and business invariants; maps domain conflicts to ApplicationError.</td></tr>
+      <tr><td>Repository</td><td>Prisma reads and atomic approval/decline transactions.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8. Approval transaction</h2>
+  <p>Approval must be atomic and conditional. The application must still be <code>PENDING_REVIEW</code> when the transaction writes. This prevents two Super Admin sessions from approving/declining the same application concurrently.</p>
+
+  <div class="flow">authenticate active user
+  -> CASL authorizes Approve
+  -> validate organization ID and optional notes
+  -> Prisma transaction:
+       conditionally transition Organization PENDING_REVIEW -> ACTIVE
+       set reviewedByUserId from authenticated Super Admin profile
+       set reviewedAt and activatedAt
+       update pending selected service areas -> ACTIVE/approved
+       create requester OrganizationMembership:
+         role = ORG_ADMIN
+         status = ACTIVE
+         source = FIRST_ADMIN
+       create approval AuditLog
+       create ORGANIZATION_APPROVED Notification for requester
+  -> commit
+  -> return safe approved result</div>
+
+  <h3>Critical checks</h3>
+  <ul>
+    <li>Reviewer ID comes from <code>request.authentication.profile.id</code>, never request body.</li>
+    <li>Organization must exist and still be pending.</li>
+    <li>Requester profile must still exist and be eligible for membership.</li>
+    <li>Selected service areas must be in an approvable state.</li>
+    <li>Unique organization/user membership constraint must be respected.</li>
+    <li>If the requester is already a member because of data inconsistency, fail safely and investigate; do not create duplicate membership.</li>
+    <li>Transaction rollback must leave no partially active organization, missing admin, audit or notification.</li>
+  </ul>
+
+  <h3>Concurrency strategy</h3>
+  <p>Use a conditional update/updateMany or another reviewed transaction pattern that proves the current state is pending. If zero rows transition, return a conflict:</p>
+  <pre>409 ORGANIZATION_REVIEW_CONFLICT
+"This organization application has already been reviewed or changed."</pre>
+
+  <h2>9. Decline transaction</h2>
+  <div class="flow">authenticate active user
+  -> CASL authorizes Decline
+  -> validate organization ID and review notes
+  -> Prisma transaction:
+       conditionally transition Organization PENDING_REVIEW -> DECLINED
+       set reviewer, reviewedAt and reviewNotes
+       transition pending service areas -> DECLINED
+       create decline AuditLog
+       create ORGANIZATION_DECLINED Notification
+       DO NOT create membership
+       DO NOT set activatedAt
+  -> commit
+  -> return safe declined result</div>
+
+  <p>Decide with the team whether review notes are mandatory for decline; recommended: require a useful bounded note. Do not include sensitive internal-only comments in the user-visible notification unless explicitly separated.</p>
+
+  <h2>10. Audit and notification behavior</h2>
+  <h3>Audit log</h3>
+  <table>
+    <thead><tr><th>Field</th><th>Approval/decline value</th></tr></thead>
+    <tbody>
+      <tr><td>actorUserId</td><td>Authenticated Super Admin profile ID</td></tr>
+      <tr><td>organizationId</td><td>Reviewed organization ID</td></tr>
+      <tr><td>action</td><td>ORGANIZATION_APPROVED or ORGANIZATION_DECLINED</td></tr>
+      <tr><td>entityType</td><td>Organization</td></tr>
+      <tr><td>entityId</td><td>Reviewed organization ID</td></tr>
+      <tr><td>metadata</td><td>Safe old/new status, selected-area count, reason code; no secrets</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Notification</h3>
+  <ul>
+    <li>Recipient is <code>organization.requestedByUserId</code>, not body data.</li>
+    <li>Approval message states organization became active and requester is now ORG_ADMIN.</li>
+    <li>Decline message states declined status and safe review notes/reason.</li>
+    <li>Notification is created inside the same transaction as review state.</li>
+    <li>Notification listing filters by authenticated recipient ID.</li>
+    <li>WebSockets are not required; load/poll notifications through REST for this milestone.</li>
+  </ul>
+
+  <h2>11. Authorization and security</h2>
+  <p>Member 1 defines action and subject constants. Member 3 consumes them; do not create a second local permission vocabulary.</p>
+  <h3>Review route order</h3>
+  <pre>router.post(
+  "/super-admin/organization-applications/:organizationId/approve",
+  authenticate,
+  buildAbility,
+  authorize(Actions.Approve, Subjects.OrganizationApplication),
+  approveOrganizationApplicationController,
+);</pre>
+
+  <h3>Security requirements</h3>
+  <ul>
+    <li>Active SUPER_ADMIN platform role is required for all review routes.</li>
+    <li>Normal USER and ORG_ADMIN membership alone are insufficient.</li>
+    <li>Frontend button visibility is not authorization.</li>
+    <li>Review list/detail must not leak to unauthorized direct requests.</li>
+    <li>Reviewer and actor IDs always come from authentication context.</li>
+    <li>All errors use ApplicationError and central error middleware.</li>
+    <li>Unexpected Prisma errors do not expose database details.</li>
+    <li>Use pagination and bounded filters for lists.</li>
+  </ul>
+
+  <h2>12. Super Admin web pages</h2>
+  <p>Use the existing <code>ecotrack-srs-mockup</code> Super Admin verification screen as a visual reference, then connect it to real bearer-authenticated APIs.</p>
+  <h3>Required UI</h3>
+  <ul>
+    <li>Pending-application list with organization name, requester, submitted date and selected-area count.</li>
+    <li>Review details with official contact data, description, registration information, document metadata and GN areas.</li>
+    <li>Approve confirmation.</li>
+    <li>Decline confirmation with validated review-notes field.</li>
+    <li>Loading, empty, error, conflict and success states.</li>
+    <li>Status update/removal from pending list after success.</li>
+  </ul>
+
+  <h3>Frontend rules</h3>
+  <ul>
+    <li>Use existing <code>apiClient.ts</code> and Supabase session hook.</li>
+    <li>Do not send reviewer ID, platform role, membership role, new status or timestamps from the browser.</li>
+    <li>Disable actions while request is pending to reduce double submission.</li>
+    <li>Still handle backend 409 because UI disabling cannot prevent concurrent reviewers.</li>
+    <li>Export pages/components for Member 1; do not replace production <code>App.tsx</code>.</li>
+    <li>Use accessible dialogs, labels, focus handling and keyboard operation.</li>
+  </ul>
+
+  <h2>13. Android project and Supabase client</h2>
+  <p>The repository’s <code>mobile</code> directory is currently empty. Create the Android Studio project there on the separate mobile branch. Use Kotlin and the agreed UI approach (Jetpack Compose if selected by the team).</p>
+
+  <h3>Initial requirements</h3>
+  <ul>
+    <li>Internet permission in <code>AndroidManifest.xml</code>.</li>
+    <li>Supabase Kotlin client and Auth module.</li>
+    <li>Compatible Ktor client engine and Kotlin serialization as required by the chosen library version.</li>
+    <li>Supabase project URL and publishable key supplied through a non-secret build configuration.</li>
+    <li>No Supabase secret/service-role key in mobile source, resources or build output.</li>
+    <li>Backend API base URL configurable for emulator/device development.</li>
+  </ul>
+
+  <div class="callout warning"><strong>Networking note:</strong> Android emulator cannot use <code>localhost</code> to reach the developer computer. Use the emulator host address (commonly <code>10.0.2.2</code>) or an agreed LAN/development URL, and expose the backend carefully only as required.</div>
+
+  <h3>Supabase client responsibilities</h3>
+  <ul>
+    <li>Install Auth.</li>
+    <li>Use PKCE flow.</li>
+    <li>Configure deep-link scheme and host.</li>
+    <li>Persist/restore session through the library.</li>
+    <li>Observe authenticated, initializing, refresh failure and signed-out states.</li>
+  </ul>
+
+  <h2>14. Android magic-link and PKCE flow</h2>
+  <h3>Supabase dashboard</h3>
+  <p>Add the agreed Android deep-link URL to Supabase Authentication redirect URLs. Use an app-specific scheme/host, for example:</p>
+  <pre>ecotrack://auth-callback</pre>
+  <p>The exact scheme and host must match Android manifest intent filters and the Supabase Auth client configuration.</p>
+
+  <h3>Android flow</h3>
+  <div class="flow">User enters email
+  -> Android calls Supabase signInWith(OTP) for email
+  -> Custom SMTP sends magic link
+  -> user opens link on Android
+  -> Android deep link opens EcoTrack
+  -> MainActivity passes intent to Supabase handleDeeplinks(intent)
+  -> PKCE code/session is handled by the Auth plugin
+  -> sessionStatus becomes Authenticated
+  -> Android sends access token to Express /api/v1/auth/me
+  -> backend verifies token and returns EcoTrack profile
+  -> authenticated mobile UI appears</div>
+
+  <h3>Conceptual Kotlin configuration</h3>
+  <pre>val supabase = createSupabaseClient(
+    supabaseUrl = BuildConfig.SUPABASE_URL,
+    supabaseKey = BuildConfig.SUPABASE_PUBLISHABLE_KEY,
+) {
+    install(Auth) {
+        flowType = FlowType.PKCE
+        scheme = "ecotrack"
+        host = "auth-callback"
+    }
+}</pre>
+  <p>Use the current Supabase Kotlin documentation while implementing because Gradle coordinates and APIs must match the selected library version.</p>
+
+  <h3>Deep-link handling</h3>
+  <ul>
+    <li>Add the manifest intent filter for the exact scheme/host.</li>
+    <li>Call <code>supabase.handleDeeplinks(intent)</code> early in activity startup as required by the library.</li>
+    <li>Handle a new intent if the activity is reused.</li>
+    <li>Display expired/invalid link errors safely.</li>
+    <li>PKCE requires the code verifier from the initiating client; test the complete same-device flow.</li>
+    <li>Do not log magic-link parameters, access tokens or refresh tokens.</li>
+  </ul>
+
+  <h2>15. Android backend API integration</h2>
+  <h3>Request</h3>
+  <pre>GET /api/v1/auth/me
+Authorization: Bearer &lt;Supabase access token&gt;
+Accept: application/json</pre>
+  <p>The mobile application must use the same backend contract as web. It does not query private EcoTrack application tables directly through Supabase. The backend owns profile provisioning, account-status checks and authorization.</p>
+
+  <h3>Mobile auth state</h3>
+  <table>
+    <thead><tr><th>State</th><th>UI/behavior</th></tr></thead>
+    <tbody>
+      <tr><td>Initializing</td><td>Loading state; do not briefly show protected UI.</td></tr>
+      <tr><td>Not authenticated</td><td>Email magic-link form.</td></tr>
+      <tr><td>Email sent</td><td>Clear same-device link instructions and resend cooldown.</td></tr>
+      <tr><td>Authenticated, profile loading</td><td>Send bearer request to /auth/me.</td></tr>
+      <tr><td>Authenticated and active</td><td>Show authenticated profile/home appropriate to milestone.</td></tr>
+      <tr><td>Account inactive</td><td>Show backend message; do not show protected app.</td></tr>
+      <tr><td>Refresh failure</td><td>Clear/repair session and return to sign-in safely.</td></tr>
+      <tr><td>Signed out</td><td>Remove session state and show login.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Sign-out</h3>
+  <p>Call Supabase sign-out, observe the session state, clear in-memory EcoTrack profile data, and navigate to login. Test for stale-request races similar to the web fix: an older profile request must not overwrite the newer signed-out state.</p>
+
+  <h2>16. Testing strategy</h2>
+  <h3>Review service/repository tests</h3>
+  <ul>
+    <li>Normal USER receives 403 for every review endpoint.</li>
+    <li>Active SUPER_ADMIN can list pending and read review details.</li>
+    <li>Suspended Super Admin is rejected.</li>
+    <li>Approval transitions exactly one pending organization.</li>
+    <li>Approval activates selected service areas.</li>
+    <li>Approval creates exactly one FIRST_ADMIN membership.</li>
+    <li>Approval creates audit and requester notification.</li>
+    <li>Decline creates no membership and no activatedAt.</li>
+    <li>Decline creates audit and requester notification.</li>
+    <li>Second/concurrent review returns 409 and creates no duplicates.</li>
+    <li>Any transaction failure rolls back every write.</li>
+    <li>Reviewer ID/body spoofing is impossible.</li>
+    <li>Notification list returns only authenticated recipient records.</li>
+  </ul>
+
+  <h3>Web tests/manual checks</h3>
+  <ul>
+    <li>Pending list loading/empty/error/success states.</li>
+    <li>Detail displays selected GN names/codes and review metadata.</li>
+    <li>Approve/decline buttons disabled while pending.</li>
+    <li>409 conflict is explained and list refreshes.</li>
+    <li>Normal user cannot see review navigation and direct API still returns 403.</li>
+    <li>Build and lint pass.</li>
+  </ul>
+
+  <h3>Android tests/manual checks</h3>
+  <ul>
+    <li>App contains only publishable key, never service key.</li>
+    <li>Email sends through configured SMTP.</li>
+    <li>Magic link opens the app through exact deep-link scheme/host.</li>
+    <li>PKCE session completes on same device.</li>
+    <li>Session survives activity/app restart as intended.</li>
+    <li>Bearer token reaches backend and /auth/me returns profile.</li>
+    <li>Invalid/expired token produces safe login/error state.</li>
+    <li>Sign-out remains signed out after restart.</li>
+    <li>Access/refresh tokens never appear in logs.</li>
+  </ul>
+
+  <h3>Backend final commands</h3>
+  <pre>cd backend
+npm run typecheck
+npm test
+npx tsx --test src/modules/organizations/review/review.integration.test.ts
+npm run build
+npx prisma validate
+npx prisma migrate status
+npm run db:check
+
+cd ..\web
+npm run build
+npm run lint</pre>
+
+  <h2>17. Handoff and definition of done</h2>
+  <h3>Review handoff to Member 1</h3>
+  <ul class="checklist">
+    <li>Router factory exported without changing production app.ts.</li>
+    <li>Dependencies exported/documented.</li>
+    <li>API DTOs documented.</li>
+    <li>Approval/decline transaction and conflict behavior documented.</li>
+    <li>Authorization constants imported from Member 1.</li>
+    <li>Web pages exported without replacing production App.tsx.</li>
+    <li>Tests and commands included in pull request.</li>
+  </ul>
+
+  <h3>Review definition of done</h3>
+  <ul class="checklist">
+    <li>Member 2 schema used without schema/migration edits.</li>
+    <li>Only active SUPER_ADMIN may review.</li>
+    <li>Approval is atomic, conditional and creates first admin/audit/notification.</li>
+    <li>Decline is atomic, conditional, creates no membership and records audit/notification.</li>
+    <li>Concurrent/double review produces 409 with no duplicate side effects.</li>
+    <li>Super Admin pages use real API and EcoTrack visual style.</li>
+    <li>Backend and web checks pass.</li>
+  </ul>
+
+  <h3>Android definition of done</h3>
+  <ul class="checklist">
+    <li>Android project committed only on mobile branch.</li>
+    <li>Publishable key and project URL configured without secrets.</li>
+    <li>PKCE and deep-link handling implemented.</li>
+    <li>Magic link, session restore, /auth/me, inactive-account handling and sign-out tested.</li>
+    <li>No incident/map functionality added.</li>
+    <li>Build/setup instructions documented for another team member.</li>
+  </ul>
+
+  <h2>Reference material</h2>
+  <ul class="source-list">
+    <li>Local source: <code>docs/IMPORTANT/EcoTrack_Backend_Module_Structure_and_Heavy_Service_Reminder.txt</code></li>
+    <li>Local source: <code>database_docs/EcoTrack_Database_v2_Finalization_and_Codex_Instructions.txt</code></li>
+    <li>Supabase Kotlin initialization and deep links: <a href="https://supabase.com/docs/reference/kotlin/initializing">https://supabase.com/docs/reference/kotlin/initializing</a></li>
+    <li>Supabase Kotlin email OTP/magic link: <a href="https://supabase.com/docs/reference/kotlin/auth-signinwithotp">https://supabase.com/docs/reference/kotlin/auth-signinwithotp</a></li>
+    <li>Supabase Kotlin auth session events: <a href="https://supabase.com/docs/reference/kotlin/auth-onauthstatechange">https://supabase.com/docs/reference/kotlin/auth-onauthstatechange</a></li>
+    <li>Supabase Android/Kotlin quickstart: <a href="https://supabase.com/docs/guides/getting-started/quickstarts/kotlin">https://supabase.com/docs/guides/getting-started/quickstarts/kotlin</a></li>
+  </ul>
+
+  <p class="footer-note">EcoTrack team plan - Member 3. Review and Android work remain separate branches. Schema changes are requested from Member 2, authorization contracts come from Member 1, and no incident/map work is part of this milestone.</p>
+</body>
+</html>
