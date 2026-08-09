@@ -1,11 +1,12 @@
 {
-  "name": "backend",
-  "version": "1.0.0",
-  "description": "",
-  "types": "module",
-  "main": "index.js",
+  "name": "ecotrack-backend",
+  "version": "0.1.0",
+  "description": "EcoTrack Express REST API",
+  "private": true,
+  "type": "module",
+  "main": "dist/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "tsx --test src/tests/auth.integration.test.ts",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
@@ -19,7 +20,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.0",
     "@prisma/client": "^7.9.0",
