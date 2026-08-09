@@ -1,122 +1,135 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
+import { LoginForm } from "./features/auth/LoginForm";
+import { ProfileScreen } from "./features/auth/ProfileScreen";
+import { useAuthentication } from "./features/auth/useAuthentication";
 
+function BrandHeader() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <header className="brand-header">
+      <div className="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 64 64" role="presentation">
+          <path
+            className="brand-stem"
+            d="M32 48V24"
+          />
+          <path
+            className="brand-leaf"
+            d="M31 27C18 28 11 20 10 10c12-1 21 4 23 15"
+          />
+          <path
+            className="brand-leaf brand-leaf-right"
+            d="M33 30c12 0 20-7 21-17-11-2-20 3-23 14"
+          />
+          <path
+            className="brand-soil"
+            d="M18 53c2-9 7-14 14-14s12 5 14 14H18Z"
+          />
+        </svg>
+      </div>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <h1>EcoTrack</h1>
+      <p>Community-Driven Environmental Action</p>
+    </header>
+  );
 }
 
-export default App
+function LoadingState() {
+  return (
+    <section
+      className="auth-state auth-state-loading"
+      aria-live="polite"
+    >
+      <span className="loading-spinner" aria-hidden="true" />
+      <h2>Securing your session</h2>
+      <p>Please wait while EcoTrack verifies your sign-in.</p>
+    </section>
+  );
+}
+
+interface AuthenticationErrorProps {
+  message: string;
+  onRetry: () => void;
+  onSignOut: () => void;
+}
+
+function AuthenticationError({
+  message,
+  onRetry,
+  onSignOut,
+}: AuthenticationErrorProps) {
+  return (
+    <section className="auth-state" role="alert">
+      <div className="state-icon state-icon-error" aria-hidden="true">
+        !
+      </div>
+      <h2>We could not complete sign-in</h2>
+      <p>{message}</p>
+
+      <div className="button-stack">
+        <button
+          className="button button-primary"
+          type="button"
+          onClick={onRetry}
+        >
+          Try again
+        </button>
+        <button
+          className="button button-secondary"
+          type="button"
+          onClick={onSignOut}
+        >
+          Return to sign in
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function App() {
+  const {
+    status,
+    profile,
+    errorMessage,
+    retry,
+    signOut,
+  } = useAuthentication();
+
+  return (
+    <main className="app-shell">
+      <div className="background-orb background-orb-one" />
+      <div className="background-orb background-orb-two" />
+
+      <section className="auth-card">
+        <BrandHeader />
+
+        <div className="auth-card-content">
+          {status === "loading" && <LoadingState />}
+
+          {status === "signedOut" && <LoginForm />}
+
+          {status === "signedIn" && profile && (
+            <ProfileScreen
+              profile={profile}
+              onSignOut={signOut}
+            />
+          )}
+
+          {status === "error" && errorMessage && (
+            <AuthenticationError
+              message={errorMessage}
+              onRetry={retry}
+              onSignOut={signOut}
+            />
+          )}
+        </div>
+      </section>
+
+      <p className="app-footer">
+        Small actions. Shared responsibility. Cleaner communities.
+      </p>
+    </main>
+  );
+}
+
+export default App;
