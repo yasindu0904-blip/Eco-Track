@@ -36,11 +36,13 @@ async function checkDatabase(): Promise<void> {
   const [
     userProfileCount,
     organizationCount,
-    organizationMemberCount,
+    organizationMembershipCount,
+    platformSettingsCount,
   ] = await Promise.all([
     prisma.userProfile.count(),
     prisma.organization.count(),
-    prisma.organizationMember.count(),
+    prisma.organizationMembership.count(),
+    prisma.platformSettings.count(),
   ]);
 
   console.log("EcoTrack database connection succeeded.");
@@ -53,8 +55,9 @@ async function checkDatabase(): Promise<void> {
   console.log(`User profiles: ${userProfileCount}`);
   console.log(`Organizations: ${organizationCount}`);
   console.log(
-    `Organization memberships: ${organizationMemberCount}`,
+    `Organization memberships: ${organizationMembershipCount}`,
   );
+  console.log(`Platform settings rows: ${platformSettingsCount}`);
 }
 
 checkDatabase()

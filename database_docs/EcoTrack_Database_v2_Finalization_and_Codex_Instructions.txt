@@ -1,0 +1,511 @@
+ECOTRACK DATABASE V2 FINALIZATION AND CODEX IMPLEMENTATION INSTRUCTIONS
+======================================================================
+Version: 1.0
+Date: 09 Aug 2026
+Purpose: Permanent database implementation guidance for EcoTrack before converting DATABASE.txt / EcoTrack ERD v2 into Prisma models and PostgreSQL migrations.
+
+PRECEDENCE AND SCOPE
+--------------------
+This note does not replace the EcoTrack Complete System Flow / Source of Truth. It finalizes database-specific decisions that were previously ambiguous in DATABASE.txt and records the implementation safeguards that Codex must preserve while building Prisma and migrations.
+
+When this note and older database planning notes differ, use this note for the database implementation details below, while preserving the current EcoTrack source-of-truth business flow.
+
+The updated DATABASE.txt already reflects these decisions at ERD/DBML level where DBML can express them. Some PostgreSQL, Supabase, PostGIS, partial-index, trigger, RLS, and cross-entity rules cannot be completely represented in DBML and therefore must be implemented and reviewed in migration SQL and service tests.
+
+
+1. PLATFORM CONFIGURATION MUST BE PERMANENTLY STORED
+----------------------------------------------------
+Problem finalized:
+- incidents.highlight_until depends on a configurable highlight duration.
+- incidents.archive_after depends on a configurable unaddressed/archive duration.
+- The previous ERD referenced configured values but had no permanent configuration source.
+
+Final decision:
+Add a singleton public.platform_settings table.
+
+Initial fields:
+- id = 1
+- incident_highlight_hours = 48
+- incident_unaddressed_days = 7
+- updated_by_user_id nullable
+- created_at
+- updated_at
+
+Rules:
+- Seed exactly one settings row for the MVP.
+- Add CHECK constraints so id = 1 and durations are positive.
+- incident_highlight_hours defaults to 48.
+- incident_unaddressed_days defaults to 7.
+- When an incident is created, calculate highlight_until and archive_after from the current settings and store the calculated timestamps on that incident.
+- Later settings changes apply to newly calculated deadlines and should not silently rewrite old incident deadlines unless a deliberate administrative migration/business operation is introduced.
+
+Reason:
+The current source of truth explicitly treats 48 hours and seven days as configurable defaults rather than hard-coded permanent constants.
+
+
+2. KEEP USER_PROFILE EMAIL AS A SYNCHRONIZED APPLICATION COPY
+--------------------------------------------------------------
+Final decision:
+Keep email in public.user_profiles.
+
+Recommended model concept:
+- auth_user_id UUID UNIQUE NOT NULL
+- email VARCHAR UNIQUE NOT NULL
+
+Authority rule:
+- Supabase Auth remains the authority for authentication identity and verified email.
+- user_profiles.email is a synchronized application copy for normal application queries and administrative/member interfaces.
+- Do not treat user_profiles.email as an independent login identity source.
+- Do not allow an ordinary profile-update API to arbitrarily change this field.
+
+Synchronization pattern:
+1. Supabase verifies the magic-link user/session.
+2. Backend obtains the authenticated Supabase user ID and verified email.
+3. Backend provisions or loads UserProfile.
+4. Backend synchronizes UserProfile.email from the verified Supabase identity when appropriate.
+
+Reason:
+Organization/member/admin views can safely query EcoTrack application tables without requiring normal domain code to read Supabase auth.users.
+
+
+3. FINAL POSTGIS REPRESENTATION
+-------------------------------
+Final database types:
+- Incident point: geography(Point, 4326)
+- Cleanup event point: geography(Point, 4326)
+- Optional meeting point: geography(Point, 4326)
+- Optional event-session location point: geography(Point, 4326)
+- Organization service boundary: geography(MultiPolygon, 4326)
+
+The old wording "geography or geometry equivalent" is no longer an open choice for this version.
+
+Indexes:
+- Add GiST indexes for PostGIS geography columns used by spatial lookups, especially incidents.geo_point and organization_service_areas.boundary.
+- Add other spatial indexes only where actual query usage justifies them.
+
+Latitude/longitude synchronization:
+EcoTrack keeps latitude and longitude because they are convenient for API/mobile/web map responses, but they must not drift away from the associated geography point.
+
+Preferred rule:
+- Use controlled database creation/update logic to derive geography(Point, 4326) from longitude/latitude.
+- Prefer a database trigger/generated mechanism where supported by the final PostgreSQL implementation.
+- Application code must not be able to leave latitude/longitude and geo_point inconsistent.
+- Apply the equivalent rule to event, meeting, and optional session points.
+
+Validation:
+- latitude must be between -90 and 90.
+- longitude must be between -180 and 180.
+
+PostGIS query implementation:
+- Normal Prisma queries remain the default for ordinary CRUD.
+- Specialized ST_Covers, ST_DWithin, ST_Distance, bounding/spatial queries may use safe parameterized SQL / TypedSQL in geospatial repositories.
+- Never concatenate untrusted coordinates or values into raw SQL strings.
+
+
+4. CLEANUP WORKFLOW TRANSITIONS MUST BE TENANT-SAFE
+---------------------------------------------------
+Problem finalized:
+The previous cleanup_workflow_transitions table stored only from_status_id and to_status_id. A database bug could therefore connect a status from Organization A to a status from Organization B.
+
+Final model:
+cleanup_workflow_transitions includes:
+- id
+- organization_id
+- from_status_id
+- to_status_id
+
+Required uniqueness:
+UNIQUE (organization_id, from_status_id, to_status_id)
+
+Required database integrity:
+- cleanup_workflow_statuses must expose a unique composite key usable by the FKs, e.g. UNIQUE (organization_id, id).
+- (transition.organization_id, transition.from_status_id) must reference (status.organization_id, status.id).
+- (transition.organization_id, transition.to_status_id) must reference (status.organization_id, status.id).
+
+Result:
+A1 -> A2 is legal if both statuses belong to Organization A.
+A1 -> B2 must be impossible at the database level.
+
+The same principle applies to cleanup_events.current_workflow_status_id:
+- The current workflow status must belong to the same organization as the cleanup event.
+- Prefer a composite FK using (cleanup_event.organization_id, current_workflow_status_id).
+
+CASL remains responsible for permission rules. The database constraints protect structural tenant integrity even if application code contains a bug.
+
+
+5. EXACT DEFINITION OF AN INCIDENT-CLAIMING / ACTIVE CLEANUP EVENT
+------------------------------------------------------------------
+Final decision:
+A linked cleanup event claims and blocks an incident only in these lifecycle statuses:
+- PUBLISHED
+- SCHEDULED
+- IN_PROGRESS
+- COMPLETION_SUBMITTED
+
+These statuses do NOT claim/block the incident:
+- DRAFT
+- COMPLETED
+- CANCELLED
+
+Important behavior:
+- An organization may create/edit a DRAFT linked to an incident without preventing another organization from eventually acting.
+- The incident claim must be acquired atomically when an event is published/enters a claiming lifecycle state.
+- If two organizations try to publish a claiming event for the same incident at nearly the same time, the database decides the winner.
+- The successful transaction obtains the claim.
+- The losing transaction returns an application conflict such as HTTP 409.
+
+Required PostgreSQL partial unique index concept:
+
+CREATE UNIQUE INDEX ...
+ON public.cleanup_events (incident_id)
+WHERE incident_id IS NOT NULL
+  AND lifecycle_status IN (
+    'PUBLISHED',
+    'SCHEDULED',
+    'IN_PROGRESS',
+    'COMPLETION_SUBMITTED'
+  );
+
+Do not use the older condition "status NOT IN (COMPLETED, CANCELLED)" because that incorrectly makes abandoned DRAFT events block an incident.
+
+Business transaction for publish/claim should include the required incident/event/history changes and should not depend on a frontend-disabled button for race protection.
+
+
+6. USE TIMESTAMPTZ FOR REAL MOMENTS
+-----------------------------------
+Final rule:
+PostgreSQL columns representing real moments use TIMESTAMPTZ.
+
+Examples:
+- created_at
+- updated_at
+- reported_at
+- reviewed_at
+- joined_at
+- published_at
+- completed_at
+- cancelled_at
+- changed_at
+- uploaded_at
+- awarded_at
+- read_at
+- resolved_at
+- archived_at
+
+Prisma should map these intentionally, e.g. DateTime with PostgreSQL Timestamptz precision selected by the project.
+
+Do not blindly convert calendar/scheduling fields that represent a local session definition:
+- session_date remains DATE.
+- start_time remains TIME.
+- end_time remains TIME.
+- document expiry dates such as expires_at remain DATE where they represent a date rather than an instant.
+
+Application/API formatting should still use a consistent timezone strategy, preferably exchanging actual instants in ISO-8601 form.
+
+
+7. DO NOT CREATE A NORMAL PRISMA-MANAGED RELATION TO SUPABASE auth.users
+------------------------------------------------------------------------
+Final rule:
+Supabase owns auth.users.
+
+EcoTrack Prisma should normally keep:
+- UserProfile.authUserId UUID UNIQUE
+
+Do not casually model a normal Prisma relation such as:
+UserProfile -> AuthUser
+that assumes EcoTrack owns and migrates the Supabase auth schema.
+
+DATABASE.txt may show auth.users as an external architecture/reference table, but the application schema intentionally has no normal application-owned FK/cascade from public.user_profiles.auth_user_id to auth.users.
+
+Authentication flow remains:
+Frontend Supabase session
+-> Bearer access token
+-> backend verifies with Supabase Auth
+-> obtain Supabase user ID/email
+-> Prisma find/upsert UserProfile by authUserId
+-> load EcoTrack roles/memberships/status
+-> CASL/tenant authorization
+
+Do not use a delete cascade from auth.users into the EcoTrack business-history graph. EcoTrack uses suspension/archive/history preservation for important records.
+
+If the team later deliberately wants a cross-schema database FK, it must be a separately reviewed Supabase/PostgreSQL SQL decision, not an accidental Prisma-generated relationship.
+
+
+8. APPLY RLS AND BACKEND-ONLY PRIVILEGE PROTECTION TO EVERY PUBLIC APPLICATION TABLE
+-------------------------------------------------------------------------------------
+Problem finalized:
+Adding many new public tables without applying the same security treatment as the initial tables would leave the database migration inconsistent.
+
+Final rule:
+Every new public EcoTrack application table must receive the project's chosen backend-only access protection in migration SQL.
+
+For the current architecture:
+Mobile/Web frontend
+-> Express API
+-> Prisma/backend DB role
+-> PostgreSQL
+
+The frontend must not gain direct unrestricted write/read access to tenant-private application tables simply because they are in the public schema.
+
+Codex must review every table, including but not limited to:
+- platform_settings
+- user_profiles
+- organizations
+- organization_verification_documents
+- organization_service_areas
+- organization_memberships
+- organization_membership_requests
+- cleanup_workflow_statuses
+- cleanup_workflow_transitions
+- incident_categories
+- incidents
+- incident_photos
+- incident_reviews
+- incident_status_history
+- cleanup_events
+- event_sessions
+- event_coordinators
+- event_participants
+- participant_session_availability
+- session_allocations
+- event_notes
+- event_evidence
+- event_status_history
+- contribution_events
+- achievement_definitions
+- user_achievements
+- user_devices
+- notifications
+- issue_reports
+- audit_logs
+
+Required migration review:
+- Enable RLS as appropriate for every application table.
+- Apply/revoke privileges consistently with the current backend-only database access model.
+- Do not assume enabling RLS on three old tables protects newly created tables.
+- Confirm the backend database role still has the access Prisma needs.
+- Confirm anonymous/authenticated frontend roles cannot bypass the Express authorization model.
+
+RLS is defense-in-depth here. Express authentication, verified tenant context, CASL, and tenant-filtered queries remain mandatory.
+
+
+9. CROSS-ENTITY CONSISTENCY REVIEW BEYOND SIMPLE FOREIGN KEYS
+-------------------------------------------------------------
+The ERD is intentionally simplified, so several IDs can each be individually valid while still forming an invalid cross-organization or cross-event combination.
+
+Codex must review and protect the following rules.
+
+A. Cleanup event and workflow status
+- cleanup_event.organization_id must equal current_workflow_status.organization_id.
+- Enforce with a composite FK where practical.
+
+B. Cleanup event creator
+- cleanup_event.created_by_membership_id must be an ACTIVE membership of cleanup_event.organization_id.
+- A normal FK proves the membership exists but does not by itself prove organization equality or active status.
+- Enforce organization equality with composite constraints where practical and active/role requirements in the transaction/service.
+
+C. Event coordinators
+- coordinator.membership_id must belong to the owning organization.
+- assigned_by_membership_id must belong to the owning organization and have authorization to assign coordinators.
+- coordinator membership must be ACTIVE at assignment time.
+
+D. Incident organization reviews
+- incident_reviews.organization_id identifies the reviewing tenant.
+- reviewed_by_membership_id must belong to that same organization and be active/authorized at review time.
+- The organization must have legitimate visibility/history rights to that shared incident according to service-area rules.
+
+E. Participant availability
+- participant_session_availability.participant_id must belong to the same cleanup event as session_id.
+- A participant from Event A must never mark availability for a session in Event B.
+
+F. Session allocations
+- participant_id and session_id must belong to the same cleanup event.
+- allocated_by_membership_id must belong to the event-owning organization and be authorized.
+- attendance_marked_by_membership_id, when present, must belong to the event-owning organization and be authorized.
+
+G. Event notes
+- author_membership_id must belong to the event-owning organization.
+
+H. Event status history
+- from/to workflow statuses must belong to the event-owning organization.
+- changed_by_membership_id must belong to the event-owning organization and be authorized for that transition.
+
+I. Event evidence
+- if session_id is present, the session must belong to the same cleanup event as event_evidence.cleanup_event_id.
+- uploader authorization/participation rules must be checked by service policy.
+
+J. Session time and capacity integrity
+- end_time > start_time.
+- capacity, if present, must be positive.
+
+K. Service areas and activation
+- an ACTIVE organization must have at least one ACTIVE approved service area.
+- Service-area approval/change is controlled; frontend input alone cannot grant access to unrelated incidents.
+
+Implementation choice:
+Use the strongest practical mechanism for each rule:
+1. Composite foreign key / unique constraint when the relationship can be represented cleanly.
+2. PostgreSQL CHECK/trigger when the rule is structural but spans data Prisma/DBML cannot conveniently express.
+3. Transactional service validation for status/authorization/business-state rules.
+4. Integration tests must prove the rule even when database constraints also exist.
+
+Do not rely only on frontend filtering.
+
+
+10. OTHER REQUIRED POSTGRESQL CONSTRAINTS / INDEXES TO PRESERVE
+---------------------------------------------------------------
+Codex must retain or implement the existing v2 integrity notes, including:
+
+- UNIQUE user_profiles.auth_user_id.
+- UNIQUE user_profiles.email as the synchronized application copy unless the implementation has a deliberate normalized-case strategy requiring a functional/citext index.
+- UNIQUE organization slug.
+- UNIQUE (organization_id, user_id) membership.
+- At most one current incident review per (incident_id, organization_id).
+- At most one participant per (cleanup_event_id, user_id).
+- At most one participant availability per (participant_id, session_id).
+- At most one allocation per (participant_id, session_id).
+- Event-session uniqueness for the selected event/date/start-time rule.
+- At most one PENDING organization-membership request for the same user and organization, implemented with a partial unique index rather than blocking historical APPROVED/DECLINED/WITHDRAWN rows.
+- Contribution/reward uniqueness/idempotency so the same qualifying source cannot award the same contribution twice.
+- Required service-area spatial indexes.
+- Normal query indexes based on actual filter paths such as organization/status/date and incident status/date.
+
+Do not over-index every foreign key automatically without considering real queries, but preserve indexes needed for tenant filters, spatial discovery, active-event claims, and common status/date lists.
+
+
+11. PRISMA VS CUSTOM MIGRATION SQL
+----------------------------------
+Prisma should own the normal application schema where practical:
+- models
+- scalar fields
+- enums
+- normal primary/unique keys
+- ordinary foreign keys
+- ordinary indexes
+- relations
+- normal migrations
+
+Custom/reviewed PostgreSQL migration SQL will still be required for some EcoTrack rules, especially:
+- PostGIS extension/type details unsupported or represented as Unsupported by Prisma.
+- geography(Point, 4326) / geography(MultiPolygon, 4326) handling.
+- GiST spatial indexes.
+- spatial triggers/generated synchronization logic.
+- partial unique indexes.
+- RLS enablement/policies.
+- privilege revocation/grants.
+- some CHECK constraints.
+- triggers/composite safeguards Prisma cannot generate cleanly.
+
+Important migration workflow:
+1. Change Prisma schema / create migration.
+2. Review generated SQL.
+3. Add required custom SQL intentionally.
+4. Apply to a development Supabase/PostgreSQL database.
+5. Run integrity and cross-tenant tests.
+6. Do not edit already-applied production migrations casually.
+
+
+12. EVENT CLAIM TRANSACTION AND CONCURRENCY
+-------------------------------------------
+Publishing a linked cleanup event is a concurrency-sensitive use case.
+
+Required behavior:
+- Database partial unique index is the final race-condition protection.
+- Service performs validation and attempts the transaction.
+- If another organization wins the claim first, map the unique-constraint conflict to HTTP 409 Conflict.
+- Do not solve this only with Redis locks or frontend button disabling.
+- Redis may reduce duplicate work, but PostgreSQL remains the permanent integrity authority.
+
+Also use optimistic concurrency/conditional updates where admins could otherwise overwrite status changes.
+
+
+13. TENANT FILTERING AND AUTHORIZATION ARE STILL REQUIRED
+---------------------------------------------------------
+Database integrity does not replace authorization.
+
+Request flow remains:
+Authentication
+-> account status
+-> tenant/context where applicable
+-> CASL ability/action check
+-> controller
+-> service/use case
+-> repository
+-> Prisma/PostgreSQL
+
+Rules:
+- Every organization-owned query must use the verified organization context from backend membership/authorization.
+- Never trust a role or organization ID merely because the frontend sent it.
+- Shared incidents are not initially organization-owned, so visibility must follow approved active service-area coverage or preserved authorized historical/event access.
+- Private incident reviews, workflows, event coordination data, notes, participants, and organization analytics remain tenant-owned.
+
+
+14. REQUIRED TEST STRATEGY FOR DATABASE V2
+------------------------------------------
+Every implementation phase involving tenant-owned data must create at least:
+- Organization A
+- Organization B
+- users/memberships for both organizations
+- one shared incident where useful
+- separate workflows/events/sessions/participants where useful
+
+Negative tests must attempt invalid direct-ID combinations, not only normal UI flows.
+
+Required examples:
+- Organization A admin cannot read/update Organization B private data by changing an ID.
+- Organization A workflow transition cannot point to Organization B status.
+- Organization A event cannot use Organization B current workflow status.
+- Organization A event cannot use Organization B coordinator membership.
+- Organization A reviewer membership cannot be recorded as Organization B's review actor.
+- Event A participant cannot mark availability for Event B session.
+- Event A participant cannot be allocated to Event B session.
+- Unauthorized membership cannot change event workflow state.
+- Two organizations concurrently publishing linked events for the same incident result in exactly one claim and one conflict.
+- A DRAFT linked event does not block another organization from publishing a claiming event.
+- COMPLETED/CANCELLED historical events do not block a valid new claiming event when business rules permit replacement/follow-up.
+
+
+15. FINAL DATABASE DECISIONS TO GIVE CODEX
+------------------------------------------
+Codex should treat the following as finalized for the current implementation:
+
+1. Add public.platform_settings with configurable 48-hour highlight and 7-day unaddressed defaults.
+2. Keep user_profiles.email as a synchronized read-only copy; Supabase Auth remains authoritative.
+3. Use geography(Point, 4326) for points and geography(MultiPolygon, 4326) for service areas.
+4. Keep lat/lng and geography synchronized using controlled database logic.
+5. Add organization_id to cleanup_workflow_transitions and enforce same-organization from/to statuses.
+6. Enforce cleanup event current workflow status belongs to the event's organization.
+7. Incident-claiming cleanup lifecycle statuses are PUBLISHED, SCHEDULED, IN_PROGRESS, COMPLETION_SUBMITTED only.
+8. DRAFT does not claim an incident.
+9. COMPLETED and CANCELLED do not claim an incident.
+10. Implement the active-incident rule as a PostgreSQL partial unique index and return 409 on race conflict.
+11. Use TIMESTAMPTZ for real moments; retain DATE/TIME for session calendar/time fields and date-only expiry fields.
+12. Keep UserProfile.authUserId unique; do not create a normal Prisma-managed cross-schema relation/FK to Supabase auth.users.
+13. Apply RLS and the backend-only privilege strategy to every new public application table.
+14. Preserve PostgreSQL as the final integrity source; Redis never replaces permanent constraints.
+15. Review every relationship for cross-organization and cross-event consistency, using composite FKs/triggers/service transactions as appropriate.
+16. Test Organization A vs Organization B direct-ID attacks and invalid cross-event combinations.
+17. Keep external network work such as Expo push delivery and heavy image work outside database transactions; queue it after commit.
+
+
+16. DO NOT CHANGE THESE CORE DOMAIN RULES WHILE IMPLEMENTING THE DATABASE
+------------------------------------------------------------------------
+The database implementation must continue to preserve the current EcoTrack source of truth:
+- One account per person.
+- Every normal user has citizen + volunteer capabilities.
+- Passwordless Supabase magic-link authentication.
+- Incidents are shared platform records and have no initial organization owner.
+- Incident visibility is derived from approved active service areas.
+- Each organization reviews the same incident independently.
+- FALSE count is informational and not a global vote/rejection.
+- Super Admin does not assign incidents or ordinary cleanup work.
+- Cleanup events belong to exactly one organization.
+- Direct cleanup events without incidents are allowed.
+- Only one incident-claiming active event may exist for an incident at a time.
+- Volunteers join directly; there is no volunteer application/approval system.
+- Multi-session availability is separate from organization session allocation.
+- Event coordinators are event-specific active organization members, not a permanent platform role.
+- Participation and rewards are non-monetary.
+- Tenant-owned information must always be protected by verified backend authorization context.
+
+END OF DATABASE V2 FINALIZATION NOTE

@@ -13,6 +13,13 @@ Project EcoTrack_ERD_v2_Simplified {
   - Volunteers join immediately; availability and actual session allocation are separate.
   - Audit logs replace several separate status-history tables that were not needed for the MVP.
   - Cleanup workflow configuration is simplified to organization-specific statuses and transitions.
+  - Incident highlight/archive durations come from permanent platform settings.
+  - PostgreSQL real-moment timestamps use TIMESTAMPTZ; DATE/TIME remain for local session scheduling fields.
+  - PostGIS uses geography(Point, 4326) for points and geography(MultiPolygon, 4326) for service areas.
+  - DRAFT cleanup events do not claim incidents. PUBLISHED, SCHEDULED, IN_PROGRESS, and COMPLETION_SUBMITTED are the incident-claiming lifecycle states.
+  - Supabase auth.users remains externally owned. user_profiles.auth_user_id is a unique logical identity link and must not become a normal Prisma-managed cross-schema foreign key unless deliberately implemented later with reviewed Supabase SQL.
+  - Every public application table must receive the project's backend-only RLS / privilege-revocation treatment in migrations.
+  - Cross-organization and cross-event relationships must be protected by database constraints where practical and by transactional service validation plus Organization A / Organization B tests where a direct FK cannot express the rule.
   '''
 }
 
@@ -172,26 +179,42 @@ Enum contribution_type {
 // AUTHENTICATION AND USER PROFILE
 // ============================================================
 
-Table auth.users [note: 'External Supabase Auth table. Passwordless magic-link identity and sessions are managed by Supabase.'] {
+Table auth.users [note: 'External Supabase-owned table shown for architecture context only. Do not model this as a normal Prisma-managed relation or application-owned FK without a deliberate reviewed Supabase-specific SQL decision.'] {
   id uuid [pk]
   email varchar [not null, unique]
-  email_confirmed_at timestamp
-  created_at timestamp [not null, default: `now()`]
+  email_confirmed_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
 }
 
 Table public.user_profiles [headerColor: #4C78A8] {
   id uuid [pk]
-  auth_user_id uuid [not null, unique]
+  auth_user_id uuid [not null, unique, note: 'Logical link to Supabase Auth user ID. Keep unique in Prisma; no normal Prisma-managed FK to auth.users.']
+  email varchar [not null, unique, note: 'Synchronized read-only application copy of the verified Supabase email. Supabase Auth remains the identity/email authority.']
   full_name varchar
   phone_number varchar
   platform_role platform_role [not null, default: 'USER']
   account_status account_status [not null, default: 'ACTIVE']
-  profile_completed_at timestamp
-  created_at timestamp [not null, default: `now()`]
-  updated_at timestamp [not null, default: `now()`]
-  archived_at timestamp
+  profile_completed_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  archived_at timestamptz
 
-  Note: 'Every normal profile automatically has Citizen and Volunteer capabilities. No separate citizen or volunteer table is required.'
+  Note: 'Every normal profile automatically has Citizen and Volunteer capabilities. No separate citizen or volunteer table is required. email is synchronized from the verified Supabase identity during provisioning/login and is not independently editable as an EcoTrack identity field.'
+}
+
+// ============================================================
+// PLATFORM CONFIGURATION
+// ============================================================
+
+Table public.platform_settings [headerColor: #9C755F] {
+  id int [pk, default: 1, note: 'Singleton application-settings row. Application logic/migration should enforce id = 1.']
+  incident_highlight_hours int [not null, default: 48, note: 'Duration used to calculate incidents.highlight_until at incident creation. Must be positive.']
+  incident_unaddressed_days int [not null, default: 7, note: 'Additional unaddressed period used to calculate incidents.archive_after. Must be positive.']
+  updated_by_user_id uuid
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Note: 'Permanent source for configurable incident visibility durations. Seed the singleton row. Add CHECK constraints for id = 1 and positive duration values.'
 }
 
 // ============================================================
@@ -210,12 +233,12 @@ Table public.organizations [headerColor: #59A14F] {
   official_address text [not null]
   status organization_status [not null, default: 'PENDING_REVIEW']
   reviewed_by_user_id uuid
-  reviewed_at timestamp
+  reviewed_at timestamptz
   review_notes text
-  activated_at timestamp
-  created_at timestamp [not null, default: `now()`]
-  updated_at timestamp [not null, default: `now()`]
-  archived_at timestamp
+  activated_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  archived_at timestamptz
 
   Note: 'Represents an existing real-world organization requesting an EcoTrack workspace; EcoTrack does not create the real organization itself.'
 }
@@ -228,10 +251,10 @@ Table public.organization_verification_documents [headerColor: #59A14F] {
   original_file_name varchar [not null]
   review_status document_review_status [not null, default: 'PENDING']
   reviewed_by_user_id uuid
-  reviewed_at timestamp
+  reviewed_at timestamptz
   review_notes text
   expires_at date
-  uploaded_at timestamp [not null, default: `now()`]
+  uploaded_at timestamptz [not null, default: `now()`]
 
   Note: 'Separate table is required because one organization can upload several proof documents.'
 }
@@ -240,13 +263,13 @@ Table public.organization_service_areas [headerColor: #59A14F] {
   id uuid [pk]
   organization_id uuid [not null]
   area_name varchar [not null]
-  boundary geography [not null, note: 'PostGIS geography(MultiPolygon, 4326) or geometry equivalent.']
+  boundary geography(MultiPolygon,4326) [not null, note: 'Approved service-area boundary. Add a spatial GiST index in migration SQL.']
   status service_area_status [not null, default: 'PENDING_REVIEW']
   reviewed_by_user_id uuid
-  reviewed_at timestamp
+  reviewed_at timestamptz
   review_notes text
-  created_at timestamp [not null, default: `now()`]
-  updated_at timestamp [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
 
   indexes {
     organization_id
@@ -264,8 +287,8 @@ Table public.organization_memberships [headerColor: #59A14F] {
   source membership_source [not null]
   source_request_id uuid [unique]
   added_or_approved_by_membership_id uuid
-  joined_at timestamp [not null, default: `now()`]
-  ended_at timestamp
+  joined_at timestamptz [not null, default: `now()`]
+  ended_at timestamptz
 
   indexes {
     (organization_id, user_id) [unique]
@@ -282,9 +305,9 @@ Table public.organization_membership_requests [headerColor: #59A14F] {
   message text
   status membership_request_status [not null, default: 'PENDING']
   reviewed_by_membership_id uuid
-  reviewed_at timestamp
+  reviewed_at timestamptz
   review_notes text
-  created_at timestamp [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
 
   indexes {
     (organization_id, requester_user_id, status)
@@ -307,12 +330,13 @@ Table public.cleanup_workflow_statuses [headerColor: #B279A2] {
   is_initial boolean [not null, default: false]
   is_final boolean [not null, default: false]
   is_active boolean [not null, default: true]
-  created_at timestamp [not null, default: `now()`]
-  updated_at timestamp [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
 
   indexes {
     (organization_id, code) [unique]
     (organization_id, position) [unique]
+    (organization_id, id) [unique, note: 'Supports tenant-safe composite foreign keys from transitions/events.']
   }
 
   Note: 'Each organization has one cleanup-event workflow for the MVP. This replaces the older workflow_definitions table.'
@@ -320,14 +344,15 @@ Table public.cleanup_workflow_statuses [headerColor: #B279A2] {
 
 Table public.cleanup_workflow_transitions [headerColor: #B279A2] {
   id uuid [pk]
+  organization_id uuid [not null]
   from_status_id uuid [not null]
   to_status_id uuid [not null]
 
   indexes {
-    (from_status_id, to_status_id) [unique]
+    (organization_id, from_status_id, to_status_id) [unique]
   }
 
-  Note: 'Defines which organization-specific cleanup statuses may follow one another. Role permissions remain in CASL/application authorization, not in another database table.'
+  Note: 'Defines which organization-specific cleanup statuses may follow one another. organization_id plus composite foreign keys must guarantee that both from/to statuses belong to this same organization. Role permissions remain in CASL/application authorization.'
 }
 
 // ============================================================
@@ -351,14 +376,14 @@ Table public.incidents [headerColor: #F28E2B] {
   status incident_status [not null, default: 'ACTIVE']
   latitude decimal(9,6) [not null]
   longitude decimal(9,6) [not null]
-  geo_point geography [not null, note: 'PostGIS geography(Point, 4326).']
+  geo_point geography(Point,4326) [not null, note: 'Keep synchronized from longitude/latitude using controlled DB logic (prefer trigger/generated mechanism) and add a spatial GiST index.']
   address_text text
-  highlight_until timestamp [not null, note: 'Calculated from the configured highlight duration when the report is created.']
-  archive_after timestamp [not null, note: 'Calculated from the configured unaddressed/archive duration when the report is created.']
-  reported_at timestamp [not null, default: `now()`]
-  updated_at timestamp [not null, default: `now()`]
-  resolved_at timestamp
-  archived_at timestamp
+  highlight_until timestamptz [not null, note: 'Calculated at creation from platform_settings.incident_highlight_hours. Stored per incident so later setting changes do not silently rewrite historical deadlines.']
+  archive_after timestamptz [not null, note: 'Calculated at creation from the configured highlight/unaddressed durations. Stored per incident for deterministic lifecycle processing.']
+  reported_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  resolved_at timestamptz
+  archived_at timestamptz
 
   indexes {
     (status, reported_at)
@@ -376,7 +401,7 @@ Table public.incident_photos [headerColor: #F28E2B] {
   thumbnail_path varchar
   caption varchar
   sort_order int [not null, default: 0]
-  uploaded_at timestamp [not null, default: `now()`]
+  uploaded_at timestamptz [not null, default: `now()`]
 }
 
 Table public.incident_reviews [headerColor: #F28E2B] {
@@ -387,9 +412,9 @@ Table public.incident_reviews [headerColor: #F28E2B] {
   reason_code varchar
   private_notes text
   reviewed_by_membership_id uuid [not null]
-  first_viewed_at timestamp [not null, default: `now()`]
-  reviewed_at timestamp
-  updated_at timestamp [not null, default: `now()`]
+  first_viewed_at timestamptz [not null, default: `now()`]
+  reviewed_at timestamptz
+  updated_at timestamptz [not null, default: `now()`]
 
   indexes {
     (incident_id, organization_id) [unique]
@@ -407,7 +432,7 @@ Table public.incident_status_history [headerColor: #F28E2B] {
   changed_by_user_id uuid
   related_cleanup_event_id uuid
   reason text
-  changed_at timestamp [not null, default: `now()`]
+  changed_at timestamptz [not null, default: `now()`]
 
   Note: 'Stores the reporter-visible shared lifecycle history: ACTIVE, CLEANUP_ORGANIZED, RESOLVED, EXPIRED, and ARCHIVED. Organization review changes are recorded in audit_logs instead of a second review-history table.'
 }
@@ -420,7 +445,7 @@ Table public.cleanup_events [headerColor: #E15759] {
   id uuid [pk]
   organization_id uuid [not null]
   incident_id uuid [note: 'NULL for a direct cleanup event.']
-  current_workflow_status_id uuid [not null]
+  current_workflow_status_id uuid [not null, note: 'Must reference a workflow status belonging to the same organization as this event.']
   lifecycle_status cleanup_lifecycle_status [not null, default: 'DRAFT']
   created_by_membership_id uuid [not null]
   title varchar [not null]
@@ -428,25 +453,25 @@ Table public.cleanup_events [headerColor: #E15759] {
   public_instructions text
   event_latitude decimal(9,6) [not null]
   event_longitude decimal(9,6) [not null]
-  event_geo_point geography [not null, note: 'PostGIS geography(Point, 4326).']
+  event_geo_point geography(Point,4326) [not null, note: 'Keep synchronized from event_longitude/event_latitude using controlled DB logic (prefer trigger/generated mechanism) and add a spatial GiST index.']
   event_address text
   meeting_latitude decimal(9,6)
   meeting_longitude decimal(9,6)
-  meeting_geo_point geography
+  meeting_geo_point geography(Point,4326) [note: 'If present, keep synchronized with meeting_longitude/meeting_latitude.']
   meeting_address text
-  published_at timestamp
-  completed_at timestamp
-  cancelled_at timestamp
+  published_at timestamptz
+  completed_at timestamptz
+  cancelled_at timestamptz
   cancellation_reason text
-  created_at timestamp [not null, default: `now()`]
-  updated_at timestamp [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
 
   indexes {
-    incident_id [note: 'Add a PostgreSQL partial UNIQUE index so one incident has at most one active event.']
+    incident_id [note: 'Migration SQL must add a partial UNIQUE index on incident_id for lifecycle_status IN (PUBLISHED, SCHEDULED, IN_PROGRESS, COMPLETION_SUBMITTED). DRAFT, COMPLETED, and CANCELLED do not claim/block an incident.']
     (organization_id, lifecycle_status, created_at)
   }
 
-  Note: 'Belongs to exactly one organization. It may be linked to one incident or be created directly with incident_id NULL.'
+  Note: 'Belongs to exactly one organization. It may be linked to one incident or be created directly with incident_id NULL. A DRAFT linked event does not claim the incident; the claim is acquired atomically when entering a claiming lifecycle state. current_workflow_status_id and created_by_membership_id must belong to the owning organization.'
 }
 
 Table public.event_sessions [headerColor: #E15759] {
@@ -459,11 +484,11 @@ Table public.event_sessions [headerColor: #E15759] {
   status session_status [not null, default: 'SCHEDULED']
   location_latitude decimal(9,6)
   location_longitude decimal(9,6)
-  location_geo_point geography
+  location_geo_point geography(Point,4326) [note: 'If present, keep synchronized with location_longitude/location_latitude.']
   location_address text
   notes text
-  created_at timestamp [not null, default: `now()`]
-  updated_at timestamp [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
 
   indexes {
     (cleanup_event_id, session_date, start_time) [unique]
@@ -477,14 +502,14 @@ Table public.event_coordinators [headerColor: #E15759] {
   cleanup_event_id uuid [not null]
   membership_id uuid [not null]
   assigned_by_membership_id uuid [not null]
-  assigned_at timestamp [not null, default: `now()`]
-  removed_at timestamp
+  assigned_at timestamptz [not null, default: `now()`]
+  removed_at timestamptz
 
   indexes {
     (cleanup_event_id, membership_id) [unique]
   }
 
-  Note: 'Task-specific responsibility for an active member of the owning organization. It does not promote the member to ORG_ADMIN.'
+  Note: 'Task-specific responsibility for an active member of the owning organization. It does not promote the member to ORG_ADMIN. membership_id and assigned_by_membership_id must belong to the same organization as the cleanup event.'
 }
 
 Table public.event_participants [headerColor: #E15759] {
@@ -492,9 +517,9 @@ Table public.event_participants [headerColor: #E15759] {
   cleanup_event_id uuid [not null]
   user_id uuid [not null]
   status participant_status [not null, default: 'JOINED']
-  joined_at timestamp [not null, default: `now()`]
-  withdrawn_at timestamp
-  removed_at timestamp
+  joined_at timestamptz [not null, default: `now()`]
+  withdrawn_at timestamptz
+  removed_at timestamptz
   removed_by_membership_id uuid
   removal_reason text
 
@@ -508,13 +533,13 @@ Table public.event_participants [headerColor: #E15759] {
 Table public.participant_session_availability [headerColor: #E15759] {
   participant_id uuid [not null]
   session_id uuid [not null]
-  marked_at timestamp [not null, default: `now()`]
+  marked_at timestamptz [not null, default: `now()`]
 
   indexes {
     (participant_id, session_id) [pk]
   }
 
-  Note: 'A row means the volunteer selected that session as available.'
+  Note: 'A row means the volunteer selected that session as available. The participant and session must belong to the same cleanup event; enforce in transactional service validation and preferably a database trigger/constraint where practical.'
 }
 
 Table public.session_allocations [headerColor: #E15759] {
@@ -523,16 +548,16 @@ Table public.session_allocations [headerColor: #E15759] {
   session_id uuid [not null]
   allocated_by_membership_id uuid [not null]
   status allocation_status [not null, default: 'PLANNED']
-  allocated_at timestamp [not null, default: `now()`]
+  allocated_at timestamptz [not null, default: `now()`]
   attendance_marked_by_membership_id uuid
-  attendance_marked_at timestamp
+  attendance_marked_at timestamptz
   notes text
 
   indexes {
     (participant_id, session_id) [unique]
   }
 
-  Note: 'Stores the organization\'s actual scheduling decision and later attendance. This is separate from volunteer-selected availability.'
+  Note: 'Stores the organization\'s actual scheduling decision and later attendance. This is separate from volunteer-selected availability. participant_id and session_id must belong to the same cleanup event, and allocator/attendance memberships must belong to the event-owning organization.'
 }
 
 Table public.event_notes [headerColor: #E15759] {
@@ -541,10 +566,10 @@ Table public.event_notes [headerColor: #E15759] {
   author_membership_id uuid [not null]
   visibility note_visibility [not null, default: 'PARTICIPANTS']
   note_text text [not null]
-  created_at timestamp [not null, default: `now()`]
-  updated_at timestamp
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
 
-  Note: 'PARTICIPANTS notes are visible to joined volunteers; INTERNAL notes remain organization-only.'
+  Note: 'PARTICIPANTS notes are visible to joined volunteers; INTERNAL notes remain organization-only. author_membership_id must belong to the cleanup event owning organization.'
 }
 
 Table public.event_evidence [headerColor: #E15759] {
@@ -556,7 +581,7 @@ Table public.event_evidence [headerColor: #E15759] {
   storage_path varchar [not null]
   thumbnail_path varchar
   caption text
-  uploaded_at timestamp [not null, default: `now()`]
+  uploaded_at timestamptz [not null, default: `now()`]
 }
 
 Table public.event_status_history [headerColor: #E15759] {
@@ -566,9 +591,9 @@ Table public.event_status_history [headerColor: #E15759] {
   to_workflow_status_id uuid [not null]
   changed_by_membership_id uuid [not null]
   notes text
-  changed_at timestamp [not null, default: `now()`]
+  changed_at timestamptz [not null, default: `now()`]
 
-  Note: 'Stores the cleanup-event status timeline shown to participants and organization users.'
+  Note: 'Stores the cleanup-event status timeline shown to participants and organization users. from/to workflow statuses and changed_by_membership_id must belong to the cleanup event owning organization.'
 }
 
 // ============================================================
@@ -584,7 +609,7 @@ Table public.contribution_events [headerColor: #EDC948] {
   cleanup_event_id uuid
   points int [not null]
   recorded_by_user_id uuid
-  created_at timestamp [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
 
   indexes {
     (user_id, created_at)
@@ -608,7 +633,7 @@ Table public.user_achievements [headerColor: #EDC948] {
   user_id uuid [not null]
   achievement_id uuid [not null]
   awarded_from_contribution_id uuid
-  awarded_at timestamp [not null, default: `now()`]
+  awarded_at timestamptz [not null, default: `now()`]
 
   indexes {
     (user_id, achievement_id) [unique]
@@ -621,8 +646,8 @@ Table public.user_devices [headerColor: #76B7B2] {
   expo_push_token varchar [not null, unique]
   platform varchar [not null]
   is_active boolean [not null, default: true]
-  registered_at timestamp [not null, default: `now()`]
-  last_seen_at timestamp
+  registered_at timestamptz [not null, default: `now()`]
+  last_seen_at timestamptz
 }
 
 Table public.notifications [headerColor: #76B7B2] {
@@ -633,8 +658,8 @@ Table public.notifications [headerColor: #76B7B2] {
   title varchar [not null]
   message text [not null]
   data jsonb
-  read_at timestamp
-  created_at timestamp [not null, default: `now()`]
+  read_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
 
   indexes {
     (user_id, read_at, created_at)
@@ -655,8 +680,8 @@ Table public.issue_reports [headerColor: #76B7B2] {
   status issue_status [not null, default: 'OPEN']
   handled_by_user_id uuid
   resolution_notes text
-  created_at timestamp [not null, default: `now()`]
-  resolved_at timestamp
+  created_at timestamptz [not null, default: `now()`]
+  resolved_at timestamptz
 
   Note: 'MVP allows one optional screenshot, so a separate issue-report attachments table is not required.'
 }
@@ -669,7 +694,7 @@ Table public.audit_logs [headerColor: #76B7B2] {
   entity_type varchar [not null]
   entity_id uuid [not null]
   metadata jsonb
-  created_at timestamp [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
 
   indexes {
     (organization_id, created_at)
@@ -681,10 +706,26 @@ Table public.audit_logs [headerColor: #76B7B2] {
 }
 
 // ============================================================
+// MIGRATION-LEVEL SECURITY / INTEGRITY RULES
+// ============================================================
+// DBML cannot fully express all PostgreSQL/Supabase rules below. Codex must implement and review them in migration SQL:
+// - Enable RLS and apply the project's backend-only access policy / privilege revocation to EVERY public application table.
+// - Add GiST indexes for all PostGIS geography columns used in spatial lookup.
+// - Add CHECK constraints for valid latitude [-90,90], longitude [-180,180], positive capacities/durations, and end_time > start_time.
+// - Keep latitude/longitude and geography point columns synchronized using one controlled database mechanism; application code must not be able to leave them inconsistent.
+// - Add the exact partial UNIQUE incident-claim index for PUBLISHED/SCHEDULED/IN_PROGRESS/COMPLETION_SUBMITTED events.
+// - Prevent more than one PENDING membership request for the same organization/user with a partial UNIQUE index.
+// - Enforce workflow transition organization consistency with composite foreign keys.
+// - Protect event/workflow/member and participant/session consistency with composite FKs, triggers, or transactional validation where direct FKs are impractical.
+// - Test all tenant-owned paths with Organization A and Organization B to prove direct-ID manipulation cannot cross tenants.
+
+// ============================================================
 // RELATIONSHIPS / FOREIGN KEYS
 // ============================================================
 
-Ref: auth.users.id - public.user_profiles.auth_user_id [delete: cascade]
+// No application-owned FK from user_profiles.auth_user_id to auth.users. Supabase Auth owns auth.users.
+
+Ref: public.platform_settings.updated_by_user_id > public.user_profiles.id [delete: set null]
 
 Ref: public.organizations.requested_by_user_id > public.user_profiles.id [delete: restrict]
 Ref: public.organizations.reviewed_by_user_id > public.user_profiles.id [delete: set null]
@@ -701,8 +742,9 @@ Ref: public.organization_membership_requests.requester_user_id > public.user_pro
 Ref: public.organization_membership_requests.reviewed_by_membership_id > public.organization_memberships.id [delete: set null]
 
 Ref: public.cleanup_workflow_statuses.organization_id > public.organizations.id [delete: cascade]
-Ref: public.cleanup_workflow_transitions.from_status_id > public.cleanup_workflow_statuses.id [delete: cascade]
-Ref: public.cleanup_workflow_transitions.to_status_id > public.cleanup_workflow_statuses.id [delete: cascade]
+Ref: public.cleanup_workflow_transitions.organization_id > public.organizations.id [delete: cascade]
+Ref: public.cleanup_workflow_transitions.(organization_id, from_status_id) > public.cleanup_workflow_statuses.(organization_id, id) [delete: cascade]
+Ref: public.cleanup_workflow_transitions.(organization_id, to_status_id) > public.cleanup_workflow_statuses.(organization_id, id) [delete: cascade]
 
 Ref: public.incidents.reporter_user_id > public.user_profiles.id [delete: restrict]
 Ref: public.incidents.category_id > public.incident_categories.id [delete: restrict]
@@ -715,7 +757,7 @@ Ref: public.incident_status_history.changed_by_user_id > public.user_profiles.id
 
 Ref: public.cleanup_events.organization_id > public.organizations.id [delete: restrict]
 Ref: public.cleanup_events.incident_id > public.incidents.id [delete: set null]
-Ref: public.cleanup_events.current_workflow_status_id > public.cleanup_workflow_statuses.id [delete: restrict]
+Ref: public.cleanup_events.(organization_id, current_workflow_status_id) > public.cleanup_workflow_statuses.(organization_id, id) [delete: restrict]
 Ref: public.cleanup_events.created_by_membership_id > public.organization_memberships.id [delete: restrict]
 Ref: public.incident_status_history.related_cleanup_event_id > public.cleanup_events.id [delete: set null]
 Ref: public.event_sessions.cleanup_event_id > public.cleanup_events.id [delete: cascade]
