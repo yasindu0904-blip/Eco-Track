@@ -1,0 +1,86 @@
+import { webEnv } from "../config/env";
+
+interface ApiErrorResponse {
+  error?: {
+    code?: string;
+    message?: string;
+  };
+}
+
+interface ApiRequestOptions extends RequestInit {
+  accessToken?: string;
+}
+
+export class ApiRequestError extends Error {
+  public readonly statusCode: number;
+  public readonly code: string;
+
+  constructor(
+    statusCode: number,
+    code: string,
+    message: string,
+  ) {
+    super(message);
+
+    this.name = "ApiRequestError";
+    this.statusCode = statusCode;
+    this.code = code;
+  }
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: ApiRequestOptions = {},
+): Promise<T> {
+  const {
+    accessToken,
+    headers: providedHeaders,
+    ...requestOptions
+  } = options;
+
+  const headers = new Headers(providedHeaders);
+
+  headers.set("Accept", "application/json");
+
+  if (accessToken) {
+    headers.set(
+      "Authorization",
+      `Bearer ${accessToken}`,
+    );
+  }
+
+  const response = await fetch(
+    `${webEnv.apiBaseUrl}${path}`,
+    {
+      ...requestOptions,
+      headers,
+    },
+  );
+
+  const responseBody = (await response
+    .json()
+    .catch(() => null)) as T | ApiErrorResponse | null;
+
+  if (!response.ok) {
+    const errorResponse =
+      responseBody as ApiErrorResponse | null;
+
+    throw new ApiRequestError(
+      response.status,
+      errorResponse?.error?.code ??
+        "API_REQUEST_FAILED",
+      errorResponse?.error?.message ??
+        "The API request failed.",
+    );
+  }
+
+  if (responseBody === null) {
+    throw new ApiRequestError(
+      response.status,
+      "INVALID_API_RESPONSE",
+      "The API returned an invalid response.",
+    );
+  }
+
+  return responseBody as T;
+}
