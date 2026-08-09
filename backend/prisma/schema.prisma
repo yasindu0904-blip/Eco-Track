@@ -100,6 +100,15 @@ model PlatformSettings {
   @@map("platform_settings")
 }
 
+model IncidentCategory {
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String  @unique
+  description String?
+  isActive    Boolean @default(true) @map("is_active")
+
+  @@map("incident_categories")
+}
+
 model Organization {
   id String @id @default(uuid()) @db.Uuid
 
