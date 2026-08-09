@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NSDI DS Division Lookup</title>
+    <link rel="stylesheet" href="/vendor/leaflet/leaflet.css" />
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+      }
+
+      #app {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      header {
+        background: #005a96;
+        color: white;
+        padding: 1rem;
+      }
+
+      .container {
+        padding: 1rem;
+      }
+
+      #map {
+        width: 100%;
+        min-height: 450px;
+        height: 70vh;
+        border: 1px solid #ccc;
+        background: #e6e6e6;
+      }
+
+      .small-input {
+        width: 10rem;
+      }
+
+      .highlight {
+        color: #006d77;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <h1>NSDI DS Division Lookup</h1>
+        <p>Enter a coordinate and highlight the Divisional Secretariat area from NSDI on OpenStreetMap tiles.</p>
+      </header>
+
+      <div class="container">
+        <div>
+          <label>
+            Latitude:
+            <input id="latitude" class="small-input" type="number" step="any" value="6.8500" />
+          </label>
+          <label style="margin-left: 1rem;">
+            Longitude:
+            <input id="longitude" class="small-input" type="number" step="any" value="79.9000" />
+          </label>
+          <button id="lookup">Lookup DS Division</button>
+        </div>
+
+        <div style="margin-top: 1rem;">
+          <strong>Result:</strong>
+          <span id="resultText">No lookup executed yet.</span>
+        </div>
+
+        <div id="map" aria-label="OpenStreetMap showing the selected DS division"></div>
+      </div>
+    </div>
+
+    <script src="/vendor/leaflet/leaflet.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
