@@ -521,6 +521,138 @@
   background: #f5f8f5;
 }
 
+.authorization-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 16px;
+  border: 1px solid #dfe7df;
+  border-radius: 13px;
+  background: #f8faf8;
+}
+
+.authorization-note-icon {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  color: var(--color-primary);
+  border-radius: 10px;
+  background: var(--color-primary-soft);
+}
+
+.authorization-note-icon svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.authorization-note h3,
+.super-admin-panel h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.92rem;
+}
+
+.authorization-note p {
+  margin: 5px 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.79rem;
+  line-height: 1.5;
+}
+
+.super-admin-panel {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  color: #ffffff;
+  border-radius: 15px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(141, 214, 82, 0.22), transparent 43%),
+    linear-gradient(145deg, #1b5e20, #103e15);
+  box-shadow: 0 12px 28px rgba(27, 94, 32, 0.2);
+}
+
+.super-admin-panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.super-admin-panel-heading > span {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: #174e1b;
+  border-radius: 11px;
+  background: #b8e986;
+}
+
+.super-admin-panel-heading p {
+  margin: 0 0 2px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.super-admin-panel h3 {
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.super-admin-panel-description {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.super-admin-panel .button-primary {
+  color: var(--color-primary-dark);
+  border-color: #d7f1bd;
+  background: #d7f1bd;
+  box-shadow: none;
+}
+
+.super-admin-panel .button-primary:hover:not(:disabled) {
+  color: #0c3611;
+  border-color: #ffffff;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.super-admin-panel .button-spinner {
+  border-color: rgba(27, 94, 32, 0.3);
+  border-top-color: var(--color-primary);
+}
+
+.access-result {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.access-result-success {
+  color: #143d18;
+  background: #dff3d0;
+}
+
+.access-result-error {
+  color: #7a1b16;
+  background: #ffe5e2;
+}
+
 .app-footer {
   margin: 0;
   color: #708076;

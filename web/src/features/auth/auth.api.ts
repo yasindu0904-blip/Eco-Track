@@ -3,6 +3,7 @@ import { apiRequest } from "../../api/apiClient";
 import type {
   AuthenticatedUserProfile,
   CurrentUserResponse,
+  SuperAdminPingResponse,
 } from "./auth.types";
 
 export async function fetchCurrentUser(
@@ -17,4 +18,19 @@ export async function fetchCurrentUser(
     );
 
   return response.data;
+}
+
+
+export async function pingSuperAdmin(
+  accessToken: string,
+): Promise<string> {
+  const response =
+    await apiRequest<SuperAdminPingResponse>(
+      "/super-admin/ping",
+      {
+        accessToken,
+      },
+    );
+
+  return response.data.message;
 }

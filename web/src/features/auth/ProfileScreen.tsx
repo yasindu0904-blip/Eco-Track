@@ -1,8 +1,10 @@
 import type { AuthenticatedUserProfile } from "./auth.types";
+import { SuperAdminAccessPanel } from "./SuperAdminAccessPanel";
 
 interface ProfileScreenProps {
   profile: AuthenticatedUserProfile;
   onSignOut: () => void;
+  onCheckSuperAdminAccess: () => Promise<string>;
 }
 
 function formatEnumLabel(value: string): string {
@@ -16,6 +18,7 @@ function formatEnumLabel(value: string): string {
 export function ProfileScreen({
   profile,
   onSignOut,
+  onCheckSuperAdminAccess,
 }: ProfileScreenProps) {
   const displayName = profile.fullName ?? "EcoTrack member";
   const initial = displayName.charAt(0).toUpperCase();
@@ -69,6 +72,11 @@ export function ProfileScreen({
         Supabase verified your identity, and the EcoTrack API loaded your
         PostgreSQL profile.
       </p>
+
+      <SuperAdminAccessPanel
+        platformRole={profile.platformRole}
+        onCheckAccess={onCheckSuperAdminAccess}
+      />
 
       <button
         className="button button-secondary"

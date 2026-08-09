@@ -19,3 +19,10 @@ export interface AuthenticatedUserProfile {
 export interface CurrentUserResponse {
   data: AuthenticatedUserProfile;
 }
+
+
+export interface SuperAdminPingResponse {
+  data: {
+    message: string;
+  };
+}

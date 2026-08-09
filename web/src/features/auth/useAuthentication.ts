@@ -7,7 +7,10 @@ import {
 import type { Session } from "@supabase/supabase-js";
 
 import { supabase } from "../../config/supabase";
-import { fetchCurrentUser } from "./auth.api";
+import {
+  fetchCurrentUser,
+  pingSuperAdmin,
+} from "./auth.api";
 
 import type {
   AuthenticatedUserProfile,
@@ -210,8 +213,30 @@ export function useAuthentication() {
     });
   }
 
+  async function checkSuperAdminAccess(): Promise<string> {
+    const { data, error } =
+      await supabase.auth.getSession();
+
+    if (error) {
+      throw error;
+    }
+
+    const accessToken =
+      data.session?.access_token;
+
+    if (!accessToken) {
+      throw new Error(
+        "You must be signed in to check Super Admin access.",
+      );
+    }
+
+    return pingSuperAdmin(accessToken);
+  }
+
   return {
     ...state,
+
+    checkSuperAdminAccess,
 
     retry: () => {
       void retry();

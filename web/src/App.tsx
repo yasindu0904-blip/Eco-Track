@@ -91,6 +91,7 @@ function App() {
     status,
     profile,
     errorMessage,
+    checkSuperAdminAccess,
     retry,
     signOut,
   } = useAuthentication();
@@ -111,6 +112,7 @@ function App() {
           {status === "signedIn" && profile && (
             <ProfileScreen
               profile={profile}
+              onCheckSuperAdminAccess={checkSuperAdminAccess}
               onSignOut={signOut}
             />
           )}
