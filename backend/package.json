@@ -6,7 +6,7 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "test": "tsx --test src/tests/auth.integration.test.ts",
+    "test": "tsx --test src/tests/*.test.ts",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
@@ -21,6 +21,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@casl/ability": "^7.0.1",
+    "@casl/prisma": "^2.0.2",
     "@prisma/adapter-pg": "^7.9.0",
     "@prisma/client": "^7.9.0",
     "@supabase/supabase-js": "^2.110.8",

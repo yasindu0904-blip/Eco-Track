@@ -1,0 +1,34 @@
+import type {
+  Organization,
+  OrganizationMembership,
+} from "../generated/prisma/client.js";
+
+import type { PrismaSubjects } from "./caslPrisma.js";
+
+export const Subjects = {
+  Platform: "Platform",
+  OrganizationApplication:
+    "OrganizationApplication",
+  Organization: "Organization",
+  OrganizationServiceArea:
+    "OrganizationServiceArea",
+  OrganizationMembership:
+    "OrganizationMembership",
+  Notification: "Notification",
+} as const;
+
+export type SubjectName =
+  (typeof Subjects)[keyof typeof Subjects];
+
+type DatabaseSubject = PrismaSubjects<{
+  Organization: Organization;
+  OrganizationMembership: OrganizationMembership;
+}>;
+
+export type Subject =
+  | Exclude<
+      SubjectName,
+      | typeof Subjects.Organization
+      | typeof Subjects.OrganizationMembership
+    >
+  | DatabaseSubject;

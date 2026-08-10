@@ -243,9 +243,9 @@ test(
 
     assert.deepEqual(await readJson(response), {
       error: {
-        code: "SUPER_ADMIN_REQUIRED",
+        code: "AUTHORIZATION_DENIED",
         message:
-          "Active Super Admin access is required.",
+          "You do not have permission to perform this action.",
       },
     });
   },
