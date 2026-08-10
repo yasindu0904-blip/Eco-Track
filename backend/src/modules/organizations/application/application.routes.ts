@@ -3,7 +3,11 @@ import {
   type Router as ExpressRouter,
 } from "express";
 
+import { Actions } from "../../../authorization/actions.js";
+import { Subjects } from "../../../authorization/subjects.js";
+import { abilityMiddleware } from "../../../middleware/ability.middleware.js";
 import { createAuthenticationMiddleware } from "../../../middleware/auth.middleware.js";
+import { authorize } from "../../../middleware/authorize.middleware.js";
 import type { AuthenticationDependencies } from "../../auth/auth.types.js";
 
 import type { OrganizationApplicationDependencies } from "./application.dependencies.js";
@@ -23,18 +27,33 @@ export function createOrganizationApplicationRouter(
   router.post(
     "/organization-applications",
     authenticate,
+    abilityMiddleware,
+    authorize(
+      Actions.Create,
+      Subjects.OrganizationApplication,
+    ),
     createOrganizationApplicationController(applicationDependencies),
   );
 
   router.get(
     "/organization-applications/me",
     authenticate,
+    abilityMiddleware,
+    authorize(
+      Actions.ReadOwn,
+      Subjects.OrganizationApplication,
+    ),
     listMyOrganizationApplicationsController(applicationDependencies),
   );
 
   router.get(
     "/organization-applications/me/:id",
     authenticate,
+    abilityMiddleware,
+    authorize(
+      Actions.ReadOwn,
+      Subjects.OrganizationApplication,
+    ),
     getMyOrganizationApplicationController(applicationDependencies),
   );
 

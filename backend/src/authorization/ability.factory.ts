@@ -68,6 +68,9 @@ export function buildAbilityForRequest(
   can(
     Actions.Read,
     Subjects.OrganizationServiceArea,
+    {
+      organizationId,
+    },
   );
 
   if (tenant.membership.role === "ORG_ADMIN") {

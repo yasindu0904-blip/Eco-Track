@@ -1,6 +1,7 @@
 import type {
   Organization,
   OrganizationMembership,
+  OrganizationServiceArea,
 } from "../generated/prisma/client.js";
 
 import type { PrismaSubjects } from "./caslPrisma.js";
@@ -23,6 +24,7 @@ export type SubjectName =
 type DatabaseSubject = PrismaSubjects<{
   Organization: Organization;
   OrganizationMembership: OrganizationMembership;
+  OrganizationServiceArea: OrganizationServiceArea;
 }>;
 
 export type Subject =
@@ -30,5 +32,6 @@ export type Subject =
       SubjectName,
       | typeof Subjects.Organization
       | typeof Subjects.OrganizationMembership
+      | typeof Subjects.OrganizationServiceArea
     >
   | DatabaseSubject;
