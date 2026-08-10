@@ -26,6 +26,13 @@ enum OrganizationStatus {
   ARCHIVED
 }
 
+enum ServiceAreaStatus {
+  PENDING_REVIEW
+  ACTIVE
+  REJECTED
+  INACTIVE
+}
+
 enum DocumentReviewStatus {
   PENDING
   VERIFIED
@@ -74,6 +81,7 @@ model UserProfile {
   requestedOrganizations        Organization[]                     @relation("OrganizationRequester")
   reviewedOrganizations         Organization[]                     @relation("OrganizationReviewer")
   reviewedVerificationDocuments OrganizationVerificationDocument[] @relation("VerificationDocumentReviewer")
+  reviewedServiceAreas          OrganizationServiceArea[]          @relation("ServiceAreaReviewer")
   settingsUpdates               PlatformSettings[]
   auditLogs                     AuditLog[]                         @relation("AuditActor")
 
@@ -134,6 +142,7 @@ model Organization {
   verificationDocuments OrganizationVerificationDocument[]
   memberships           OrganizationMembership[]
   membershipRequests    OrganizationMembershipRequest[]
+  serviceAreas          OrganizationServiceArea[]
   auditLogs             AuditLog[]
 
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -239,4 +248,30 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([actorUserId, createdAt])
   @@map("audit_logs")
+}
+
+model OrganizationServiceArea {
+  id String @id @default(uuid()) @db.Uuid
+
+  organizationId   String  @map("organization_id") @db.Uuid
+  reviewedByUserId String? @map("reviewed_by_user_id") @db.Uuid
+
+  areaName String @map("area_name")
+
+  boundary Unsupported("geography(MultiPolygon,4326)")
+
+  status      ServiceAreaStatus @default(PENDING_REVIEW)
+  reviewedAt  DateTime?         @map("reviewed_at") @db.Timestamptz(6)
+  reviewNotes String?           @map("review_notes")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  reviewedBy UserProfile? @relation("ServiceAreaReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@map("organization_service_areas")
 }

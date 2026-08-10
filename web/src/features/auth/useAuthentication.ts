@@ -25,12 +25,14 @@ type AuthenticationStatus =
 interface AuthenticationState {
   status: AuthenticationStatus;
   profile: AuthenticatedUserProfile | null;
+  accessToken: string | null;
   errorMessage: string | null;
 }
 
 const loadingState: AuthenticationState = {
   status: "loading",
   profile: null,
+  accessToken: null,
   errorMessage: null,
 };
 
@@ -41,6 +43,7 @@ async function resolveSession(
     return {
       status: "signedOut",
       profile: null,
+      accessToken: null,
       errorMessage: null,
     };
   }
@@ -64,12 +67,14 @@ async function resolveSession(
     return {
       status: "signedIn",
       profile,
+      accessToken: session.access_token,
       errorMessage: null,
     };
   } catch (error) {
     return {
       status: "error",
       profile: null,
+      accessToken: null,
       errorMessage:
         error instanceof Error
           ? error.message
@@ -116,6 +121,7 @@ export function useAuthentication() {
             setState({
               status: "error",
               profile: null,
+              accessToken: null,
               errorMessage: error.message,
             });
           }
@@ -163,6 +169,7 @@ export function useAuthentication() {
       setState({
         status: "error",
         profile: null,
+        accessToken: null,
         errorMessage: error.message,
       });
 
@@ -200,6 +207,7 @@ export function useAuthentication() {
       setState({
         status: "error",
         profile: null,
+        accessToken: null,
         errorMessage: error.message,
       });
 
@@ -209,6 +217,7 @@ export function useAuthentication() {
     setState({
       status: "signedOut",
       profile: null,
+      accessToken: null,
       errorMessage: null,
     });
   }

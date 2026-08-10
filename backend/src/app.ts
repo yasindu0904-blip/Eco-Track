@@ -8,11 +8,14 @@ import { errorMiddleware } from "./middleware/error.middleware.js";
 import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 
 import { createAuthRouter } from "./modules/auth/auth.routes.js";
+import { createOrganizationApplicationRouter } from "./modules/organizations/application/application.routes.js";
 
 import type { AuthenticationDependencies } from "./modules/auth/auth.types.js";
+import type { OrganizationApplicationDependencies } from "./modules/organizations/application/application.dependencies.js";
 
 type CreateAppOptions = {
   webOrigin?: string;
+  organizationApplicationDependencies?: OrganizationApplicationDependencies;
 };
 
 export function createApp(
@@ -50,6 +53,16 @@ export function createApp(
     "/api/v1",
     createAuthRouter(authenticationDependencies),
   );
+
+  if (options.organizationApplicationDependencies) {
+    app.use(
+      "/api/v1",
+      createOrganizationApplicationRouter(
+        authenticationDependencies,
+        options.organizationApplicationDependencies,
+      ),
+    );
+  }
 
   app.use(notFoundMiddleware);
 

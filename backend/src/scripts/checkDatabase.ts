@@ -6,6 +6,10 @@ type ConnectionInformation = {
   databaseUser: string;
 };
 
+type PostgisCheck = {
+  isValid: boolean;
+};
+
 async function checkDatabase(): Promise<void> {
   console.log("Checking EcoTrack database connection...");
 
@@ -37,13 +41,32 @@ async function checkDatabase(): Promise<void> {
     userProfileCount,
     organizationCount,
     organizationMembershipCount,
+    organizationServiceAreaCount,
     platformSettingsCount,
+    postgisCheck,
   ] = await Promise.all([
     prisma.userProfile.count(),
     prisma.organization.count(),
     prisma.organizationMembership.count(),
+    prisma.organizationServiceArea.count(),
     prisma.platformSettings.count(),
+    prisma.$queryRaw<PostgisCheck[]>`
+      SELECT extensions.ST_IsValid(
+        extensions.ST_Multi(
+          extensions.ST_SetSRID(
+            extensions.ST_GeomFromGeoJSON(
+              '{"type":"Polygon","coordinates":[[[79.85,6.92],[79.86,6.92],[79.86,6.93],[79.85,6.92]]]}'::json
+            ),
+            4326
+          )
+        )
+      ) AS "isValid"
+    `,
   ]);
+
+  if (postgisCheck[0]?.isValid !== true) {
+    throw new Error("PostGIS connected but did not validate the test geometry.");
+  }
 
   console.log("EcoTrack database connection succeeded.");
   console.log("");
@@ -57,7 +80,9 @@ async function checkDatabase(): Promise<void> {
   console.log(
     `Organization memberships: ${organizationMembershipCount}`,
   );
+  console.log(`Organization service areas: ${organizationServiceAreaCount}`);
   console.log(`Platform settings rows: ${platformSettingsCount}`);
+  console.log("PostGIS repository functions: available");
 }
 
 checkDatabase()
