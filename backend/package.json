@@ -6,7 +6,7 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "test": "tsx --test src/tests/auth.integration.test.ts",
+    "test": "tsx --test src/tests/*.test.ts",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
