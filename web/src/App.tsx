@@ -1,8 +1,8 @@
 import "./App.css";
 
 import { LoginForm } from "./features/auth/LoginForm";
-import { ProfileScreen } from "./features/auth/ProfileScreen";
 import { useAuthentication } from "./features/auth/useAuthentication";
+import { OrganizationApplicationPage } from "./features/organizations/application";
 
 function BrandHeader() {
   return (
@@ -90,11 +90,29 @@ function App() {
   const {
     status,
     profile,
+    accessToken,
     errorMessage,
-    checkSuperAdminAccess,
     retry,
     signOut,
   } = useAuthentication();
+
+  const isOrganizationPreview =
+    import.meta.env.DEV &&
+    new URLSearchParams(window.location.search).get("organization-preview") === "1";
+
+  if (isOrganizationPreview) {
+    return <OrganizationApplicationPage />;
+  }
+
+  if (status === "signedIn" && profile && accessToken) {
+    return (
+      <OrganizationApplicationPage
+        accessToken={accessToken}
+        profile={profile}
+        onSignOut={signOut}
+      />
+    );
+  }
 
   return (
     <main className="app-shell">
@@ -108,14 +126,6 @@ function App() {
           {status === "loading" && <LoadingState />}
 
           {status === "signedOut" && <LoginForm />}
-
-          {status === "signedIn" && profile && (
-            <ProfileScreen
-              profile={profile}
-              onCheckSuperAdminAccess={checkSuperAdminAccess}
-              onSignOut={signOut}
-            />
-          )}
 
           {status === "error" && errorMessage && (
             <AuthenticationError

@@ -4,11 +4,13 @@ import { env } from "./config/env.js";
 import { prisma } from "./database/prisma.js";
 
 import { authenticationDependencies } from "./modules/auth/auth.dependencies.js";
+import { organizationApplicationDependencies } from "./modules/organizations/application/application.dependencies.js";
 
 const app = createApp(
   authenticationDependencies,
   {
     webOrigin: env.WEB_ORIGIN,
+    organizationApplicationDependencies,
   },
 );
 

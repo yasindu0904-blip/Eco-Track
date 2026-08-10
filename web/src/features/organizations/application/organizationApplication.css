@@ -1,0 +1,54 @@
+.organization-shell { min-height: 100vh; background: #f4f7f4; color: #212a23; }
+.organization-header { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 16px max(24px, calc((100vw - 1120px) / 2)); border-bottom: 1px solid #dce5dd; background: rgba(255,255,255,.96); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.organization-header p, .organization-user span { margin: 2px 0 0; color: #66736a; font-size: .78rem; }
+.organization-brand { color: #1b5e20; font-size: 1.45rem; font-weight: 800; letter-spacing: -.04em; }
+.organization-user { display: flex; align-items: center; gap: 14px; }
+.organization-user button { padding: 8px 12px; color: #1b5e20; border: 1px solid #b8cab9; border-radius: 8px; background: #fff; font-weight: 700; }
+.preview-badge { padding: 6px 9px; color: #775000 !important; border-radius: 999px; background: #fff0d8; font-size: .7rem !important; font-weight: 800; }
+.organization-content { width: min(100% - 32px, 1120px); margin: 0 auto; padding: 42px 0 64px; }
+.organization-intro { display: grid; grid-template-columns: 1fr repeat(3, auto); align-items: end; gap: 18px; margin-bottom: 30px; }
+.organization-eyebrow { color: #1b5e20; font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.organization-intro h1 { max-width: 700px; margin: 8px 0 10px; font-size: clamp(1.9rem, 4vw, 3.2rem); line-height: 1.05; letter-spacing: -.045em; }
+.organization-intro p { margin: 0; color: #66736a; }
+.organization-step { display: grid; justify-items: center; gap: 5px; color: #66736a; font-size: .75rem; }
+.organization-step strong { display: grid; place-items: center; width: 34px; height: 34px; color: #fff; border-radius: 50%; background: #1b5e20; }
+.organization-tabs { display: flex; gap: 6px; margin-bottom: 22px; padding: 5px; width: fit-content; border: 1px solid #dce5dd; border-radius: 11px; background: #fff; }
+.organization-tabs button { min-height: 42px; padding: 8px 16px; color: #66736a; border: 0; border-radius: 8px; background: transparent; font-weight: 750; }
+.organization-tabs button.active { color: #fff; background: #1b5e20; }
+.organization-tabs span { margin-left: 6px; padding: 2px 7px; border-radius: 999px; background: rgba(255,255,255,.2); }
+.organization-form, .organization-applications { display: grid; gap: 20px; }
+.organization-card, .application-card, .organization-empty { padding: 26px; border: 1px solid #dce5dd; border-radius: 15px; background: #fff; box-shadow: 0 4px 16px rgba(25,66,32,.06); }
+.organization-card-heading { display: flex; gap: 14px; margin-bottom: 24px; }
+.organization-card-heading > span { flex: 0 0 38px; width: 38px; height: 38px; display: grid; place-items: center; color: #1b5e20; border-radius: 10px; background: #e8f3e9; font-size: .78rem; font-weight: 800; }
+.organization-card h2, .application-card h2, .organization-empty h2 { margin: 0; font-size: 1.15rem; }
+.organization-card-heading p, .organization-empty p { margin: 5px 0 0; color: #66736a; font-size: .87rem; }
+.organization-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.organization-grid label { display: grid; gap: 8px; color: #303a32; font-size: .86rem; font-weight: 700; }
+.organization-grid label.wide { grid-column: 1 / -1; }
+.organization-grid input, .organization-grid textarea { width: 100%; padding: 12px 14px; color: #212a23; border: 1px solid #cfd9d0; border-radius: 9px; background: #fff; font: inherit; font-weight: 400; resize: vertical; }
+.organization-grid input:focus, .organization-grid textarea:focus { border-color: #1b5e20; outline: 3px solid rgba(27,94,32,.1); }
+.organization-grid .code-input { font-family: Consolas, monospace; font-size: .8rem; line-height: 1.55; background: #f8faf8; }
+.organization-submit { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 20px 24px; border-radius: 14px; background: #153f1a; color: #fff; }
+.organization-submit p { max-width: 660px; margin: 0; color: rgba(255,255,255,.72); font-size: .84rem; }
+.organization-submit button, .organization-empty button { min-height: 46px; padding: 11px 20px; color: #153f1a; border: 0; border-radius: 9px; background: #d7f1bd; font-weight: 800; }
+.organization-submit button:disabled { opacity: .65; }
+.organization-notice { margin-bottom: 18px; padding: 13px 16px; border-radius: 10px; font-size: .88rem; }
+.organization-notice.success { color: #1e5a24; background: #e4f4dc; }
+.organization-notice.error { color: #8b2119; background: #fee9e7; }
+.organization-notice.preview { color: #624300; background: #fff4de; border: 1px solid #f2d59b; }
+.application-card-top { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; }
+.application-date { color: #7a877d; font-size: .75rem; }
+.application-card > p { color: #66736a; }
+.application-status { padding: 6px 10px; border-radius: 999px; font-size: .72rem; font-weight: 800; }
+.application-status.pending_review { color: #8a4b00; background: #fff0d8; }
+.application-status.active { color: #216127; background: #e4f4dc; }
+.application-status.declined, .application-status.suspended, .application-status.archived { color: #8b2119; background: #fee9e7; }
+.application-card dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin: 18px 0 0; }
+.application-card dl > div { padding: 13px; border-radius: 9px; background: #f4f7f4; }
+.application-card dt { color: #758078; font-size: .72rem; }
+.application-card dd { margin: 4px 0 0; font-size: .86rem; font-weight: 650; overflow-wrap: anywhere; }
+.review-note { margin-top: 16px; padding: 14px; border-left: 3px solid #1b5e20; background: #f5f8f5; }
+.review-note p { margin: 5px 0 0; }
+.organization-empty { text-align: center; padding: 54px 24px; }
+.organization-empty button { margin-top: 18px; background: #1b5e20; color: #fff; }
+@media (max-width: 760px) { .organization-header { padding: 12px 16px; } .organization-user span { display: none; } .organization-content { width: min(100% - 24px, 1120px); padding-top: 28px; } .organization-intro { grid-template-columns: repeat(3, 1fr); } .organization-intro > div:first-child { grid-column: 1 / -1; } .organization-grid, .application-card dl { grid-template-columns: 1fr; } .organization-grid label.wide { grid-column: auto; } .organization-submit { align-items: stretch; flex-direction: column; } .organization-submit button { width: 100%; } .application-card-top { flex-direction: column; } }
