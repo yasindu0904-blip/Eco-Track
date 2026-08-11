@@ -1,0 +1,646 @@
+.citizen-dashboard-shell {
+  min-height: 100vh;
+  color: var(--color-text);
+  background:
+    radial-gradient(circle at 90% 0, rgba(126, 199, 82, 0.14), transparent 27%),
+    linear-gradient(180deg, #f8fbf8 0%, #f1f6f2 100%);
+}
+
+.citizen-dashboard-header {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 34px;
+  align-items: center;
+  padding: 13px max(24px, calc((100vw - 1240px) / 2));
+  border-bottom: 1px solid rgba(27, 94, 32, 0.12);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 4px 20px rgba(24, 70, 31, 0.045);
+  backdrop-filter: blur(14px);
+}
+
+.citizen-dashboard-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.citizen-dashboard-brand-mark {
+  width: 45px;
+  height: 45px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: #f1f8ed;
+}
+
+.citizen-dashboard-brand-mark svg {
+  width: 36px;
+  height: 36px;
+}
+
+.citizen-brand-stem {
+  fill: none;
+  stroke: #358b38;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.citizen-brand-leaf {
+  fill: #78c941;
+}
+
+.citizen-brand-leaf-right {
+  fill: #9bdb4e;
+}
+
+.citizen-brand-soil {
+  fill: #795548;
+}
+
+.citizen-dashboard-brand > span:last-child {
+  display: grid;
+  gap: 1px;
+}
+
+.citizen-dashboard-brand strong {
+  color: var(--color-primary);
+  font-size: 1.15rem;
+  letter-spacing: -0.03em;
+}
+
+.citizen-dashboard-brand small {
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.citizen-dashboard-nav {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.citizen-dashboard-nav button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  color: var(--color-text-muted);
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.citizen-dashboard-nav button:hover {
+  color: var(--color-primary);
+  background: #f1f7f1;
+}
+
+.citizen-dashboard-nav .citizen-dashboard-nav-active {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.citizen-dashboard-nav svg,
+.citizen-dashboard-role-card svg,
+.citizen-summary-icon svg,
+.citizen-action-icon svg,
+.citizen-action-primary svg,
+.citizen-dashboard-foundation-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.citizen-dashboard-nav svg {
+  width: 18px;
+  height: 18px;
+}
+
+.citizen-dashboard-user {
+  display: grid;
+  grid-template-columns: 39px minmax(0, auto) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.citizen-dashboard-avatar {
+  width: 39px;
+  height: 39px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  border-radius: 11px;
+  background: linear-gradient(145deg, #2e7d32, #174e1b);
+  font-weight: 800;
+}
+
+.citizen-dashboard-user > span:nth-child(2) {
+  max-width: 190px;
+  display: grid;
+  gap: 2px;
+}
+
+.citizen-dashboard-user strong,
+.citizen-dashboard-user small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.citizen-dashboard-user strong {
+  font-size: 0.74rem;
+}
+
+.citizen-dashboard-user small {
+  color: var(--color-text-muted);
+  font-size: 0.64rem;
+}
+
+.citizen-dashboard-user button {
+  min-height: 38px;
+  padding: 8px 11px;
+  color: var(--color-primary);
+  border: 1px solid #bdd0be;
+  border-radius: 9px;
+  background: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.citizen-dashboard-main {
+  width: min(100% - 40px, 1240px);
+  margin: 0 auto;
+  padding: 44px 0 62px;
+}
+
+.citizen-dashboard-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 40px;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.citizen-dashboard-eyebrow {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--color-primary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.citizen-dashboard-hero h1 {
+  margin: 0;
+  color: #18321d;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+}
+
+.citizen-dashboard-hero > div:first-child > p {
+  max-width: 720px;
+  margin: 13px 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.94rem;
+  line-height: 1.65;
+}
+
+.citizen-dashboard-role-card {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 19px;
+  color: #ffffff;
+  border-radius: 17px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(167, 229, 102, 0.2), transparent 42%),
+    linear-gradient(145deg, #1b5e20, #103e15);
+  box-shadow: 0 14px 32px rgba(27, 94, 32, 0.17);
+}
+
+.citizen-dashboard-role-card > span {
+  width: 50px;
+  height: 50px;
+  display: grid;
+  place-items: center;
+  padding: 13px;
+  color: #174e1b;
+  border-radius: 14px;
+  background: #cdefaa;
+}
+
+.citizen-dashboard-role-card small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.citizen-dashboard-role-card strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.96rem;
+}
+
+.citizen-dashboard-role-card p {
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.67);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.citizen-dashboard-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 17px;
+  margin-bottom: 34px;
+}
+
+.citizen-dashboard-summary article {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 14px;
+  padding: 19px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 9px 28px rgba(25, 66, 32, 0.05);
+}
+
+.citizen-summary-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  padding: 11px;
+  border-radius: 13px;
+}
+
+.citizen-summary-icon-green {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.citizen-summary-icon-amber {
+  color: #9a6600;
+  background: #fff4d9;
+}
+
+.citizen-summary-icon-blue {
+  color: #27637b;
+  background: #e7f4f8;
+}
+
+.citizen-dashboard-summary small {
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.citizen-dashboard-summary strong {
+  display: block;
+  margin-top: 4px;
+  color: #18321d;
+  font-size: 0.98rem;
+}
+
+.citizen-dashboard-summary p {
+  margin: 5px 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.citizen-dashboard-section {
+  padding: 26px;
+  border: 1px solid var(--color-border);
+  border-radius: 19px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 14px 38px rgba(25, 66, 32, 0.06);
+}
+
+.citizen-dashboard-section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 30px;
+  align-items: end;
+  margin-bottom: 21px;
+}
+
+.citizen-dashboard-section-heading h2 {
+  margin: 0;
+  color: #18321d;
+  font-size: 1.28rem;
+  letter-spacing: -0.025em;
+}
+
+.citizen-dashboard-section-heading > p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+}
+
+.citizen-dashboard-actions {
+  display: grid;
+  grid-template-columns: 1.2fr repeat(2, minmax(0, 0.9fr));
+  gap: 16px;
+}
+
+.citizen-action-card {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 21px;
+  border: 1px solid #dfe7df;
+  border-radius: 15px;
+  background: #f8faf8;
+}
+
+.citizen-action-card-featured {
+  color: #ffffff;
+  border-color: transparent;
+  background:
+    radial-gradient(circle at 100% 0, rgba(171, 231, 109, 0.2), transparent 42%),
+    linear-gradient(145deg, #1c6422, #103e15);
+}
+
+.citizen-action-icon {
+  width: 45px;
+  height: 45px;
+  display: grid;
+  place-items: center;
+  padding: 11px;
+  color: var(--color-primary);
+  border-radius: 13px;
+  background: var(--color-primary-soft);
+}
+
+.citizen-action-card-featured .citizen-action-icon {
+  color: #174e1b;
+  background: #cdefaa;
+}
+
+.citizen-action-badge {
+  position: absolute;
+  top: 21px;
+  right: 21px;
+  padding: 5px 8px;
+  color: #194d1d;
+  border-radius: 999px;
+  background: #dff3d0;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.citizen-action-badge-muted {
+  color: #6b746c;
+  background: #e9eeea;
+}
+
+.citizen-action-card h3 {
+  margin: 18px 0 0;
+  color: #18321d;
+  font-size: 1rem;
+}
+
+.citizen-action-card-featured h3 {
+  color: #ffffff;
+}
+
+.citizen-action-card > p {
+  margin: 8px 0 21px;
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  line-height: 1.58;
+}
+
+.citizen-action-card-featured > p {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.citizen-action-buttons {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 9px;
+  margin-top: auto;
+}
+
+.citizen-action-primary,
+.citizen-action-secondary,
+.citizen-action-disabled {
+  min-height: 44px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.citizen-action-primary {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  color: #103e15;
+  border: 0;
+  background: #d7f1bd;
+}
+
+.citizen-action-primary:hover {
+  background: #ffffff;
+}
+
+.citizen-action-primary svg {
+  width: 17px;
+  height: 17px;
+}
+
+.citizen-action-secondary {
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+}
+
+.citizen-action-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.citizen-action-disabled {
+  width: 100%;
+  margin-top: auto;
+  color: #7b857d;
+  cursor: not-allowed;
+  border: 1px solid #d9e1da;
+  background: #edf1ed;
+}
+
+.citizen-dashboard-foundation {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: center;
+  margin-top: 20px;
+  padding: 19px 22px;
+  border: 1px solid #d8e5d9;
+  border-radius: 15px;
+  background: #f8fbf8;
+}
+
+.citizen-dashboard-foundation > div {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 13px;
+  align-items: center;
+}
+
+.citizen-dashboard-foundation-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  color: var(--color-primary);
+  border-radius: 12px;
+  background: var(--color-primary-soft);
+}
+
+.citizen-dashboard-foundation h2 {
+  margin: 0;
+  color: #18321d;
+  font-size: 0.88rem;
+}
+
+.citizen-dashboard-foundation p {
+  margin: 4px 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  line-height: 1.48;
+}
+
+.citizen-dashboard-active-status {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  color: var(--color-primary);
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.citizen-dashboard-active-status::before {
+  width: 7px;
+  height: 7px;
+  content: "";
+  border-radius: 50%;
+  background: var(--color-success);
+}
+
+@media (max-width: 1020px) {
+  .citizen-dashboard-header {
+    grid-template-columns: auto 1fr;
+  }
+
+  .citizen-dashboard-nav {
+    display: none;
+  }
+
+  .citizen-dashboard-user {
+    justify-self: end;
+  }
+
+  .citizen-dashboard-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .citizen-dashboard-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .citizen-action-card-featured {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .citizen-dashboard-header {
+    min-height: 68px;
+    padding: 11px 16px;
+  }
+
+  .citizen-dashboard-user > span:nth-child(2) {
+    display: none;
+  }
+
+  .citizen-dashboard-main {
+    width: min(100% - 28px, 1240px);
+    padding: 31px 0 44px;
+  }
+
+  .citizen-dashboard-hero {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .citizen-dashboard-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .citizen-action-card-featured {
+    grid-column: auto;
+  }
+
+  .citizen-dashboard-section {
+    padding: 19px;
+  }
+
+  .citizen-dashboard-section-heading,
+  .citizen-dashboard-foundation {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 460px) {
+  .citizen-dashboard-brand small,
+  .citizen-dashboard-avatar {
+    display: none;
+  }
+
+  .citizen-dashboard-user {
+    display: block;
+  }
+
+  .citizen-dashboard-hero h1 {
+    font-size: 2rem;
+  }
+
+  .citizen-action-buttons {
+    grid-template-columns: 1fr;
+  }
+}

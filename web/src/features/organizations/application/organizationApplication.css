@@ -1,5 +1,9 @@
 .organization-shell { min-height: 100vh; background: #f4f7f4; color: #212a23; }
 .organization-header { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 16px max(24px, calc((100vw - 1120px) / 2)); border-bottom: 1px solid #dce5dd; background: rgba(255,255,255,.96); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.organization-header-start { display: flex; align-items: center; gap: 15px; }
+.organization-back-button { min-height: 40px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 11px; color: #1b5e20; border: 1px solid #c4d4c5; border-radius: 9px; background: #f8faf8; font-size: .74rem; font-weight: 750; }
+.organization-back-button:hover { border-color: #1b5e20; background: #e8f3e9; }
+.organization-back-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .organization-header p, .organization-user span { margin: 2px 0 0; color: #66736a; font-size: .78rem; }
 .organization-brand { color: #1b5e20; font-size: 1.45rem; font-weight: 800; letter-spacing: -.04em; }
 .organization-user { display: flex; align-items: center; gap: 14px; }

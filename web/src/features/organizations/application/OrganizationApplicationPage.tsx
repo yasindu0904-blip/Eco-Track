@@ -1,4 +1,8 @@
-import { useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useState,
+  type FormEvent,
+} from "react";
 
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import {
@@ -15,6 +19,8 @@ import "./organizationApplication.css";
 interface OrganizationApplicationPageProps {
   accessToken?: string;
   profile?: AuthenticatedUserProfile;
+  initialView?: "apply" | "applications";
+  onBackToDashboard?: () => void;
   onSignOut?: () => void;
 }
 
@@ -47,12 +53,17 @@ function statusLabel(status: OrganizationStatus): string {
 export function OrganizationApplicationPage({
   accessToken,
   profile,
+  initialView = "apply",
+  onBackToDashboard,
   onSignOut,
 }: OrganizationApplicationPageProps) {
-  const [view, setView] = useState<"apply" | "applications">("apply");
+  const [view, setView] =
+    useState<"apply" | "applications">(initialView);
   const [applications, setApplications] = useState<OrganizationApplication[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingApplications, setIsLoadingApplications] = useState(false);
+  const [isLoadingApplications, setIsLoadingApplications] = useState(
+    initialView === "applications" && Boolean(accessToken),
+  );
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -75,6 +86,44 @@ export function OrganizationApplicationPage({
       setIsLoadingApplications(false);
     }
   }
+
+  useEffect(() => {
+    if (initialView !== "applications" || !accessToken) {
+      return;
+    }
+
+    let isActive = true;
+
+    void listMyOrganizationApplications(accessToken)
+      .then((loadedApplications) => {
+        if (!isActive) {
+          return;
+        }
+
+        setApplications(loadedApplications);
+        setErrorMessage(null);
+      })
+      .catch((error: unknown) => {
+        if (!isActive) {
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to load applications.",
+        );
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoadingApplications(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [accessToken, initialView]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -127,9 +176,23 @@ export function OrganizationApplicationPage({
   return (
     <main className="organization-shell">
       <header className="organization-header">
-        <div>
-          <span className="organization-brand">EcoTrack</span>
-          <p>Organization onboarding</p>
+        <div className="organization-header-start">
+          {onBackToDashboard && (
+            <button
+              className="organization-back-button"
+              type="button"
+              onClick={onBackToDashboard}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+              Dashboard
+            </button>
+          )}
+          <div>
+            <span className="organization-brand">EcoTrack</span>
+            <p>Organization onboarding</p>
+          </div>
         </div>
         <div className="organization-user">
           <span>{profile ? profile.fullName ?? profile.email : "Development preview"}</span>
