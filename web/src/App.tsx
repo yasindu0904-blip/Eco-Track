@@ -194,6 +194,7 @@ function App() {
       return (
         <SuperAdminDashboard
           profile={profile}
+          accessToken={accessToken}
           onCheckAccess={checkSuperAdminAccess}
           onSignOut={() => {
             setCitizenView("dashboard");

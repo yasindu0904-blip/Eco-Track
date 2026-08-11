@@ -32,6 +32,19 @@
 .organization-grid input, .organization-grid textarea { width: 100%; padding: 12px 14px; color: #212a23; border: 1px solid #cfd9d0; border-radius: 9px; background: #fff; font: inherit; font-weight: 400; resize: vertical; }
 .organization-grid input:focus, .organization-grid textarea:focus { border-color: #1b5e20; outline: 3px solid rgba(27,94,32,.1); }
 .organization-grid .code-input { font-family: Consolas, monospace; font-size: .8rem; line-height: 1.55; background: #f8faf8; }
+.gn-area-selector { display: grid; gap: 14px; }
+.gn-area-selector > label { display: grid; gap: 8px; color: #303a32; font-size: .86rem; font-weight: 700; }
+.gn-area-selector > label input { width: 100%; padding: 12px 14px; color: #212a23; border: 1px solid #cfd9d0; border-radius: 9px; background: #fff; font: inherit; font-weight: 400; }
+.gn-area-selector > label input:focus { border-color: #1b5e20; outline: 3px solid rgba(27,94,32,.1); }
+.gn-selection-summary { margin: 0; color: #1b5e20; font-size: .8rem; font-weight: 750; }
+.gn-area-results { max-height: 330px; overflow-y: auto; display: grid; gap: 8px; padding: 10px; border: 1px solid #dce5dd; border-radius: 11px; background: #f8faf8; }
+.gn-area-results > p { margin: 18px; color: #66736a; text-align: center; }
+.gn-area-option { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid #dce5dd; border-radius: 9px; background: #fff; cursor: pointer; }
+.gn-area-option:has(input:checked) { border-color: #2d7a34; background: #edf7e9; }
+.gn-area-option input { width: 17px; height: 17px; margin-top: 2px; accent-color: #1b5e20; }
+.gn-area-option span { display: grid; gap: 3px; }
+.gn-area-option strong { color: #253027; font-size: .88rem; }
+.gn-area-option small { color: #6c786f; font-size: .75rem; }
 .organization-submit { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 20px 24px; border-radius: 14px; background: #153f1a; color: #fff; }
 .organization-submit p { max-width: 660px; margin: 0; color: rgba(255,255,255,.72); font-size: .84rem; }
 .organization-submit button, .organization-empty button { min-height: 46px; padding: 11px 20px; color: #153f1a; border: 0; border-radius: 9px; background: #d7f1bd; font-weight: 800; }

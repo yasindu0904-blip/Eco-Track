@@ -1,10 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { AuthenticatedUserProfile } from "../auth/auth.types";
+import {
+  approveOrganizationApplication,
+  declineOrganizationApplication,
+  listPendingOrganizationApplications,
+} from "./organizationReview.api";
+import type { OrganizationReviewApplication } from "./organizationReview.types";
 import "./superAdminDashboard.css";
 
 interface SuperAdminDashboardProps {
   profile: AuthenticatedUserProfile;
+  accessToken?: string;
   onCheckAccess: () => Promise<string>;
   onSignOut: () => void;
 }
@@ -92,6 +99,7 @@ function formatAccountStatus(value: string): string {
 
 export function SuperAdminDashboard({
   profile,
+  accessToken,
   onCheckAccess,
   onSignOut,
 }: SuperAdminDashboardProps) {
@@ -100,6 +108,94 @@ export function SuperAdminDashboard({
       status: "idle",
       message: null,
     });
+  const [applications, setApplications] = useState<OrganizationReviewApplication[]>([]);
+  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [reviewStatus, setReviewStatus] = useState<
+    "loading" | "ready" | "submitting" | "error"
+  >(accessToken ? "loading" : "ready");
+  const [reviewMessage, setReviewMessage] = useState<string | null>(null);
+
+  const selectedApplication = applications.find(
+    (application) => application.id === selectedApplicationId,
+  ) ?? applications[0] ?? null;
+
+  useEffect(() => {
+    if (!accessToken) {
+      return;
+    }
+
+    let isActive = true;
+
+    void listPendingOrganizationApplications(accessToken)
+      .then((loadedApplications) => {
+        if (isActive) {
+          setApplications(loadedApplications);
+          setSelectedApplicationId(loadedApplications[0]?.id ?? null);
+          setReviewStatus("ready");
+        }
+      })
+      .catch((error: unknown) => {
+        if (isActive) {
+          setReviewStatus("error");
+          setReviewMessage(
+            error instanceof Error ? error.message : "Unable to load applications.",
+          );
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [accessToken]);
+
+  async function handleReview(decision: "APPROVE" | "DECLINE"): Promise<void> {
+    if (!accessToken || !selectedApplication) {
+      return;
+    }
+
+    if (decision === "DECLINE" && reviewNotes.trim().length < 3) {
+      setReviewMessage("Enter a decline reason of at least 3 characters.");
+      return;
+    }
+
+    setReviewStatus("submitting");
+    setReviewMessage(null);
+
+    try {
+      if (decision === "APPROVE") {
+        await approveOrganizationApplication(
+          accessToken,
+          selectedApplication.id,
+          reviewNotes,
+        );
+      } else {
+        await declineOrganizationApplication(
+          accessToken,
+          selectedApplication.id,
+          reviewNotes.trim(),
+        );
+      }
+
+      const remaining = applications.filter(
+        (application) => application.id !== selectedApplication.id,
+      );
+      setApplications(remaining);
+      setSelectedApplicationId(remaining[0]?.id ?? null);
+      setReviewNotes("");
+      setReviewStatus("ready");
+      setReviewMessage(
+        decision === "APPROVE"
+          ? "Organization approved and first Organization Admin created."
+          : "Organization application declined.",
+      );
+    } catch (error) {
+      setReviewStatus("error");
+      setReviewMessage(
+        error instanceof Error ? error.message : "Unable to review the application.",
+      );
+    }
+  }
 
   const displayName = profile.fullName ?? "EcoTrack Super Admin";
   const initial = displayName.charAt(0).toUpperCase();
@@ -164,10 +260,18 @@ export function SuperAdminDashboard({
             <DashboardIcon name="dashboard" />
             Overview
           </button>
-          <button className="super-admin-nav-item" type="button" disabled>
+          <button
+            className="super-admin-nav-item"
+            type="button"
+            onClick={() => {
+              document.getElementById("organization-reviews")?.scrollIntoView({
+                behavior: "smooth",
+              });
+            }}
+          >
             <DashboardIcon name="review" />
             Organization reviews
-            <span>Next</span>
+            <span>{applications.length}</span>
           </button>
           <button className="super-admin-nav-item" type="button" disabled>
             <DashboardIcon name="area" />
@@ -253,53 +357,139 @@ export function SuperAdminDashboard({
         </section>
 
         <div className="super-admin-content-grid">
-          <section className="super-admin-review-card">
+          <section className="super-admin-review-card" id="organization-reviews">
             <div className="super-admin-section-heading">
               <div>
                 <span className="super-admin-eyebrow">Review workspace</span>
                 <h2>Organization applications</h2>
               </div>
-              <span className="super-admin-coming-badge">Review API next</span>
-            </div>
-
-            <div className="super-admin-empty-state">
-              <span className="super-admin-empty-icon" aria-hidden="true">
-                <DashboardIcon name="review" />
+              <span className="super-admin-coming-badge">
+                {applications.length} pending
               </span>
-              <h3>The review queue is being connected</h3>
-              <p>
-                Applications are already saved as pending review. Member 3's
-                review endpoints will supply the live queue, application details,
-                approval, and decline actions here.
-              </p>
-              <button type="button" disabled>
-                Open review queue
-              </button>
             </div>
 
-            <div className="super-admin-review-steps">
-              <div>
-                <span>1</span>
-                <p>
-                  <strong>Check organization details</strong>
-                  Confirm official contact and registration information.
-                </p>
+            {reviewMessage && (
+              <div
+                className={`super-admin-review-message ${reviewStatus === "error" ? "error" : "success"}`}
+                role={reviewStatus === "error" ? "alert" : "status"}
+              >
+                {reviewMessage}
               </div>
-              <div>
-                <span>2</span>
-                <p>
-                  <strong>Review service areas</strong>
-                  Confirm requested areas before they become active.
-                </p>
+            )}
+
+            {reviewStatus === "loading" ? (
+              <div className="super-admin-empty-state">
+                <h3>Loading pending applications…</h3>
               </div>
-              <div>
-                <span>3</span>
-                <p>
-                  <strong>Record the decision</strong>
-                  Approval creates the first Org Admin; decline records notes.
-                </p>
+            ) : !accessToken ? (
+              <div className="super-admin-empty-state">
+                <h3>Preview mode</h3>
+                <p>Sign in as a real Super Admin to load and review applications.</p>
               </div>
-            </div>
+            ) : applications.length === 0 ? (
+              <div className="super-admin-empty-state">
+                <span className="super-admin-empty-icon" aria-hidden="true">
+                  <DashboardIcon name="check" />
+                </span>
+                <h3>No pending applications</h3>
+                <p>New citizen organization applications will appear here.</p>
+              </div>
+            ) : (
+              <div className="super-admin-review-workspace">
+                <div className="super-admin-review-list" aria-label="Pending applications">
+                  {applications.map((application) => (
+                    <button
+                      type="button"
+                      key={application.id}
+                      className={
+                        application.id === selectedApplication?.id
+                          ? "selected"
+                          : ""
+                      }
+                      onClick={() => {
+                        setSelectedApplicationId(application.id);
+                        setReviewNotes("");
+                        setReviewMessage(null);
+                      }}
+                    >
+                      <strong>{application.name}</strong>
+                      <span>{application.requester.fullName ?? application.requester.email}</span>
+                      <small>
+                        {application.serviceAreas.length} GN {application.serviceAreas.length === 1 ? "Division" : "Divisions"}
+                      </small>
+                    </button>
+                  ))}
+                </div>
+
+                {selectedApplication && (
+                  <article className="super-admin-review-detail">
+                    <div className="super-admin-review-detail-heading">
+                      <div>
+                        <span>Submitted {new Date(selectedApplication.createdAt).toLocaleDateString()}</span>
+                        <h3>{selectedApplication.name}</h3>
+                      </div>
+                      <span>Pending review</span>
+                    </div>
+
+                    <p>{selectedApplication.description ?? "No description provided."}</p>
+
+                    <dl>
+                      <div><dt>Requester</dt><dd>{selectedApplication.requester.fullName ?? selectedApplication.requester.email}</dd></div>
+                      <div><dt>Registration</dt><dd>{selectedApplication.registrationNumber ?? "Not provided"}</dd></div>
+                      <div><dt>Official email</dt><dd>{selectedApplication.officialEmail}</dd></div>
+                      <div><dt>Official phone</dt><dd>{selectedApplication.officialPhone}</dd></div>
+                      <div className="wide"><dt>Address</dt><dd>{selectedApplication.officialAddress}</dd></div>
+                    </dl>
+
+                    <div className="super-admin-review-areas">
+                      <strong>Requested GN Divisions</strong>
+                      <div>
+                        {selectedApplication.serviceAreas.map((area) => (
+                          <span key={area.id}>
+                            {area.name}
+                            <small>
+                              {[area.divisionalSecretariatName, area.districtName]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </small>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <label className="super-admin-review-notes">
+                      Review notes
+                      <textarea
+                        rows={4}
+                        maxLength={2000}
+                        value={reviewNotes}
+                        onChange={(event) => setReviewNotes(event.target.value)}
+                        placeholder="Required when declining; optional when approving."
+                      />
+                    </label>
+
+                    <div className="super-admin-review-actions">
+                      <button
+                        className="decline"
+                        type="button"
+                        disabled={reviewStatus === "submitting"}
+                        onClick={() => void handleReview("DECLINE")}
+                      >
+                        Decline
+                      </button>
+                      <button
+                        className="approve"
+                        type="button"
+                        disabled={reviewStatus === "submitting"}
+                        onClick={() => void handleReview("APPROVE")}
+                      >
+                        {reviewStatus === "submitting" ? "Saving decision…" : "Approve organization"}
+                      </button>
+                    </div>
+                  </article>
+                )}
+              </div>
+            )}
           </section>
 
           <aside className="super-admin-side-column">

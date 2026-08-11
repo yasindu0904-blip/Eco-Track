@@ -13,8 +13,8 @@ import type {
 } from "../application.types.js";
 import {
   createOrganizationApplicationRecord,
+  findActiveAdministrativeAreasByIds,
   organizationSlugExists,
-  validateServiceAreaBoundary,
 } from "../repositories/organizationApplication.repository.js";
 
 function createSlugBase(name: string): string {
@@ -87,29 +87,17 @@ export async function createOrganizationApplication(
     );
   }
 
-  for (let index = 0; index < command.application.serviceAreas.length; index += 1) {
-    const serviceArea = command.application.serviceAreas[index];
+  const selectedAreas = await findActiveAdministrativeAreasByIds(
+    dependencies.prisma,
+    command.application.administrativeAreaIds,
+  );
 
-    if (!serviceArea) {
-      continue;
-    }
-
-    const validation = await validateServiceAreaBoundary(
-      dependencies.prisma,
-      serviceArea.boundary,
+  if (selectedAreas.length !== command.application.administrativeAreaIds.length) {
+    throw new ApplicationError(
+      422,
+      "INVALID_ADMINISTRATIVE_AREA_SELECTION",
+      "One or more selected GN Divisions do not exist or are inactive.",
     );
-
-    if (
-      validation.isEmpty ||
-      !validation.isValid ||
-      validation.geometryType !== "MULTIPOLYGON"
-    ) {
-      throw new ApplicationError(
-        422,
-        "INVALID_SERVICE_AREA_BOUNDARY",
-        `Service area ${index + 1} has an invalid MultiPolygon boundary: ${validation.validityReason}`,
-      );
-    }
   }
 
   const slug = await createAvailableSlug(
@@ -120,5 +108,6 @@ export async function createOrganizationApplication(
   return createOrganizationApplicationRecord(dependencies.prisma, {
     ...command,
     slug,
+    selectedAreas,
   });
 }

@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 import type { PrismaClient } from "../../../../generated/prisma/client.js";
 import { ServiceAreaStatus } from "../../../../generated/prisma/enums.js";
 
@@ -7,14 +5,8 @@ import type {
   CreateOrganizationApplicationCommand,
   OrganizationApplicationDto,
   OrganizationServiceAreaDto,
+  SelectedAdministrativeArea,
 } from "../application.types.js";
-
-export type BoundaryValidationResult = {
-  isEmpty: boolean;
-  isValid: boolean;
-  geometryType: string;
-  validityReason: string;
-};
 
 export async function organizationSlugExists(
   prisma: PrismaClient,
@@ -28,33 +20,22 @@ export async function organizationSlugExists(
   return organization !== null;
 }
 
-export async function validateServiceAreaBoundary(
+export async function findActiveAdministrativeAreasByIds(
   prisma: PrismaClient,
-  boundary: unknown,
-): Promise<BoundaryValidationResult> {
-  const boundaryJson = JSON.stringify(boundary);
-  const results = await prisma.$queryRaw<BoundaryValidationResult[]>`
-    WITH geometry AS (
-      SELECT extensions.ST_SetSRID(
-        extensions.ST_GeomFromGeoJSON(${boundaryJson}::json),
-        4326
-      ) AS value
-    )
-    SELECT
-      extensions.ST_IsEmpty(value) AS "isEmpty",
-      extensions.ST_IsValid(value) AS "isValid",
-      extensions.GeometryType(value) AS "geometryType",
-      extensions.ST_IsValidReason(value) AS "validityReason"
-    FROM geometry
-  `;
-
-  const result = results[0];
-
-  if (!result) {
-    throw new Error("PostGIS did not return a boundary validation result.");
-  }
-
-  return result;
+  ids: string[],
+): Promise<SelectedAdministrativeArea[]> {
+  return prisma.administrativeArea.findMany({
+    where: {
+      id: { in: ids },
+      isActive: true,
+      level: "GN_DIVISION",
+    },
+    select: {
+      id: true,
+      officialCode: true,
+      nameEn: true,
+    },
+  });
 }
 
 export async function listOrganizationApplicationRecordsByRequester(
@@ -82,10 +63,17 @@ export async function listOrganizationApplicationRecordsByRequester(
         orderBy: { createdAt: "asc" },
         select: {
           id: true,
+          administrativeAreaId: true,
           areaName: true,
           status: true,
           reviewedAt: true,
           reviewNotes: true,
+          administrativeArea: {
+            select: {
+              officialCode: true,
+              nameEn: true,
+            },
+          },
         },
       },
     },
@@ -107,7 +95,12 @@ export async function listOrganizationApplicationRecordsByRequester(
     updatedAt: organization.updatedAt.toISOString(),
     serviceAreas: organization.serviceAreas.map((serviceArea) => ({
       id: serviceArea.id,
-      areaName: serviceArea.areaName,
+      administrativeAreaId: serviceArea.administrativeAreaId,
+      officialCode: serviceArea.administrativeArea?.officialCode ?? null,
+      areaName:
+        serviceArea.administrativeArea?.nameEn ??
+        serviceArea.areaName ??
+        "Legacy service area",
       status: serviceArea.status,
       reviewedAt: serviceArea.reviewedAt?.toISOString() ?? null,
       reviewNotes: serviceArea.reviewNotes,
@@ -143,10 +136,17 @@ export async function findOrganizationApplicationRecordByIdAndRequester(
         orderBy: { createdAt: "asc" },
         select: {
           id: true,
+          administrativeAreaId: true,
           areaName: true,
           status: true,
           reviewedAt: true,
           reviewNotes: true,
+          administrativeArea: {
+            select: {
+              officialCode: true,
+              nameEn: true,
+            },
+          },
         },
       },
     },
@@ -172,7 +172,12 @@ export async function findOrganizationApplicationRecordByIdAndRequester(
     updatedAt: organization.updatedAt.toISOString(),
     serviceAreas: organization.serviceAreas.map((serviceArea) => ({
       id: serviceArea.id,
-      areaName: serviceArea.areaName,
+      administrativeAreaId: serviceArea.administrativeAreaId,
+      officialCode: serviceArea.administrativeArea?.officialCode ?? null,
+      areaName:
+        serviceArea.administrativeArea?.nameEn ??
+        serviceArea.areaName ??
+        "Legacy service area",
       status: serviceArea.status,
       reviewedAt: serviceArea.reviewedAt?.toISOString() ?? null,
       reviewNotes: serviceArea.reviewNotes,
@@ -183,6 +188,7 @@ export async function findOrganizationApplicationRecordByIdAndRequester(
 export type CreateOrganizationApplicationRecordCommand =
   CreateOrganizationApplicationCommand & {
     slug: string;
+    selectedAreas: SelectedAdministrativeArea[];
   };
 
 export async function createOrganizationApplicationRecord(
@@ -221,39 +227,30 @@ export async function createOrganizationApplicationRecord(
 
     const serviceAreas: OrganizationServiceAreaDto[] = [];
 
-    for (const serviceArea of command.application.serviceAreas) {
-      const serviceAreaId = randomUUID();
-      const boundaryJson = JSON.stringify(serviceArea.boundary);
+    const selectedAreasById = new Map(
+      command.selectedAreas.map((area) => [area.id, area]),
+    );
 
-      await transaction.$executeRaw`
-        INSERT INTO "organization_service_areas" (
-          "id",
-          "organization_id",
-          "area_name",
-          "boundary",
-          "status",
-          "created_at",
-          "updated_at"
-        )
-        VALUES (
-          ${serviceAreaId}::uuid,
-          ${organization.id}::uuid,
-          ${serviceArea.areaName},
-          extensions.ST_Multi(
-            extensions.ST_SetSRID(
-              extensions.ST_GeomFromGeoJSON(${boundaryJson}::json),
-              4326
-            )
-          )::extensions.geography,
-          'PENDING_REVIEW'::"ServiceAreaStatus",
-          CURRENT_TIMESTAMP,
-          CURRENT_TIMESTAMP
-        )
-      `;
+    for (const administrativeAreaId of command.application.administrativeAreaIds) {
+      const administrativeArea = selectedAreasById.get(administrativeAreaId);
+
+      if (!administrativeArea) {
+        throw new Error("A validated GN Division was not available during creation.");
+      }
+
+      const serviceArea = await transaction.organizationServiceArea.create({
+        data: {
+          organizationId: organization.id,
+          administrativeAreaId: administrativeArea.id,
+        },
+        select: { id: true },
+      });
 
       serviceAreas.push({
-        id: serviceAreaId,
-        areaName: serviceArea.areaName,
+        id: serviceArea.id,
+        administrativeAreaId: administrativeArea.id,
+        officialCode: administrativeArea.officialCode,
+        areaName: administrativeArea.nameEn,
         status: ServiceAreaStatus.PENDING_REVIEW,
         reviewedAt: null,
         reviewNotes: null,

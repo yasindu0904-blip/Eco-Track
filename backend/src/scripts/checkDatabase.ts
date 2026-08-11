@@ -42,6 +42,8 @@ async function checkDatabase(): Promise<void> {
     organizationCount,
     organizationMembershipCount,
     organizationServiceAreaCount,
+    administrativeAreaCount,
+    notificationCount,
     platformSettingsCount,
     postgisCheck,
   ] = await Promise.all([
@@ -49,6 +51,8 @@ async function checkDatabase(): Promise<void> {
     prisma.organization.count(),
     prisma.organizationMembership.count(),
     prisma.organizationServiceArea.count(),
+    prisma.administrativeArea.count(),
+    prisma.notification.count(),
     prisma.platformSettings.count(),
     prisma.$queryRaw<PostgisCheck[]>`
       SELECT extensions.ST_IsValid(
@@ -81,6 +85,8 @@ async function checkDatabase(): Promise<void> {
     `Organization memberships: ${organizationMembershipCount}`,
   );
   console.log(`Organization service areas: ${organizationServiceAreaCount}`);
+  console.log(`Administrative areas: ${administrativeAreaCount}`);
+  console.log(`Notifications: ${notificationCount}`);
   console.log(`Platform settings rows: ${platformSettingsCount}`);
   console.log("PostGIS repository functions: available");
 }

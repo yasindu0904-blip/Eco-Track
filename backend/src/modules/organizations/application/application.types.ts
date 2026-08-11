@@ -3,22 +3,6 @@ import type {
   ServiceAreaStatus,
 } from "../../../generated/prisma/enums.js";
 
-export type GeoJsonPosition = [
-  longitude: number,
-  latitude: number,
-  ...additionalCoordinates: number[],
-];
-
-export type MultiPolygonGeometry = {
-  type: "MultiPolygon";
-  coordinates: GeoJsonPosition[][][];
-};
-
-export type OrganizationServiceAreaInput = {
-  areaName: string;
-  boundary: MultiPolygonGeometry;
-};
-
 export type CreateOrganizationApplicationInput = {
   name: string;
   registrationNumber?: string;
@@ -26,15 +10,23 @@ export type CreateOrganizationApplicationInput = {
   officialEmail: string;
   officialPhone: string;
   officialAddress: string;
-  serviceAreas: OrganizationServiceAreaInput[];
+  administrativeAreaIds: string[];
 };
 
 export type OrganizationServiceAreaDto = {
   id: string;
+  administrativeAreaId: string | null;
+  officialCode: string | null;
   areaName: string;
   status: ServiceAreaStatus;
   reviewedAt: string | null;
   reviewNotes: string | null;
+};
+
+export type SelectedAdministrativeArea = {
+  id: string;
+  officialCode: string;
+  nameEn: string;
 };
 
 export type OrganizationApplicationDto = {
