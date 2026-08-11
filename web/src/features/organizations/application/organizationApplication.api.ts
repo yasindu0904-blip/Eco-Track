@@ -1,11 +1,31 @@
 import { apiRequest } from "../../../api/apiClient";
 
 import type {
+  AdministrativeArea,
+  AdministrativeAreaListResponse,
   CreateOrganizationApplicationInput,
   OrganizationApplication,
   OrganizationApplicationListResponse,
   OrganizationApplicationResponse,
 } from "./organizationApplication.types";
+
+export async function listAdministrativeAreas(
+  accessToken: string,
+  search: string,
+): Promise<AdministrativeArea[]> {
+  const query = new URLSearchParams({ limit: "50" });
+
+  if (search.trim()) {
+    query.set("search", search.trim());
+  }
+
+  const response = await apiRequest<AdministrativeAreaListResponse>(
+    `/administrative-areas?${query.toString()}`,
+    { accessToken },
+  );
+
+  return response.data;
+}
 
 export async function createOrganizationApplication(
   accessToken: string,

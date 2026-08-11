@@ -12,6 +12,7 @@ import {
   PlatformRole,
 } from "../../../generated/prisma/enums.js";
 import { errorMiddleware } from "../../../middleware/error.middleware.js";
+import { createAdministrativeAreaRouter } from "../../administrativeAreas/administrativeArea.routes.js";
 import type { AuthenticationDependencies } from "../../auth/auth.types.js";
 
 import { organizationApplicationDependencies } from "./application.dependencies.js";
@@ -23,6 +24,7 @@ const otherProfileId = randomUUID();
 const otherAuthUserId = randomUUID();
 const testEmail = `organization-application-${testProfileId}@example.com`;
 const validAccessToken = `test-token-${testProfileId}`;
+const testAdministrativeAreaId = randomUUID();
 
 const authenticationDependencies: AuthenticationDependencies = {
   async verifyAccessToken(accessToken) {
@@ -61,24 +63,7 @@ function validApplicationBody(name: string) {
     officialEmail: `office-${testProfileId}@example.com`,
     officialPhone: "+94 77 123 4567",
     officialAddress: "Test address, Colombo, Sri Lanka",
-    serviceAreas: [
-      {
-        areaName: "Integration Test Service Area",
-        boundary: {
-          type: "MultiPolygon",
-          coordinates: [
-            [
-              [
-                [79.85, 6.92],
-                [79.86, 6.92],
-                [79.86, 6.93],
-                [79.85, 6.92],
-              ],
-            ],
-          ],
-        },
-      },
-    ],
+    administrativeAreaIds: [testAdministrativeAreaId],
   };
 }
 
@@ -94,6 +79,36 @@ async function postApplication(body: unknown) {
 }
 
 before(async () => {
+  await prisma.$executeRaw`
+    INSERT INTO "administrative_areas" (
+      "id",
+      "level",
+      "official_code",
+      "name_en",
+      "divisional_secretariat_name",
+      "district_name",
+      "province_name",
+      "boundary",
+      "source_name",
+      "source_version",
+      "updated_at"
+    ) VALUES (
+      ${testAdministrativeAreaId}::uuid,
+      'GN_DIVISION'::"AdministrativeAreaLevel",
+      ${`TEST-${testAdministrativeAreaId}`},
+      'Integration Test GN Division',
+      'Test DS Division',
+      'Test District',
+      'Test Province',
+      extensions.ST_GeogFromText(
+        'SRID=4326;MULTIPOLYGON(((79.85 6.92,79.86 6.92,79.86 6.93,79.85 6.92)))'
+      ),
+      'EcoTrack integration test',
+      'test-v1',
+      CURRENT_TIMESTAMP
+    )
+  `;
+
   await prisma.userProfile.createMany({
     data: [
       {
@@ -124,6 +139,13 @@ before(async () => {
 
   const app = express();
   app.use(express.json());
+  app.use(
+    "/api/v1",
+    createAdministrativeAreaRouter(
+      authenticationDependencies,
+      organizationApplicationDependencies,
+    ),
+  );
   app.use(
     "/api/v1",
     createOrganizationApplicationRouter(
@@ -176,6 +198,9 @@ after(async () => {
       },
     },
   });
+  await prisma.administrativeArea.delete({
+    where: { id: testAdministrativeAreaId },
+  });
   await prisma.$disconnect();
 });
 
@@ -192,6 +217,27 @@ test("rejects a missing bearer token", async () => {
   assert.equal(response.status, 401);
 });
 
+test("searches active GN Division references for the authenticated user", async () => {
+  const response = await fetch(
+    `${baseUrl}/api/v1/administrative-areas?search=Integration`,
+    {
+      headers: {
+        authorization: `Bearer ${validAccessToken}`,
+      },
+    },
+  );
+
+  assert.equal(response.status, 200);
+
+  const responseBody = (await response.json()) as {
+    data: Array<{ id: string; name: string }>;
+  };
+
+  assert.equal(responseBody.data.length, 1);
+  assert.equal(responseBody.data[0]?.id, testAdministrativeAreaId);
+  assert.equal(responseBody.data[0]?.name, "Integration Test GN Division");
+});
+
 test("rejects requester-controlled security fields", async () => {
   const response = await postApplication({
     ...validApplicationBody("Unauthorized Field Test"),
@@ -201,21 +247,12 @@ test("rejects requester-controlled security fields", async () => {
   assert.equal(response.status, 400);
 });
 
-test("rejects invalid PostGIS geometry without creating an organization", async () => {
-  const organizationName = `Invalid Boundary ${testProfileId}`;
-  const body = validApplicationBody(organizationName);
-
-  body.serviceAreas[0]!.boundary.coordinates = [
-    [
-      [
-        [79.85, 6.92],
-        [79.86, 6.93],
-        [79.86, 6.92],
-        [79.85, 6.93],
-        [79.85, 6.92],
-      ],
-    ],
-  ];
+test("rejects an unknown GN Division without creating an organization", async () => {
+  const organizationName = `Unknown Area ${testProfileId}`;
+  const body = {
+    ...validApplicationBody(organizationName),
+    administrativeAreaIds: [randomUUID()],
+  };
 
   const response = await postApplication(body);
   assert.equal(response.status, 422);

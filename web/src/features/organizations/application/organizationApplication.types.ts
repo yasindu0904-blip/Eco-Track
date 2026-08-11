@@ -11,22 +11,6 @@ export type ServiceAreaStatus =
   | "REJECTED"
   | "INACTIVE";
 
-export type GeoJsonPosition = [
-  longitude: number,
-  latitude: number,
-  ...additionalCoordinates: number[],
-];
-
-export interface MultiPolygonGeometry {
-  type: "MultiPolygon";
-  coordinates: GeoJsonPosition[][][];
-}
-
-export interface OrganizationServiceAreaInput {
-  areaName: string;
-  boundary: MultiPolygonGeometry;
-}
-
 export interface CreateOrganizationApplicationInput {
   name: string;
   registrationNumber?: string;
@@ -34,11 +18,13 @@ export interface CreateOrganizationApplicationInput {
   officialEmail: string;
   officialPhone: string;
   officialAddress: string;
-  serviceAreas: OrganizationServiceAreaInput[];
+  administrativeAreaIds: string[];
 }
 
 export interface OrganizationServiceArea {
   id: string;
+  administrativeAreaId: string | null;
+  officialCode: string | null;
   areaName: string;
   status: ServiceAreaStatus;
   reviewedAt: string | null;
@@ -68,4 +54,18 @@ export interface OrganizationApplicationResponse {
 
 export interface OrganizationApplicationListResponse {
   data: OrganizationApplication[];
+}
+
+export interface AdministrativeArea {
+  id: string;
+  officialCode: string;
+  name: string;
+  gnNumber: string | null;
+  divisionalSecretariatName: string | null;
+  districtName: string | null;
+  provinceName: string | null;
+}
+
+export interface AdministrativeAreaListResponse {
+  data: AdministrativeArea[];
 }

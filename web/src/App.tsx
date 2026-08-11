@@ -1,8 +1,35 @@
+import { useState } from "react";
+
 import "./App.css";
 
 import { LoginForm } from "./features/auth/LoginForm";
 import { useAuthentication } from "./features/auth/useAuthentication";
+import { CitizenDashboard } from "./features/citizen/CitizenDashboard";
 import { OrganizationApplicationPage } from "./features/organizations/application";
+import { SuperAdminDashboard } from "./features/super-admin/SuperAdminDashboard";
+
+const previewSuperAdminProfile = {
+  id: "00000000-0000-4000-8000-000000000001",
+  email: "superadmin@ecotrack.local",
+  fullName: "EcoTrack Super Admin",
+  phoneNumber: null,
+  platformRole: "SUPER_ADMIN",
+  accountStatus: "ACTIVE",
+} as const;
+
+const previewCitizenProfile = {
+  id: "00000000-0000-4000-8000-000000000002",
+  email: "citizen@ecotrack.local",
+  fullName: "EcoTrack Citizen",
+  phoneNumber: null,
+  platformRole: "USER",
+  accountStatus: "ACTIVE",
+} as const;
+
+type CitizenView =
+  | "dashboard"
+  | "organization-apply"
+  | "organization-applications";
 
 function BrandHeader() {
   return (
@@ -87,29 +114,131 @@ function AuthenticationError({
 }
 
 function App() {
+  const [citizenView, setCitizenView] =
+    useState<CitizenView>("dashboard");
+
   const {
     status,
     profile,
     accessToken,
     errorMessage,
+    checkSuperAdminAccess,
     retry,
     signOut,
   } = useAuthentication();
 
+  const searchParameters = new URLSearchParams(window.location.search);
+
   const isOrganizationPreview =
     import.meta.env.DEV &&
-    new URLSearchParams(window.location.search).get("organization-preview") === "1";
+    searchParameters.get("organization-preview") === "1";
+
+  const isSuperAdminPreview =
+    import.meta.env.DEV &&
+    searchParameters.get("super-admin-preview") === "1";
+
+  const isCitizenPreview =
+    import.meta.env.DEV &&
+    searchParameters.get("citizen-preview") === "1";
+
+  if (isSuperAdminPreview) {
+    return (
+      <SuperAdminDashboard
+        profile={previewSuperAdminProfile}
+        onCheckAccess={() =>
+          Promise.resolve("Preview mode: protected access UI is ready.")
+        }
+        onSignOut={() => undefined}
+      />
+    );
+  }
 
   if (isOrganizationPreview) {
     return <OrganizationApplicationPage />;
   }
 
+  if (isCitizenPreview) {
+    if (citizenView !== "dashboard") {
+      return (
+        <OrganizationApplicationPage
+          key={citizenView}
+          profile={previewCitizenProfile}
+          initialView={
+            citizenView === "organization-applications"
+              ? "applications"
+              : "apply"
+          }
+          onBackToDashboard={() => {
+            setCitizenView("dashboard");
+          }}
+        />
+      );
+    }
+
+    return (
+      <CitizenDashboard
+        profile={previewCitizenProfile}
+        onStartOrganizationApplication={() => {
+          setCitizenView("organization-apply");
+        }}
+        onViewOrganizationApplications={() => {
+          setCitizenView("organization-applications");
+        }}
+        onSignOut={() => undefined}
+      />
+    );
+  }
+
   if (status === "signedIn" && profile && accessToken) {
+    if (profile.platformRole === "SUPER_ADMIN") {
+      return (
+        <SuperAdminDashboard
+          profile={profile}
+          accessToken={accessToken}
+          onCheckAccess={checkSuperAdminAccess}
+          onSignOut={() => {
+            setCitizenView("dashboard");
+            signOut();
+          }}
+        />
+      );
+    }
+
+    if (citizenView === "dashboard") {
+      return (
+        <CitizenDashboard
+          profile={profile}
+          onStartOrganizationApplication={() => {
+            setCitizenView("organization-apply");
+          }}
+          onViewOrganizationApplications={() => {
+            setCitizenView("organization-applications");
+          }}
+          onSignOut={() => {
+            setCitizenView("dashboard");
+            signOut();
+          }}
+        />
+      );
+    }
+
     return (
       <OrganizationApplicationPage
+        key={citizenView}
         accessToken={accessToken}
         profile={profile}
-        onSignOut={signOut}
+        initialView={
+          citizenView === "organization-applications"
+            ? "applications"
+            : "apply"
+        }
+        onBackToDashboard={() => {
+          setCitizenView("dashboard");
+        }}
+        onSignOut={() => {
+          setCitizenView("dashboard");
+          signOut();
+        }}
       />
     );
   }

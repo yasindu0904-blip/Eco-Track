@@ -33,6 +33,10 @@ enum ServiceAreaStatus {
   INACTIVE
 }
 
+enum AdministrativeAreaLevel {
+  GN_DIVISION
+}
+
 enum DocumentReviewStatus {
   PENDING
   VERIFIED
@@ -64,6 +68,21 @@ enum MembershipSource {
   FIRST_ADMIN
 }
 
+enum NotificationType {
+  INCIDENT_STATUS_CHANGED
+  NEW_INCIDENT_IN_AREA
+  EVENT_PUBLISHED
+  EVENT_JOINED
+  SESSION_ALLOCATED
+  EVENT_UPDATED
+  EVENT_CANCELLED
+  EVENT_COMPLETED
+  MEMBERSHIP_UPDATED
+  ORGANIZATION_REVIEW_UPDATED
+  ACHIEVEMENT_AWARDED
+  GENERAL
+}
+
 model UserProfile {
   id         String @id @default(uuid()) @db.Uuid
   authUserId String @unique @map("auth_user_id") @db.Uuid
@@ -84,6 +103,7 @@ model UserProfile {
   reviewedServiceAreas          OrganizationServiceArea[]          @relation("ServiceAreaReviewer")
   settingsUpdates               PlatformSettings[]
   auditLogs                     AuditLog[]                         @relation("AuditActor")
+  notifications                 Notification[]
 
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -144,6 +164,7 @@ model Organization {
   membershipRequests    OrganizationMembershipRequest[]
   serviceAreas          OrganizationServiceArea[]
   auditLogs             AuditLog[]
+  notifications         Notification[]
 
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -250,15 +271,38 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+model Notification {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId         String  @map("user_id") @db.Uuid
+  organizationId String? @map("organization_id") @db.Uuid
+
+  type    NotificationType
+  title   String
+  message String
+  data    Json?
+
+  readAt    DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user         UserProfile   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([userId, readAt, createdAt])
+  @@map("notifications")
+}
+
 model OrganizationServiceArea {
   id String @id @default(uuid()) @db.Uuid
 
-  organizationId   String  @map("organization_id") @db.Uuid
-  reviewedByUserId String? @map("reviewed_by_user_id") @db.Uuid
+  organizationId       String  @map("organization_id") @db.Uuid
+  administrativeAreaId String? @map("administrative_area_id") @db.Uuid
+  reviewedByUserId     String? @map("reviewed_by_user_id") @db.Uuid
 
-  areaName String @map("area_name")
+  // Nullable legacy fields preserve applications created before GN references.
+  areaName String? @map("area_name")
 
-  boundary Unsupported("geography(MultiPolygon,4326)")
+  boundary Unsupported("geography(MultiPolygon,4326)")?
 
   status      ServiceAreaStatus @default(PENDING_REVIEW)
   reviewedAt  DateTime?         @map("reviewed_at") @db.Timestamptz(6)
@@ -266,12 +310,49 @@ model OrganizationServiceArea {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  administrativeArea AdministrativeArea? @relation(fields: [administrativeAreaId], references: [id], onDelete: Restrict)
+
   reviewedBy UserProfile? @relation("ServiceAreaReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  @@unique([organizationId, administrativeAreaId])
   @@index([organizationId])
   @@index([organizationId, status])
+  @@index([administrativeAreaId])
   @@map("organization_service_areas")
+}
+
+model AdministrativeArea {
+  id String @id @default(uuid()) @db.Uuid
+
+  level        AdministrativeAreaLevel @default(GN_DIVISION)
+  officialCode String                  @map("official_code")
+  nameEn       String                  @map("name_en")
+  gnNumber     String?                 @map("gn_number")
+
+  divisionalSecretariatName String? @map("divisional_secretariat_name")
+  divisionalSecretariatCode String? @map("divisional_secretariat_code")
+  districtName              String? @map("district_name")
+  districtCode              String? @map("district_code")
+  provinceName              String? @map("province_name")
+  provinceCode              String? @map("province_code")
+
+  boundary Unsupported("geography(MultiPolygon,4326)")
+
+  sourceName    String   @map("source_name")
+  sourceUrl     String?  @map("source_url")
+  sourceVersion String?  @map("source_version")
+  isActive      Boolean  @default(true) @map("is_active")
+  importedAt    DateTime @default(now()) @map("imported_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organizationServiceAreas OrganizationServiceArea[]
+
+  @@unique([level, officialCode])
+  @@index([nameEn])
+  @@index([districtName, divisionalSecretariatName])
+  @@index([isActive, level])
+  @@map("administrative_areas")
 }
