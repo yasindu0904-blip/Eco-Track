@@ -1,0 +1,45 @@
+name: ecotrack
+
+services:
+  backend:
+    build:
+      context: ./backend
+      target: runtime
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.docker}
+      SUPABASE_URL: ${SUPABASE_URL:?Set SUPABASE_URL in .env.docker}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?Set SUPABASE_PUBLISHABLE_KEY in .env.docker}
+      SUPER_ADMIN_AUTH_USER_ID: ${SUPER_ADMIN_AUTH_USER_ID:-}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-superadmin@ecotrack.com}
+      SUPER_ADMIN_FULL_NAME: ${SUPER_ADMIN_FULL_NAME:-EcoTrack Super Admin}
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:5000/health').then(response=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      target: runtime
+      args:
+        VITE_SUPABASE_URL: ${SUPABASE_URL:?Set SUPABASE_URL in .env.docker}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?Set SUPABASE_PUBLISHABLE_KEY in .env.docker}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5000/api/v1}
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped

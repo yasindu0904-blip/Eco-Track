@@ -13,9 +13,11 @@ coverage/
 .env.production
 .env.test
 .env.*.local
+.env.docker
 
 # Keep environment templates
 !.env.example
+!.env.docker.example
 
 # Vite
 .vite/
