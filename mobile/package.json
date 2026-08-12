@@ -1,0 +1,33 @@
+{
+  "name": "ecotrack-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start --dev-client",
+    "start:go": "expo start",
+    "android": "expo run:android --device",
+    "typecheck": "tsc --noEmit",
+    "doctor": "npx expo-doctor",
+    "security:check": "node scripts/verifyMetroImageSecurity.cjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
+    "expo": "~57.0.12",
+    "expo-build-properties": "~57.0.10",
+    "expo-dev-client": "~57.0.11",
+    "expo-linking": "~57.0.5",
+    "expo-secure-store": "~57.0.1",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.2",
+    "react-native-url-polyfill": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.18",
+    "typescript": "~6.0.3"
+  },
+  "overrides": {
+    "uuid": "11.1.1"
+  }
+}
