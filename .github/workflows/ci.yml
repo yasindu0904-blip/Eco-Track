@@ -1,0 +1,125 @@
+name: EcoTrack CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ecotrack-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://ci_user:ci_password@localhost:5432/ecotrack_ci
+      SUPABASE_URL: https://ci-placeholder.supabase.co
+      SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npm run prisma:generate
+
+      - name: Type-check backend
+        run: npm run typecheck
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Run database-independent backend tests
+        run: >-
+          npx tsx --test
+          src/tests/auth.integration.test.ts
+          src/tests/authorization.integration.test.ts
+
+  web:
+    name: Web checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    env:
+      VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
+      VITE_API_BASE_URL: http://localhost:5000/api/v1
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        run: npm ci
+
+      - name: Lint web application
+        run: npm run lint
+
+      - name: Build web application
+        run: npm run build
+
+  mobile:
+    name: Mobile checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
+      EXPO_PUBLIC_API_BASE_URL: http://127.0.0.1:5000/api/v1
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install mobile dependencies
+        run: npm ci
+
+      - name: Verify Metro image-parser mitigation
+        run: npm run security:check
+
+      - name: Type-check mobile application
+        run: npm run typecheck
+
+      - name: Validate Expo project
+        run: npm run doctor
+
+      - name: Bundle Android JavaScript
+        run: npx expo export --platform android --output-dir dist
