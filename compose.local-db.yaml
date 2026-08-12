@@ -1,0 +1,46 @@
+services:
+  database:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_DB: ecotrack_local
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - ecotrack-postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init/20-supabase-compat.sql:/docker-entrypoint-initdb.d/20-supabase-compat.sql:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U postgres -d ecotrack_local
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: ./backend
+      target: build
+    command:
+      - npx
+      - prisma
+      - migrate
+      - deploy
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@database:5432/ecotrack_local?schema=public
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@database:5432/ecotrack_local?schema=public
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  ecotrack-postgres-data:
