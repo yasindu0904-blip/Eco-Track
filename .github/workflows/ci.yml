@@ -56,11 +56,20 @@ jobs:
       - name: Install backend dependencies
         run: npm ci
 
-      - name: Prepare Supabase-compatible database roles
+      - name: Prepare Supabase-compatible PostGIS database
         run: |
-          psql -h localhost -U postgres -d ecotrack_ci -c "CREATE ROLE anon NOLOGIN;"
-          psql -h localhost -U postgres -d ecotrack_ci -c "CREATE ROLE authenticated NOLOGIN;"
-          psql -h localhost -U postgres -d ecotrack_ci -c "CREATE SCHEMA IF NOT EXISTS extensions;"
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d ecotrack_ci <<'SQL'
+          DROP EXTENSION IF EXISTS postgis_tiger_geocoder CASCADE;
+          DROP EXTENSION IF EXISTS postgis_topology CASCADE;
+          DROP EXTENSION IF EXISTS postgis CASCADE;
+
+          CREATE SCHEMA IF NOT EXISTS extensions;
+          CREATE EXTENSION postgis WITH SCHEMA extensions;
+          SELECT extensions.postgis_full_version();
+
+          CREATE ROLE anon NOLOGIN;
+          CREATE ROLE authenticated NOLOGIN;
+          SQL
 
       - name: Apply database migrations
         run: npx prisma migrate deploy
