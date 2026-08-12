@@ -18,14 +18,29 @@ jobs:
   backend:
     name: Backend checks
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_DB: ecotrack_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ecotrack_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: backend
     env:
       NODE_ENV: test
-      DATABASE_URL: postgresql://ci_user:ci_password@localhost:5432/ecotrack_ci
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ecotrack_ci?schema=public
       SUPABASE_URL: https://ci-placeholder.supabase.co
       SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
+      PGPASSWORD: postgres
 
     steps:
       - name: Check out repository
@@ -41,6 +56,15 @@ jobs:
       - name: Install backend dependencies
         run: npm ci
 
+      - name: Prepare Supabase-compatible database roles
+        run: |
+          psql -h localhost -U postgres -d ecotrack_ci -c "CREATE ROLE anon NOLOGIN;"
+          psql -h localhost -U postgres -d ecotrack_ci -c "CREATE ROLE authenticated NOLOGIN;"
+          psql -h localhost -U postgres -d ecotrack_ci -c "CREATE SCHEMA IF NOT EXISTS extensions;"
+
+      - name: Apply database migrations
+        run: npx prisma migrate deploy
+
       - name: Generate Prisma Client
         run: npm run prisma:generate
 
@@ -50,11 +74,8 @@ jobs:
       - name: Build backend
         run: npm run build
 
-      - name: Run database-independent backend tests
-        run: >-
-          npx tsx --test
-          src/tests/auth.integration.test.ts
-          src/tests/authorization.integration.test.ts
+      - name: Run all backend tests
+        run: npm test
 
   web:
     name: Web checks
