@@ -704,7 +704,7 @@ Table public.notifications [headerColor: #76B7B2] {
     (user_id, read_at, created_at)
   }
 
-  Note: 'Permanent in-app notification record. Expo push is only a delivery mechanism.'
+  Note: 'Permanent in-app notification record. Expo push is only a delivery mechanism. PostgreSQL also has a partial index on (user_id, created_at DESC) WHERE read_at IS NULL for unread lists and counts; DBML cannot express that predicate.'
 }
 
 Table public.issue_reports [headerColor: #76B7B2] {
