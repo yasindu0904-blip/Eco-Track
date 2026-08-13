@@ -43,6 +43,10 @@ async function checkDatabase(): Promise<void> {
     organizationMembershipCount,
     organizationServiceAreaCount,
     administrativeAreaCount,
+    incidentCount,
+    cleanupEventCount,
+    eventParticipantCount,
+    contributionEventCount,
     notificationCount,
     platformSettingsCount,
     postgisCheck,
@@ -52,6 +56,10 @@ async function checkDatabase(): Promise<void> {
     prisma.organizationMembership.count(),
     prisma.organizationServiceArea.count(),
     prisma.administrativeArea.count(),
+    prisma.incident.count(),
+    prisma.cleanupEvent.count(),
+    prisma.eventParticipant.count(),
+    prisma.contributionEvent.count(),
     prisma.notification.count(),
     prisma.platformSettings.count(),
     prisma.$queryRaw<PostgisCheck[]>`
@@ -86,6 +94,10 @@ async function checkDatabase(): Promise<void> {
   );
   console.log(`Organization service areas: ${organizationServiceAreaCount}`);
   console.log(`Administrative areas: ${administrativeAreaCount}`);
+  console.log(`Incidents: ${incidentCount}`);
+  console.log(`Cleanup events: ${cleanupEventCount}`);
+  console.log(`Event participants: ${eventParticipantCount}`);
+  console.log(`Contribution events: ${contributionEventCount}`);
   console.log(`Notifications: ${notificationCount}`);
   console.log(`Platform settings rows: ${platformSettingsCount}`);
   console.log("PostGIS repository functions: available");
