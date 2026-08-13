@@ -15,7 +15,8 @@ Project EcoTrack_ERD_v2_Simplified {
   - Cleanup workflow configuration is simplified to organization-specific statuses and transitions.
   - Incident highlight/archive durations come from permanent platform settings.
   - PostgreSQL real-moment timestamps use TIMESTAMPTZ; DATE/TIME remain for local session scheduling fields.
-  - PostGIS uses geography(Point, 4326) for points and geography(MultiPolygon, 4326) for service areas.
+  - PostGIS uses geography(Point, 4326) for points and geography(MultiPolygon, 4326) for official administrative-area boundaries.
+  - New organization service areas reference official GN Divisions instead of duplicating their large boundary values.
   - DRAFT cleanup events do not claim incidents. PUBLISHED, SCHEDULED, IN_PROGRESS, and COMPLETION_SUBMITTED are the incident-claiming lifecycle states.
   - Supabase auth.users remains externally owned. user_profiles.auth_user_id is a unique logical identity link and must not become a normal Prisma-managed cross-schema foreign key unless deliberately implemented later with reviewed Supabase SQL.
   - Every public application table must receive the project's backend-only RLS / privilege-revocation treatment in migrations.
@@ -57,6 +58,10 @@ Enum service_area_status {
   ACTIVE
   REJECTED
   INACTIVE
+}
+
+Enum administrative_area_level {
+  GN_DIVISION
 }
 
 Enum membership_role {
@@ -259,11 +264,42 @@ Table public.organization_verification_documents [headerColor: #59A14F] {
   Note: 'Separate table is required because one organization can upload several proof documents.'
 }
 
+Table public.administrative_areas [headerColor: #59A14F] {
+  id uuid [pk]
+  level administrative_area_level [not null, default: 'GN_DIVISION']
+  official_code varchar [not null]
+  name_en varchar [not null]
+  gn_number varchar
+  divisional_secretariat_name varchar
+  divisional_secretariat_code varchar
+  district_name varchar
+  district_code varchar
+  province_name varchar
+  province_code varchar
+  boundary geography(MultiPolygon,4326) [not null, note: 'Official GN Division boundary. Migration SQL adds a spatial GiST index.']
+  source_name varchar [not null]
+  source_url text
+  source_version varchar
+  is_active boolean [not null, default: true]
+  imported_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (level, official_code) [unique]
+    name_en
+    (district_name, divisional_secretariat_name)
+    (is_active, level)
+  }
+
+  Note: 'Reusable official administrative-area reference. Store each GN Division name, hierarchy, code, and boundary once; organizations select these records by ID.'
+}
+
 Table public.organization_service_areas [headerColor: #59A14F] {
   id uuid [pk]
   organization_id uuid [not null]
-  area_name varchar [not null]
-  boundary geography(MultiPolygon,4326) [not null, note: 'Approved service-area boundary. Add a spatial GiST index in migration SQL.']
+  administrative_area_id uuid
+  area_name varchar [note: 'Nullable legacy field retained only for older development records.']
+  boundary geography(MultiPolygon,4326) [note: 'Nullable legacy field retained only for older development records. New GN-based rows use administrative_area_id.']
   status service_area_status [not null, default: 'PENDING_REVIEW']
   reviewed_by_user_id uuid
   reviewed_at timestamptz
@@ -273,9 +309,12 @@ Table public.organization_service_areas [headerColor: #59A14F] {
 
   indexes {
     organization_id
+    (organization_id, status)
+    administrative_area_id
+    (organization_id, administrative_area_id) [unique]
   }
 
-  Note: 'An active organization must have at least one ACTIVE service area. The boundary determines which shared incidents the organization can discover.'
+  Note: 'An active organization must have at least one ACTIVE service area. New rows reference administrative_areas so the official GN boundary is not duplicated. A CHECK permits either administrative_area_id or the legacy area_name plus boundary pair.'
 }
 
 Table public.organization_memberships [headerColor: #59A14F] {
@@ -391,7 +430,7 @@ Table public.incidents [headerColor: #F28E2B] {
     reporter_user_id
   }
 
-  Note: 'Shared platform record with no organization_id. Covering organizations are derived by spatially comparing geo_point with ACTIVE organization_service_areas.'
+  Note: 'Shared platform record with no organization_id. Covering organizations are derived by spatially comparing geo_point with the official administrative-area boundaries referenced by ACTIVE organization_service_areas.'
 }
 
 Table public.incident_photos [headerColor: #F28E2B] {
@@ -710,7 +749,7 @@ Table public.audit_logs [headerColor: #76B7B2] {
 // ============================================================
 // DBML cannot fully express all PostgreSQL/Supabase rules below. Codex must implement and review them in migration SQL:
 // - Enable RLS and apply the project's backend-only access policy / privilege revocation to EVERY public application table.
-// - Add GiST indexes for all PostGIS geography columns used in spatial lookup.
+// - Add GiST indexes for all PostGIS geography columns used in spatial lookup, especially administrative_areas.boundary and incident/event points.
 // - Add CHECK constraints for valid latitude [-90,90], longitude [-180,180], positive capacities/durations, and end_time > start_time.
 // - Keep latitude/longitude and geography point columns synchronized using one controlled database mechanism; application code must not be able to leave them inconsistent.
 // - Add the exact partial UNIQUE incident-claim index for PUBLISHED/SCHEDULED/IN_PROGRESS/COMPLETION_SUBMITTED events.
@@ -732,6 +771,7 @@ Ref: public.organizations.reviewed_by_user_id > public.user_profiles.id [delete:
 Ref: public.organization_verification_documents.organization_id > public.organizations.id [delete: cascade]
 Ref: public.organization_verification_documents.reviewed_by_user_id > public.user_profiles.id [delete: set null]
 Ref: public.organization_service_areas.organization_id > public.organizations.id [delete: cascade]
+Ref: public.organization_service_areas.administrative_area_id > public.administrative_areas.id [delete: restrict]
 Ref: public.organization_service_areas.reviewed_by_user_id > public.user_profiles.id [delete: set null]
 Ref: public.organization_memberships.organization_id > public.organizations.id [delete: restrict]
 Ref: public.organization_memberships.user_id > public.user_profiles.id [delete: restrict]
