@@ -52,7 +52,8 @@ const authenticationDependencies: AuthenticationDependencies = {
       id: isAdmin ? superAdminId : applicantId,
       email: identity.email,
       fullName: isAdmin ? "Review Test Super Admin" : "Review Test Applicant",
-      phoneNumber: null,
+      phoneNumber: isAdmin ? "+94770000002" : "+94770000003",
+      profileCompletedAt: new Date(),
       platformRole: isAdmin ? PlatformRole.SUPER_ADMIN : PlatformRole.USER,
       accountStatus: AccountStatus.ACTIVE,
     };

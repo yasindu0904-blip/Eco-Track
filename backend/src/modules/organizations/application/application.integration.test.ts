@@ -43,7 +43,8 @@ const authenticationDependencies: AuthenticationDependencies = {
       id: testProfileId,
       email: testEmail,
       fullName: "Organization Application Test User",
-      phoneNumber: null,
+      phoneNumber: "+94770000001",
+      profileCompletedAt: new Date(),
       platformRole: PlatformRole.USER,
       accountStatus: AccountStatus.ACTIVE,
     };

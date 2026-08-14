@@ -12,6 +12,7 @@ export interface AuthenticatedUserProfile {
   email: string;
   fullName: string | null;
   phoneNumber: string | null;
+  profileCompletedAt: string | null;
   platformRole: PlatformRole;
   accountStatus: AccountStatus;
 }

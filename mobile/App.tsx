@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
 
 import { LoginScreen } from "./src/auth/LoginScreen";
+import { ProfileOnboardingScreen } from "./src/auth/ProfileOnboardingScreen";
 import { useAuthentication } from "./src/auth/useAuthentication";
 import { BrandHeader, Button, LoadingState, Notice, Screen, sharedStyles } from "./src/components/ui";
 import { CitizenDashboard } from "./src/features/citizen/CitizenDashboard";
@@ -45,6 +46,21 @@ export default function App() {
           <Button label="Return to sign in" variant="secondary" onPress={() => void signOut()} />
         </View>
       </Screen>
+    );
+  } else if (
+    authentication.profile &&
+    authentication.accessToken &&
+    (!authentication.profile.profileCompletedAt ||
+      !authentication.profile.fullName?.trim() ||
+      !authentication.profile.phoneNumber?.trim())
+  ) {
+    content = (
+      <ProfileOnboardingScreen
+        accessToken={authentication.accessToken}
+        profile={authentication.profile}
+        onCompleted={authentication.replaceProfile}
+        onSignOut={() => void signOut()}
+      />
     );
   } else if (
     authentication.profile &&

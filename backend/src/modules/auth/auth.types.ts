@@ -13,6 +13,7 @@ export type AuthenticatedUserProfile = {
   email: string;
   fullName: string | null;
   phoneNumber: string | null;
+  profileCompletedAt: Date | null;
   platformRole: PlatformRole;
   accountStatus: AccountStatus;
 };

@@ -8,6 +8,7 @@ import type { PrismaSubjects } from "./caslPrisma.js";
 
 export const Subjects = {
   Platform: "Platform",
+  UserProfile: "UserProfile",
   OrganizationApplication:
     "OrganizationApplication",
   Organization: "Organization",

@@ -3,6 +3,7 @@ import { useState } from "react";
 import "./App.css";
 
 import { LoginForm } from "./features/auth/LoginForm";
+import { ProfileOnboarding } from "./features/auth/ProfileOnboarding";
 import { useAuthentication } from "./features/auth/useAuthentication";
 import { CitizenDashboard } from "./features/citizen/CitizenDashboard";
 import { OrganizationApplicationPage } from "./features/organizations/application";
@@ -13,6 +14,7 @@ const previewSuperAdminProfile = {
   email: "superadmin@ecotrack.local",
   fullName: "EcoTrack Super Admin",
   phoneNumber: null,
+  profileCompletedAt: null,
   platformRole: "SUPER_ADMIN",
   accountStatus: "ACTIVE",
 } as const;
@@ -22,6 +24,7 @@ const previewCitizenProfile = {
   email: "citizen@ecotrack.local",
   fullName: "EcoTrack Citizen",
   phoneNumber: null,
+  profileCompletedAt: null,
   platformRole: "USER",
   accountStatus: "ACTIVE",
 } as const;
@@ -123,6 +126,7 @@ function App() {
     accessToken,
     errorMessage,
     checkSuperAdminAccess,
+    replaceProfile,
     retry,
     signOut,
   } = useAuthentication();
@@ -190,6 +194,29 @@ function App() {
   }
 
   if (status === "signedIn" && profile && accessToken) {
+    if (
+      !profile.profileCompletedAt ||
+      !profile.fullName?.trim() ||
+      !profile.phoneNumber?.trim()
+    ) {
+      return (
+        <main className="app-shell">
+          <section className="auth-card">
+            <BrandHeader />
+
+            <div className="auth-card-content">
+              <ProfileOnboarding
+                accessToken={accessToken}
+                profile={profile}
+                onCompleted={replaceProfile}
+                onSignOut={signOut}
+              />
+            </div>
+          </section>
+        </main>
+      );
+    }
+
     if (profile.platformRole === "SUPER_ADMIN") {
       return (
         <SuperAdminDashboard

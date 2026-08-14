@@ -14,6 +14,7 @@ const activeUser: AuthenticatedUserProfile = {
   email: "user@example.com",
   fullName: "Test User",
   phoneNumber: null,
+  profileCompletedAt: null,
   platformRole: "USER",
   accountStatus: "ACTIVE",
 };
@@ -228,7 +229,15 @@ test(
 test(
   "a normal user cannot access the Super Admin endpoint",
   async () => {
-    const baseUrl = await startTestServer();
+    const completedUser: AuthenticatedUserProfile = {
+      ...activeUser,
+      phoneNumber: "+94770000004",
+      profileCompletedAt: new Date(),
+    };
+
+    const baseUrl = await startTestServer(
+      createFakeDependencies(completedUser),
+    );
 
     const response = await fetch(
       `${baseUrl}/api/v1/super-admin/ping`,
@@ -252,6 +261,38 @@ test(
 );
 
 test(
+  "an incomplete profile cannot bypass onboarding through a protected endpoint",
+  async () => {
+    const incompleteSuperAdmin: AuthenticatedUserProfile = {
+      ...activeUser,
+      platformRole: "SUPER_ADMIN",
+    };
+
+    const baseUrl = await startTestServer(
+      createFakeDependencies(incompleteSuperAdmin),
+    );
+
+    const response = await fetch(
+      `${baseUrl}/api/v1/super-admin/ping`,
+      {
+        headers: {
+          authorization: "Bearer valid-token",
+        },
+      },
+    );
+
+    assert.equal(response.status, 403);
+    assert.deepEqual(await readJson(response), {
+      error: {
+        code: "PROFILE_INCOMPLETE",
+        message:
+          "Complete your profile before using this EcoTrack feature.",
+      },
+    });
+  },
+);
+
+test(
   "an active Super Admin can access the Super Admin endpoint",
   async () => {
     const activeSuperAdmin:
@@ -260,6 +301,8 @@ test(
         id: "10000000-0000-4000-8000-000000000002",
         email: "superadmin@example.com",
         fullName: "Test Super Admin",
+        phoneNumber: "+94770000005",
+        profileCompletedAt: new Date(),
         platformRole: "SUPER_ADMIN",
       };
 

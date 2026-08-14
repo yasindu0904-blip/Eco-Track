@@ -38,6 +38,7 @@ const activeUser: AuthenticatedUserProfile = {
   email: "user@example.com",
   fullName: "Test User",
   phoneNumber: null,
+  profileCompletedAt: null,
   platformRole: "USER",
   accountStatus: "ACTIVE",
 };

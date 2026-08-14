@@ -33,6 +33,8 @@ export function buildAbilityForRequest(
     Subjects.OrganizationApplication,
   );
   can(Actions.ReadOwn, Subjects.Notification);
+  can(Actions.ReadOwn, Subjects.UserProfile);
+  can(Actions.Update, Subjects.UserProfile);
 
   if (profile.platformRole === "SUPER_ADMIN") {
     can(Actions.Read, Subjects.Platform);
