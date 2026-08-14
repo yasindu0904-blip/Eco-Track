@@ -11,6 +11,7 @@ import { createAuthRouter } from "./modules/auth/auth.routes.js";
 import { createAdministrativeAreaRouter } from "./modules/administrativeAreas/administrativeArea.routes.js";
 import { createOrganizationApplicationRouter } from "./modules/organizations/application/application.routes.js";
 import { createOrganizationReviewRouter } from "./modules/organizations/review/organizationReview.routes.js";
+import { createProfileRouter } from "./modules/profiles/profile.routes.js";
 
 import type { AuthenticationDependencies } from "./modules/auth/auth.types.js";
 import type { OrganizationApplicationDependencies } from "./modules/organizations/application/application.dependencies.js";
@@ -54,6 +55,11 @@ export function createApp(
   app.use(
     "/api/v1",
     createAuthRouter(authenticationDependencies),
+  );
+
+  app.use(
+    "/api/v1",
+    createProfileRouter(authenticationDependencies),
   );
 
   if (options.organizationApplicationDependencies) {

@@ -242,10 +242,20 @@ export function useAuthentication() {
     return pingSuperAdmin(accessToken);
   }
 
+  function replaceProfile(
+    profile: AuthenticatedUserProfile,
+  ): void {
+    setState((current) => ({
+      ...current,
+      profile,
+    }));
+  }
+
   return {
     ...state,
 
     checkSuperAdminAccess,
+    replaceProfile,
 
     retry: () => {
       void retry();

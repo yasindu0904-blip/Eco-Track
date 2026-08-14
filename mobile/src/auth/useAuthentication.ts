@@ -176,5 +176,9 @@ export function useAuthentication() {
     await supabase.auth.signOut({ scope: "local" });
   }, []);
 
-  return { ...state, retry, signOut };
+  const replaceProfile = useCallback((profile: AuthenticatedUserProfile) => {
+    setState((current) => ({ ...current, profile }));
+  }, []);
+
+  return { ...state, retry, signOut, replaceProfile };
 }

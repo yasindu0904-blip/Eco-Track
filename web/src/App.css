@@ -660,6 +660,42 @@
   text-align: center;
 }
 
+.profile-onboarding {
+  display: grid;
+  gap: 22px;
+}
+
+.onboarding-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  color: var(--color-primary);
+  font-size: 1.35rem;
+  font-weight: 800;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+}
+
+.profile-input-wrapper input {
+  padding-left: 16px;
+}
+
+.profile-onboarding .form-group input:disabled {
+  color: var(--color-text-muted);
+  background: #f3f6f3;
+}
+
+.profile-privacy-note {
+  margin: 0;
+  padding: 13px 14px;
+  color: var(--color-text-muted);
+  font-size: 0.79rem;
+  line-height: 1.55;
+  border-left: 3px solid var(--color-primary);
+  background: #f4f8f4;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);

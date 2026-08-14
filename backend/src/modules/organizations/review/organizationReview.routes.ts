@@ -5,6 +5,7 @@ import { Subjects } from "../../../authorization/subjects.js";
 import { abilityMiddleware } from "../../../middleware/ability.middleware.js";
 import { createAuthenticationMiddleware } from "../../../middleware/auth.middleware.js";
 import { authorize } from "../../../middleware/authorize.middleware.js";
+import { requireCompletedProfile } from "../../../middleware/requireCompletedProfile.middleware.js";
 import type { AuthenticationDependencies } from "../../auth/auth.types.js";
 import type { OrganizationApplicationDependencies } from "../application/application.dependencies.js";
 import { getOrganizationApplicationReviewController } from "./controllers/getOrganizationApplicationReview.controller.js";
@@ -21,6 +22,7 @@ export function createOrganizationReviewRouter(
   router.get(
     "/super-admin/organization-applications",
     authenticate,
+    requireCompletedProfile,
     abilityMiddleware,
     authorize(Actions.Read, Subjects.OrganizationApplication),
     listPendingOrganizationApplicationsController(dependencies),
@@ -29,6 +31,7 @@ export function createOrganizationReviewRouter(
   router.get(
     "/super-admin/organization-applications/:id",
     authenticate,
+    requireCompletedProfile,
     abilityMiddleware,
     authorize(Actions.Read, Subjects.OrganizationApplication),
     getOrganizationApplicationReviewController(dependencies),
@@ -37,6 +40,7 @@ export function createOrganizationReviewRouter(
   router.post(
     "/super-admin/organization-applications/:id/approve",
     authenticate,
+    requireCompletedProfile,
     abilityMiddleware,
     authorize(Actions.Approve, Subjects.OrganizationApplication),
     reviewOrganizationApplicationController(dependencies, "APPROVE"),
@@ -45,6 +49,7 @@ export function createOrganizationReviewRouter(
   router.post(
     "/super-admin/organization-applications/:id/decline",
     authenticate,
+    requireCompletedProfile,
     abilityMiddleware,
     authorize(Actions.Decline, Subjects.OrganizationApplication),
     reviewOrganizationApplicationController(dependencies, "DECLINE"),

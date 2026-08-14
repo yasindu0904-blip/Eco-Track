@@ -15,6 +15,7 @@ export function getCurrentUserController(
       email: profile.email,
       fullName: profile.fullName,
       phoneNumber: profile.phoneNumber,
+      profileCompletedAt: profile.profileCompletedAt,
       platformRole: profile.platformRole,
       accountStatus: profile.accountStatus,
     },

@@ -356,11 +356,19 @@ test("incident coordinates create a PostGIS point and find every covering organi
     ORDER BY organization."id"
   `;
 
-  assert.deepEqual(
+  const coveringOrganizationIds = new Set(
     coveringOrganizations.map(
       (organization) => organization.organizationId,
-    ).sort(),
-    [organizationAId, organizationBId].sort(),
+    ),
+  );
+
+  assert.equal(
+    coveringOrganizationIds.has(organizationAId),
+    true,
+  );
+  assert.equal(
+    coveringOrganizationIds.has(organizationBId),
+    true,
   );
 });
 

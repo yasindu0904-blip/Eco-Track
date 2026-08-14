@@ -8,6 +8,7 @@ import { Subjects } from "../../../authorization/subjects.js";
 import { abilityMiddleware } from "../../../middleware/ability.middleware.js";
 import { createAuthenticationMiddleware } from "../../../middleware/auth.middleware.js";
 import { authorize } from "../../../middleware/authorize.middleware.js";
+import { requireCompletedProfile } from "../../../middleware/requireCompletedProfile.middleware.js";
 import type { AuthenticationDependencies } from "../../auth/auth.types.js";
 
 import type { OrganizationApplicationDependencies } from "./application.dependencies.js";
@@ -27,6 +28,7 @@ export function createOrganizationApplicationRouter(
   router.post(
     "/organization-applications",
     authenticate,
+    requireCompletedProfile,
     abilityMiddleware,
     authorize(
       Actions.Create,
@@ -38,6 +40,7 @@ export function createOrganizationApplicationRouter(
   router.get(
     "/organization-applications/me",
     authenticate,
+    requireCompletedProfile,
     abilityMiddleware,
     authorize(
       Actions.ReadOwn,
@@ -49,6 +52,7 @@ export function createOrganizationApplicationRouter(
   router.get(
     "/organization-applications/me/:id",
     authenticate,
+    requireCompletedProfile,
     abilityMiddleware,
     authorize(
       Actions.ReadOwn,
