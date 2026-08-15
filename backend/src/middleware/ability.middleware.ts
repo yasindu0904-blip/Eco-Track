@@ -26,6 +26,8 @@ export function abilityMiddleware(
     request.ability = buildAbilityForRequest({
       profile: authentication.profile,
       tenant: request.tenant,
+      eventAuthorization:
+        request.eventAuthorization,
     });
 
     next();

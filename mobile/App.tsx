@@ -2,6 +2,7 @@ import { useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
 
+import { hasCompletedProfile } from "./src/authorization/authorizationUi";
 import { LoginScreen } from "./src/auth/LoginScreen";
 import { ProfileOnboardingScreen } from "./src/auth/ProfileOnboardingScreen";
 import { useAuthentication } from "./src/auth/useAuthentication";
@@ -50,9 +51,7 @@ export default function App() {
   } else if (
     authentication.profile &&
     authentication.accessToken &&
-    (!authentication.profile.profileCompletedAt ||
-      !authentication.profile.fullName?.trim() ||
-      !authentication.profile.phoneNumber?.trim())
+    !hasCompletedProfile(authentication.profile)
   ) {
     content = (
       <ProfileOnboardingScreen

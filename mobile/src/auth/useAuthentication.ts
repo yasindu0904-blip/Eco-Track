@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import * as Linking from "expo-linking";
 import type { Session } from "@supabase/supabase-js";
 
-import { ApiRequestError } from "../api/apiClient";
+import { describeApiFailure } from "../api/apiError";
 import { supabase } from "../config/supabase";
 import { fetchCurrentUser } from "./auth.api";
 import { handleAuthenticationCallback } from "./auth.service";
@@ -25,13 +25,10 @@ const initialState: AuthenticationState = {
 };
 
 function authenticationErrorMessage(error: unknown): string {
-  if (error instanceof ApiRequestError && error.statusCode === 401) {
-    return "Your access token is invalid or expired. Please request a new magic link.";
-  }
-
-  return error instanceof Error
-    ? error.message
-    : "EcoTrack could not complete authentication.";
+  return describeApiFailure(
+    error,
+    "EcoTrack could not complete authentication.",
+  ).message;
 }
 
 export function useAuthentication() {

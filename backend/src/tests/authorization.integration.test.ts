@@ -14,11 +14,16 @@ import { buildAbilityForRequest } from "../authorization/ability.factory.js";
 import type {
   ActiveTenantContext,
   AuthorizationDependencies,
+  EventAuthorizationContext,
 } from "../authorization/authorization.types.js";
-import { Subjects } from "../authorization/subjects.js";
+import {
+  createAuthorizationSubject,
+  Subjects,
+} from "../authorization/subjects.js";
 import { abilityMiddleware } from "../middleware/ability.middleware.js";
 import { authorize } from "../middleware/authorize.middleware.js";
 import { errorMiddleware } from "../middleware/error.middleware.js";
+import { createEventAuthorizationMiddleware } from "../middleware/eventAuthorization.middleware.js";
 import { createTenantMiddleware } from "../middleware/tenant.middleware.js";
 import type { AuthenticatedUserProfile } from "../modules/auth/auth.types.js";
 
@@ -32,13 +37,17 @@ const organizationBId =
   "30000000-0000-4000-8000-000000000002";
 const membershipId =
   "40000000-0000-4000-8000-000000000001";
+const cleanupEventAId =
+  "50000000-0000-4000-8000-000000000001";
+const cleanupEventBId =
+  "50000000-0000-4000-8000-000000000002";
 
 const activeUser: AuthenticatedUserProfile = {
   id: userId,
   email: "user@example.com",
   fullName: "Test User",
-  phoneNumber: null,
-  profileCompletedAt: null,
+  phoneNumber: "+94770000001",
+  profileCompletedAt: new Date(),
   platformRole: "USER",
   accountStatus: "ACTIVE",
 };
@@ -102,6 +111,9 @@ function attachAuthentication(
 
 function createFakeAuthorizationDependencies(
   tenant: ActiveTenantContext | null,
+  eventAuthorization:
+    | EventAuthorizationContext
+    | null = null,
 ): AuthorizationDependencies {
   return {
     findActiveTenantContext: async (
@@ -119,6 +131,42 @@ function createFakeAuthorizationDependencies(
 
       return tenant;
     },
+
+    findEventAuthorizationContext: async (
+      requestedOrganizationId,
+      requestedMembershipId,
+      requestedCleanupEventId,
+    ) => {
+      if (
+        !tenant ||
+        !eventAuthorization ||
+        requestedOrganizationId !==
+          tenant.organization.id ||
+        requestedMembershipId !==
+          tenant.membership.id ||
+        requestedCleanupEventId !==
+          eventAuthorization.cleanupEvent.id ||
+        requestedOrganizationId !==
+          eventAuthorization.cleanupEvent.organizationId
+      ) {
+        return null;
+      }
+
+      return eventAuthorization;
+    },
+  };
+}
+
+function createEventAuthorizationContext(
+  isCoordinator: boolean,
+): EventAuthorizationContext {
+  return {
+    cleanupEvent: {
+      id: cleanupEventAId,
+      organizationId: organizationAId,
+      lifecycleStatus: "PUBLISHED",
+    },
+    isCoordinator,
   };
 }
 
@@ -168,6 +216,53 @@ async function startTenantTestServer(
   return `http://127.0.0.1:${address.port}`;
 }
 
+async function startEventTestServer(
+  dependencies: AuthorizationDependencies,
+  profile: AuthenticatedUserProfile = activeUser,
+): Promise<string> {
+  const app = express();
+
+  app.get(
+    "/organizations/:organizationId/events/:eventId/operations",
+    attachAuthentication(profile),
+    createTenantMiddleware(dependencies),
+    createEventAuthorizationMiddleware(dependencies),
+    abilityMiddleware,
+    authorize(
+      Actions.Transition,
+      Subjects.CleanupEvent,
+    ),
+    (_request, response) => {
+      response.status(200).json({
+        data: {
+          message: "Event operation access confirmed.",
+        },
+      });
+    },
+  );
+
+  app.use(errorMiddleware);
+
+  const server = app.listen(0, "127.0.0.1");
+
+  runningServers.add(server);
+
+  await new Promise<void>((resolve, reject) => {
+    server.once("listening", resolve);
+    server.once("error", reject);
+  });
+
+  const address = server.address();
+
+  if (!address || typeof address === "string") {
+    throw new Error(
+      "The event authorization test server did not receive a TCP port.",
+    );
+  }
+
+  return `http://127.0.0.1:${address.port}`;
+}
+
 async function readJson(
   response: globalThis.Response,
 ): Promise<unknown> {
@@ -175,7 +270,7 @@ async function readJson(
 }
 
 test(
-  "an active user receives citizen permissions only",
+  "an active completed user receives citizen and volunteer permissions",
   () => {
     const ability = buildAbilityForRequest({
       profile: activeUser,
@@ -196,6 +291,54 @@ test(
       true,
     );
     assert.equal(
+      ability.can(Actions.Create, Subjects.Incident),
+      true,
+    );
+    assert.equal(
+      ability.can(Actions.Join, Subjects.CleanupEvent),
+      true,
+    );
+    assert.equal(
+      ability.can(
+        Actions.ManageAvailability,
+        Subjects.ParticipantAvailability,
+      ),
+      true,
+    );
+    assert.equal(
+      ability.can(
+        Actions.ManageAvailability,
+        createAuthorizationSubject(
+          Subjects.ParticipantAvailability,
+          {
+            participant: {
+              userId,
+            },
+          },
+        ),
+      ),
+      true,
+    );
+    assert.equal(
+      ability.can(
+        Actions.ManageAvailability,
+        createAuthorizationSubject(
+          Subjects.ParticipantAvailability,
+          {
+            participant: {
+              userId:
+                "10000000-0000-4000-8000-000000000099",
+            },
+          },
+        ),
+      ),
+      false,
+    );
+    assert.equal(
+      ability.can(Actions.Publish, Subjects.CleanupEvent),
+      false,
+    );
+    assert.equal(
       ability.can(
         Actions.Approve,
         Subjects.OrganizationApplication,
@@ -210,7 +353,7 @@ test(
 );
 
 test(
-  "an active Super Admin receives platform review permissions",
+  "an active Super Admin receives oversight but no ordinary operations",
   () => {
     const ability = buildAbilityForRequest({
       profile: {
@@ -249,6 +392,62 @@ test(
         Actions.ManageMembership,
         Subjects.OrganizationMembership,
       ),
+      false,
+    );
+    assert.equal(
+      ability.can(Actions.Read, Subjects.Incident),
+      true,
+    );
+    assert.equal(
+      ability.can(Actions.Create, Subjects.Incident),
+      false,
+    );
+    assert.equal(
+      ability.can(Actions.Join, Subjects.CleanupEvent),
+      false,
+    );
+    assert.equal(
+      ability.can(Actions.Publish, Subjects.CleanupEvent),
+      false,
+    );
+    assert.equal(
+      ability.can(
+        Actions.RecordAttendance,
+        Subjects.SessionAllocation,
+      ),
+      false,
+    );
+  },
+);
+
+test(
+  "an incomplete profile can update itself but receives no domain permissions",
+  () => {
+    const ability = buildAbilityForRequest({
+      profile: {
+        ...activeUser,
+        phoneNumber: null,
+        profileCompletedAt: null,
+      },
+    });
+
+    assert.equal(
+      ability.can(Actions.Update, Subjects.UserProfile),
+      true,
+    );
+    assert.equal(
+      ability.can(
+        Actions.Create,
+        Subjects.OrganizationApplication,
+      ),
+      false,
+    );
+    assert.equal(
+      ability.can(Actions.Create, Subjects.Incident),
+      false,
+    );
+    assert.equal(
+      ability.can(Actions.Join, Subjects.CleanupEvent),
       false,
     );
   },
@@ -299,6 +498,32 @@ test(
       ),
       false,
     );
+
+    const organizationAEvent =
+      createAuthorizationSubject(
+        Subjects.CleanupEvent,
+        {
+          id: cleanupEventAId,
+          organizationId: organizationAId,
+        },
+      );
+    const organizationBEvent =
+      createAuthorizationSubject(
+        Subjects.CleanupEvent,
+        {
+          id: cleanupEventBId,
+          organizationId: organizationBId,
+        },
+      );
+
+    assert.equal(
+      ability.can(Actions.Publish, organizationAEvent),
+      true,
+    );
+    assert.equal(
+      ability.can(Actions.Publish, organizationBEvent),
+      false,
+    );
   },
 );
 
@@ -328,6 +553,143 @@ test(
       ability.can(
         Actions.ManageMembership,
         Subjects.OrganizationMembership,
+      ),
+      false,
+    );
+  },
+);
+
+test(
+  "an archived profile receives no protected permissions",
+  () => {
+    const ability = buildAbilityForRequest({
+      profile: {
+        ...activeUser,
+        accountStatus: "ARCHIVED",
+      },
+      tenant: createTenantContext("ORG_ADMIN"),
+    });
+
+    assert.equal(
+      ability.can(Actions.Update, Subjects.UserProfile),
+      false,
+    );
+    assert.equal(
+      ability.can(Actions.Create, Subjects.Incident),
+      false,
+    );
+    assert.equal(
+      ability.can(Actions.Publish, Subjects.CleanupEvent),
+      false,
+    );
+  },
+);
+
+test(
+  "an assigned Org Member coordinator receives only event-scoped operations",
+  () => {
+    const tenant = createTenantContext("ORG_MEMBER");
+    const ability = buildAbilityForRequest({
+      profile: activeUser,
+      tenant,
+      eventAuthorization:
+        createEventAuthorizationContext(true),
+    });
+
+    const assignedEvent = createAuthorizationSubject(
+      Subjects.CleanupEvent,
+      {
+        id: cleanupEventAId,
+        organizationId: organizationAId,
+      },
+    );
+    const otherEvent = createAuthorizationSubject(
+      Subjects.CleanupEvent,
+      {
+        id: cleanupEventBId,
+        organizationId: organizationAId,
+      },
+    );
+
+    assert.equal(
+      ability.can(Actions.Transition, assignedEvent),
+      true,
+    );
+    assert.equal(
+      ability.can(Actions.Complete, assignedEvent),
+      true,
+    );
+    assert.equal(
+      ability.can(Actions.Transition, otherEvent),
+      false,
+    );
+    assert.equal(
+      ability.can(Actions.Publish, assignedEvent),
+      false,
+    );
+    assert.equal(
+      ability.can(Actions.Cancel, assignedEvent),
+      false,
+    );
+    assert.equal(
+      ability.can(
+        Actions.ManageMembership,
+        Subjects.OrganizationMembership,
+      ),
+      false,
+    );
+    assert.equal(
+      ability.can(
+        Actions.RecordAttendance,
+        createAuthorizationSubject(
+          Subjects.SessionAllocation,
+          {
+            participant: {
+              cleanupEventId: cleanupEventAId,
+            },
+          },
+        ),
+      ),
+      true,
+    );
+    assert.equal(
+      ability.can(
+        Actions.RecordAttendance,
+        createAuthorizationSubject(
+          Subjects.SessionAllocation,
+          {
+            participant: {
+              cleanupEventId: cleanupEventBId,
+            },
+          },
+        ),
+      ),
+      false,
+    );
+  },
+);
+
+test(
+  "an ordinary Org Member receives no event operation permissions",
+  () => {
+    const ability = buildAbilityForRequest({
+      profile: activeUser,
+      tenant: createTenantContext("ORG_MEMBER"),
+      eventAuthorization:
+        createEventAuthorizationContext(false),
+    });
+
+    assert.equal(
+      ability.can(
+        Actions.Transition,
+        Subjects.CleanupEvent,
+      ),
+      false,
+    );
+    assert.equal(
+      ability.can(
+        Actions.RecordAttendance,
+        Subjects.SessionAllocation,
       ),
       false,
     );
@@ -423,6 +785,108 @@ test(
         code: "ORGANIZATION_ID_INVALID",
         message:
           "A valid organization ID is required.",
+      },
+    });
+  },
+);
+
+test(
+  "an assigned coordinator can enter only the verified event route",
+  async () => {
+    const tenant = createTenantContext("ORG_MEMBER");
+    const baseUrl = await startEventTestServer(
+      createFakeAuthorizationDependencies(
+        tenant,
+        createEventAuthorizationContext(true),
+      ),
+    );
+
+    const response = await fetch(
+      `${baseUrl}/organizations/${organizationAId}/events/${cleanupEventAId}/operations`,
+    );
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(await readJson(response), {
+      data: {
+        message: "Event operation access confirmed.",
+      },
+    });
+  },
+);
+
+test(
+  "an ordinary Org Member cannot gain coordinator operations",
+  async () => {
+    const tenant = createTenantContext("ORG_MEMBER");
+    const baseUrl = await startEventTestServer(
+      createFakeAuthorizationDependencies(
+        tenant,
+        createEventAuthorizationContext(false),
+      ),
+    );
+
+    const response = await fetch(
+      `${baseUrl}/organizations/${organizationAId}/events/${cleanupEventAId}/operations`,
+    );
+
+    assert.equal(response.status, 403);
+    assert.deepEqual(await readJson(response), {
+      error: {
+        code: "AUTHORIZATION_DENIED",
+        message:
+          "You do not have permission to perform this action.",
+      },
+    });
+  },
+);
+
+test(
+  "changing the event ID cannot grant access to another event",
+  async () => {
+    const tenant = createTenantContext("ORG_MEMBER");
+    const baseUrl = await startEventTestServer(
+      createFakeAuthorizationDependencies(
+        tenant,
+        createEventAuthorizationContext(true),
+      ),
+    );
+
+    const response = await fetch(
+      `${baseUrl}/organizations/${organizationAId}/events/${cleanupEventBId}/operations`,
+    );
+
+    assert.equal(response.status, 404);
+    assert.deepEqual(await readJson(response), {
+      error: {
+        code: "CLEANUP_EVENT_NOT_FOUND",
+        message:
+          "The cleanup event was not found in this organization.",
+      },
+    });
+  },
+);
+
+test(
+  "event authorization middleware rejects a malformed event ID",
+  async () => {
+    const tenant = createTenantContext("ORG_MEMBER");
+    const baseUrl = await startEventTestServer(
+      createFakeAuthorizationDependencies(
+        tenant,
+        createEventAuthorizationContext(true),
+      ),
+    );
+
+    const response = await fetch(
+      `${baseUrl}/organizations/${organizationAId}/events/not-a-uuid/operations`,
+    );
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(await readJson(response), {
+      error: {
+        code: "CLEANUP_EVENT_ID_INVALID",
+        message:
+          "A valid cleanup event ID is required.",
       },
     });
   },
