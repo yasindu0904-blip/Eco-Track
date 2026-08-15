@@ -1,17 +1,17 @@
 export {
   createOrganizationApplication,
   getMyOrganizationApplication,
+  listAdministrativeAreas,
   listMyOrganizationApplications,
 } from "./organizationApplication.api";
 
 export { OrganizationApplicationPage } from "./OrganizationApplicationPage";
 
 export type {
+  AdministrativeArea,
   CreateOrganizationApplicationInput,
-  MultiPolygonGeometry,
   OrganizationApplication,
   OrganizationServiceArea,
-  OrganizationServiceAreaInput,
   OrganizationStatus,
   ServiceAreaStatus,
 } from "./organizationApplication.types";

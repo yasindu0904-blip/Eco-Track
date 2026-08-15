@@ -3,8 +3,12 @@ import {
   type Router as ExpressRouter,
 } from "express";
 
+import { Actions } from "../../authorization/actions.js";
+import { Subjects } from "../../authorization/subjects.js";
+import { abilityMiddleware } from "../../middleware/ability.middleware.js";
 import { createAuthenticationMiddleware } from "../../middleware/auth.middleware.js";
-import { requireActiveSuperAdmin } from "../../middleware/requireSuperAdmin.middleware.js";
+import { authorize } from "../../middleware/authorize.middleware.js";
+import { requireCompletedProfile } from "../../middleware/requireCompletedProfile.middleware.js";
 
 import { getCurrentUserController } from "./controllers/getCurrentUser.controller.js";
 import { superAdminPingController } from "./controllers/superAdminPing.controller.js";
@@ -28,7 +32,9 @@ export function createAuthRouter(
   router.get(
     "/super-admin/ping",
     authenticate,
-    requireActiveSuperAdmin,
+    requireCompletedProfile,
+    abilityMiddleware,
+    authorize(Actions.Read, Subjects.Platform),
     superAdminPingController,
   );
 

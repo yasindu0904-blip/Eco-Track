@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "EcoTrack",
+    "slug": "ecotrack-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "ecotrack",
+    "android": {
+      "package": "com.ecotrack.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#f4f8f1"
+      }
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
+    ]
+  }
+}

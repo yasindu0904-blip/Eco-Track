@@ -1,11 +1,17 @@
-import { useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useState,
+  type FormEvent,
+} from "react";
 
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import {
   createOrganizationApplication,
+  listAdministrativeAreas,
   listMyOrganizationApplications,
 } from "./organizationApplication.api";
 import type {
+  AdministrativeArea,
   CreateOrganizationApplicationInput,
   OrganizationApplication,
   OrganizationStatus,
@@ -15,26 +21,10 @@ import "./organizationApplication.css";
 interface OrganizationApplicationPageProps {
   accessToken?: string;
   profile?: AuthenticatedUserProfile;
+  initialView?: "apply" | "applications";
+  onBackToDashboard?: () => void;
   onSignOut?: () => void;
 }
-
-const sampleBoundary = JSON.stringify(
-  {
-    type: "MultiPolygon",
-    coordinates: [
-      [
-        [
-          [79.85, 6.92],
-          [79.86, 6.92],
-          [79.86, 6.93],
-          [79.85, 6.92],
-        ],
-      ],
-    ],
-  },
-  null,
-  2,
-);
 
 function statusLabel(status: OrganizationStatus): string {
   return status
@@ -47,14 +37,60 @@ function statusLabel(status: OrganizationStatus): string {
 export function OrganizationApplicationPage({
   accessToken,
   profile,
+  initialView = "apply",
+  onBackToDashboard,
   onSignOut,
 }: OrganizationApplicationPageProps) {
-  const [view, setView] = useState<"apply" | "applications">("apply");
+  const [view, setView] =
+    useState<"apply" | "applications">(initialView);
   const [applications, setApplications] = useState<OrganizationApplication[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingApplications, setIsLoadingApplications] = useState(false);
+  const [isLoadingApplications, setIsLoadingApplications] = useState(
+    initialView === "applications" && Boolean(accessToken),
+  );
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [areaSearch, setAreaSearch] = useState("");
+  const [availableAreas, setAvailableAreas] = useState<AdministrativeArea[]>([]);
+  const [selectedAreaIds, setSelectedAreaIds] = useState<string[]>([]);
+  const [isLoadingAreas, setIsLoadingAreas] = useState(Boolean(accessToken));
+
+  useEffect(() => {
+    if (!accessToken) {
+      return;
+    }
+
+    let isActive = true;
+    const timeoutId = window.setTimeout(() => {
+      setIsLoadingAreas(true);
+
+      void listAdministrativeAreas(accessToken, areaSearch)
+        .then((areas) => {
+          if (isActive) {
+            setAvailableAreas(areas);
+          }
+        })
+        .catch((error: unknown) => {
+          if (isActive) {
+            setErrorMessage(
+              error instanceof Error
+                ? error.message
+                : "Unable to load GN Divisions.",
+            );
+          }
+        })
+        .finally(() => {
+          if (isActive) {
+            setIsLoadingAreas(false);
+          }
+        });
+    }, 300);
+
+    return () => {
+      isActive = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [accessToken, areaSearch]);
 
   async function loadApplications(): Promise<void> {
     if (!accessToken) {
@@ -76,6 +112,44 @@ export function OrganizationApplicationPage({
     }
   }
 
+  useEffect(() => {
+    if (initialView !== "applications" || !accessToken) {
+      return;
+    }
+
+    let isActive = true;
+
+    void listMyOrganizationApplications(accessToken)
+      .then((loadedApplications) => {
+        if (!isActive) {
+          return;
+        }
+
+        setApplications(loadedApplications);
+        setErrorMessage(null);
+      })
+      .catch((error: unknown) => {
+        if (!isActive) {
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to load applications.",
+        );
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoadingApplications(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [accessToken, initialView]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
@@ -91,7 +165,6 @@ export function OrganizationApplicationPage({
     const form = new FormData(event.currentTarget);
 
     try {
-      const boundary = JSON.parse(String(form.get("boundary")));
       const application: CreateOrganizationApplicationInput = {
         name: String(form.get("name")),
         registrationNumber: String(form.get("registrationNumber")) || undefined,
@@ -99,25 +172,23 @@ export function OrganizationApplicationPage({
         officialEmail: String(form.get("officialEmail")),
         officialPhone: String(form.get("officialPhone")),
         officialAddress: String(form.get("officialAddress")),
-        serviceAreas: [
-          {
-            areaName: String(form.get("areaName")),
-            boundary,
-          },
-        ],
+        administrativeAreaIds: selectedAreaIds,
       };
+
+      if (selectedAreaIds.length === 0) {
+        throw new Error("Select at least one GN Division.");
+      }
 
       const created = await createOrganizationApplication(accessToken, application);
       setMessage(`${created.name} was submitted for review.`);
+      setSelectedAreaIds([]);
       await loadApplications();
       setView("applications");
     } catch (error) {
       setErrorMessage(
-        error instanceof SyntaxError
-          ? "Boundary must be valid GeoJSON."
-          : error instanceof Error
-            ? error.message
-            : "Unable to submit the application.",
+        error instanceof Error
+          ? error.message
+          : "Unable to submit the application.",
       );
     } finally {
       setIsSubmitting(false);
@@ -127,9 +198,23 @@ export function OrganizationApplicationPage({
   return (
     <main className="organization-shell">
       <header className="organization-header">
-        <div>
-          <span className="organization-brand">EcoTrack</span>
-          <p>Organization onboarding</p>
+        <div className="organization-header-start">
+          {onBackToDashboard && (
+            <button
+              className="organization-back-button"
+              type="button"
+              onClick={onBackToDashboard}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+              Dashboard
+            </button>
+          )}
+          <div>
+            <span className="organization-brand">EcoTrack</span>
+            <p>Organization onboarding</p>
+          </div>
         </div>
         <div className="organization-user">
           <span>{profile ? profile.fullName ?? profile.email : "Development preview"}</span>
@@ -180,16 +265,68 @@ export function OrganizationApplicationPage({
 
             <section className="organization-card">
               <div className="organization-card-heading">
-                <span>02</span><div><h2>Service area</h2><p>Add one proposed area and its MultiPolygon boundary.</p></div>
+                <span>02</span><div><h2>Service areas</h2><p>Select the official Grama Niladhari Divisions covered by the organization.</p></div>
               </div>
-              <div className="organization-grid">
-                <label className="wide">Area name<input name="areaName" required minLength={2} placeholder="e.g. Colombo Fort GN Division" /></label>
-                <label className="wide">Boundary GeoJSON<textarea className="code-input" name="boundary" required rows={12} defaultValue={sampleBoundary} spellCheck={false} /></label>
+              <div className="gn-area-selector">
+                <label>
+                  Search by GN Division, DS Division, district, or official code
+                  <input
+                    type="search"
+                    value={areaSearch}
+                    onChange={(event) => setAreaSearch(event.target.value)}
+                    placeholder="e.g. Kesbewa or Mampe"
+                    disabled={!accessToken}
+                  />
+                </label>
+
+                <p className="gn-selection-summary">
+                  {selectedAreaIds.length} GN {selectedAreaIds.length === 1 ? "Division" : "Divisions"} selected
+                </p>
+
+                <div className="gn-area-results" aria-live="polite">
+                  {isLoadingAreas ? (
+                    <p>Loading official GN Divisions…</p>
+                  ) : availableAreas.length === 0 ? (
+                    <p>
+                      {accessToken
+                        ? "No matching GN Divisions were found."
+                        : "Sign in to search official GN Divisions."}
+                    </p>
+                  ) : (
+                    availableAreas.map((area) => {
+                      const isSelected = selectedAreaIds.includes(area.id);
+
+                      return (
+                        <label className="gn-area-option" key={area.id}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              setSelectedAreaIds((current) =>
+                                current.includes(area.id)
+                                  ? current.filter((id) => id !== area.id)
+                                  : [...current, area.id],
+                              );
+                            }}
+                          />
+                          <span>
+                            <strong>{area.name}</strong>
+                            <small>
+                              {[area.divisionalSecretariatName, area.districtName]
+                                .filter(Boolean)
+                                .join(" · ")} · Code {area.officialCode}
+                            </small>
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             </section>
 
             <div className="organization-submit">
-              <p>Submission creates pending records only. An administrator must review and activate the organization.</p>
+              <p>Submission links official GN boundaries as pending records. An administrator must review and activate the organization.</p>
               <button type="submit" disabled={isSubmitting}>{isSubmitting ? "Submitting…" : "Submit application"}</button>
             </div>
           </form>

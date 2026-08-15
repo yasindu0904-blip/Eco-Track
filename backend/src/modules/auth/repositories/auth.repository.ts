@@ -10,6 +10,7 @@ const authenticatedUserProfileSelect = {
   email: true,
   fullName: true,
   phoneNumber: true,
+  profileCompletedAt: true,
   platformRole: true,
   accountStatus: true,
 } as const;

@@ -6,7 +6,8 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "test": "tsx --test src/tests/auth.integration.test.ts",
+    "test": "tsx --test \"src/**/*.test.ts\"",
+    "test:organization": "tsx --test src/modules/organizations/application/application.integration.test.ts",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
@@ -14,6 +15,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
+    "import:gn-divisions": "tsx src/scripts/importGnDivisions.ts",
     "prisma:studio": "prisma studio",
     "db:check": "tsx src/scripts/checkDatabase.ts"
   },
@@ -21,6 +23,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@casl/ability": "^7.0.1",
+    "@casl/prisma": "^2.0.2",
     "@prisma/adapter-pg": "^7.9.0",
     "@prisma/client": "^7.9.0",
     "@supabase/supabase-js": "^2.110.8",

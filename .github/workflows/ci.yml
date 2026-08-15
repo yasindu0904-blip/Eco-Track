@@ -1,0 +1,155 @@
+name: EcoTrack CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ecotrack-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend checks
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_DB: ecotrack_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ecotrack_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ecotrack_ci?schema=public
+      SUPABASE_URL: https://ci-placeholder.supabase.co
+      SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
+      PGPASSWORD: postgres
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Prepare Supabase-compatible PostGIS database
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d ecotrack_ci <<'SQL'
+          DROP EXTENSION IF EXISTS postgis_tiger_geocoder CASCADE;
+          DROP EXTENSION IF EXISTS postgis_topology CASCADE;
+          DROP EXTENSION IF EXISTS postgis CASCADE;
+
+          CREATE SCHEMA IF NOT EXISTS extensions;
+          CREATE EXTENSION postgis WITH SCHEMA extensions;
+          SELECT extensions.postgis_full_version();
+
+          CREATE ROLE anon NOLOGIN;
+          CREATE ROLE authenticated NOLOGIN;
+          SQL
+
+      - name: Apply database migrations
+        run: npx prisma migrate deploy
+
+      - name: Generate Prisma Client
+        run: npm run prisma:generate
+
+      - name: Type-check backend
+        run: npm run typecheck
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Run all backend tests
+        run: npm test
+
+  web:
+    name: Web checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    env:
+      VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
+      VITE_API_BASE_URL: http://localhost:5000/api/v1
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        run: npm ci
+
+      - name: Lint web application
+        run: npm run lint
+
+      - name: Build web application
+        run: npm run build
+
+  mobile:
+    name: Mobile checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
+      EXPO_PUBLIC_API_BASE_URL: http://127.0.0.1:5000/api/v1
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install mobile dependencies
+        run: npm ci
+
+      - name: Verify Metro image-parser mitigation
+        run: npm run security:check
+
+      - name: Type-check mobile application
+        run: npm run typecheck
+
+      - name: Validate Expo project
+        run: npm run doctor
+
+      - name: Bundle Android JavaScript
+        run: npx expo export --platform android --output-dir dist

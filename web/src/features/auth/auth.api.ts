@@ -20,6 +20,26 @@ export async function fetchCurrentUser(
   return response.data;
 }
 
+export async function completeCurrentUserProfile(
+  accessToken: string,
+  input: { fullName: string; phoneNumber: string },
+): Promise<AuthenticatedUserProfile> {
+  const response =
+    await apiRequest<CurrentUserResponse>(
+      "/profile/complete",
+      {
+        method: "PUT",
+        accessToken,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(input),
+      },
+    );
+
+  return response.data;
+}
+
 
 export async function pingSuperAdmin(
   accessToken: string,

@@ -33,6 +33,10 @@ enum ServiceAreaStatus {
   INACTIVE
 }
 
+enum AdministrativeAreaLevel {
+  GN_DIVISION
+}
+
 enum DocumentReviewStatus {
   PENDING
   VERIFIED
@@ -64,6 +68,90 @@ enum MembershipSource {
   FIRST_ADMIN
 }
 
+enum NotificationType {
+  INCIDENT_STATUS_CHANGED
+  NEW_INCIDENT_IN_AREA
+  EVENT_PUBLISHED
+  EVENT_JOINED
+  SESSION_ALLOCATED
+  EVENT_UPDATED
+  EVENT_CANCELLED
+  EVENT_COMPLETED
+  MEMBERSHIP_UPDATED
+  ORGANIZATION_REVIEW_UPDATED
+  ACHIEVEMENT_AWARDED
+  GENERAL
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  ACTIVE
+  CLEANUP_ORGANIZED
+  RESOLVED
+  EXPIRED
+  ARCHIVED
+}
+
+enum IncidentReviewStatus {
+  VIEWED
+  VALID
+  FALSE
+}
+
+enum CleanupLifecycleStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETION_SUBMITTED
+  COMPLETED
+  CANCELLED
+}
+
+enum SessionStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ParticipantStatus {
+  JOINED
+  WITHDRAWN
+  REMOVED
+}
+
+enum AllocationStatus {
+  PLANNED
+  ATTENDED
+  ABSENT
+  REMOVED
+}
+
+enum NoteVisibility {
+  PARTICIPANTS
+  INTERNAL
+}
+
+enum EvidenceType {
+  BEFORE
+  PROGRESS
+  AFTER
+}
+
+enum ContributionType {
+  VERIFIED_INCIDENT_REPORT
+  SESSION_ATTENDED
+  EVENT_COMPLETED
+  SPECIAL_CONTRIBUTION
+}
+
 model UserProfile {
   id         String @id @default(uuid()) @db.Uuid
   authUserId String @unique @map("auth_user_id") @db.Uuid
@@ -84,6 +172,14 @@ model UserProfile {
   reviewedServiceAreas          OrganizationServiceArea[]          @relation("ServiceAreaReviewer")
   settingsUpdates               PlatformSettings[]
   auditLogs                     AuditLog[]                         @relation("AuditActor")
+  notifications                 Notification[]
+  reportedIncidents             Incident[]                         @relation("IncidentReporter")
+  incidentStatusChanges         IncidentStatusHistory[]            @relation("IncidentStatusChanger")
+  eventParticipations           EventParticipant[]
+  uploadedEventEvidence         EventEvidence[]                    @relation("EventEvidenceUploader")
+  receivedContributions         ContributionEvent[]                @relation("ContributionRecipient")
+  recordedContributions         ContributionEvent[]                @relation("ContributionRecorder")
+  achievements                  UserAchievement[]
 
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -114,6 +210,8 @@ model IncidentCategory {
   description String?
   isActive    Boolean @default(true) @map("is_active")
 
+  incidents Incident[]
+
   @@map("incident_categories")
 }
 
@@ -139,11 +237,16 @@ model Organization {
   requestedBy UserProfile  @relation("OrganizationRequester", fields: [requestedByUserId], references: [id], onDelete: Restrict)
   reviewedBy  UserProfile? @relation("OrganizationReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
 
-  verificationDocuments OrganizationVerificationDocument[]
-  memberships           OrganizationMembership[]
-  membershipRequests    OrganizationMembershipRequest[]
-  serviceAreas          OrganizationServiceArea[]
-  auditLogs             AuditLog[]
+  verificationDocuments      OrganizationVerificationDocument[]
+  memberships                OrganizationMembership[]
+  membershipRequests         OrganizationMembershipRequest[]
+  serviceAreas               OrganizationServiceArea[]
+  auditLogs                  AuditLog[]
+  notifications              Notification[]
+  cleanupWorkflowStatuses    CleanupWorkflowStatus[]
+  cleanupWorkflowTransitions CleanupWorkflowTransition[]
+  incidentReviews            IncidentReview[]
+  cleanupEvents              CleanupEvent[]
 
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -191,9 +294,18 @@ model OrganizationMembership {
   user          UserProfile                    @relation(fields: [userId], references: [id], onDelete: Restrict)
   sourceRequest OrganizationMembershipRequest? @relation("ApprovedMembership", fields: [sourceRequestId], references: [id], onDelete: SetNull)
 
-  addedOrApprovedBy   OrganizationMembership?         @relation("MembershipApprover", fields: [addedOrApprovedByMembershipId], references: [id], onDelete: SetNull)
-  approvedMemberships OrganizationMembership[]        @relation("MembershipApprover")
-  reviewedRequests    OrganizationMembershipRequest[] @relation("MembershipRequestReviewer")
+  addedOrApprovedBy              OrganizationMembership?         @relation("MembershipApprover", fields: [addedOrApprovedByMembershipId], references: [id], onDelete: SetNull)
+  approvedMemberships            OrganizationMembership[]        @relation("MembershipApprover")
+  reviewedRequests               OrganizationMembershipRequest[] @relation("MembershipRequestReviewer")
+  createdCleanupEvents           CleanupEvent[]                  @relation("CleanupEventCreator")
+  incidentReviews                IncidentReview[]                @relation("IncidentReviewer")
+  coordinatorAssignments         EventCoordinator[]              @relation("EventCoordinatorMembership")
+  assignedCoordinatorAssignments EventCoordinator[]              @relation("EventCoordinatorAssigner")
+  participantRemovals            EventParticipant[]              @relation("EventParticipantRemover")
+  allocatedSessions              SessionAllocation[]             @relation("SessionAllocator")
+  attendanceMarkedAllocations    SessionAllocation[]             @relation("AttendanceMarker")
+  authoredEventNotes             EventNote[]                     @relation("EventNoteAuthor")
+  eventStatusChanges             EventStatusHistory[]            @relation("EventStatusChanger")
 
   joinedAt DateTime  @default(now()) @map("joined_at") @db.Timestamptz(6)
   endedAt  DateTime? @map("ended_at") @db.Timestamptz(6)
@@ -250,15 +362,38 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+model Notification {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  userId         String  @map("user_id") @db.Uuid
+  organizationId String? @map("organization_id") @db.Uuid
+
+  type    NotificationType
+  title   String
+  message String
+  data    Json?
+
+  readAt    DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user         UserProfile   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([userId, readAt, createdAt])
+  @@map("notifications")
+}
+
 model OrganizationServiceArea {
   id String @id @default(uuid()) @db.Uuid
 
-  organizationId   String  @map("organization_id") @db.Uuid
-  reviewedByUserId String? @map("reviewed_by_user_id") @db.Uuid
+  organizationId       String  @map("organization_id") @db.Uuid
+  administrativeAreaId String? @map("administrative_area_id") @db.Uuid
+  reviewedByUserId     String? @map("reviewed_by_user_id") @db.Uuid
 
-  areaName String @map("area_name")
+  // Nullable legacy fields preserve applications created before GN references.
+  areaName String? @map("area_name")
 
-  boundary Unsupported("geography(MultiPolygon,4326)")
+  boundary Unsupported("geography(MultiPolygon,4326)")?
 
   status      ServiceAreaStatus @default(PENDING_REVIEW)
   reviewedAt  DateTime?         @map("reviewed_at") @db.Timestamptz(6)
@@ -266,12 +401,433 @@ model OrganizationServiceArea {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  administrativeArea AdministrativeArea? @relation(fields: [administrativeAreaId], references: [id], onDelete: Restrict)
+
   reviewedBy UserProfile? @relation("ServiceAreaReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  @@unique([organizationId, administrativeAreaId], map: "organization_service_areas_organization_id_administrative_area_")
   @@index([organizationId])
   @@index([organizationId, status])
+  @@index([administrativeAreaId])
   @@map("organization_service_areas")
+}
+
+model AdministrativeArea {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  level        AdministrativeAreaLevel @default(GN_DIVISION)
+  officialCode String                  @map("official_code")
+  nameEn       String                  @map("name_en")
+  gnNumber     String?                 @map("gn_number")
+
+  divisionalSecretariatName String? @map("divisional_secretariat_name")
+  divisionalSecretariatCode String? @map("divisional_secretariat_code")
+  districtName              String? @map("district_name")
+  districtCode              String? @map("district_code")
+  provinceName              String? @map("province_name")
+  provinceCode              String? @map("province_code")
+
+  boundary Unsupported("geography(MultiPolygon,4326)")
+
+  sourceName    String   @map("source_name")
+  sourceUrl     String?  @map("source_url")
+  sourceVersion String?  @map("source_version")
+  isActive      Boolean  @default(true) @map("is_active")
+  importedAt    DateTime @default(now()) @map("imported_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organizationServiceAreas OrganizationServiceArea[]
+
+  @@unique([level, officialCode])
+  @@index([nameEn])
+  @@index([districtName, divisionalSecretariatName], map: "administrative_areas_district_name_divisional_secretariat_name_")
+  @@index([isActive, level])
+  @@map("administrative_areas")
+}
+
+model CleanupWorkflowStatus {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  organizationId        String                 @map("organization_id") @db.Uuid
+  code                  String
+  label                 String
+  mappedLifecycleStatus CleanupLifecycleStatus @map("mapped_lifecycle_status")
+  position              Int
+  isInitial             Boolean                @default(false) @map("is_initial")
+  isFinal               Boolean                @default(false) @map("is_final")
+  isActive              Boolean                @default(true) @map("is_active")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  outgoingTransitions CleanupWorkflowTransition[] @relation("WorkflowTransitionFrom")
+  incomingTransitions CleanupWorkflowTransition[] @relation("WorkflowTransitionTo")
+  currentEvents       CleanupEvent[]              @relation("CurrentWorkflowStatus")
+  historiesFrom       EventStatusHistory[]        @relation("EventHistoryFromStatus")
+  historiesTo         EventStatusHistory[]        @relation("EventHistoryToStatus")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, position])
+  @@unique([organizationId, id])
+  @@map("cleanup_workflow_statuses")
+}
+
+model CleanupWorkflowTransition {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  fromStatusId   String @map("from_status_id") @db.Uuid
+  toStatusId     String @map("to_status_id") @db.Uuid
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fromStatus   CleanupWorkflowStatus @relation("WorkflowTransitionFrom", fields: [organizationId, fromStatusId], references: [organizationId, id], onDelete: Cascade, map: "cleanup_workflow_transitions_from_status_fkey")
+  toStatus     CleanupWorkflowStatus @relation("WorkflowTransitionTo", fields: [organizationId, toStatusId], references: [organizationId, id], onDelete: Cascade, map: "cleanup_workflow_transitions_to_status_fkey")
+
+  @@unique([organizationId, fromStatusId, toStatusId], map: "cleanup_workflow_transitions_organization_from_to_key")
+  @@map("cleanup_workflow_transitions")
+}
+
+model Incident {
+  id             String                               @id @default(uuid()) @db.Uuid
+  reporterUserId String                               @map("reporter_user_id") @db.Uuid
+  categoryId     String                               @map("category_id") @db.Uuid
+  title          String
+  description    String
+  severity       IncidentSeverity
+  status         IncidentStatus                       @default(ACTIVE)
+  latitude       Decimal                              @db.Decimal(9, 6)
+  longitude      Decimal                              @db.Decimal(9, 6)
+  // Managed by a database trigger and queried through parameterized spatial SQL.
+  geoPoint       Unsupported("geography(Point,4326)") @default(dbgenerated()) @map("geo_point")
+  addressText    String?                              @map("address_text")
+  highlightUntil DateTime                             @map("highlight_until") @db.Timestamptz(6)
+  archiveAfter   DateTime                             @map("archive_after") @db.Timestamptz(6)
+  reportedAt     DateTime                             @default(now()) @map("reported_at") @db.Timestamptz(6)
+  updatedAt      DateTime                             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  resolvedAt     DateTime?                            @map("resolved_at") @db.Timestamptz(6)
+  archivedAt     DateTime?                            @map("archived_at") @db.Timestamptz(6)
+
+  reporter UserProfile      @relation("IncidentReporter", fields: [reporterUserId], references: [id], onDelete: Restrict)
+  category IncidentCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  photos             IncidentPhoto[]
+  reviews            IncidentReview[]
+  statusHistory      IncidentStatusHistory[]
+  cleanupEvents      CleanupEvent[]
+  contributionEvents ContributionEvent[]
+
+  @@index([status, reportedAt])
+  @@index([categoryId])
+  @@index([reporterUserId])
+  @@map("incidents")
+}
+
+model IncidentPhoto {
+  id            String   @id @default(uuid()) @db.Uuid
+  incidentId    String   @map("incident_id") @db.Uuid
+  storagePath   String   @map("storage_path")
+  thumbnailPath String?  @map("thumbnail_path")
+  caption       String?
+  sortOrder     Int      @default(0) @map("sort_order")
+  uploadedAt    DateTime @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, sortOrder])
+  @@map("incident_photos")
+}
+
+model IncidentReview {
+  id                     String               @id @default(uuid()) @db.Uuid
+  incidentId             String               @map("incident_id") @db.Uuid
+  organizationId         String               @map("organization_id") @db.Uuid
+  status                 IncidentReviewStatus
+  reasonCode             String?              @map("reason_code")
+  privateNotes           String?              @map("private_notes")
+  reviewedByMembershipId String               @map("reviewed_by_membership_id") @db.Uuid
+  firstViewedAt          DateTime             @default(now()) @map("first_viewed_at") @db.Timestamptz(6)
+  reviewedAt             DateTime?            @map("reviewed_at") @db.Timestamptz(6)
+  updatedAt              DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  incident     Incident               @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reviewedBy   OrganizationMembership @relation("IncidentReviewer", fields: [reviewedByMembershipId], references: [id], onDelete: Restrict)
+
+  @@unique([incidentId, organizationId])
+  @@index([incidentId, status])
+  @@index([organizationId, status, updatedAt], map: "incident_reviews_organization_status_updated_idx")
+  @@map("incident_reviews")
+}
+
+model IncidentStatusHistory {
+  id                    String          @id @default(uuid()) @db.Uuid
+  incidentId            String          @map("incident_id") @db.Uuid
+  fromStatus            IncidentStatus? @map("from_status")
+  toStatus              IncidentStatus  @map("to_status")
+  changedByUserId       String?         @map("changed_by_user_id") @db.Uuid
+  relatedCleanupEventId String?         @map("related_cleanup_event_id") @db.Uuid
+  reason                String?
+  changedAt             DateTime        @default(now()) @map("changed_at") @db.Timestamptz(6)
+
+  incident            Incident      @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  changedBy           UserProfile?  @relation("IncidentStatusChanger", fields: [changedByUserId], references: [id], onDelete: SetNull)
+  relatedCleanupEvent CleanupEvent? @relation("RelatedCleanupEvent", fields: [relatedCleanupEventId], references: [id], onDelete: SetNull)
+
+  @@index([incidentId, changedAt], map: "incident_status_history_incident_changed_at_idx")
+  @@map("incident_status_history")
+}
+
+model CleanupEvent {
+  id                      String                                @id @default(uuid()) @db.Uuid
+  organizationId          String                                @map("organization_id") @db.Uuid
+  incidentId              String?                               @map("incident_id") @db.Uuid
+  currentWorkflowStatusId String                                @map("current_workflow_status_id") @db.Uuid
+  lifecycleStatus         CleanupLifecycleStatus                @default(DRAFT) @map("lifecycle_status")
+  createdByMembershipId   String                                @map("created_by_membership_id") @db.Uuid
+  title                   String
+  description             String
+  publicInstructions      String?                               @map("public_instructions")
+  eventLatitude           Decimal                               @map("event_latitude") @db.Decimal(9, 6)
+  eventLongitude          Decimal                               @map("event_longitude") @db.Decimal(9, 6)
+  // Managed by a database trigger and queried through parameterized spatial SQL.
+  eventGeoPoint           Unsupported("geography(Point,4326)")  @default(dbgenerated()) @map("event_geo_point")
+  eventAddress            String?                               @map("event_address")
+  meetingLatitude         Decimal?                              @map("meeting_latitude") @db.Decimal(9, 6)
+  meetingLongitude        Decimal?                              @map("meeting_longitude") @db.Decimal(9, 6)
+  meetingGeoPoint         Unsupported("geography(Point,4326)")? @map("meeting_geo_point")
+  meetingAddress          String?                               @map("meeting_address")
+  publishedAt             DateTime?                             @map("published_at") @db.Timestamptz(6)
+  completedAt             DateTime?                             @map("completed_at") @db.Timestamptz(6)
+  cancelledAt             DateTime?                             @map("cancelled_at") @db.Timestamptz(6)
+  cancellationReason      String?                               @map("cancellation_reason")
+  createdAt               DateTime                              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime                              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization          Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  incident              Incident?              @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  currentWorkflowStatus CleanupWorkflowStatus  @relation("CurrentWorkflowStatus", fields: [organizationId, currentWorkflowStatusId], references: [organizationId, id], onDelete: Restrict, map: "cleanup_events_current_workflow_status_fkey")
+  createdByMembership   OrganizationMembership @relation("CleanupEventCreator", fields: [organizationId, createdByMembershipId], references: [organizationId, id], onDelete: Restrict, map: "cleanup_events_created_by_membership_fkey")
+
+  incidentStatusHistory IncidentStatusHistory[] @relation("RelatedCleanupEvent")
+  sessions              EventSession[]
+  coordinators          EventCoordinator[]
+  participants          EventParticipant[]
+  notes                 EventNote[]
+  evidence              EventEvidence[]
+  statusHistory         EventStatusHistory[]
+  contributionEvents    ContributionEvent[]
+
+  @@unique([organizationId, id])
+  @@index([incidentId])
+  @@index([organizationId, lifecycleStatus, createdAt], map: "cleanup_events_organization_lifecycle_created_idx")
+  @@map("cleanup_events")
+}
+
+model EventSession {
+  id                String                                @id @default(uuid()) @db.Uuid
+  cleanupEventId    String                                @map("cleanup_event_id") @db.Uuid
+  sessionDate       DateTime                              @map("session_date") @db.Date
+  startTime         DateTime                              @map("start_time") @db.Time(6)
+  endTime           DateTime                              @map("end_time") @db.Time(6)
+  capacity          Int?
+  status            SessionStatus                         @default(SCHEDULED)
+  locationLatitude  Decimal?                              @map("location_latitude") @db.Decimal(9, 6)
+  locationLongitude Decimal?                              @map("location_longitude") @db.Decimal(9, 6)
+  locationGeoPoint  Unsupported("geography(Point,4326)")? @map("location_geo_point")
+  locationAddress   String?                               @map("location_address")
+  notes             String?
+  createdAt         DateTime                              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  cleanupEvent CleanupEvent @relation(fields: [cleanupEventId], references: [id], onDelete: Cascade)
+
+  availabilities ParticipantSessionAvailability[]
+  allocations    SessionAllocation[]
+  evidence       EventEvidence[]
+
+  @@unique([cleanupEventId, sessionDate, startTime], map: "event_sessions_event_date_start_key")
+  @@unique([cleanupEventId, id], map: "event_sessions_event_id_key")
+  @@index([sessionDate, status], map: "event_sessions_date_status_idx")
+  @@map("event_sessions")
+}
+
+model EventCoordinator {
+  id                     String    @id @default(uuid()) @db.Uuid
+  cleanupEventId         String    @map("cleanup_event_id") @db.Uuid
+  membershipId           String    @map("membership_id") @db.Uuid
+  assignedByMembershipId String    @map("assigned_by_membership_id") @db.Uuid
+  assignedAt             DateTime  @default(now()) @map("assigned_at") @db.Timestamptz(6)
+  removedAt              DateTime? @map("removed_at") @db.Timestamptz(6)
+
+  cleanupEvent CleanupEvent           @relation(fields: [cleanupEventId], references: [id], onDelete: Cascade)
+  membership   OrganizationMembership @relation("EventCoordinatorMembership", fields: [membershipId], references: [id], onDelete: Restrict)
+  assignedBy   OrganizationMembership @relation("EventCoordinatorAssigner", fields: [assignedByMembershipId], references: [id], onDelete: Restrict)
+
+  @@unique([cleanupEventId, membershipId], map: "event_coordinators_event_membership_key")
+  @@index([membershipId, removedAt], map: "event_coordinators_membership_removed_at_idx")
+  @@map("event_coordinators")
+}
+
+model EventParticipant {
+  id                    String            @id @default(uuid()) @db.Uuid
+  cleanupEventId        String            @map("cleanup_event_id") @db.Uuid
+  userId                String            @map("user_id") @db.Uuid
+  status                ParticipantStatus @default(JOINED)
+  joinedAt              DateTime          @default(now()) @map("joined_at") @db.Timestamptz(6)
+  withdrawnAt           DateTime?         @map("withdrawn_at") @db.Timestamptz(6)
+  removedAt             DateTime?         @map("removed_at") @db.Timestamptz(6)
+  removedByMembershipId String?           @map("removed_by_membership_id") @db.Uuid
+  removalReason         String?           @map("removal_reason")
+
+  cleanupEvent CleanupEvent            @relation(fields: [cleanupEventId], references: [id], onDelete: Cascade)
+  user         UserProfile             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  removedBy    OrganizationMembership? @relation("EventParticipantRemover", fields: [removedByMembershipId], references: [id], onDelete: SetNull)
+
+  availabilities ParticipantSessionAvailability[]
+  allocations    SessionAllocation[]
+
+  @@unique([cleanupEventId, userId], map: "event_participants_event_user_key")
+  @@unique([cleanupEventId, id], map: "event_participants_event_id_key")
+  @@index([userId, status], map: "event_participants_user_status_idx")
+  @@map("event_participants")
+}
+
+model ParticipantSessionAvailability {
+  participantId String   @map("participant_id") @db.Uuid
+  sessionId     String   @map("session_id") @db.Uuid
+  markedAt      DateTime @default(now()) @map("marked_at") @db.Timestamptz(6)
+
+  participant EventParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  session     EventSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@id([participantId, sessionId])
+  @@map("participant_session_availability")
+}
+
+model SessionAllocation {
+  id                             String           @id @default(uuid()) @db.Uuid
+  participantId                  String           @map("participant_id") @db.Uuid
+  sessionId                      String           @map("session_id") @db.Uuid
+  allocatedByMembershipId        String           @map("allocated_by_membership_id") @db.Uuid
+  status                         AllocationStatus @default(PLANNED)
+  allocatedAt                    DateTime         @default(now()) @map("allocated_at") @db.Timestamptz(6)
+  attendanceMarkedByMembershipId String?          @map("attendance_marked_by_membership_id") @db.Uuid
+  attendanceMarkedAt             DateTime?        @map("attendance_marked_at") @db.Timestamptz(6)
+  notes                          String?
+
+  participant        EventParticipant        @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  session            EventSession            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  allocatedBy        OrganizationMembership  @relation("SessionAllocator", fields: [allocatedByMembershipId], references: [id], onDelete: Restrict)
+  attendanceMarkedBy OrganizationMembership? @relation("AttendanceMarker", fields: [attendanceMarkedByMembershipId], references: [id], onDelete: SetNull)
+  contributionEvents ContributionEvent[]
+
+  @@unique([participantId, sessionId], map: "session_allocations_participant_session_key")
+  @@map("session_allocations")
+}
+
+model EventNote {
+  id                 String         @id @default(uuid()) @db.Uuid
+  cleanupEventId     String         @map("cleanup_event_id") @db.Uuid
+  authorMembershipId String         @map("author_membership_id") @db.Uuid
+  visibility         NoteVisibility @default(PARTICIPANTS)
+  noteText           String         @map("note_text")
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime?      @map("updated_at") @db.Timestamptz(6)
+
+  cleanupEvent CleanupEvent           @relation(fields: [cleanupEventId], references: [id], onDelete: Cascade)
+  author       OrganizationMembership @relation("EventNoteAuthor", fields: [authorMembershipId], references: [id], onDelete: Restrict)
+
+  @@index([cleanupEventId, visibility, createdAt], map: "event_notes_event_visibility_created_idx")
+  @@map("event_notes")
+}
+
+model EventEvidence {
+  id               String       @id @default(uuid()) @db.Uuid
+  cleanupEventId   String       @map("cleanup_event_id") @db.Uuid
+  sessionId        String?      @map("session_id") @db.Uuid
+  uploadedByUserId String       @map("uploaded_by_user_id") @db.Uuid
+  type             EvidenceType
+  storagePath      String       @map("storage_path")
+  thumbnailPath    String?      @map("thumbnail_path")
+  caption          String?
+  uploadedAt       DateTime     @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+
+  cleanupEvent CleanupEvent  @relation(fields: [cleanupEventId], references: [id], onDelete: Cascade)
+  session      EventSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  uploadedBy   UserProfile   @relation("EventEvidenceUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([cleanupEventId, uploadedAt], map: "event_evidence_event_uploaded_at_idx")
+  @@map("event_evidence")
+}
+
+model EventStatusHistory {
+  id                    String   @id @default(uuid()) @db.Uuid
+  cleanupEventId        String   @map("cleanup_event_id") @db.Uuid
+  fromWorkflowStatusId  String?  @map("from_workflow_status_id") @db.Uuid
+  toWorkflowStatusId    String   @map("to_workflow_status_id") @db.Uuid
+  changedByMembershipId String   @map("changed_by_membership_id") @db.Uuid
+  notes                 String?
+  changedAt             DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
+
+  cleanupEvent CleanupEvent           @relation(fields: [cleanupEventId], references: [id], onDelete: Cascade)
+  fromStatus   CleanupWorkflowStatus? @relation("EventHistoryFromStatus", fields: [fromWorkflowStatusId], references: [id], onDelete: SetNull)
+  toStatus     CleanupWorkflowStatus  @relation("EventHistoryToStatus", fields: [toWorkflowStatusId], references: [id], onDelete: Restrict)
+  changedBy    OrganizationMembership @relation("EventStatusChanger", fields: [changedByMembershipId], references: [id], onDelete: Restrict)
+
+  @@index([cleanupEventId, changedAt], map: "event_status_history_event_changed_at_idx")
+  @@map("event_status_history")
+}
+
+model ContributionEvent {
+  id                  String           @id @default(uuid()) @db.Uuid
+  userId              String           @map("user_id") @db.Uuid
+  type                ContributionType
+  incidentId          String?          @map("incident_id") @db.Uuid
+  sessionAllocationId String?          @map("session_allocation_id") @db.Uuid
+  cleanupEventId      String?          @map("cleanup_event_id") @db.Uuid
+  points              Int
+  recordedByUserId    String?          @map("recorded_by_user_id") @db.Uuid
+  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user                UserProfile        @relation("ContributionRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  incident            Incident?          @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  sessionAllocation   SessionAllocation? @relation(fields: [sessionAllocationId], references: [id], onDelete: SetNull)
+  cleanupEvent        CleanupEvent?      @relation(fields: [cleanupEventId], references: [id], onDelete: SetNull)
+  recordedBy          UserProfile?       @relation("ContributionRecorder", fields: [recordedByUserId], references: [id], onDelete: SetNull)
+  awardedAchievements UserAchievement[]
+
+  @@index([userId, createdAt], map: "contribution_events_user_created_at_idx")
+  @@map("contribution_events")
+}
+
+model AchievementDefinition {
+  id              String  @id @default(uuid()) @db.Uuid
+  code            String  @unique
+  name            String
+  description     String
+  thresholdPoints Int?    @map("threshold_points")
+  highlightOnMap  Boolean @default(false) @map("highlight_on_map")
+  isActive        Boolean @default(true) @map("is_active")
+
+  userAchievements UserAchievement[]
+
+  @@map("achievement_definitions")
+}
+
+model UserAchievement {
+  id                        String   @id @default(uuid()) @db.Uuid
+  userId                    String   @map("user_id") @db.Uuid
+  achievementId             String   @map("achievement_id") @db.Uuid
+  awardedFromContributionId String?  @map("awarded_from_contribution_id") @db.Uuid
+  awardedAt                 DateTime @default(now()) @map("awarded_at") @db.Timestamptz(6)
+
+  user                    UserProfile           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement             AchievementDefinition @relation(fields: [achievementId], references: [id], onDelete: Restrict)
+  awardedFromContribution ContributionEvent?    @relation(fields: [awardedFromContributionId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, achievementId], map: "user_achievements_user_achievement_key")
+  @@map("user_achievements")
 }
