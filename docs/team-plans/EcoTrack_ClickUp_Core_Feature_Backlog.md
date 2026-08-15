@@ -26,7 +26,7 @@ Do not recreate these items:
 | Gate | CORE-00 authorization contract | Wait/review contract | Wait/review contract |
 | Wave 1 | NOT-01 in-app notifications | MAP-01 map foundation | EVT-01 workflow defaults |
 | Wave 2 | ACC-01 membership self-service | INC-01 incident reporting | EVT-02 drafts, sessions, coordinators |
-| Wave 3 | ACC-02 membership administration | INC-02 spatial discovery | Wait for linked-event dependencies or support tests |
+| Wave 3 | ACC-02 membership administration | INC-02 spatial discovery | Continue EVT-02 linked-event integration and acceptance tests after its dependencies merge; this remains part of EVT-02, not a new task |
 | Wave 4 | REW-01 rewards foundation | INC-03 organization review | EVT-03 publish/claim and public event details |
 | Wave 5 | DASH-01 dashboards | MAP-02 role-specific map integration | EVT-04 join, availability, withdrawal |
 | Wave 6 | Final integration support | Spatial/security regression support | EVT-05 allocation, removal, attendance |
@@ -567,6 +567,14 @@ Create safe default workflow statuses/transitions for active organizations and A
 **Suggested branch:** `feature/event-drafts-sessions-coordinators`  
 **Depends on:** EVT-01, MAP-01, ACC-02 membership context; INC-01 for linked drafts
 
+### Wave 2 and Wave 3 execution note
+
+- The ClickUp task name remains `EVT-02 — Cleanup-event drafts, sessions, and coordinators`, and Member 3 keeps the existing suggested branch. Wave 3 does not create or rename a task.
+- Wave 2 is the planned start for `EVT-02`, but the dependency rule still applies. Member 3 begins dependency-dependent code only after the required provider work is merged into `main`.
+- The Wave 3 table entry means Member 3 continues the same `EVT-02` task by completing linked-incident integration and the `EVT-02` acceptance tests. It does not transfer or change any Member 1 or Member 2 task.
+- Member 1 tests `ACC-02` membership administration in the `ACC-02` task. Member 2 tests `MAP-01`/`INC-01` map and incident behavior in those tasks. Member 3 tests only how the merged contracts are consumed safely by `EVT-02`.
+- If `ACC-02` or `INC-01` is not merged when Member 3 reaches the dependent portion, Member 3 waits for that contract and reports the blocker. Member 3 must not modify Member 1 or Member 2 modules to bypass it.
+
 ### Goal
 
 Allow an ORG_ADMIN to build a direct or incident-linked DRAFT, add valid sessions, and assign active same-organization coordinators.
@@ -594,12 +602,17 @@ Allow an ORG_ADMIN to build a direct or incident-linked DRAFT, add valid session
 
 ### Tests and acceptance criteria
 
+- [ ] Member 3 adds backend integration tests for the real route -> middleware -> controller -> service/use-case -> repository path; CASL-only unit checks are insufficient.
 - [ ] Organization A cannot use Organization B membership/status/session/event IDs.
+- [ ] Organization A cannot link an incident that is not legitimately visible to Organization A, even by submitting its UUID directly.
+- [ ] A legitimately visible incident can be selected for a linked draft through the merged incident contract.
 - [ ] DRAFT does not claim or change the incident globally.
 - [ ] Direct drafts work with no incident.
 - [ ] Invalid session time/capacity and duplicate session are rejected.
 - [ ] Coordinator must be active and belong to the owner organization.
 - [ ] ORG_MEMBER cannot assign themselves unless authorized as admin.
+- [ ] Web and mobile use Member 2's merged location-picker contract and call the same real API with loading, validation, success, and error states.
+- [ ] Backend typecheck/build/tests, web lint/build, and mobile security/typecheck/doctor checks pass before handoff.
 
 ---
 
