@@ -353,6 +353,47 @@ test(
 );
 
 test(
+  "notification abilities are restricted to the authenticated user's records",
+  () => {
+    const ability = buildAbilityForRequest({
+      profile: activeUser,
+    });
+    const ownNotification = createAuthorizationSubject(
+      Subjects.Notification,
+      {
+        id: "60000000-0000-4000-8000-000000000001",
+        userId,
+      },
+    );
+    const otherNotification = createAuthorizationSubject(
+      Subjects.Notification,
+      {
+        id: "60000000-0000-4000-8000-000000000002",
+        userId:
+          "10000000-0000-4000-8000-000000000002",
+      },
+    );
+
+    assert.equal(
+      ability.can(Actions.ReadOwn, ownNotification),
+      true,
+    );
+    assert.equal(
+      ability.can(Actions.MarkRead, ownNotification),
+      true,
+    );
+    assert.equal(
+      ability.can(Actions.ReadOwn, otherNotification),
+      false,
+    );
+    assert.equal(
+      ability.can(Actions.MarkRead, otherNotification),
+      false,
+    );
+  },
+);
+
+test(
   "an active Super Admin receives oversight but no ordinary operations",
   () => {
     const ability = buildAbilityForRequest({

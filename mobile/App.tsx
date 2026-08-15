@@ -8,6 +8,7 @@ import { ProfileOnboardingScreen } from "./src/auth/ProfileOnboardingScreen";
 import { useAuthentication } from "./src/auth/useAuthentication";
 import { BrandHeader, Button, LoadingState, Notice, Screen, sharedStyles } from "./src/components/ui";
 import { CitizenDashboard } from "./src/features/citizen/CitizenDashboard";
+import { NotificationInboxScreen } from "./src/features/notifications/NotificationInboxScreen";
 import { MyOrganizationApplicationsScreen } from "./src/features/organizations/MyOrganizationApplicationsScreen";
 import { OrganizationApplicationScreen } from "./src/features/organizations/OrganizationApplicationScreen";
 import type { OrganizationApplication } from "./src/features/organizations/organizationApplication.types";
@@ -18,11 +19,13 @@ type CitizenView = "dashboard" | "createOrganization" | "organizationApplication
 export default function App() {
   const authentication = useAuthentication();
   const [citizenView, setCitizenView] = useState<CitizenView>("dashboard");
+  const [showNotifications, setShowNotifications] = useState(false);
   const [submittedApplication, setSubmittedApplication] =
     useState<OrganizationApplication | null>(null);
 
   const signOut = async () => {
     setCitizenView("dashboard");
+    setShowNotifications(false);
     setSubmittedApplication(null);
     await authentication.signOut();
   };
@@ -66,15 +69,32 @@ export default function App() {
     authentication.accessToken &&
     authentication.profile.platformRole === "SUPER_ADMIN"
   ) {
-    content = (
+    content = showNotifications ? (
+      <NotificationInboxScreen
+        accessToken={authentication.accessToken}
+        onBack={() => setShowNotifications(false)}
+      />
+    ) : (
       <SuperAdminDashboard
         accessToken={authentication.accessToken}
         profile={authentication.profile}
+        onOpenNotifications={() => setShowNotifications(true)}
         onSignOut={() => void signOut()}
       />
     );
   } else if (authentication.profile && authentication.accessToken) {
-    if (citizenView === "createOrganization") {
+    if (showNotifications) {
+      content = (
+        <NotificationInboxScreen
+          accessToken={authentication.accessToken}
+          onBack={() => setShowNotifications(false)}
+          onOpenOrganizationApplications={() => {
+            setShowNotifications(false);
+            setCitizenView("organizationApplications");
+          }}
+        />
+      );
+    } else if (citizenView === "createOrganization") {
       content = (
         <OrganizationApplicationScreen
           accessToken={authentication.accessToken}
@@ -104,7 +124,9 @@ export default function App() {
     } else {
       content = (
         <CitizenDashboard
+          accessToken={authentication.accessToken}
           profile={authentication.profile}
+          onOpenNotifications={() => setShowNotifications(true)}
           onCreateOrganizationApplication={() => setCitizenView("createOrganization")}
           onViewApplications={() => setCitizenView("organizationApplications")}
           onSignOut={() => void signOut()}

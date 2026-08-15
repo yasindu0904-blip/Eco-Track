@@ -1,8 +1,11 @@
 import type { AuthenticatedUserProfile } from "../auth/auth.types";
+import { NotificationButton } from "../notifications/NotificationInbox";
 import "./citizenDashboard.css";
 
 interface CitizenDashboardProps {
   profile: AuthenticatedUserProfile;
+  accessToken?: string;
+  onOpenNotifications?: () => void;
   onStartOrganizationApplication: () => void;
   onViewOrganizationApplications: () => void;
   onSignOut: () => void;
@@ -74,6 +77,8 @@ function CitizenIcon({ name }: CitizenIconProps) {
 
 export function CitizenDashboard({
   profile,
+  accessToken,
+  onOpenNotifications,
   onStartOrganizationApplication,
   onViewOrganizationApplications,
   onSignOut,
@@ -117,6 +122,12 @@ export function CitizenDashboard({
             <CitizenIcon name="organization" />
             My organization requests
           </button>
+          {onOpenNotifications && (
+            <NotificationButton
+              accessToken={accessToken}
+              onOpen={onOpenNotifications}
+            />
+          )}
         </nav>
 
         <div className="citizen-dashboard-user">

@@ -13,6 +13,9 @@ import {
 } from "../../../generated/prisma/enums.js";
 import { errorMiddleware } from "../../../middleware/error.middleware.js";
 import type { AuthenticationDependencies } from "../../auth/auth.types.js";
+import { notificationDependencies } from "../../notifications/notification.dependencies.js";
+import { createNotificationRouter } from "../../notifications/notification.routes.js";
+import type { NotificationPageDto } from "../../notifications/notification.types.js";
 import { organizationApplicationDependencies } from "../application/application.dependencies.js";
 import { createOrganizationReviewRouter } from "./organizationReview.routes.js";
 
@@ -68,6 +71,17 @@ function adminRequest(path: string, options: RequestInit = {}) {
     ...options,
     headers: {
       authorization: `Bearer ${superAdminToken}`,
+      "content-type": "application/json",
+      ...options.headers,
+    },
+  });
+}
+
+function applicantRequest(path: string, options: RequestInit = {}) {
+  return fetch(`${baseUrl}${path}`, {
+    ...options,
+    headers: {
+      authorization: `Bearer ${applicantToken}`,
       "content-type": "application/json",
       ...options.headers,
     },
@@ -156,6 +170,13 @@ before(async () => {
       organizationApplicationDependencies,
     ),
   );
+  app.use(
+    "/api/v1",
+    createNotificationRouter(
+      authenticationDependencies,
+      notificationDependencies,
+    ),
+  );
   app.use(errorMiddleware);
 
   await new Promise<void>((resolve) => {
@@ -242,6 +263,23 @@ test("approval activates the organization and creates its first admin atomically
   assert.equal(organization.memberships[0]?.source, "FIRST_ADMIN");
   assert.equal(organization.auditLogs[0]?.action, "ORGANIZATION_APPLICATION_APPROVED");
   assert.equal(organization.notifications.length, 1);
+
+  const inboxResponse = await applicantRequest(
+    "/api/v1/notifications?unreadOnly=true",
+  );
+  assert.equal(inboxResponse.status, 200);
+
+  const inboxBody = (await inboxResponse.json()) as {
+    data: NotificationPageDto;
+  };
+  const approvalNotification = inboxBody.data.items.find(
+    (notification) =>
+      notification.data?.organizationId === approveOrganizationId,
+  );
+
+  assert.equal(approvalNotification?.type, "ORGANIZATION_REVIEW_UPDATED");
+  assert.equal(approvalNotification?.data?.status, "ACTIVE");
+  assert.equal(approvalNotification?.readAt, null);
 });
 
 test("an application cannot be reviewed twice", async () => {
@@ -285,4 +323,21 @@ test("decline requires notes and creates no membership", async () => {
   assert.equal(organization.memberships.length, 0);
   assert.equal(organization.auditLogs[0]?.action, "ORGANIZATION_APPLICATION_DECLINED");
   assert.equal(organization.notifications.length, 1);
+
+  const inboxResponse = await applicantRequest(
+    "/api/v1/notifications?unreadOnly=true",
+  );
+  assert.equal(inboxResponse.status, 200);
+
+  const inboxBody = (await inboxResponse.json()) as {
+    data: NotificationPageDto;
+  };
+  const declineNotification = inboxBody.data.items.find(
+    (notification) =>
+      notification.data?.organizationId === declineOrganizationId,
+  );
+
+  assert.equal(declineNotification?.type, "ORGANIZATION_REVIEW_UPDATED");
+  assert.equal(declineNotification?.data?.status, "DECLINED");
+  assert.equal(declineNotification?.readAt, null);
 });

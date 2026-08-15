@@ -1,0 +1,136 @@
+ECOTRACK LOCAL DOCKER/POSTGIS FIRST-RUN SETUP
+================================================
+
+Purpose
+-------
+
+The local Docker stack creates an isolated PostgreSQL/PostGIS database. It does
+not copy application rows from Supabase. Database migrations create the schema,
+indexes, constraints, RLS policies, and seed records contained in migrations,
+but they do not automatically import the official GN Division dataset or
+provision a controlled Super Admin profile.
+
+Run commands from the Eco-Track repository root in PowerShell.
+
+
+PROBLEM 1: THE ORGANIZATION FORM CANNOT FIND REAL GN DIVISIONS
+----------------------------------------------------------------
+
+Symptoms:
+
+- Searching for Kesbewa, Mampe, or another real area returns no matches.
+- The form may show only records with names such as "Workflow Test GN" if a
+  previous integration-test run left test data in the local database.
+
+Cause:
+
+`prisma migrate deploy` creates the `administrative_areas` table and its PostGIS
+indexes, but migrations intentionally do not contain the large official Sri
+Lanka GN Division boundary dataset. Each new local Docker volume therefore
+starts without those reference rows.
+
+Required first-run command:
+
+docker compose --env-file .env.docker -f compose.yaml -f compose.local-db.yaml run --rm --env-from-file .env.docker -e DATABASE_URL=postgresql://postgres:postgres@database:5432/ecotrack_local?schema=public migrate npm run import:gn-divisions
+
+What the command does:
+
+- Keeps DATABASE_URL pointed at the local Docker database, never Supabase.
+- Downloads the official GN Division GeoJSON pages from the configured Sri
+  Lanka NSDI ArcGIS service.
+- Validates Polygon/MultiPolygon geometry.
+- Stores boundaries in `administrative_areas` using PostGIS geography.
+- Inserts or updates rows by official code, so the importer is idempotent.
+
+Expected result at the time this guide was written:
+
+- 14,051 source records processed.
+- 13,835 valid GN Division records imported.
+- 216 invalid/incomplete source records skipped.
+
+The external source can change, so future totals may differ slightly. Do not
+commit imported database rows to Git. A teammate normally runs this once for
+each newly created local Docker database volume, and may rerun it to refresh
+official reference data.
+
+
+PROBLEM 2: A SUPABASE SUPER ADMIN OPENS THE CITIZEN DASHBOARD LOCALLY
+------------------------------------------------------------------------
+
+Symptoms:
+
+- Supabase Auth successfully verifies the controlled Super Admin account.
+- Local EcoTrack asks that account to complete its profile.
+- `/auth/me` returns `platformRole = USER` and the citizen/volunteer dashboard
+  opens instead of the Super Admin dashboard.
+
+Cause:
+
+Supabase Auth supplies identity and access tokens, but the Docker backend uses
+the isolated local PostgreSQL database for `user_profiles`. A Super Admin row in
+the Supabase-hosted application database is not automatically copied into the
+local database. A newly provisioned local profile therefore receives Prisma's
+normal `USER` default until the controlled seed is run.
+
+Required configuration:
+
+In the ignored repository-root `.env.docker` file, configure the authorized
+Supabase Auth account used for local Super Admin testing:
+
+SUPER_ADMIN_AUTH_USER_ID=<the Supabase Auth user's UUID>
+SUPER_ADMIN_EMAIL=<the same verified email address>
+SUPER_ADMIN_FULL_NAME=EcoTrack Super Admin
+
+Never invent an Auth UUID, accept a UUID from the frontend, or promote an
+ordinary account through a public API. Use only the team-approved controlled
+Super Admin identity. `.env.docker` is ignored by Git and must not be committed.
+
+Required first-run/recovery command:
+
+docker compose --env-file .env.docker -f compose.yaml -f compose.local-db.yaml run --rm --env-from-file .env.docker -e DATABASE_URL=postgresql://postgres:postgres@database:5432/ecotrack_local?schema=public migrate npx prisma db seed
+
+What the command does:
+
+- Keeps DATABASE_URL pointed at the local Docker database, never Supabase.
+- Upserts the configured Auth UUID and verified email.
+- Sets `platform_role = SUPER_ADMIN` and `account_status = ACTIVE`.
+- Preserves the existing profile-completion timestamp and phone number when the
+  local profile already exists.
+- Ensures the singleton platform-settings row exists.
+
+After seeding, sign out of any ordinary-user browser/mobile session, sign in
+with the configured Super Admin email, open its new magic link, and refresh the
+application. The email displayed by the dashboard must match the configured
+Super Admin email.
+
+
+RECOMMENDED TEAMMATE FIRST-RUN ORDER
+--------------------------------------
+
+1. Create the ignored `.env.docker` file from the documented example/config.
+2. Configure Supabase URL/key and the controlled Super Admin Auth identity.
+3. Start the local stack:
+
+   docker compose --env-file .env.docker -f compose.yaml -f compose.local-db.yaml up -d --build
+
+4. Run the Super Admin seed command above.
+5. Run the GN Division import command above.
+6. Verify containers:
+
+   docker compose --env-file .env.docker -f compose.yaml -f compose.local-db.yaml ps -a
+
+Expected services:
+
+- `database`: healthy, local PostGIS on host port 5433.
+- `migrate`: exited successfully with code 0.
+- `backend`: healthy on host port 5000.
+- `web`: healthy on host port 8080.
+
+Important separation rule:
+
+- Local mode: Supabase Auth + local Docker PostgreSQL/PostGIS application data.
+- Shared mode: Supabase Auth + Supabase PostgreSQL/PostGIS application data.
+
+Always confirm DATABASE_URL before running seeds, imports, tests, or migration
+recovery commands. Do not assume rows from one application database exist in
+the other.

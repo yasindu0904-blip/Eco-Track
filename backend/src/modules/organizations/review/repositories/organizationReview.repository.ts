@@ -7,6 +7,7 @@ import {
   OrganizationStatus,
   ServiceAreaStatus,
 } from "../../../../generated/prisma/enums.js";
+import { createNotificationRecord } from "../../../notifications/repositories/notification.repository.js";
 
 import type {
   OrganizationReviewApplicationDto,
@@ -222,21 +223,19 @@ export async function applyOrganizationReviewTransaction(
       },
     });
 
-    await transaction.notification.create({
+    await createNotificationRecord(transaction, {
+      userId: application.requestedByUserId,
+      organizationId: application.id,
+      type: NotificationType.ORGANIZATION_REVIEW_UPDATED,
+      title: approved
+        ? "Organization application approved"
+        : "Organization application declined",
+      message: approved
+        ? `${application.name} is active. You are now its Organization Admin.`
+        : `${application.name} was declined. Review the administrator notes for details.`,
       data: {
-        userId: application.requestedByUserId,
         organizationId: application.id,
-        type: NotificationType.ORGANIZATION_REVIEW_UPDATED,
-        title: approved
-          ? "Organization application approved"
-          : "Organization application declined",
-        message: approved
-          ? `${application.name} is active. You are now its Organization Admin.`
-          : `${application.name} was declined. Review the administrator notes for details.`,
-        data: {
-          organizationId: application.id,
-          status: organizationStatus,
-        },
+        status: organizationStatus,
       },
     });
 

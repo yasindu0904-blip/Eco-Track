@@ -7,6 +7,7 @@ import { LoginForm } from "./features/auth/LoginForm";
 import { ProfileOnboarding } from "./features/auth/ProfileOnboarding";
 import { useAuthentication } from "./features/auth/useAuthentication";
 import { CitizenDashboard } from "./features/citizen/CitizenDashboard";
+import { NotificationInbox } from "./features/notifications/NotificationInbox";
 import { OrganizationApplicationPage } from "./features/organizations/application";
 import { SuperAdminDashboard } from "./features/super-admin/SuperAdminDashboard";
 
@@ -120,6 +121,8 @@ function AuthenticationError({
 function App() {
   const [citizenView, setCitizenView] =
     useState<CitizenView>("dashboard");
+  const [showNotifications, setShowNotifications] =
+    useState(false);
 
   const {
     status,
@@ -214,14 +217,33 @@ function App() {
       );
     }
 
+    if (showNotifications) {
+      return (
+        <NotificationInbox
+          accessToken={accessToken}
+          onBack={() => setShowNotifications(false)}
+          onOpenOrganizationApplications={
+            profile.platformRole === "USER"
+              ? () => {
+                  setShowNotifications(false);
+                  setCitizenView("organization-applications");
+                }
+              : undefined
+          }
+        />
+      );
+    }
+
     if (profile.platformRole === "SUPER_ADMIN") {
       return (
         <SuperAdminDashboard
           profile={profile}
           accessToken={accessToken}
           onCheckAccess={checkSuperAdminAccess}
+          onOpenNotifications={() => setShowNotifications(true)}
           onSignOut={() => {
             setCitizenView("dashboard");
+            setShowNotifications(false);
             signOut();
           }}
         />
@@ -232,6 +254,8 @@ function App() {
       return (
         <CitizenDashboard
           profile={profile}
+          accessToken={accessToken}
+          onOpenNotifications={() => setShowNotifications(true)}
           onStartOrganizationApplication={() => {
             setCitizenView("organization-apply");
           }}
@@ -240,6 +264,7 @@ function App() {
           }}
           onSignOut={() => {
             setCitizenView("dashboard");
+            setShowNotifications(false);
             signOut();
           }}
         />
