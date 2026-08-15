@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import "./App.css";
 
+import { hasCompletedProfile } from "./authorization/authorizationUi";
 import { LoginForm } from "./features/auth/LoginForm";
 import { ProfileOnboarding } from "./features/auth/ProfileOnboarding";
 import { useAuthentication } from "./features/auth/useAuthentication";
@@ -194,11 +195,7 @@ function App() {
   }
 
   if (status === "signedIn" && profile && accessToken) {
-    if (
-      !profile.profileCompletedAt ||
-      !profile.fullName?.trim() ||
-      !profile.phoneNumber?.trim()
-    ) {
+    if (!hasCompletedProfile(profile)) {
       return (
         <main className="app-shell">
           <section className="auth-card">

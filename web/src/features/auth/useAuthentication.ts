@@ -6,6 +6,7 @@ import {
 
 import type { Session } from "@supabase/supabase-js";
 
+import { describeApiFailure } from "../../api/apiError";
 import { supabase } from "../../config/supabase";
 import {
   fetchCurrentUser,
@@ -76,9 +77,10 @@ async function resolveSession(
       profile: null,
       accessToken: null,
       errorMessage:
-        error instanceof Error
-          ? error.message
-          : "Unable to load your EcoTrack profile.",
+        describeApiFailure(
+          error,
+          "Unable to load your EcoTrack profile.",
+        ).message,
     };
   }
 }

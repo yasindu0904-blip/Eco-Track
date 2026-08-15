@@ -11,9 +11,10 @@ Before changing code, every team member and every Codex session must read:
 1. `docs/IMPORTANT/EcoTrack_CODEX_Instructions_for_docs_IMPORTANT.txt`
 2. `docs/IMPORTANT/EcoTrack_Complete_System_Flow_Source_of_Truth_v1.txt`
 3. This file
-4. `database_docs/EcoTrack_Database_v2_Finalization_and_Codex_Instructions.txt`
-5. `database_docs/EcoTrack_ERD_v2_Final.dbml`
-6. The current Prisma schema, migrations, tests, and implementation being changed
+4. `docs/IMPORTANT/EcoTrack_Core_Authorization_Contract.md`
+5. `database_docs/EcoTrack_Database_v2_Finalization_and_Codex_Instructions.txt`
+6. `database_docs/EcoTrack_ERD_v2_Final.dbml`
+7. The current Prisma schema, migrations, tests, and implementation being changed
 
 When documents disagree, use the order above, except that the current database migration history is immutable evidence of what has already been applied. Stop and ask the integration owner before changing a domain rule.
 

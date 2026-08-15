@@ -49,13 +49,23 @@ export async function apiRequest<T>(
     );
   }
 
-  const response = await fetch(
-    `${webEnv.apiBaseUrl}${path}`,
-    {
-      ...requestOptions,
-      headers,
-    },
-  );
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${webEnv.apiBaseUrl}${path}`,
+      {
+        ...requestOptions,
+        headers,
+      },
+    );
+  } catch {
+    throw new ApiRequestError(
+      0,
+      "NETWORK_REQUEST_FAILED",
+      "EcoTrack could not reach the API. Check your network and API address.",
+    );
+  }
 
   const responseBody = (await response
     .json()

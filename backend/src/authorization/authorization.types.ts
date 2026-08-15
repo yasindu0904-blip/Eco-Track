@@ -1,4 +1,5 @@
 import type {
+  CleanupLifecycleStatus,
   MembershipRole,
   MembershipStatus,
   OrganizationStatus,
@@ -18,9 +19,24 @@ export type ActiveTenantContext = {
   };
 };
 
+export type EventAuthorizationContext = {
+  cleanupEvent: {
+    id: string;
+    organizationId: string;
+    lifecycleStatus: CleanupLifecycleStatus;
+  };
+  isCoordinator: boolean;
+};
+
 export type AuthorizationDependencies = {
   findActiveTenantContext: (
     userId: string,
     organizationId: string,
   ) => Promise<ActiveTenantContext | null>;
+
+  findEventAuthorizationContext: (
+    organizationId: string,
+    membershipId: string,
+    cleanupEventId: string,
+  ) => Promise<EventAuthorizationContext | null>;
 };
