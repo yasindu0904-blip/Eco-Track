@@ -6,6 +6,7 @@ import { pingSuperAdmin } from "../../auth/auth.api";
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import { BrandHeader, Button, Field, LoadingState, Notice, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
+import { NotificationButton } from "../notifications/NotificationInboxScreen";
 import {
   approveOrganizationApplication,
   declineOrganizationApplication,
@@ -17,6 +18,7 @@ import type { OrganizationReviewApplication } from "./organizationReview.types";
 type Props = {
   accessToken: string;
   profile: AuthenticatedUserProfile;
+  onOpenNotifications: () => void;
   onSignOut: () => void;
 };
 
@@ -28,7 +30,7 @@ function readableError(error: unknown): string {
   return "The Super Admin request could not be completed.";
 }
 
-export function SuperAdminDashboard({ accessToken, profile, onSignOut }: Props) {
+export function SuperAdminDashboard({ accessToken, profile, onOpenNotifications, onSignOut }: Props) {
   const [applications, setApplications] = useState<OrganizationReviewApplication[]>([]);
   const [selected, setSelected] = useState<OrganizationReviewApplication | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
@@ -147,6 +149,10 @@ export function SuperAdminDashboard({ accessToken, profile, onSignOut }: Props) 
   return (
     <Screen>
       <BrandHeader eyebrow="Protected platform area" title="Super Admin" compact />
+      <NotificationButton
+        accessToken={accessToken}
+        onOpen={onOpenNotifications}
+      />
 
       <View style={[sharedStyles.card, styles.adminIdentity]}>
         <View style={styles.adminBadge}><Text style={styles.adminBadgeText}>★</Text></View>

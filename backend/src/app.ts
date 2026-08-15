@@ -9,15 +9,18 @@ import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 
 import { createAuthRouter } from "./modules/auth/auth.routes.js";
 import { createAdministrativeAreaRouter } from "./modules/administrativeAreas/administrativeArea.routes.js";
+import { createNotificationRouter } from "./modules/notifications/notification.routes.js";
 import { createOrganizationApplicationRouter } from "./modules/organizations/application/application.routes.js";
 import { createOrganizationReviewRouter } from "./modules/organizations/review/organizationReview.routes.js";
 import { createProfileRouter } from "./modules/profiles/profile.routes.js";
 
 import type { AuthenticationDependencies } from "./modules/auth/auth.types.js";
+import type { NotificationDependencies } from "./modules/notifications/notification.dependencies.js";
 import type { OrganizationApplicationDependencies } from "./modules/organizations/application/application.dependencies.js";
 
 type CreateAppOptions = {
   webOrigin?: string;
+  notificationDependencies?: NotificationDependencies;
   organizationApplicationDependencies?: OrganizationApplicationDependencies;
 };
 
@@ -61,6 +64,16 @@ export function createApp(
     "/api/v1",
     createProfileRouter(authenticationDependencies),
   );
+
+  if (options.notificationDependencies) {
+    app.use(
+      "/api/v1",
+      createNotificationRouter(
+        authenticationDependencies,
+        options.notificationDependencies,
+      ),
+    );
+  }
 
   if (options.organizationApplicationDependencies) {
     app.use(

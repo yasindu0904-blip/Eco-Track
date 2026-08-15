@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import type { AuthenticatedUserProfile } from "../auth/auth.types";
+import { NotificationButton } from "../notifications/NotificationInbox";
 import {
   approveOrganizationApplication,
   declineOrganizationApplication,
@@ -13,6 +14,7 @@ interface SuperAdminDashboardProps {
   profile: AuthenticatedUserProfile;
   accessToken?: string;
   onCheckAccess: () => Promise<string>;
+  onOpenNotifications?: () => void;
   onSignOut: () => void;
 }
 
@@ -101,6 +103,7 @@ export function SuperAdminDashboard({
   profile,
   accessToken,
   onCheckAccess,
+  onOpenNotifications,
   onSignOut,
 }: SuperAdminDashboardProps) {
   const [accessCheck, setAccessCheck] =
@@ -278,6 +281,12 @@ export function SuperAdminDashboard({
             Service areas
             <span>Next</span>
           </button>
+          {onOpenNotifications && (
+            <NotificationButton
+              accessToken={accessToken}
+              onOpen={onOpenNotifications}
+            />
+          )}
         </nav>
 
         <div className="super-admin-security-note">

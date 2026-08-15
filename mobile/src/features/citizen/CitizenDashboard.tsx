@@ -3,9 +3,12 @@ import { StyleSheet, Text, View } from "react-native";
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import { BrandHeader, Button, Notice, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
+import { NotificationButton } from "../notifications/NotificationInboxScreen";
 
 type CitizenDashboardProps = {
   profile: AuthenticatedUserProfile;
+  accessToken: string;
+  onOpenNotifications: () => void;
   onCreateOrganizationApplication: () => void;
   onViewApplications: () => void;
   onSignOut: () => void;
@@ -13,6 +16,8 @@ type CitizenDashboardProps = {
 
 export function CitizenDashboard({
   profile,
+  accessToken,
+  onOpenNotifications,
   onCreateOrganizationApplication,
   onViewApplications,
   onSignOut,
@@ -36,6 +41,11 @@ export function CitizenDashboard({
 
       <Notice
         message="Every normal EcoTrack account can report as a citizen and voluntarily join cleanup events. Organization access is additional to this account."
+      />
+
+      <NotificationButton
+        accessToken={accessToken}
+        onOpen={onOpenNotifications}
       />
 
       <View style={sharedStyles.card}>
