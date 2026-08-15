@@ -9,6 +9,7 @@ Codex is responsible for repository inspection, coding, file edits, commands, mi
 Before making any change
 ------------------------
 1. Read this file and the relevant files under docs/IMPORTANT.
+   For parallel core-feature work, EcoTrack_Core_Feature_Parallel_Development_Guide.md is mandatory.
 2. Inspect the current repository tree and the current contents of every file that will be changed.
 3. Treat the repository as the source of truth; do not assume a file still matches an older chat snippet.
 4. Preserve npm-installed dependency versions unless an upgrade is explicitly requested.

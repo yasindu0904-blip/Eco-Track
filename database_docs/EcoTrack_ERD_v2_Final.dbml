@@ -704,7 +704,7 @@ Table public.notifications [headerColor: #76B7B2] {
     (user_id, read_at, created_at)
   }
 
-  Note: 'Permanent in-app notification record. Expo push is only a delivery mechanism.'
+  Note: 'Permanent in-app notification record. Expo push is only a delivery mechanism. Custom migration notifications_unread_user_created_at_idx indexes (user_id, created_at DESC) only where read_at IS NULL for unread inbox and badge queries.'
 }
 
 Table public.issue_reports [headerColor: #76B7B2] {
