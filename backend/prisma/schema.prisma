@@ -379,6 +379,8 @@ model Notification {
   user         UserProfile   @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
+  // A custom SQL migration adds the partial unread index because Prisma schema
+  // syntax does not describe: (user_id, created_at DESC) WHERE read_at IS NULL.
   @@index([userId, readAt, createdAt])
   @@map("notifications")
 }

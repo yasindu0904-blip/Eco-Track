@@ -600,3 +600,17 @@ test("every new domain table has RLS and no frontend-role table privileges", asy
     );
   }
 });
+
+test("notification unread lookups use a dedicated partial index", async () => {
+  const indexes = await prisma.$queryRaw<Array<{ definition: string }>>`
+    SELECT indexdef AS definition
+    FROM pg_indexes
+    WHERE schemaname = 'public'
+      AND tablename = 'notifications'
+      AND indexname = 'notifications_unread_user_created_at_idx'
+  `;
+
+  assert.equal(indexes.length, 1);
+  assert.match(indexes[0]?.definition ?? "", /\(user_id, created_at DESC\)/);
+  assert.match(indexes[0]?.definition ?? "", /WHERE \(read_at IS NULL\)/);
+});
