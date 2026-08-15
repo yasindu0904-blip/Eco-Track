@@ -29,8 +29,8 @@ Do not recreate these items:
 | Wave 3 | ACC-02 membership administration | INC-02 spatial discovery | Wait for linked-event dependencies or support tests |
 | Wave 4 | REW-01 rewards foundation | INC-03 organization review | EVT-03 publish/claim and public event details |
 | Wave 5 | DASH-01 dashboards | MAP-02 role-specific map integration | EVT-04 join, availability, withdrawal |
-| Wave 6 | Final integration support | Spatial/security regression support | EVT-05 allocation, removal, attendance |
-| Wave 7 | Cross-feature workflow verification | Incident regression support | EVT-06 notes, evidence, lifecycle, cancellation, completion |
+| Wave 6 | INT-01 integration wiring and client parity | MAP-03 spatial/security regression | EVT-05 allocation, removal, attendance |
+| Wave 7 | INT-02 cross-feature workflow verification | INC-04 incident regression | EVT-06 notes, evidence, lifecycle, cancellation, completion |
 
 Dependencies are more important than the wave number. Do not begin a dependent task against an unmerged branch.
 
@@ -519,6 +519,95 @@ Finish one coherent map experience for citizen/volunteer, organization, and Supe
 
 ---
 
+## MAP-03 — Spatial performance and security regression
+
+**Owner:** Member 2
+
+**Suggested branch:** `test/spatial-security-regression`
+
+**Depends on:** MAP-02, INC-03, and EVT-03 public-event marker contract
+
+### Goal
+
+Prove that the completed spatial implementation remains bounded, indexed, tenant-safe, and usable after the incident, map, and event branches are combined.
+
+### Backend work
+
+- Add spatial regression coverage for bounding-box, radius, `ST_Covers`, overlap, boundary points, invalid coordinates, excessive bounds, inactive service areas, and public/private response projections.
+- Create Organization A and Organization B with separate and overlapping service areas, incidents inside/outside/on boundaries, and organization-owned events.
+- Attempt direct-ID and altered-organization requests to prove reviews, private notes, contacts, and private event data cannot cross tenants.
+- Verify results are deduplicated when several approved service polygons cover one incident.
+- Inspect the primary query plans and document use of GiST/normal indexes. Avoid unstable CI tests that pass or fail using only execution time.
+- Add reasonable bbox/radius, page-size, result-count, and response-size protections when a regression is found.
+- Do not create another map API or change the marker contract without coordinating its consumers.
+
+### Web work
+
+- Exercise citizen, organization, and Super Admin map modes with dense, empty, overlapping, denied-location, and API-error scenarios.
+- Confirm rapid pan/zoom does not leave stale markers or create an unbounded request burst.
+- Confirm clusters, selected feature, result list, filters, and role-specific actions remain synchronized.
+- Fix map-owned regressions inside Member 2’s feature files and send shared composition changes to INT-01.
+
+### Mobile work
+
+- Exercise startup with location granted, denied, and unavailable; manual pin selection must remain usable.
+- Verify weak-network retry, stale-request protection, bounded data loading, marker selection, and return-from-background behavior.
+- Confirm the app does not continuously track location and does not log/display private marker fields.
+
+### Tests and acceptance criteria
+
+- [ ] Positive, boundary, overlap, invalid-input, and cross-tenant spatial tests pass in CI PostGIS.
+- [ ] Primary spatial queries use the intended indexes based on documented query-plan evidence.
+- [ ] Ordinary endpoints cannot download unbounded national map data.
+- [ ] Public/Super Admin results contain no private reviews, contacts, or participant data.
+- [ ] Web and mobile work without location permission and during empty/error states.
+- [ ] No competing map implementation or incompatible marker contract is introduced.
+
+---
+
+## INC-04 — Incident workflow regression and handoff verification
+
+**Owner:** Member 2
+
+**Suggested branch:** `test/incident-workflow-regression`
+
+**Depends on:** INC-03, MAP-03, EVT-03, NOT-01, and REW-01
+
+### Goal
+
+Verify the entire incident lane after event claiming, notifications, and rewards are integrated, and fix incident-owned regressions without taking ownership of Member 3’s event implementation.
+
+### Backend work
+
+- Add regression scenarios for reporting, initial history/deadlines, own-report access, spatial discovery, organization visibility, independent review, false counts, VALID rewards, and linked-event status effects.
+- Verify one shared incident remains one record across overlapping organizations and every organization keeps only its own current review.
+- Verify FALSE never globally rejects an incident or prevents another covering organization from validating/acting.
+- Verify linked-event publication changes the incident to CLEANUP_ORGANIZED, cancellation returns it to the correct ACTIVE/UNADDRESSED state, and completion resolves it.
+- Verify idempotency for incident retry, review changes, reporter notifications, and verified-report contribution awards.
+- Test reporter, public, organization, and Super Admin projections for privacy and record-level authorization.
+
+### Web work
+
+- Run the real journey: report -> My Reports -> public map -> organization review -> linked event -> updated incident history/state.
+- Confirm citizen, organization, and Super Admin screens use the same status and false-count meanings.
+- Fix incident/map-owned regressions without rewriting event-owned screens.
+
+### Mobile work
+
+- Run the same Android journey with GPS/manual pin, evidence behavior, weak-network failure, map discovery, reporter notification, and updated report detail.
+- Confirm recoverable API errors do not sign out a valid session and private organization notes never appear.
+
+### Tests and acceptance criteria
+
+- [ ] Full incident lifecycle regression passes.
+- [ ] Overlap, boundary visibility, independent review, and false-count behavior remain correct.
+- [ ] Publish/cancel/complete produces correct incident state without duplicate history, rewards, or notifications.
+- [ ] Direct-ID attacks and private-field projection tests pass.
+- [ ] Web and Android smoke-test results using real APIs are documented.
+- [ ] Changes remain in the incident/map lane unless the integration owner approves a shared-file change.
+
+---
+
 # Member 3 / Cleanup Event and Volunteering Tasks
 
 ## EVT-01 — Organization cleanup-workflow defaults and protected transitions
@@ -766,33 +855,92 @@ Complete the operational event lifecycle, including participant/internal communi
 
 ---
 
-# Final integration task — Full workflow, cross-tenant, and client parity verification
+# Integration Owner Completion Tasks
+
+## INT-01 — Shared integration wiring and web/mobile parity
 
 **Owner:** Member 1 / integration owner  
-**Suggested branch:** `integration/core-workflows` or perform as reviewed PR merges into `main`  
-**Depends on:** all required feature tasks
+**Suggested branch:** `integration/core-feature-wiring`
 
-### Work
+**Depends on:** each provider feature being integrated; may be updated incrementally after its PR passes review
 
-- Mount every exported backend router in `backend/src/app.ts` without changing global middleware/error order.
-- Connect every exported web and mobile screen to the existing authentication/profile gate and role-aware navigation.
-- Resolve shared-file conflicts manually and preserve both features; never select one entire side blindly.
-- Run migrations against a clean local PostGIS database and run all backend tests.
-- Run complete cross-tenant direct-ID tests with Organization A and B.
-- Run the end-to-end scenario: magic link/profile -> incident -> spatial visibility -> organization VALID -> publish/claim -> volunteer join/availability -> allocation -> attendance -> completion -> incident resolved -> notifications/rewards/dashboards.
-- Run direct-event and cancellation/replacement-event scenarios.
+### Goal
+
+Connect independently developed routers and screens to the real applications without moving business logic into shared composition files or breaking authentication/profile completion.
+
+### Backend work
+
+- Review each provider PR’s router, dependencies, middleware order, API contract, tests, packages, and migrations before wiring it.
+- Mount approved routers once under `/api/v1` in `backend/src/app.ts`; preserve Helmet, CORS, body parsing, health, not-found, and error middleware order.
+- Update `server.ts` dependency composition only when required. Never construct feature repositories/controllers directly in `app.ts`.
+- Resolve authorization additions centrally and reject duplicate/inconsistent action or subject strings.
+- Run all backend tests after each integration batch so the branch causing a regression remains identifiable.
+
+### Web work
+
+- Connect exported screens to the authenticated, profile-complete, role-aware flow in `web/src/App.tsx`.
+- Preserve citizen access for every normal user and add organization switching without trusting a frontend organization role.
+- Integrate navigation, notification links, loading/error boundaries, and shared styling without copying feature logic into `App.tsx`.
+- Confirm Member 2’s single map implementation is reused by all incident and event entry points.
+
+### Mobile work
+
+- Connect exported screens to the existing Supabase session, onboarding gate, dashboard, and Android deep-link flow in `mobile/App.tsx`.
+- Integrate organization context, notifications, map/event navigation, Android back behavior, and recoverable API errors.
+- Rebuild the development application when a merged native package change requires it.
+
+### Tests and acceptance criteria
+
+- [ ] Every approved router is mounted once at the documented path.
+- [ ] Global middleware/error order and authentication/profile gates remain intact.
+- [ ] Web and mobile can reach every completed feature through real navigation.
+- [ ] No hard-coded token, role, user, organization, or fake success data is added.
+- [ ] Shared-file conflicts preserve both contracts rather than accepting one whole file.
+- [ ] Backend, web, mobile, Docker, and CI checks pass after integration.
+
+---
+
+## INT-02 — Full workflow, cross-tenant, and client parity verification
+
+**Owner:** Member 1 / integration owner
+
+**Suggested branch:** `integration/core-workflows`
+
+**Depends on:** all required feature tasks, including MAP-03, INC-04, and INT-01
+
+### Goal
+
+Prove the merged system works as one secure product across a clean database, backend, web, and Android—not merely as isolated feature branches.
+
+### Backend work
+
+- Deploy every migration to a clean local PostGIS database and run the entire backend suite.
+- Add/finish full Organization A versus Organization B direct-ID security coverage.
+- Run the end-to-end scenario: profile -> report -> spatial visibility -> VALID review -> publish/claim -> join/availability -> allocation -> attendance -> completion -> incident resolution -> notifications/rewards/dashboards.
+- Run direct-event, cancellation/replacement-event, duplicate retry, and concurrent claim scenarios.
 - Verify public APIs never expose phone numbers, private notes, storage secrets, or tenant-private analytics.
-- Verify web and mobile use the same status meanings and real APIs.
-- Run all CI-equivalent backend, web, and mobile commands plus Docker health checks.
 
-### Done when
+### Web work
+
+- Run the complete workflow through real navigation and APIs for citizen, ORG_MEMBER/coordinator, ORG_ADMIN, and Super Admin contexts.
+- Verify status terminology, empty/loading/error states, organization switching, map links, notifications, rewards, and dashboard totals.
+- Remove only fake/presentation-only behavior from implemented production feature paths while preserving the mockup-derived style.
+
+### Mobile work
+
+- Run the complete citizen/volunteer and authorized organization workflow on Android using the real backend.
+- Verify magic-link return, profile gate, denied location, weak-network recovery, evidence actions, notifications, back navigation, and session persistence.
+- Confirm mobile and web use the same API/status meanings and neither relies on frontend-only authorization.
+
+### Tests and acceptance criteria
 
 - [ ] CI is green.
 - [ ] Clean-database migration deployment succeeds.
 - [ ] Full workflow and cross-tenant suites pass.
 - [ ] Web and Android manual smoke tests pass.
+- [ ] Docker health checks pass.
 - [ ] No presentation-only/fake data remains in implemented feature paths.
-- [ ] API contracts, environment setup, and known deliberate exclusions are documented.
+- [ ] API contracts, environment setup, verification evidence, and deliberate exclusions are documented.
 
 ## Deliberate exclusions unless a separate ClickUp task is approved
 
