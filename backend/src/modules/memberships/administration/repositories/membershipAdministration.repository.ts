@@ -665,7 +665,32 @@ export async function changeMembershipStatusTransaction(
 }
 
 export function isPrismaTransactionConflict(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "P2034";
+  const conflictCodes = new Set(["P2034", "40001", "40P01"]);
+  const pending: unknown[] = [error];
+  const visited = new Set<object>();
+
+  while (pending.length > 0) {
+    const candidate = pending.pop();
+    if (typeof candidate !== "object" || candidate === null || visited.has(candidate)) continue;
+    visited.add(candidate);
+
+    const record = candidate as Record<string, unknown>;
+    if (
+      [record.code, record.originalCode, record.sqlState].some(
+        (value) => typeof value === "string" && conflictCodes.has(value),
+      ) ||
+      record.kind === "TransactionWriteConflict" ||
+      (typeof record.message === "string" &&
+        record.message.includes("Transaction failed due to a write conflict or a deadlock"))
+    ) {
+      return true;
+    }
+
+    // Prisma adapter errors can wrap the PostgreSQL SQLSTATE several levels deep.
+    pending.push(record.cause, record.meta, record.driverAdapterError);
+  }
+
+  return false;
 }
 
 export function isPrismaUniqueConflict(error: unknown): boolean {
