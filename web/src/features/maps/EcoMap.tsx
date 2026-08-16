@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CircleMarker,
+  GeoJSON,
   MapContainer,
   Popup,
   TileLayer,
   useMap,
   useMapEvents,
 } from "react-leaflet";
+import { geoJSON } from "leaflet";
+import type { GeoJsonObject } from "geojson";
 
 import "leaflet/dist/leaflet.css";
 import "./map.css";
@@ -18,6 +21,7 @@ import {
 } from "./map.constants";
 import type {
   MapLocation,
+  MapBoundaryFeatureCollection,
   MapMarkerFeature,
   MapViewport,
   MapViewportChangeHandler,
@@ -34,6 +38,7 @@ interface MarkerCluster {
 
 export interface EcoMapProps {
   markers?: MapMarkerFeature[];
+  boundaries?: MapBoundaryFeatureCollection;
   initialCenter?: MapLocation;
   initialZoom?: number;
   selectedMarkerId?: string;
@@ -43,9 +48,57 @@ export interface EcoMapProps {
   height?: number | string;
   className?: string;
   accessibleLabel?: string;
+  showListFallback?: boolean;
   onMarkerSelect?: (marker: MapMarkerFeature) => void;
   onLocationSelect?: (location: MapLocation) => void;
   onViewportChange?: MapViewportChangeHandler;
+}
+
+function OrganizationBoundaryLayer({
+  boundaries,
+}: {
+  boundaries: MapBoundaryFeatureCollection;
+}) {
+  const map = useMap();
+
+  const focusBoundaries = () => {
+    const bounds = geoJSON(
+      boundaries as GeoJsonObject,
+    ).getBounds();
+
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, {
+        padding: [30, 30],
+        maxZoom: 15,
+      });
+    }
+  };
+
+  return (
+    <>
+      <GeoJSON
+        key={boundaries.features.map((feature) => feature.properties.id).join(":")}
+        data={boundaries as GeoJsonObject}
+        style={{
+          color: "#101312",
+          fill: false,
+          fillColor: "transparent",
+          fillOpacity: 0,
+          opacity: 0.95,
+          weight: 3,
+        }}
+      />
+      <button
+        type="button"
+        className="eco-map-boundary-control"
+        onClick={focusBoundaries}
+        aria-label="Focus organization service areas"
+        title="Focus organization service areas"
+      >
+        <span aria-hidden="true">⌖</span>
+      </button>
+    </>
+  );
 }
 
 function clusterMarkers(
@@ -332,6 +385,7 @@ function ClusteredMarkerLayer({
 
 export function EcoMap({
   markers = [],
+  boundaries,
   initialCenter = COLOMBO_MAP_CENTER,
   initialZoom = 12,
   selectedMarkerId,
@@ -341,6 +395,7 @@ export function EcoMap({
   height = 520,
   className = "",
   accessibleLabel = "EcoTrack incident and cleanup event map",
+  showListFallback = true,
   onMarkerSelect,
   onLocationSelect,
   onViewportChange,
@@ -394,6 +449,9 @@ export function EcoMap({
             selectedMarkerId={selectedMarkerId}
             onMarkerSelect={onMarkerSelect}
           />
+          {boundaries && boundaries.features.length > 0 && (
+            <OrganizationBoundaryLayer boundaries={boundaries} />
+          )}
           {selectedLocation && selectionMode === "point" && (
             <CircleMarker
               center={[
@@ -446,7 +504,7 @@ export function EcoMap({
         </p>
       )}
 
-      {markers.length > 0 && (
+      {showListFallback && markers.length > 0 && (
         <div className="eco-map-list-fallback">
           <div className="eco-map-list-heading">
             <h3>Locations in this view</h3>

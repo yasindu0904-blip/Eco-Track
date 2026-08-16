@@ -7,6 +7,25 @@ export type AccountStatus =
   | "SUSPENDED"
   | "ARCHIVED";
 
+export type MembershipRole =
+  | "ORG_MEMBER"
+  | "ORG_ADMIN";
+
+export type MembershipStatus =
+  | "ACTIVE"
+  | "SUSPENDED"
+  | "LEFT"
+  | "REMOVED";
+
+export interface ActiveOrganizationMembership {
+  id: string;
+  organizationId: string;
+  organizationName: string;
+  organizationSlug: string;
+  role: MembershipRole;
+  status: MembershipStatus;
+}
+
 export interface AuthenticatedUserProfile {
   id: string;
   email: string;
@@ -15,6 +34,7 @@ export interface AuthenticatedUserProfile {
   profileCompletedAt: string | null;
   platformRole: PlatformRole;
   accountStatus: AccountStatus;
+  activeMemberships?: ActiveOrganizationMembership[];
 }
 
 export interface CurrentUserResponse {

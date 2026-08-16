@@ -41,6 +41,32 @@ export interface MapMarkerFeature {
   properties: MapMarkerProperties;
 }
 
+export type MapBoundaryGeometry =
+  | {
+      type: "Polygon";
+      coordinates: [number, number][][];
+    }
+  | {
+      type: "MultiPolygon";
+      coordinates: [number, number][][][];
+    };
+
+export interface MapBoundaryFeature {
+  type: "Feature";
+  geometry: MapBoundaryGeometry;
+  properties: {
+    id: string;
+    name: string;
+    officialCode: string | null;
+    status: string;
+  };
+}
+
+export interface MapBoundaryFeatureCollection {
+  type: "FeatureCollection";
+  features: MapBoundaryFeature[];
+}
+
 export interface MapViewportRequestContext {
   signal: AbortSignal;
   requestId: number;
@@ -57,4 +83,3 @@ export function markerLocation(marker: MapMarkerFeature): MapLocation {
     latitude: marker.geometry.coordinates[1],
   };
 }
-

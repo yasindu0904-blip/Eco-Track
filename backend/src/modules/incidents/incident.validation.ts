@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { sriLankaMapLocationSchema } from "../maps/map.validation.js";
+import { sriLankaMapViewportQuerySchema } from "../maps/map.validation.js";
 import {
   INCIDENT_EVIDENCE_LIMITS,
   INCIDENT_LIST_LIMITS,
@@ -80,5 +81,21 @@ export const incidentListQuerySchema = z.object({
   cursor: z.string().trim().min(1).max(500).optional(),
 }).strict();
 
+export const organizationIncidentDiscoveryQuerySchema =
+  sriLankaMapViewportQuerySchema.safeExtend({
+    status: z.enum([
+      "ACTIVE",
+      "CLEANUP_ORGANIZED",
+      "RESOLVED",
+      "EXPIRED",
+      "ARCHIVED",
+    ]).optional(),
+    categoryId: z.uuid().optional(),
+    reportedAfter: z.iso.datetime({ offset: true }).optional(),
+  });
+
 export type ValidatedCreateIncident = z.infer<typeof createIncidentSchema>;
 export type ValidatedEvidenceUploadRequest = z.infer<typeof createEvidenceUploadIntentsSchema>;
+export type ValidatedOrganizationIncidentDiscovery = z.infer<
+  typeof organizationIncidentDiscoveryQuerySchema
+>;

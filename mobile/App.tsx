@@ -13,15 +13,17 @@ import { IncidentReportScreen, MyReportsScreen } from "./src/features/incidents"
 import type { IncidentDetail } from "./src/features/incidents/incident.types";
 import { MyOrganizationApplicationsScreen } from "./src/features/organizations/MyOrganizationApplicationsScreen";
 import { OrganizationApplicationScreen } from "./src/features/organizations/OrganizationApplicationScreen";
+import { OrganizationWorkspaceScreen } from "./src/features/organizations/OrganizationWorkspaceScreen";
 import type { OrganizationApplication } from "./src/features/organizations/organizationApplication.types";
 import { SuperAdminDashboard } from "./src/features/superAdmin/SuperAdminDashboard";
 
-type CitizenView = "dashboard" | "createOrganization" | "organizationApplications" | "reportIncident" | "myReports";
+type CitizenView = "dashboard" | "createOrganization" | "organizationApplications" | "organizationWorkspace" | "reportIncident" | "myReports";
 
 export default function App() {
   const authentication = useAuthentication();
   const [citizenView, setCitizenView] = useState<CitizenView>("dashboard");
   const [showNotifications, setShowNotifications] = useState(false);
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState("");
   const [submittedApplication, setSubmittedApplication] =
     useState<OrganizationApplication | null>(null);
   const [submittedIncident, setSubmittedIncident] =
@@ -30,6 +32,7 @@ export default function App() {
   const signOut = async () => {
     setCitizenView("dashboard");
     setShowNotifications(false);
+    setSelectedOrganizationId("");
     setSubmittedApplication(null);
     setSubmittedIncident(null);
     await authentication.signOut();
@@ -88,6 +91,13 @@ export default function App() {
       />
     );
   } else if (authentication.profile && authentication.accessToken) {
+    const activeMemberships = authentication.profile.activeMemberships ?? [];
+    const activeMembership =
+      activeMemberships.find(
+        (membership) =>
+          membership.organizationId === selectedOrganizationId,
+      ) ?? activeMemberships[0];
+
     if (showNotifications) {
       content = (
         <NotificationInboxScreen
@@ -119,11 +129,25 @@ export default function App() {
           onBack={() => {
             setSubmittedApplication(null);
             setCitizenView("dashboard");
+            void authentication.refreshProfile();
           }}
           onCreateAnother={() => {
             setSubmittedApplication(null);
             setCitizenView("createOrganization");
           }}
+        />
+      );
+    } else if (citizenView === "organizationWorkspace" && activeMembership) {
+      content = (
+        <OrganizationWorkspaceScreen
+          profile={authentication.profile}
+          accessToken={authentication.accessToken}
+          memberships={activeMemberships}
+          selectedOrganizationId={activeMembership.organizationId}
+          onSelectOrganization={setSelectedOrganizationId}
+          onBack={() => setCitizenView("dashboard")}
+          onViewApplications={() => setCitizenView("organizationApplications")}
+          onSignOut={() => void signOut()}
         />
       );
     } else if (citizenView === "reportIncident") {
@@ -158,6 +182,15 @@ export default function App() {
           accessToken={authentication.accessToken}
           profile={authentication.profile}
           onOpenNotifications={() => setShowNotifications(true)}
+          activeOrganization={activeMembership}
+          onOpenOrganizationWorkspace={
+            activeMembership
+              ? () => {
+                  setSelectedOrganizationId(activeMembership.organizationId);
+                  setCitizenView("organizationWorkspace");
+                }
+              : undefined
+          }
           onCreateOrganizationApplication={() => setCitizenView("createOrganization")}
           onViewApplications={() => setCitizenView("organizationApplications")}
           onReportIncident={() => setCitizenView("reportIncident")}

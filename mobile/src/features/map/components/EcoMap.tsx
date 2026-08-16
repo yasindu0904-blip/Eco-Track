@@ -29,6 +29,7 @@ import {
   isWithinSriLankaBounds,
 } from "../map.constants";
 import type {
+  MapBoundaryFeatureCollection,
   MapLocation,
   MapMarkerFeature,
   MapViewport,
@@ -55,6 +56,7 @@ const cleanupEventFilter: FilterSpecification = [
 
 export interface EcoMapProps {
   markers?: MapMarkerFeature[];
+  boundaries?: MapBoundaryFeatureCollection;
   initialCenter?: MapLocation;
   initialZoom?: number;
   selectedMarkerId?: string;
@@ -63,10 +65,43 @@ export interface EcoMapProps {
   selectionMode?: "point" | "center";
   height?: number;
   accessibleLabel?: string;
+  showListFallback?: boolean;
   onMarkerSelect?: (marker: MapMarkerFeature) => void;
   onLocationSelect?: (location: MapLocation) => void;
   onViewportChange?: MapViewportChangeHandler;
   onInteractionChange?: (isInteracting: boolean) => void;
+}
+
+function getBoundaryBounds(
+  boundaries: MapBoundaryFeatureCollection,
+): [number, number, number, number] | null {
+  let west = Number.POSITIVE_INFINITY;
+  let south = Number.POSITIVE_INFINITY;
+  let east = Number.NEGATIVE_INFINITY;
+  let north = Number.NEGATIVE_INFINITY;
+
+  const visit = (value: unknown): void => {
+    if (
+      Array.isArray(value) &&
+      value.length >= 2 &&
+      typeof value[0] === "number" &&
+      typeof value[1] === "number"
+    ) {
+      west = Math.min(west, value[0]);
+      south = Math.min(south, value[1]);
+      east = Math.max(east, value[0]);
+      north = Math.max(north, value[1]);
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+    }
+  };
+
+  boundaries.features.forEach((feature) => visit(feature.geometry.coordinates));
+
+  return Number.isFinite(west) ? [west, south, east, north] : null;
 }
 
 function viewportIsBounded(viewport: MapViewport): boolean {
@@ -94,6 +129,7 @@ function locationsDiffer(
 
 export function EcoMap({
   markers = [],
+  boundaries,
   initialCenter = COLOMBO_MAP_CENTER,
   initialZoom = 12,
   selectedMarkerId,
@@ -102,6 +138,7 @@ export function EcoMap({
   selectionMode = "point",
   height = 480,
   accessibleLabel = "EcoTrack incident and cleanup event map",
+  showListFallback = true,
   onMarkerSelect,
   onLocationSelect,
   onViewportChange,
@@ -123,6 +160,10 @@ export function EcoMap({
       features: markers,
     }),
     [markers],
+  );
+  const boundaryBounds = useMemo(
+    () => boundaries ? getBoundaryBounds(boundaries) : null,
+    [boundaries],
   );
 
   useEffect(() => {
@@ -352,6 +393,23 @@ export function EcoMap({
             ]}
           />
 
+          {boundaries && boundaries.features.length > 0 && (
+            <GeoJSONSource
+              id="eco-map-organization-boundaries"
+              data={boundaries}
+            >
+              <Layer
+                id="eco-map-organization-boundary-lines"
+                type="line"
+                paint={{
+                  "line-color": "#101312",
+                  "line-opacity": 0.95,
+                  "line-width": 3,
+                }}
+              />
+            </GeoJSONSource>
+          )}
+
           {markers.length > 0 && (
             <GeoJSONSource
               ref={markerSourceRef}
@@ -466,6 +524,25 @@ export function EcoMap({
           <Text style={styles.locationButtonText}>My location</Text>
         </Pressable>
 
+        {boundaryBounds && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.boundaryButton,
+              pressed && styles.buttonPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Focus organization service areas"
+            onPress={() =>
+              cameraRef.current?.fitBounds(boundaryBounds, {
+                padding: { top: 36, right: 36, bottom: 36, left: 36 },
+                duration: 400,
+              })
+            }
+          >
+            <Text style={styles.boundaryButtonIcon}>⌖</Text>
+          </Pressable>
+        )}
+
         {selectionEnabled && selectionMode === "center" && (
           <View pointerEvents="none" style={styles.centerPinContainer}>
             <View style={styles.centerPinShape}>
@@ -500,7 +577,7 @@ export function EcoMap({
         </Text>
       )}
 
-      {markers.length > 0 && (
+      {showListFallback && markers.length > 0 && (
         <View style={styles.listFallback}>
           <View style={styles.listHeading}>
             <Text style={styles.listTitle}>Locations in this view</Text>
@@ -592,6 +669,25 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontSize: 13,
     fontWeight: "800",
+  },
+  boundaryButton: {
+    position: "absolute",
+    top: 62,
+    right: 12,
+    width: 42,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(16,19,18,0.28)",
+    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.97)",
+    elevation: 4,
+  },
+  boundaryButtonIcon: {
+    color: "#101312",
+    fontSize: 23,
+    fontWeight: "900",
   },
   centerPinContainer: {
     position: "absolute",

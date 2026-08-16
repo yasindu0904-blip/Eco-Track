@@ -9,12 +9,15 @@ import {
   getMyIncident,
   getPublicSafeIncident,
   listMyIncidents,
+  listOrganizationIncidents,
+  listOrganizationServiceAreaBoundaries,
 } from "../services/incident.service.js";
 import {
   createEvidenceUploadIntentsSchema,
   createIncidentSchema,
   incidentIdParametersSchema,
   incidentListQuerySchema,
+  organizationIncidentDiscoveryQuerySchema,
 } from "../incident.validation.js";
 
 function validationError(validation: { error: { issues: Array<{ path: PropertyKey[]; message: string }> } }) {
@@ -109,5 +112,44 @@ export function getPublicSafeIncidentController(dependencies: IncidentDependenci
         data: await getPublicSafeIncident(dependencies, validateId(request)),
       });
     } catch (error) { next(error); }
+  };
+}
+
+export function listOrganizationIncidentsController(
+  dependencies: IncidentDependencies,
+) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const validation = organizationIncidentDiscoveryQuerySchema.safeParse(
+        request.query,
+      );
+      if (!validation.success) throw validationError(validation);
+      response.status(200).json({
+        data: await listOrganizationIncidents(
+          dependencies,
+          request.tenant!.organization.id,
+          validation.data,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+export function listOrganizationServiceAreaBoundariesController(
+  dependencies: IncidentDependencies,
+) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      response.status(200).json({
+        data: await listOrganizationServiceAreaBoundaries(
+          dependencies,
+          request.tenant!.organization.id,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
   };
 }

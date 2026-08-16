@@ -12,6 +12,8 @@ export {
 export { MAP_MARKER_KINDS, markerLocation } from "./map.types";
 export type {
   MapBounds,
+  MapBoundaryFeatureCollection,
+  MapBoundaryGeometry,
   MapLocation,
   MapMarkerFeature,
   MapMarkerKind,
@@ -20,4 +22,3 @@ export type {
   MapViewportChangeHandler,
   MapViewportRequestContext,
 } from "./map.types";
-

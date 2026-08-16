@@ -65,8 +65,8 @@ export async function isLocationCoveredByActiveOrganizationServiceArea(
 }
 
 /**
- * Produces an organization-scoped GeoJSON overlay. A future authorized route
- * may expose this for organization profile/service-area map rendering.
+ * Produces an active organization-scoped GeoJSON overlay for authorized map
+ * rendering.
  */
 export async function listOrganizationServiceAreaBoundaryFeatures(
   prisma: PrismaClient,
@@ -92,9 +92,14 @@ export async function listOrganizationServiceAreaBoundaryFeatures(
         6
       ) AS "geometryJson"
     FROM "organization_service_areas" AS service_area
+    JOIN "organizations" AS organization
+      ON organization."id" = service_area."organization_id"
+     AND organization."status" = 'ACTIVE'::"OrganizationStatus"
     LEFT JOIN "administrative_areas" AS administrative_area
       ON administrative_area."id" = service_area."administrative_area_id"
+     AND administrative_area."is_active" = true
     WHERE service_area."organization_id" = ${organizationId}::uuid
+      AND service_area."status" = 'ACTIVE'::"ServiceAreaStatus"
       AND COALESCE(
         service_area."boundary",
         administrative_area."boundary"

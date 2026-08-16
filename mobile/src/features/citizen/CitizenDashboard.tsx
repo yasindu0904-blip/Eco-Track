@@ -1,6 +1,9 @@
 import { StyleSheet, Text, View } from "react-native";
 
-import type { AuthenticatedUserProfile } from "../../auth/auth.types";
+import type {
+  ActiveOrganizationMembership,
+  AuthenticatedUserProfile,
+} from "../../auth/auth.types";
 import { BrandHeader, Button, Notice, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import { NotificationButton } from "../notifications/NotificationInboxScreen";
@@ -9,6 +12,8 @@ type CitizenDashboardProps = {
   profile: AuthenticatedUserProfile;
   accessToken: string;
   onOpenNotifications: () => void;
+  activeOrganization?: ActiveOrganizationMembership;
+  onOpenOrganizationWorkspace?: () => void;
   onCreateOrganizationApplication: () => void;
   onViewApplications: () => void;
   onReportIncident: () => void;
@@ -20,6 +25,8 @@ export function CitizenDashboard({
   profile,
   accessToken,
   onOpenNotifications,
+  activeOrganization,
+  onOpenOrganizationWorkspace,
   onCreateOrganizationApplication,
   onViewApplications,
   onReportIncident,
@@ -51,6 +58,24 @@ export function CitizenDashboard({
         accessToken={accessToken}
         onOpen={onOpenNotifications}
       />
+
+      {activeOrganization && onOpenOrganizationWorkspace ? (
+        <View style={[sharedStyles.card, styles.organizationCard]}>
+          <Text style={styles.organizationEyebrow}>ACTIVE ORGANIZATION</Text>
+          <Text style={sharedStyles.sectionTitle}>
+            {activeOrganization.organizationName}
+          </Text>
+          <Text style={sharedStyles.sectionSubtitle}>
+            {activeOrganization.role === "ORG_ADMIN"
+              ? "Organization admin"
+              : "Organization member"}
+          </Text>
+          <Button
+            label="Open organization workspace"
+            onPress={onOpenOrganizationWorkspace}
+          />
+        </View>
+      ) : null}
 
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.sectionTitle}>Organization onboarding</Text>
@@ -100,6 +125,15 @@ const styles = StyleSheet.create({
   email: { color: colors.textMuted, fontSize: 13 },
   upcomingCard: { backgroundColor: colors.surfaceMuted },
   upcomingEyebrow: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.1,
+  },
+  organizationCard: {
+    borderColor: colors.primary,
+  },
+  organizationEyebrow: {
     color: colors.primary,
     fontSize: 11,
     fontWeight: "900",

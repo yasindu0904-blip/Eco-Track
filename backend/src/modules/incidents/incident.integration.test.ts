@@ -6,6 +6,7 @@ import test, { after, before } from "node:test";
 
 import express from "express";
 
+import { authorizationDependencies } from "../../authorization/authorization.dependencies.js";
 import { prisma } from "../../database/prisma.js";
 import { AccountStatus, PlatformRole } from "../../generated/prisma/enums.js";
 import { errorMiddleware } from "../../middleware/error.middleware.js";
@@ -21,6 +22,9 @@ const categoryId = randomUUID();
 const reporterToken = `incident-reporter-${reporterId}`;
 const otherToken = `incident-other-${otherReporterId}`;
 const submissionId = randomUUID();
+const organizationId = randomUUID();
+const serviceAreaId = randomUUID();
+const overlappingServiceAreaId = randomUUID();
 const uploadedPaths = new Set<string>();
 
 const profiles = {
@@ -62,6 +66,7 @@ const authenticationDependencies: AuthenticationDependencies = {
 
 const dependencies: IncidentDependencies = {
   prisma,
+  authorization: authorizationDependencies,
   storage: {
     async createUploadIntent(storagePath) {
       uploadedPaths.add(storagePath);
@@ -106,6 +111,68 @@ before(async () => {
   await prisma.incidentCategory.create({
     data: { id: categoryId, name: `Integration category ${categoryId}`, isActive: true },
   });
+  await prisma.organization.create({
+    data: {
+      id: organizationId,
+      requestedByUserId: otherReporterId,
+      name: `Incident review organization ${organizationId}`,
+      slug: `incident-review-${organizationId}`,
+      officialEmail: profiles[otherToken].email,
+      officialPhone: "+94770000003",
+      officialAddress: "Colombo, Sri Lanka",
+      status: "ACTIVE",
+      memberships: {
+        create: {
+          userId: otherReporterId,
+          role: "ORG_ADMIN",
+          status: "ACTIVE",
+          source: "FIRST_ADMIN",
+        },
+      },
+    },
+  });
+  await prisma.$executeRaw`
+    INSERT INTO "organization_service_areas" (
+      "id",
+      "organization_id",
+      "area_name",
+      "boundary",
+      "status",
+      "created_at",
+      "updated_at"
+    ) VALUES (
+      ${serviceAreaId}::uuid,
+      ${organizationId}::uuid,
+      'Colombo test GN Division',
+      extensions.ST_GeogFromText(
+        'MULTIPOLYGON(((79.8612 6.9271, 79.95 6.9271, 79.95 7.05, 79.8612 7.05, 79.8612 6.9271)))'
+      ),
+      'ACTIVE'::"ServiceAreaStatus",
+      NOW(),
+      NOW()
+    )
+  `;
+  await prisma.$executeRaw`
+    INSERT INTO "organization_service_areas" (
+      "id",
+      "organization_id",
+      "area_name",
+      "boundary",
+      "status",
+      "created_at",
+      "updated_at"
+    ) VALUES (
+      ${overlappingServiceAreaId}::uuid,
+      ${organizationId}::uuid,
+      'Overlapping Colombo test GN Division',
+      extensions.ST_GeogFromText(
+        'MULTIPOLYGON(((79.84 6.90, 79.93 6.90, 79.93 7.02, 79.84 7.02, 79.84 6.90)))'
+      ),
+      'ACTIVE'::"ServiceAreaStatus",
+      NOW(),
+      NOW()
+    )
+  `;
 
   const app = express();
   app.use(express.json());
@@ -120,6 +187,9 @@ before(async () => {
 after(async () => {
   if (server) await new Promise<void>((resolve, reject) => server?.close((error) => error ? reject(error) : resolve()));
   await prisma.incident.deleteMany({ where: { reporterUserId: { in: [reporterId, otherReporterId] } } });
+  await prisma.organizationMembership.deleteMany({ where: { organizationId } });
+  await prisma.organizationServiceArea.deleteMany({ where: { organizationId } });
+  await prisma.organization.deleteMany({ where: { id: organizationId } });
   await prisma.incidentCategory.deleteMany({ where: { id: categoryId } });
   await prisma.userProfile.deleteMany({ where: { id: { in: [reporterId, otherReporterId] } } });
 });
@@ -197,6 +267,69 @@ test("lists own reports and protects the own-detail route", async () => {
   const publicBody = await publicSafe.json() as { data: Record<string, unknown> };
   assert.equal("reporterUserId" in publicBody.data, false);
   assert.equal("submissionId" in publicBody.data, false);
+});
+
+test("organization discovery includes covered boundary incidents and active area outlines", async () => {
+  const query = "west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=20";
+  const response = await request(
+    `/organizations/${organizationId}/incidents?${query}`,
+    otherToken,
+  );
+  assert.equal(response.status, 200);
+  const body = await response.json() as {
+    data: { items: Array<Record<string, unknown>>; nextCursor: string | null };
+  };
+  const incident = body.data.items.find((item) => item.id === createdIncidentId);
+  assert.ok(incident);
+  assert.equal(
+    body.data.items.filter((item) => item.id === createdIncidentId).length,
+    1,
+  );
+  assert.equal("reporterUserId" in incident, false);
+  assert.equal("description" in incident, false);
+  assert.equal("privateNotes" in incident, false);
+  assert.equal(incident.falseReviewCount, 0);
+
+  const boundaries = await request(
+    `/organizations/${organizationId}/service-area-boundaries`,
+    otherToken,
+  );
+  assert.equal(boundaries.status, 200);
+  const boundaryBody = await boundaries.json() as {
+    data: { type: string; features: Array<{ properties: { id: string } }> };
+  };
+  assert.equal(boundaryBody.data.type, "FeatureCollection");
+  assert.equal(boundaryBody.data.features[0]?.properties.id, serviceAreaId);
+
+  const crossTenant = await request(
+    `/organizations/${organizationId}/incidents?${query}`,
+    reporterToken,
+  );
+  assert.equal(crossTenant.status, 403);
+
+  const excessiveBounds = await request(
+    `/organizations/${organizationId}/incidents?west=79.4&south=5.8&east=82.1&north=10&zoom=7`,
+    otherToken,
+  );
+  assert.equal(excessiveBounds.status, 400);
+
+  await prisma.organizationServiceArea.updateMany({
+    where: { organizationId },
+    data: { status: "INACTIVE" },
+  });
+  const inactiveAreaResponse = await request(
+    `/organizations/${organizationId}/incidents?${query}`,
+    otherToken,
+  );
+  const inactiveAreaBody = await inactiveAreaResponse.json() as {
+    data: { items: unknown[] };
+  };
+  assert.equal(inactiveAreaResponse.status, 200);
+  assert.deepEqual(inactiveAreaBody.data.items, []);
+  await prisma.organizationServiceArea.updateMany({
+    where: { organizationId },
+    data: { status: "ACTIVE" },
+  });
 });
 
 test("rejects invalid coordinates and inactive categories", async () => {

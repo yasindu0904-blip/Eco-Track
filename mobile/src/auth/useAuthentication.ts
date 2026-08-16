@@ -177,5 +177,25 @@ export function useAuthentication() {
     setState((current) => ({ ...current, profile }));
   }, []);
 
-  return { ...state, retry, signOut, replaceProfile };
+  const refreshProfile = useCallback(async () => {
+    const accessToken = state.accessToken;
+
+    if (!accessToken) {
+      return;
+    }
+
+    try {
+      const profile = await fetchCurrentUser(accessToken);
+
+      setState((current) =>
+        current.accessToken === accessToken
+          ? { ...current, profile }
+          : current,
+      );
+    } catch {
+      // Keep the current signed-in screen when a background refresh fails.
+    }
+  }, [state.accessToken]);
+
+  return { ...state, retry, signOut, replaceProfile, refreshProfile };
 }

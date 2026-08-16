@@ -13,6 +13,29 @@ const authenticatedUserProfileSelect = {
   profileCompletedAt: true,
   platformRole: true,
   accountStatus: true,
+  memberships: {
+    where: {
+      status: "ACTIVE",
+      organization: {
+        status: "ACTIVE",
+      },
+    },
+    orderBy: {
+      joinedAt: "asc",
+    },
+    select: {
+      id: true,
+      organizationId: true,
+      role: true,
+      status: true,
+      organization: {
+        select: {
+          name: true,
+          slug: true,
+        },
+      },
+    },
+  },
 } as const;
 
 export async function findProfileAuthUserIdByEmail(
@@ -33,17 +56,30 @@ export async function findProfileAuthUserIdByEmail(
 export async function upsertAuthenticationProfile(
   identity: VerifiedSupabaseIdentity,
 ): Promise<AuthenticatedUserProfile> {
-  return prisma.userProfile.upsert({
-    where: {
-      authUserId: identity.authUserId,
-    },
-    update: {
-      email: identity.email,
-    },
-    create: {
-      authUserId: identity.authUserId,
-      email: identity.email,
-    },
-    select: authenticatedUserProfileSelect,
-  });
+  const { memberships, ...profile } =
+    await prisma.userProfile.upsert({
+      where: {
+        authUserId: identity.authUserId,
+      },
+      update: {
+        email: identity.email,
+      },
+      create: {
+        authUserId: identity.authUserId,
+        email: identity.email,
+      },
+      select: authenticatedUserProfileSelect,
+    });
+
+  return {
+    ...profile,
+    activeMemberships: memberships.map((membership) => ({
+      id: membership.id,
+      organizationId: membership.organizationId,
+      organizationName: membership.organization.name,
+      organizationSlug: membership.organization.slug,
+      role: membership.role,
+      status: membership.status,
+    })),
+  };
 }

@@ -1,0 +1,387 @@
+.organization-workspace-shell {
+  min-height: 100vh;
+  color: var(--color-text);
+  background: #f3f7f3;
+}
+
+.organization-workspace-header {
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 12px max(20px, calc((100vw - 1120px) / 2));
+  border-bottom: 1px solid var(--color-border);
+  background: #ffffff;
+}
+
+.organization-workspace-header strong {
+  color: var(--color-primary);
+  font-size: 1.15rem;
+}
+
+.organization-workspace-header button {
+  width: fit-content;
+  min-height: 40px;
+  padding: 8px 12px;
+  color: var(--color-primary);
+  border: 1px solid #bdd0be;
+  border-radius: 8px;
+  background: #ffffff;
+  font-weight: 750;
+}
+
+.organization-workspace-header button:last-child {
+  justify-self: end;
+}
+
+.organization-workspace-main {
+  width: min(100% - 40px, 1120px);
+  margin: 0 auto;
+  padding: 46px 0 64px;
+}
+
+.organization-workspace-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: end;
+}
+
+.organization-workspace-heading span,
+.organization-workspace-panel span {
+  color: var(--color-primary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.organization-workspace-heading h1 {
+  margin: 6px 0;
+  color: #18321d;
+  font-size: clamp(2rem, 4vw, 3rem);
+  letter-spacing: 0;
+}
+
+.organization-workspace-heading p,
+.organization-workspace-panel p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.organization-workspace-heading label {
+  display: grid;
+  gap: 6px;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.organization-workspace-heading select {
+  min-width: 220px;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--color-text);
+}
+
+.organization-workspace-tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 28px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.organization-workspace-tabs button {
+  min-height: 38px;
+  padding: 8px 13px;
+  color: var(--color-text-muted);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.organization-workspace-tabs button:hover,
+.organization-workspace-tabs button.is-active {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.organization-workspace-access {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 32px 0 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.organization-workspace-access > div {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+  padding: 20px;
+  border-right: 1px solid var(--color-border);
+}
+
+.organization-workspace-access > div:last-child {
+  border-right: 0;
+}
+
+.organization-workspace-access small {
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.organization-workspace-access strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.organization-workspace-status {
+  color: var(--color-success);
+}
+
+.organization-workspace-panel {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: center;
+  padding: 26px;
+  border: 1px solid #cadcc9;
+  border-radius: 8px;
+  background: #edf6ed;
+}
+
+.organization-workspace-panel h2 {
+  margin: 7px 0 8px;
+  color: #18321d;
+  font-size: 1.25rem;
+}
+
+.organization-workspace-panel button {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 10px 14px;
+  color: #ffffff;
+  border: 0;
+  border-radius: 8px;
+  background: var(--color-primary);
+  font-weight: 800;
+}
+
+.organization-incident-review {
+  margin-top: 20px;
+}
+
+.organization-review-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.organization-review-toolbar > div,
+.organization-review-toolbar label {
+  display: grid;
+  gap: 5px;
+}
+
+.organization-review-toolbar span,
+.organization-review-toolbar label {
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.organization-review-toolbar strong {
+  color: #18321d;
+  font-size: 1rem;
+}
+
+.organization-review-toolbar select {
+  min-width: 180px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text);
+  background: #ffffff;
+}
+
+.organization-review-error {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  color: #8b2b23;
+  border-left: 3px solid #b8322a;
+  background: #fdecea;
+}
+
+.organization-review-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(260px, 0.7fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.organization-review-layout .eco-map-shell {
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.organization-review-list {
+  height: 562px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.organization-review-list > button {
+  width: 100%;
+  display: grid;
+  gap: 6px;
+  padding: 15px;
+  color: var(--color-text);
+  border: 0;
+  border-bottom: 1px solid #e3e9e3;
+  background: #ffffff;
+  text-align: left;
+}
+
+.organization-review-list > button:hover,
+.organization-review-list > button.is-selected {
+  background: #edf6ed;
+}
+
+.organization-review-list > button.is-selected {
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.organization-review-list span,
+.organization-review-detail span {
+  color: var(--color-primary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.organization-review-list small {
+  color: var(--color-text-muted);
+}
+
+.organization-review-empty {
+  padding: 24px 18px;
+}
+
+.organization-review-empty p {
+  margin: 8px 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.organization-review-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 28px;
+  align-items: center;
+  margin-top: 14px;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.organization-review-detail h2 {
+  margin: 5px 0;
+  color: #18321d;
+  font-size: 1.15rem;
+}
+
+.organization-review-detail p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.organization-review-detail dl {
+  display: flex;
+  gap: 26px;
+  margin: 0;
+}
+
+.organization-review-detail dl > div {
+  display: grid;
+  gap: 4px;
+}
+
+.organization-review-detail dt {
+  color: var(--color-text-muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.organization-review-detail dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+@media (max-width: 700px) {
+  .organization-workspace-header {
+    grid-template-columns: 1fr auto;
+  }
+
+  .organization-workspace-header strong {
+    display: none;
+  }
+
+  .organization-workspace-main {
+    width: min(100% - 28px, 1120px);
+    padding-top: 32px;
+  }
+
+  .organization-workspace-heading,
+  .organization-workspace-panel,
+  .organization-review-toolbar,
+  .organization-review-detail {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .organization-review-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .organization-review-list {
+    height: auto;
+    max-height: 360px;
+  }
+
+  .organization-review-detail dl {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .organization-workspace-access {
+    grid-template-columns: 1fr;
+  }
+
+  .organization-workspace-access > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .organization-workspace-access > div:last-child {
+    border-bottom: 0;
+  }
+}
