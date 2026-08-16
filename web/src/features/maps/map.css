@@ -62,7 +62,7 @@
   left: 50%;
   top: 50%;
   width: 48px;
-  height: 48px;
+  height: 56px;
   transform: translate(-50%, -100%);
   pointer-events: none;
 }
@@ -80,6 +80,7 @@
   border-radius: 50% 50% 50% 0;
   background: #101312;
   box-shadow: -5px 6px 12px rgba(12, 24, 17, 0.28);
+  z-index: 1;
 }
 
 .eco-map-center-pin-shape > span {
@@ -91,10 +92,10 @@
 
 .eco-map-center-pin-shadow {
   position: absolute;
-  left: 15px;
-  top: 44px;
-  width: 18px;
-  height: 6px;
+  left: 16px;
+  top: 52px;
+  width: 16px;
+  height: 4px;
   border-radius: 50%;
   background: rgba(12, 24, 17, 0.3);
   filter: blur(1px);
