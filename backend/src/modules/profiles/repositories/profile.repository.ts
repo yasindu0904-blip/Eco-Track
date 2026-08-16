@@ -24,3 +24,17 @@ export function completeProfileRecord(
     select: completedProfileSelect,
   });
 }
+
+export function updateProfileRecord(
+  userId: string,
+  data: { fullName: string; phoneNumber: string },
+) {
+  return prisma.userProfile.update({
+    where: { id: userId },
+    data: {
+      fullName: data.fullName,
+      phoneNumber: data.phoneNumber,
+    },
+    select: completedProfileSelect,
+  });
+}

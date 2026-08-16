@@ -6,6 +6,7 @@ interface CitizenDashboardProps {
   profile: AuthenticatedUserProfile;
   accessToken?: string;
   onOpenNotifications?: () => void;
+  onManageMembership: () => void;
   onStartOrganizationApplication: () => void;
   onViewOrganizationApplications: () => void;
   onSignOut: () => void;
@@ -79,6 +80,7 @@ export function CitizenDashboard({
   profile,
   accessToken,
   onOpenNotifications,
+  onManageMembership,
   onStartOrganizationApplication,
   onViewOrganizationApplications,
   onSignOut,
@@ -121,6 +123,10 @@ export function CitizenDashboard({
           <button type="button" onClick={onViewOrganizationApplications}>
             <CitizenIcon name="organization" />
             My organization requests
+          </button>
+          <button type="button" onClick={onManageMembership}>
+            <CitizenIcon name="organization" />
+            Join an organization
           </button>
           {onOpenNotifications && (
             <NotificationButton
@@ -210,6 +216,26 @@ export function CitizenDashboard({
           </div>
 
           <div className="citizen-dashboard-actions">
+            <article className="citizen-action-card citizen-action-card-featured">
+              <span className="citizen-action-icon">
+                <CitizenIcon name="organization" />
+              </span>
+              <span className="citizen-action-badge">Available</span>
+              <h3>Join an active organization</h3>
+              <p>
+                Find approved organizations, request member access, update your
+                profile, and track or withdraw pending requests.
+              </p>
+              <button
+                className="citizen-action-primary"
+                type="button"
+                onClick={onManageMembership}
+              >
+                Manage membership
+                <CitizenIcon name="arrow" />
+              </button>
+            </article>
+
             <article className="citizen-action-card citizen-action-card-featured">
               <span className="citizen-action-icon">
                 <CitizenIcon name="organization" />

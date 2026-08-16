@@ -9,6 +9,7 @@ type CitizenDashboardProps = {
   profile: AuthenticatedUserProfile;
   accessToken: string;
   onOpenNotifications: () => void;
+  onManageMembership: () => void;
   onCreateOrganizationApplication: () => void;
   onViewApplications: () => void;
   onSignOut: () => void;
@@ -18,6 +19,7 @@ export function CitizenDashboard({
   profile,
   accessToken,
   onOpenNotifications,
+  onManageMembership,
   onCreateOrganizationApplication,
   onViewApplications,
   onSignOut,
@@ -47,6 +49,15 @@ export function CitizenDashboard({
         accessToken={accessToken}
         onOpen={onOpenNotifications}
       />
+
+      <View style={sharedStyles.card}>
+        <Text style={sharedStyles.sectionTitle}>Organization membership</Text>
+        <Text style={sharedStyles.sectionSubtitle}>
+          Find active organizations, request member access, edit your profile,
+          and track your request status.
+        </Text>
+        <Button label="Manage membership" onPress={onManageMembership} />
+      </View>
 
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.sectionTitle}>Organization onboarding</Text>
