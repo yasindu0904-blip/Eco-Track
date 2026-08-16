@@ -4,11 +4,14 @@ import express, {
 } from "express";
 import helmet from "helmet";
 
+import type { AuthorizationDependencies } from "./authorization/authorization.types.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 
 import { createAuthRouter } from "./modules/auth/auth.routes.js";
 import { createAdministrativeAreaRouter } from "./modules/administrativeAreas/administrativeArea.routes.js";
+import type { CleanupWorkflowDependencies } from "./modules/cleanupWorkflows/cleanupWorkflow.dependencies.js";
+import { createCleanupWorkflowRouter } from "./modules/cleanupWorkflows/cleanupWorkflow.routes.js";
 import { createNotificationRouter } from "./modules/notifications/notification.routes.js";
 import { createMembershipSelfServiceRouter } from "./modules/memberships/selfService/membershipSelfService.routes.js";
 import { createOrganizationApplicationRouter } from "./modules/organizations/application/application.routes.js";
@@ -22,6 +25,8 @@ import type { OrganizationApplicationDependencies } from "./modules/organization
 
 type CreateAppOptions = {
   webOrigin?: string;
+  authorizationDependencies?: AuthorizationDependencies;
+  cleanupWorkflowDependencies?: CleanupWorkflowDependencies;
   notificationDependencies?: NotificationDependencies;
   membershipSelfServiceDependencies?: MembershipSelfServiceDependencies;
   organizationApplicationDependencies?: OrganizationApplicationDependencies;
@@ -84,6 +89,20 @@ export function createApp(
       createMembershipSelfServiceRouter(
         authenticationDependencies,
         options.membershipSelfServiceDependencies,
+      ),
+    );
+  }
+
+  if (
+    options.authorizationDependencies &&
+    options.cleanupWorkflowDependencies
+  ) {
+    app.use(
+      "/api/v1",
+      createCleanupWorkflowRouter(
+        authenticationDependencies,
+        options.authorizationDependencies,
+        options.cleanupWorkflowDependencies,
       ),
     );
   }
