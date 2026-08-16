@@ -5,6 +5,7 @@ import { prisma } from "./database/prisma.js";
 
 import { authenticationDependencies } from "./modules/auth/auth.dependencies.js";
 import { notificationDependencies } from "./modules/notifications/notification.dependencies.js";
+import { incidentDependencies } from "./modules/incidents/incident.dependencies.js";
 import { organizationApplicationDependencies } from "./modules/organizations/application/application.dependencies.js";
 
 const app = createApp(
@@ -12,6 +13,7 @@ const app = createApp(
   {
     webOrigin: env.WEB_ORIGIN,
     notificationDependencies,
+    incidentDependencies,
     organizationApplicationDependencies,
   },
 );

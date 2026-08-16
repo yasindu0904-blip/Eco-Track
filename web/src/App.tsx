@@ -7,6 +7,7 @@ import { LoginForm } from "./features/auth/LoginForm";
 import { ProfileOnboarding } from "./features/auth/ProfileOnboarding";
 import { useAuthentication } from "./features/auth/useAuthentication";
 import { CitizenDashboard } from "./features/citizen/CitizenDashboard";
+import { IncidentPage } from "./features/incidents";
 import { NotificationInbox } from "./features/notifications/NotificationInbox";
 import { MapFoundationPreview } from "./features/maps";
 import { OrganizationApplicationPage } from "./features/organizations/application";
@@ -35,7 +36,9 @@ const previewCitizenProfile = {
 type CitizenView =
   | "dashboard"
   | "organization-apply"
-  | "organization-applications";
+  | "organization-applications"
+  | "incident-create"
+  | "incident-reports";
 
 function BrandHeader() {
   return (
@@ -174,6 +177,17 @@ function App() {
   }
 
   if (isCitizenPreview) {
+    if (citizenView === "incident-create" || citizenView === "incident-reports") {
+      return (
+        <IncidentPage
+          accessToken="preview-token"
+          profile={previewCitizenProfile}
+          initialView={citizenView === "incident-reports" ? "reports" : "create"}
+          onBackToDashboard={() => setCitizenView("dashboard")}
+        />
+      );
+    }
+
     if (citizenView !== "dashboard") {
       return (
         <OrganizationApplicationPage
@@ -200,6 +214,8 @@ function App() {
         onViewOrganizationApplications={() => {
           setCitizenView("organization-applications");
         }}
+        onReportIncident={() => setCitizenView("incident-create")}
+        onViewIncidentReports={() => setCitizenView("incident-reports")}
         onSignOut={() => undefined}
       />
     );
@@ -270,9 +286,26 @@ function App() {
           onViewOrganizationApplications={() => {
             setCitizenView("organization-applications");
           }}
+          onReportIncident={() => setCitizenView("incident-create")}
+          onViewIncidentReports={() => setCitizenView("incident-reports")}
           onSignOut={() => {
             setCitizenView("dashboard");
             setShowNotifications(false);
+            signOut();
+          }}
+        />
+      );
+    }
+
+    if (citizenView === "incident-create" || citizenView === "incident-reports") {
+      return (
+        <IncidentPage
+          accessToken={accessToken}
+          profile={profile}
+          initialView={citizenView === "incident-reports" ? "reports" : "create"}
+          onBackToDashboard={() => setCitizenView("dashboard")}
+          onSignOut={() => {
+            setCitizenView("dashboard");
             signOut();
           }}
         />

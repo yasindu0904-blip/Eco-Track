@@ -238,6 +238,7 @@ before(async () => {
     data: {
       id: incidentId,
       reporterUserId: volunteerProfileId,
+      submissionId: randomUUID(),
       categoryId,
       title: "Domain schema test incident",
       description: "Verifies geographic routing and event claim integrity.",

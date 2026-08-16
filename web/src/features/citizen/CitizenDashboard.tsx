@@ -8,6 +8,8 @@ interface CitizenDashboardProps {
   onOpenNotifications?: () => void;
   onStartOrganizationApplication: () => void;
   onViewOrganizationApplications: () => void;
+  onReportIncident: () => void;
+  onViewIncidentReports: () => void;
   onSignOut: () => void;
 }
 
@@ -81,6 +83,8 @@ export function CitizenDashboard({
   onOpenNotifications,
   onStartOrganizationApplication,
   onViewOrganizationApplications,
+  onReportIncident,
+  onViewIncidentReports,
   onSignOut,
 }: CitizenDashboardProps) {
   const displayName = profile.fullName ?? "EcoTrack member";
@@ -121,6 +125,10 @@ export function CitizenDashboard({
           <button type="button" onClick={onViewOrganizationApplications}>
             <CitizenIcon name="organization" />
             My organization requests
+          </button>
+          <button type="button" onClick={onViewIncidentReports}>
+            <CitizenIcon name="report" />
+            My Reports
           </button>
           {onOpenNotifications && (
             <NotificationButton
@@ -184,8 +192,8 @@ export function CitizenDashboard({
             </span>
             <div>
               <small>Environmental reports</small>
-              <strong>Coming next</strong>
-              <p>Incident reporting will be connected in a later milestone.</p>
+              <strong>Available now</strong>
+              <p>Report an incident and follow its shared status.</p>
             </div>
           </article>
           <article>
@@ -243,17 +251,21 @@ export function CitizenDashboard({
               <span className="citizen-action-icon">
                 <CitizenIcon name="report" />
               </span>
-              <span className="citizen-action-badge citizen-action-badge-muted">
-                Upcoming
-              </span>
+              <span className="citizen-action-badge">Available</span>
               <h3>Report an environmental incident</h3>
               <p>
-                Add the incident-reporting flow when location and evidence
-                modules are implemented.
+                Confirm a map location, describe the concern, and attach photo
+                evidence for nearby organizations to review.
               </p>
-              <button className="citizen-action-disabled" type="button" disabled>
-                Incident reporting is not connected
-              </button>
+              <div className="citizen-action-buttons">
+                <button className="citizen-action-primary" type="button" onClick={onReportIncident}>
+                  Report incident
+                  <CitizenIcon name="arrow" />
+                </button>
+                <button className="citizen-action-secondary" type="button" onClick={onViewIncidentReports}>
+                  View my reports
+                </button>
+              </div>
             </article>
 
             <article className="citizen-action-card">
