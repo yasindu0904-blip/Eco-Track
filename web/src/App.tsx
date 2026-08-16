@@ -8,6 +8,7 @@ import { ProfileOnboarding } from "./features/auth/ProfileOnboarding";
 import { useAuthentication } from "./features/auth/useAuthentication";
 import { CitizenDashboard } from "./features/citizen/CitizenDashboard";
 import { NotificationInbox } from "./features/notifications/NotificationInbox";
+import { MembershipSelfServicePage } from "./features/memberships";
 import { OrganizationApplicationPage } from "./features/organizations/application";
 import { SuperAdminDashboard } from "./features/super-admin/SuperAdminDashboard";
 
@@ -33,6 +34,7 @@ const previewCitizenProfile = {
 
 type CitizenView =
   | "dashboard"
+  | "membership"
   | "organization-apply"
   | "organization-applications";
 
@@ -189,6 +191,7 @@ function App() {
         onStartOrganizationApplication={() => {
           setCitizenView("organization-apply");
         }}
+        onManageMembership={() => undefined}
         onViewOrganizationApplications={() => {
           setCitizenView("organization-applications");
         }}
@@ -256,6 +259,7 @@ function App() {
           profile={profile}
           accessToken={accessToken}
           onOpenNotifications={() => setShowNotifications(true)}
+          onManageMembership={() => setCitizenView("membership")}
           onStartOrganizationApplication={() => {
             setCitizenView("organization-apply");
           }}
@@ -267,6 +271,17 @@ function App() {
             setShowNotifications(false);
             signOut();
           }}
+        />
+      );
+    }
+
+    if (citizenView === "membership") {
+      return (
+        <MembershipSelfServicePage
+          accessToken={accessToken}
+          profile={profile}
+          onProfileUpdated={replaceProfile}
+          onBack={() => setCitizenView("dashboard")}
         />
       );
     }
