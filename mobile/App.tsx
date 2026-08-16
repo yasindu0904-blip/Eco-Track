@@ -9,12 +9,13 @@ import { useAuthentication } from "./src/auth/useAuthentication";
 import { BrandHeader, Button, LoadingState, Notice, Screen, sharedStyles } from "./src/components/ui";
 import { CitizenDashboard } from "./src/features/citizen/CitizenDashboard";
 import { NotificationInboxScreen } from "./src/features/notifications/NotificationInboxScreen";
+import { MembershipSelfServiceScreen } from "./src/features/memberships/MembershipSelfServiceScreen";
 import { MyOrganizationApplicationsScreen } from "./src/features/organizations/MyOrganizationApplicationsScreen";
 import { OrganizationApplicationScreen } from "./src/features/organizations/OrganizationApplicationScreen";
 import type { OrganizationApplication } from "./src/features/organizations/organizationApplication.types";
 import { SuperAdminDashboard } from "./src/features/superAdmin/SuperAdminDashboard";
 
-type CitizenView = "dashboard" | "createOrganization" | "organizationApplications";
+type CitizenView = "dashboard" | "membership" | "createOrganization" | "organizationApplications";
 
 export default function App() {
   const authentication = useAuthentication();
@@ -121,12 +122,22 @@ export default function App() {
           }}
         />
       );
+    } else if (citizenView === "membership") {
+      content = (
+        <MembershipSelfServiceScreen
+          accessToken={authentication.accessToken}
+          profile={authentication.profile}
+          onProfileUpdated={authentication.replaceProfile}
+          onBack={() => setCitizenView("dashboard")}
+        />
+      );
     } else {
       content = (
         <CitizenDashboard
           accessToken={authentication.accessToken}
           profile={authentication.profile}
           onOpenNotifications={() => setShowNotifications(true)}
+          onManageMembership={() => setCitizenView("membership")}
           onCreateOrganizationApplication={() => setCitizenView("createOrganization")}
           onViewApplications={() => setCitizenView("organizationApplications")}
           onSignOut={() => void signOut()}

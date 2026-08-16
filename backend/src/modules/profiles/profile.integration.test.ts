@@ -86,6 +86,33 @@ test("a first-time user completes name and phone only once", async () => {
     assert.equal(nextSignInBody.data.fullName, "Eco Citizen");
     assert.equal(nextSignInBody.data.phoneNumber, "+94771234567");
     assert.ok(nextSignInBody.data.profileCompletedAt);
+
+    const immutableFieldAttempt = await fetch(`${baseUrl}/profile`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({
+        fullName: "Changed Citizen",
+        phoneNumber: "+94 77 555 0123",
+        email: "attacker@example.test",
+      }),
+    });
+    assert.equal(immutableFieldAttempt.status, 400);
+
+    const updated = await fetch(`${baseUrl}/profile`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({
+        fullName: "Changed Citizen",
+        phoneNumber: "+94 (77) 555-0123",
+      }),
+    });
+    assert.equal(updated.status, 200);
+    const updatedBody = (await updated.json()) as {
+      data: { email: string; fullName: string; phoneNumber: string };
+    };
+    assert.equal(updatedBody.data.email, email);
+    assert.equal(updatedBody.data.fullName, "Changed Citizen");
+    assert.equal(updatedBody.data.phoneNumber, "+94775550123");
   } finally {
     if (server) {
       await new Promise<void>((resolve, reject) => {
