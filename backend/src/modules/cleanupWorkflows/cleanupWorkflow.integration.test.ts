@@ -86,6 +86,7 @@ before(async () => {
 
 after(async () => {
   if (server) await new Promise<void>((resolve, reject) => server?.close((error) => error ? reject(error) : resolve()));
+  await prisma.organizationMembership.deleteMany({ where: { organizationId: { in: [organizationAId, organizationBId] } } });
   await prisma.organization.deleteMany({ where: { id: { in: [organizationAId, organizationBId] } } });
   await prisma.userProfile.deleteMany({ where: { id: { in: [profileAId, profileBId] } } });
   await prisma.$disconnect();
@@ -112,6 +113,70 @@ test("an existing organization with missing protected defaults is safely repaire
   assert.equal(workflow.transitions.length, 10);
 });
 
+test("protected lifecycle flags are repaired without replacing custom codes and labels", async () => {
+  const statuses = await prisma.cleanupWorkflowStatus.findMany({
+    where: {
+      organizationId: organizationAId,
+      mappedLifecycleStatus: { in: ["DRAFT", "COMPLETED", "CANCELLED"] },
+    },
+  });
+  const draft = statuses.find((status) => status.mappedLifecycleStatus === "DRAFT");
+  const completed = statuses.find((status) => status.mappedLifecycleStatus === "COMPLETED");
+  const cancelled = statuses.find((status) => status.mappedLifecycleStatus === "CANCELLED");
+  assert.ok(draft && completed && cancelled);
+
+  await Promise.all([
+    prisma.cleanupWorkflowStatus.update({
+      where: { id: draft.id },
+      data: { code: "PLANNING", label: "Planning", isInitial: false, isActive: false },
+    }),
+    prisma.cleanupWorkflowStatus.update({
+      where: { id: completed.id },
+      data: { code: "FINISHED", label: "Work Finished", isFinal: false, isActive: false },
+    }),
+    prisma.cleanupWorkflowStatus.update({
+      where: { id: cancelled.id },
+      data: { code: "STOPPED", label: "Event Stopped", isFinal: false, isActive: false },
+    }),
+  ]);
+
+  const workflow = await initializeAndGetCleanupWorkflow(cleanupWorkflowDependencies, organizationAId);
+  const repairedDraft = workflow.statuses.find((status) => status.mappedLifecycleStatus === "DRAFT");
+  const repairedCompleted = workflow.statuses.find((status) => status.mappedLifecycleStatus === "COMPLETED");
+  const repairedCancelled = workflow.statuses.find((status) => status.mappedLifecycleStatus === "CANCELLED");
+
+  assert.deepEqual(
+    {
+      code: repairedDraft?.code,
+      label: repairedDraft?.label,
+      isInitial: repairedDraft?.isInitial,
+      isActive: repairedDraft?.isActive,
+      isFinal: repairedDraft?.isFinal,
+    },
+    { code: "PLANNING", label: "Planning", isInitial: true, isActive: true, isFinal: false },
+  );
+  assert.deepEqual(
+    {
+      code: repairedCompleted?.code,
+      label: repairedCompleted?.label,
+      isInitial: repairedCompleted?.isInitial,
+      isActive: repairedCompleted?.isActive,
+      isFinal: repairedCompleted?.isFinal,
+    },
+    { code: "FINISHED", label: "Work Finished", isInitial: false, isActive: true, isFinal: true },
+  );
+  assert.deepEqual(
+    {
+      code: repairedCancelled?.code,
+      label: repairedCancelled?.label,
+      isInitial: repairedCancelled?.isInitial,
+      isActive: repairedCancelled?.isActive,
+      isFinal: repairedCancelled?.isFinal,
+    },
+    { code: "STOPPED", label: "Event Stopped", isInitial: false, isActive: true, isFinal: true },
+  );
+});
+
 test("the real route lists only the verified active tenant workflow", async () => {
   const ownResponse = await fetch(`${baseUrl}/api/v1/organizations/${organizationAId}/cleanup-workflow`, { headers: { authorization: `Bearer ${tokenA}` } });
   assert.equal(ownResponse.status, 200);
@@ -131,14 +196,20 @@ test("configured transitions are tenant-bound and direct cross-organization IDs 
   ]);
   const draftA = workflowA.statuses.find((status) => status.mappedLifecycleStatus === "DRAFT");
   const publishedA = workflowA.statuses.find((status) => status.mappedLifecycleStatus === "PUBLISHED");
+  const completedA = workflowA.statuses.find((status) => status.mappedLifecycleStatus === "COMPLETED");
   const publishedB = workflowB.statuses.find((status) => status.mappedLifecycleStatus === "PUBLISHED");
-  assert.ok(draftA && publishedA && publishedB);
+  assert.ok(draftA && publishedA && completedA && publishedB);
 
   const allowed = await requireAllowedCleanupWorkflowTransition(cleanupWorkflowDependencies, organizationAId, draftA.id, publishedA.id);
   assert.equal(allowed.organizationId, organizationAId);
 
   await assert.rejects(
     requireAllowedCleanupWorkflowTransition(cleanupWorkflowDependencies, organizationAId, draftA.id, publishedB.id),
+    (error: unknown) => error instanceof ApplicationError && error.statusCode === 409 && error.code === "CLEANUP_WORKFLOW_TRANSITION_NOT_ALLOWED",
+  );
+
+  await assert.rejects(
+    requireAllowedCleanupWorkflowTransition(cleanupWorkflowDependencies, organizationAId, draftA.id, completedA.id),
     (error: unknown) => error instanceof ApplicationError && error.statusCode === 409 && error.code === "CLEANUP_WORKFLOW_TRANSITION_NOT_ALLOWED",
   );
 });

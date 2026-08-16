@@ -1,13 +1,13 @@
 import type { PrismaClient } from "../../../generated/prisma/client.js";
 
 const requiredStatuses = [
-  { code: "DRAFT", label: "Draft", lifecycle: "DRAFT", isInitial: true, isFinal: false },
-  { code: "PUBLISHED", label: "Published", lifecycle: "PUBLISHED", isInitial: false, isFinal: false },
-  { code: "SCHEDULED", label: "Scheduled", lifecycle: "SCHEDULED", isInitial: false, isFinal: false },
-  { code: "IN_PROGRESS", label: "In Progress", lifecycle: "IN_PROGRESS", isInitial: false, isFinal: false },
-  { code: "COMPLETION_SUBMITTED", label: "Completion Submitted", lifecycle: "COMPLETION_SUBMITTED", isInitial: false, isFinal: false },
-  { code: "COMPLETED", label: "Completed", lifecycle: "COMPLETED", isInitial: false, isFinal: true },
-  { code: "CANCELLED", label: "Cancelled", lifecycle: "CANCELLED", isInitial: false, isFinal: true },
+  { code: "DRAFT", label: "Draft", lifecycle: "DRAFT", isInitial: true, isFinal: false, isActive: true },
+  { code: "PUBLISHED", label: "Published", lifecycle: "PUBLISHED", isInitial: false, isFinal: false, isActive: true },
+  { code: "SCHEDULED", label: "Scheduled", lifecycle: "SCHEDULED", isInitial: false, isFinal: false, isActive: true },
+  { code: "IN_PROGRESS", label: "In Progress", lifecycle: "IN_PROGRESS", isInitial: false, isFinal: false, isActive: true },
+  { code: "COMPLETION_SUBMITTED", label: "Completion Submitted", lifecycle: "COMPLETION_SUBMITTED", isInitial: false, isFinal: false, isActive: true },
+  { code: "COMPLETED", label: "Completed", lifecycle: "COMPLETED", isInitial: false, isFinal: true, isActive: true },
+  { code: "CANCELLED", label: "Cancelled", lifecycle: "CANCELLED", isInitial: false, isFinal: true, isActive: true },
 ] as const;
 
 const requiredTransitions = [
@@ -28,7 +28,29 @@ export async function ensureDefaultCleanupWorkflow(prisma: PrismaClient, organiz
     const byLifecycle = new Map(existing.map((status) => [status.mappedLifecycleStatus, status]));
 
     for (const definition of requiredStatuses) {
-      if (byLifecycle.has(definition.lifecycle)) continue;
+      const existingStatus = byLifecycle.get(definition.lifecycle);
+
+      if (existingStatus) {
+        const hasProtectedValues =
+          existingStatus.isInitial === definition.isInitial &&
+          existingStatus.isFinal === definition.isFinal &&
+          existingStatus.isActive === definition.isActive;
+
+        if (!hasProtectedValues) {
+          const repaired = await transaction.cleanupWorkflowStatus.update({
+            where: { id: existingStatus.id },
+            data: {
+              isInitial: definition.isInitial,
+              isFinal: definition.isFinal,
+              isActive: definition.isActive,
+            },
+          });
+          byLifecycle.set(definition.lifecycle, repaired);
+        }
+
+        continue;
+      }
+
       const created = await transaction.cleanupWorkflowStatus.create({
         data: {
           organizationId,
@@ -38,6 +60,7 @@ export async function ensureDefaultCleanupWorkflow(prisma: PrismaClient, organiz
           position: nextPosition++,
           isInitial: definition.isInitial,
           isFinal: definition.isFinal,
+          isActive: definition.isActive,
         },
       });
       byLifecycle.set(definition.lifecycle, created);
