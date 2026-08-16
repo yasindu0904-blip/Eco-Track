@@ -36,6 +36,7 @@ Do not recreate these systems under new names. Extend them.
 ## 3. Non-negotiable product rules
 
 - One account has citizen and volunteer capabilities. There is no separate volunteer account or volunteer application.
+- A normal user starts in the personal Citizen & Volunteer workspace and may switch into only backend-verified active organization memberships; roles never carry from one organization context into another.
 - Authentication remains passwordless Supabase magic-link authentication.
 - A citizen reports one shared incident and never selects an organization.
 - Incident visibility comes from approved active service-area geometry.

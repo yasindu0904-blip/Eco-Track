@@ -148,6 +148,61 @@ Feature code must type the loaded request property through Express augmentation.
 - incomplete active profile can read/update only its own profile so onboarding can finish;
 - suspended or archived profile receives no protected abilities.
 
+## Multi-role dashboard and active-workspace contract
+
+This contract applies to a normal `USER` who may also hold memberships in one
+or more organizations. `ORG_MEMBER` and `ORG_ADMIN` are organization-scoped
+membership roles; they do not replace the person's citizen/volunteer account.
+
+After authentication and profile completion, a normal user starts in the
+personal **Citizen & Volunteer** workspace. The personal workspace remains
+available regardless of organization membership and contains the person's
+citizen reporting, public cleanup discovery, volunteer participation, personal
+notifications, and rewards.
+
+The web/mobile navigation must provide a workspace switcher populated from
+active memberships returned by the backend. For example:
+
+```text
+Personal workspace — Citizen & Volunteer
+Organization A — ORG_ADMIN
+Organization B — ORG_MEMBER
+```
+
+Selecting an organization changes only the active organization context; it does
+not change the user's permanent platform role or remove personal capabilities.
+Every organization selection must enter a backend route containing the selected
+`organizationId`, then run tenant middleware to load and verify that user's
+active membership. Frontend state, labels, local storage, query parameters, and
+submitted role names are never authorization evidence.
+
+The resulting workspace permissions are isolated:
+
+- Organization A `ORG_ADMIN` abilities apply only while operating on verified
+  Organization A resources.
+- Organization B `ORG_MEMBER` abilities remain limited to Organization B and do
+  not inherit Organization A administration.
+- An `ORG_MEMBER` receives event-operational abilities only when event context
+  also proves an active coordinator assignment for that specific event.
+- Suspended/inactive memberships must not appear as usable workspaces and must
+  fail backend tenant verification if addressed directly.
+- Switching back to the personal workspace removes organization context from
+  subsequent personal API requests.
+
+Do not calculate one global "highest organization role" for a multi-membership
+user. The same person may be an admin, member, coordinator, and volunteer in
+different contexts at the same time.
+
+`SUPER_ADMIN` follows the separate platform-dashboard flow. It is controlled
+platform provisioning, not an organization membership or a selectable
+organization workspace, and it does not automatically receive ordinary tenant
+operations.
+
+The organization workspace switcher and summary screens are completed through
+ACC-02, DASH-01, and INT-01. Feature branches must expose their server-backed
+membership/context contracts for that integration rather than independently
+editing shared application composition files.
+
 ## Frontend handoff
 
 Web exports:
