@@ -6,6 +6,7 @@ import { prisma } from "./database/prisma.js";
 import { authorizationDependencies } from "./authorization/authorization.dependencies.js";
 import { authenticationDependencies } from "./modules/auth/auth.dependencies.js";
 import { cleanupWorkflowDependencies } from "./modules/cleanupWorkflows/cleanupWorkflow.dependencies.js";
+import { membershipAdministrationDependencies } from "./modules/memberships/administration/membershipAdministration.dependencies.js";
 import { notificationDependencies } from "./modules/notifications/notification.dependencies.js";
 import { membershipSelfServiceDependencies } from "./modules/memberships/selfService/membershipSelfService.dependencies.js";
 import { organizationApplicationDependencies } from "./modules/organizations/application/application.dependencies.js";
@@ -16,6 +17,7 @@ const app = createApp(
     webOrigin: env.WEB_ORIGIN,
     authorizationDependencies,
     cleanupWorkflowDependencies,
+    membershipAdministrationDependencies,
     notificationDependencies,
     membershipSelfServiceDependencies,
     organizationApplicationDependencies,
