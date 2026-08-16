@@ -8,6 +8,7 @@ import { ProfileOnboarding } from "./features/auth/ProfileOnboarding";
 import { useAuthentication } from "./features/auth/useAuthentication";
 import { CitizenDashboard } from "./features/citizen/CitizenDashboard";
 import { NotificationInbox } from "./features/notifications/NotificationInbox";
+import { MapFoundationPreview } from "./features/maps";
 import { OrganizationApplicationPage } from "./features/organizations/application";
 import { SuperAdminDashboard } from "./features/super-admin/SuperAdminDashboard";
 
@@ -148,6 +149,13 @@ function App() {
   const isCitizenPreview =
     import.meta.env.DEV &&
     searchParameters.get("citizen-preview") === "1";
+
+  const isMapPreview =
+    import.meta.env.DEV && searchParameters.get("map-preview") === "1";
+
+  if (isMapPreview) {
+    return <MapFoundationPreview />;
+  }
 
   if (isSuperAdminPreview) {
     return (
