@@ -1,4 +1,5 @@
 export { MembershipAdministrationPage } from "./MembershipAdministrationPage";
+export { OrganizationMembershipWorkspacesPage } from "./OrganizationMembershipWorkspacesPage";
 export {
   addExistingMember,
   approveMembershipRequest,

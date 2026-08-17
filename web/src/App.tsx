@@ -8,7 +8,10 @@ import { ProfileOnboarding } from "./features/auth/ProfileOnboarding";
 import { useAuthentication } from "./features/auth/useAuthentication";
 import { CitizenDashboard } from "./features/citizen/CitizenDashboard";
 import { NotificationInbox } from "./features/notifications/NotificationInbox";
-import { MembershipSelfServicePage } from "./features/memberships";
+import {
+  MembershipSelfServicePage,
+  OrganizationMembershipWorkspacesPage,
+} from "./features/memberships";
 import { OrganizationApplicationPage } from "./features/organizations/application";
 import { SuperAdminDashboard } from "./features/super-admin/SuperAdminDashboard";
 
@@ -35,6 +38,7 @@ const previewCitizenProfile = {
 type CitizenView =
   | "dashboard"
   | "membership"
+  | "organization-workspaces"
   | "organization-apply"
   | "organization-applications";
 
@@ -192,6 +196,7 @@ function App() {
           setCitizenView("organization-apply");
         }}
         onManageMembership={() => undefined}
+        onOpenOrganizationWorkspaces={() => undefined}
         onViewOrganizationApplications={() => {
           setCitizenView("organization-applications");
         }}
@@ -260,6 +265,9 @@ function App() {
           accessToken={accessToken}
           onOpenNotifications={() => setShowNotifications(true)}
           onManageMembership={() => setCitizenView("membership")}
+          onOpenOrganizationWorkspaces={() =>
+            setCitizenView("organization-workspaces")
+          }
           onStartOrganizationApplication={() => {
             setCitizenView("organization-apply");
           }}
@@ -281,6 +289,15 @@ function App() {
           accessToken={accessToken}
           profile={profile}
           onProfileUpdated={replaceProfile}
+          onBack={() => setCitizenView("dashboard")}
+        />
+      );
+    }
+
+    if (citizenView === "organization-workspaces") {
+      return (
+        <OrganizationMembershipWorkspacesPage
+          accessToken={accessToken}
           onBack={() => setCitizenView("dashboard")}
         />
       );
