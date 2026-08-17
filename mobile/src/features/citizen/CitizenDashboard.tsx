@@ -14,6 +14,7 @@ type CitizenDashboardProps = {
   onViewApplications: () => void;
   onReportIncident: () => void;
   onViewReports: () => void;
+  onOpenImpact: () => void;
   onSignOut: () => void;
 };
 
@@ -26,6 +27,7 @@ export function CitizenDashboard({
   onViewApplications,
   onReportIncident,
   onViewReports,
+  onOpenImpact,
   onSignOut,
 }: CitizenDashboardProps) {
   const displayName = profile.fullName?.trim() || "EcoTrack member";
@@ -87,6 +89,15 @@ export function CitizenDashboard({
         </Text>
         <Button label="Report an incident" onPress={onReportIncident} />
         <Button label="View My Reports" variant="secondary" onPress={onViewReports} />
+      </View>
+
+      <View style={sharedStyles.card}>
+        <Text style={styles.upcomingEyebrow}>MY IMPACT</Text>
+        <Text style={sharedStyles.sectionTitle}>Rewards and achievements</Text>
+        <Text style={sharedStyles.sectionSubtitle}>
+          See non-monetary points and the private history behind every verified contribution.
+        </Text>
+        <Button label="Open My Impact" onPress={onOpenImpact} />
       </View>
 
       <Button label="Sign out" variant="secondary" onPress={onSignOut} />

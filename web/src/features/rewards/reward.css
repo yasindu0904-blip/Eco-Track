@@ -1,0 +1,134 @@
+.impact-page {
+  min-height: 100vh;
+  padding: 34px max(22px, calc((100vw - 1120px) / 2)) 64px;
+  color: var(--color-text);
+  background:
+    radial-gradient(circle at 90% 0, rgba(126, 199, 82, 0.16), transparent 28%),
+    linear-gradient(180deg, #f8fbf8, #eef5ef);
+}
+
+.impact-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+  margin-bottom: 26px;
+}
+
+.impact-header button,
+.impact-notice button,
+.impact-load-more {
+  min-height: 43px;
+  padding: 10px 15px;
+  color: var(--color-primary);
+  border: 1px solid #b9cdbc;
+  border-radius: 11px;
+  background: #fff;
+  font-weight: 800;
+}
+
+.impact-header span,
+.impact-section-heading span {
+  color: var(--color-primary);
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.impact-header h1 {
+  margin: 4px 0 0;
+  color: #17331d;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  letter-spacing: -0.05em;
+}
+
+.impact-header p,
+.impact-points-card p,
+.impact-empty p,
+.impact-history p,
+.impact-achievements p {
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.impact-header p { margin: 7px 0 0; }
+
+.impact-overview {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.7fr);
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.impact-points-card {
+  padding: 26px;
+  color: #fff;
+  border-radius: 20px;
+  background: radial-gradient(circle at 100% 0, rgba(194, 239, 147, 0.2), transparent 40%), linear-gradient(145deg, #1b6725, #0f4017);
+  box-shadow: 0 15px 38px rgba(27, 94, 32, 0.18);
+}
+
+.impact-points-card span { font-size: 0.78rem; font-weight: 800; text-transform: uppercase; }
+.impact-points-card strong { display: block; margin: 8px 0; font-size: 3.8rem; line-height: 1; }
+.impact-points-card p { margin: 0; color: rgba(255, 255, 255, 0.72); font-size: 0.78rem; }
+
+.impact-breakdown {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.impact-breakdown article,
+.impact-section,
+.impact-state,
+.impact-notice {
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 28px rgba(25, 66, 32, 0.055);
+}
+
+.impact-breakdown article { display: grid; gap: 5px; padding: 18px; border-radius: 16px; }
+.impact-breakdown span { color: var(--color-text-muted); font-size: 0.72rem; font-weight: 700; }
+.impact-breakdown strong { color: #17331d; font-size: 1.25rem; }
+.impact-breakdown small { color: var(--color-text-muted); }
+
+.impact-section { margin-top: 20px; padding: 24px; border-radius: 20px; }
+.impact-section-heading { display: flex; justify-content: space-between; gap: 20px; align-items: end; margin-bottom: 18px; }
+.impact-section-heading h2 { margin: 4px 0 0; color: #17331d; }
+.impact-section-heading > strong { color: var(--color-primary); font-size: 0.8rem; }
+
+.impact-achievements,
+.impact-history { display: grid; gap: 12px; }
+.impact-achievements { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.impact-achievements article,
+.impact-history article { display: grid; gap: 14px; padding: 17px; border: 1px solid #dce7dd; border-radius: 15px; background: #f8fbf8; }
+.impact-achievements article { grid-template-columns: 42px 1fr; }
+.impact-achievements article > span { width: 42px; height: 42px; display: grid; place-items: center; color: #185a21; border-radius: 13px; background: #d7f1bd; font-size: 1.2rem; }
+.impact-achievements h3,
+.impact-history h3 { margin: 0; color: #17331d; font-size: 0.95rem; }
+.impact-achievements p,
+.impact-history p { margin: 5px 0; font-size: 0.76rem; }
+.impact-achievements small,
+.impact-history small { color: #748078; font-size: 0.68rem; }
+
+.impact-history article { grid-template-columns: 60px 1fr; }
+.impact-history-points { width: 54px; min-height: 45px; display: grid; place-items: center; color: #185a21; border-radius: 12px; background: #e3f2dd; font-weight: 900; }
+.impact-empty { padding: 24px; text-align: center; border-radius: 15px; background: #f6f9f6; }
+.impact-empty strong { color: #17331d; }
+.impact-empty p { margin: 7px 0 0; font-size: 0.8rem; }
+.impact-state,
+.impact-notice { padding: 24px; border-radius: 17px; text-align: center; }
+.impact-error { border-color: #efc8c4; background: #fff4f2; }
+.impact-error p { color: var(--color-error); }
+.impact-load-more { width: 100%; margin-top: 16px; }
+
+@media (max-width: 760px) {
+  .impact-page { padding: 24px 16px 44px; }
+  .impact-header,
+  .impact-overview { grid-template-columns: 1fr; }
+  .impact-header button { width: fit-content; }
+  .impact-breakdown,
+  .impact-achievements { grid-template-columns: 1fr; }
+  .impact-section-heading { align-items: flex-start; flex-direction: column; }
+}

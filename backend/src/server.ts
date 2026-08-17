@@ -11,6 +11,7 @@ import { notificationDependencies } from "./modules/notifications/notification.d
 import { membershipSelfServiceDependencies } from "./modules/memberships/selfService/membershipSelfService.dependencies.js";
 import { incidentDependencies } from "./modules/incidents/incident.dependencies.js";
 import { organizationApplicationDependencies } from "./modules/organizations/application/application.dependencies.js";
+import { rewardDependencies } from "./modules/rewards/reward.dependencies.js";
 
 const app = createApp(
   authenticationDependencies,
@@ -23,6 +24,7 @@ const app = createApp(
     membershipSelfServiceDependencies,
     incidentDependencies,
     organizationApplicationDependencies,
+    rewardDependencies,
   },
 );
 

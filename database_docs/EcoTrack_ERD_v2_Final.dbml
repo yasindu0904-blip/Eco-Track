@@ -648,6 +648,7 @@ Table public.contribution_events [headerColor: #EDC948] {
   incident_id uuid
   session_allocation_id uuid
   cleanup_event_id uuid
+  source_key varchar [note: 'Required stable backend-generated approval key only for SPECIAL_CONTRIBUTION. It makes retries idempotent and is never accepted from an ordinary frontend request.']
   points int [not null]
   recorded_by_user_id uuid
   created_at timestamptz [not null, default: `now()`]
@@ -656,7 +657,7 @@ Table public.contribution_events [headerColor: #EDC948] {
     (user_id, created_at)
   }
 
-  Note: 'Immutable reason for points. A CHECK constraint should ensure the source column matches the contribution type and prevent duplicate awards.'
+  Note: 'Immutable reason for non-monetary points. A CHECK constraint ensures the source column matches the contribution type. Partial unique indexes prevent duplicate verified-incident, attendance, completion, and approved-special awards.'
 }
 
 Table public.achievement_definitions [headerColor: #EDC948] {
@@ -826,13 +827,13 @@ Ref: public.event_status_history.to_workflow_status_id > public.cleanup_workflow
 Ref: public.event_status_history.changed_by_membership_id > public.organization_memberships.id [delete: restrict]
 
 Ref: public.contribution_events.user_id > public.user_profiles.id [delete: cascade]
-Ref: public.contribution_events.incident_id > public.incidents.id [delete: set null]
-Ref: public.contribution_events.session_allocation_id > public.session_allocations.id [delete: set null]
-Ref: public.contribution_events.cleanup_event_id > public.cleanup_events.id [delete: set null]
+Ref: public.contribution_events.incident_id > public.incidents.id [delete: restrict]
+Ref: public.contribution_events.session_allocation_id > public.session_allocations.id [delete: restrict]
+Ref: public.contribution_events.cleanup_event_id > public.cleanup_events.id [delete: restrict]
 Ref: public.contribution_events.recorded_by_user_id > public.user_profiles.id [delete: set null]
 Ref: public.user_achievements.user_id > public.user_profiles.id [delete: cascade]
 Ref: public.user_achievements.achievement_id > public.achievement_definitions.id [delete: restrict]
-Ref: public.user_achievements.awarded_from_contribution_id > public.contribution_events.id [delete: set null]
+Ref: public.user_achievements.awarded_from_contribution_id > public.contribution_events.id [delete: restrict]
 Ref: public.user_devices.user_id > public.user_profiles.id [delete: cascade]
 Ref: public.notifications.user_id > public.user_profiles.id [delete: cascade]
 Ref: public.notifications.organization_id > public.organizations.id [delete: set null]

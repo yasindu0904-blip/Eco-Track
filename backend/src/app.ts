@@ -20,12 +20,14 @@ import { createIncidentRouter } from "./modules/incidents/incident.routes.js";
 import { createOrganizationApplicationRouter } from "./modules/organizations/application/application.routes.js";
 import { createOrganizationReviewRouter } from "./modules/organizations/review/organizationReview.routes.js";
 import { createProfileRouter } from "./modules/profiles/profile.routes.js";
+import { createRewardRouter } from "./modules/rewards/reward.routes.js";
 
 import type { AuthenticationDependencies } from "./modules/auth/auth.types.js";
 import type { NotificationDependencies } from "./modules/notifications/notification.dependencies.js";
 import type { MembershipSelfServiceDependencies } from "./modules/memberships/selfService/membershipSelfService.dependencies.js";
 import type { IncidentDependencies } from "./modules/incidents/incident.dependencies.js";
 import type { OrganizationApplicationDependencies } from "./modules/organizations/application/application.dependencies.js";
+import type { RewardDependencies } from "./modules/rewards/reward.dependencies.js";
 
 type CreateAppOptions = {
   webOrigin?: string;
@@ -36,6 +38,7 @@ type CreateAppOptions = {
   membershipSelfServiceDependencies?: MembershipSelfServiceDependencies;
   incidentDependencies?: IncidentDependencies;
   organizationApplicationDependencies?: OrganizationApplicationDependencies;
+  rewardDependencies?: RewardDependencies;
 };
 
 export function createApp(
@@ -95,6 +98,16 @@ export function createApp(
       createMembershipSelfServiceRouter(
         authenticationDependencies,
         options.membershipSelfServiceDependencies,
+      ),
+    );
+  }
+
+  if (options.rewardDependencies) {
+    app.use(
+      "/api/v1",
+      createRewardRouter(
+        authenticationDependencies,
+        options.rewardDependencies,
       ),
     );
   }

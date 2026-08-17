@@ -31,7 +31,7 @@ starts without those reference rows.
 
 Required first-run command:
 
-docker compose --env-file .env.docker -f compose.yaml -f compose.local-db.yaml run --rm --env-from-file .env.docker -e DATABASE_URL=postgresql://postgres:postgres@database:5432/ecotrack_local?schema=public migrate npm run import:gn-divisions
+docker compose --env-file .env.docker -f compose.yaml -f compose.local-db.yaml run --rm --env-from-file .env.docker -e "DATABASE_URL=postgresql://postgres:postgres@database:5432/ecotrack_local?schema=public&options=-c%20search_path%3Dpublic%2Cextensions" migrate npm run import:gn-divisions
 
 What the command does:
 
@@ -87,7 +87,7 @@ Super Admin identity. `.env.docker` is ignored by Git and must not be committed.
 
 Required first-run/recovery command:
 
-docker compose --env-file .env.docker -f compose.yaml -f compose.local-db.yaml run --rm --env-from-file .env.docker -e DATABASE_URL=postgresql://postgres:postgres@database:5432/ecotrack_local?schema=public migrate npx prisma db seed
+docker compose --env-file .env.docker -f compose.yaml -f compose.local-db.yaml run --rm --env-from-file .env.docker -e "DATABASE_URL=postgresql://postgres:postgres@database:5432/ecotrack_local?schema=public&options=-c%20search_path%3Dpublic%2Cextensions" migrate npx prisma db seed
 
 What the command does:
 
@@ -134,3 +134,7 @@ Important separation rule:
 Always confirm DATABASE_URL before running seeds, imports, tests, or migration
 recovery commands. Do not assume rows from one application database exist in
 the other.
+
+The local and CI migration URLs include `public,extensions` in PostgreSQL's
+search path. Supabase-compatible PostGIS keeps the `geography` type in the
+`extensions` schema, while EcoTrack application tables remain in `public`.

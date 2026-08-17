@@ -122,6 +122,44 @@ async function main(): Promise<void> {
     ),
   );
 
+  const achievementDefinitions = await Promise.all(
+    [
+      {
+        code: "GREEN_STARTER",
+        name: "Green Starter",
+        description: "Earned after reaching 20 verified EcoTrack contribution points.",
+        thresholdPoints: 20,
+        highlightOnMap: false,
+      },
+      {
+        code: "COMMUNITY_HELPER",
+        name: "Community Helper",
+        description: "Earned after reaching 100 verified EcoTrack contribution points.",
+        thresholdPoints: 100,
+        highlightOnMap: false,
+      },
+      {
+        code: "ECO_CHAMPION",
+        name: "Eco Champion",
+        description: "Earned after reaching 500 verified EcoTrack contribution points.",
+        thresholdPoints: 500,
+        highlightOnMap: true,
+      },
+    ].map((achievement) =>
+      prisma.achievementDefinition.upsert({
+        where: { code: achievement.code },
+        update: {
+          name: achievement.name,
+          description: achievement.description,
+          thresholdPoints: achievement.thresholdPoints,
+          highlightOnMap: achievement.highlightOnMap,
+          isActive: true,
+        },
+        create: achievement,
+      }),
+    ),
+  );
+
   console.log("EcoTrack super-admin profile is ready:");
 
   console.log(
@@ -130,6 +168,7 @@ async function main(): Promise<void> {
         superAdminProfile,
         platformSettings,
         incidentCategories,
+        achievementDefinitions,
       },
       null,
       2,

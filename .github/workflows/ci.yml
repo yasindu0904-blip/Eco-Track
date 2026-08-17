@@ -37,7 +37,7 @@ jobs:
         working-directory: backend
     env:
       NODE_ENV: test
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ecotrack_ci?schema=public
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/ecotrack_ci?schema=public&options=-c%20search_path%3Dpublic%2Cextensions"
       SUPABASE_URL: https://ci-placeholder.supabase.co
       SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
       PGPASSWORD: postgres

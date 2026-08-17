@@ -792,14 +792,15 @@ model ContributionEvent {
   incidentId          String?          @map("incident_id") @db.Uuid
   sessionAllocationId String?          @map("session_allocation_id") @db.Uuid
   cleanupEventId      String?          @map("cleanup_event_id") @db.Uuid
+  sourceKey           String?          @map("source_key")
   points              Int
   recordedByUserId    String?          @map("recorded_by_user_id") @db.Uuid
   createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user                UserProfile        @relation("ContributionRecipient", fields: [userId], references: [id], onDelete: Cascade)
-  incident            Incident?          @relation(fields: [incidentId], references: [id], onDelete: SetNull)
-  sessionAllocation   SessionAllocation? @relation(fields: [sessionAllocationId], references: [id], onDelete: SetNull)
-  cleanupEvent        CleanupEvent?      @relation(fields: [cleanupEventId], references: [id], onDelete: SetNull)
+  incident            Incident?          @relation(fields: [incidentId], references: [id], onDelete: Restrict)
+  sessionAllocation   SessionAllocation? @relation(fields: [sessionAllocationId], references: [id], onDelete: Restrict)
+  cleanupEvent        CleanupEvent?      @relation(fields: [cleanupEventId], references: [id], onDelete: Restrict)
   recordedBy          UserProfile?       @relation("ContributionRecorder", fields: [recordedByUserId], references: [id], onDelete: SetNull)
   awardedAchievements UserAchievement[]
 
@@ -830,7 +831,7 @@ model UserAchievement {
 
   user                    UserProfile           @relation(fields: [userId], references: [id], onDelete: Cascade)
   achievement             AchievementDefinition @relation(fields: [achievementId], references: [id], onDelete: Restrict)
-  awardedFromContribution ContributionEvent?    @relation(fields: [awardedFromContributionId], references: [id], onDelete: SetNull)
+  awardedFromContribution ContributionEvent?    @relation(fields: [awardedFromContributionId], references: [id], onDelete: Restrict)
 
   @@unique([userId, achievementId], map: "user_achievements_user_achievement_key")
   @@map("user_achievements")
