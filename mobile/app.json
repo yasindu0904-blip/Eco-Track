@@ -13,6 +13,7 @@
       }
     },
     "plugins": [
+      "./scripts/withShortAndroidCmakePath.cjs",
       "expo-secure-store",
       "@maplibre/maplibre-react-native",
       [

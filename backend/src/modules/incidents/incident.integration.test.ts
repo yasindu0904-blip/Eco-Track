@@ -290,6 +290,18 @@ test("organization discovery includes covered boundary incidents and active area
   assert.equal("privateNotes" in incident, false);
   assert.equal(incident.falseReviewCount, 0);
 
+  const allCoveredResponse = await request(
+    `/organizations/${organizationId}/incidents?scope=all`,
+    otherToken,
+  );
+  assert.equal(allCoveredResponse.status, 200);
+  const allCoveredBody = await allCoveredResponse.json() as {
+    data: { items: Array<{ id: string }> };
+  };
+  assert.ok(
+    allCoveredBody.data.items.some((item) => item.id === createdIncidentId),
+  );
+
   const boundaries = await request(
     `/organizations/${organizationId}/service-area-boundaries`,
     otherToken,

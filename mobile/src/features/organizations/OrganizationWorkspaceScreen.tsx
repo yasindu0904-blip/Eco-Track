@@ -83,23 +83,19 @@ export function OrganizationWorkspaceScreen({
         <Pressable
           accessibilityRole="button"
           accessibilityState={{ selected: activeTab === "overview" }}
-          onPress={() => setActiveTab("overview")}
+          onPress={() => {
+            setMapInteracting(false);
+            setActiveTab("overview");
+          }}
           style={[styles.tab, activeTab === "overview" && styles.tabSelected]}
         >
           <Text style={[styles.tabText, activeTab === "overview" && styles.tabTextSelected]}>
             Overview
           </Text>
         </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ selected: activeTab === "incidentReview" }}
-          onPress={() => setActiveTab("incidentReview")}
-          style={[styles.tab, activeTab === "incidentReview" && styles.tabSelected]}
-        >
-          <Text style={[styles.tabText, activeTab === "incidentReview" && styles.tabTextSelected]}>
-            Incident review
-          </Text>
-        </Pressable>
+        {activeTab === "incidentReview" ? (
+          <Text style={styles.breadcrumb}>/ Incident review</Text>
+        ) : null}
       </View>
 
       {activeTab === "overview" ? (
@@ -139,6 +135,28 @@ export function OrganizationWorkspaceScreen({
               onPress={onViewApplications}
             />
           </View>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open incident review"
+            onPress={() => setActiveTab("incidentReview")}
+            style={({ pressed }) => [
+              styles.toolCard,
+              pressed && styles.toolCardPressed,
+            ]}
+          >
+            <View style={styles.toolIcon}>
+              <Text style={styles.toolIconText}>!</Text>
+            </View>
+            <View style={styles.toolCopy}>
+              <Text style={styles.toolEyebrow}>INCIDENT REVIEW</Text>
+              <Text style={styles.toolTitle}>Available now</Text>
+              <Text style={styles.toolDescription}>
+                Search covered reports and review them by GN Division.
+              </Text>
+            </View>
+            <Text style={styles.toolArrow}>→</Text>
+          </Pressable>
         </>
       ) : (
         <OrganizationIncidentReview
@@ -221,4 +239,48 @@ const styles = StyleSheet.create({
   tabSelected: { backgroundColor: colors.primarySoft },
   tabText: { color: colors.textMuted, fontSize: 13, fontWeight: "900" },
   tabTextSelected: { color: colors.primary },
+  breadcrumb: {
+    alignSelf: "center",
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  toolCard: {
+    minHeight: 128,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+  },
+  toolCardPressed: {
+    borderColor: colors.warning,
+    backgroundColor: colors.warningSoft,
+  },
+  toolIcon: {
+    width: 58,
+    height: 58,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 17,
+    backgroundColor: colors.warningSoft,
+  },
+  toolIconText: {
+    color: colors.warning,
+    fontSize: 24,
+    fontWeight: "900",
+  },
+  toolCopy: { flex: 1, gap: 3 },
+  toolEyebrow: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+  toolTitle: { color: colors.text, fontSize: 20, fontWeight: "900" },
+  toolDescription: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
+  toolArrow: { color: colors.warning, fontSize: 24, fontWeight: "900" },
 });

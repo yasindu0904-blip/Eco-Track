@@ -95,13 +95,9 @@ export function OrganizationWorkspace({
           >
             Overview
           </button>
-          <button
-            type="button"
-            className={activeTab === "incident-review" ? "is-active" : undefined}
-            onClick={() => setActiveTab("incident-review")}
-          >
-            Incident review
-          </button>
+          {activeTab === "incident-review" && (
+            <span aria-current="page">/ Incident review</span>
+          )}
         </nav>
 
         {activeTab === "incident-review" ? (
@@ -138,6 +134,29 @@ export function OrganizationWorkspace({
               </div>
               <button type="button" onClick={onViewApplications}>
                 View organization requests
+              </button>
+            </section>
+
+            <section className="organization-workspace-overview" aria-label="Workspace tools">
+              <button
+                type="button"
+                className="organization-workspace-tool-card"
+                onClick={() => setActiveTab("incident-review")}
+              >
+                <span className="organization-workspace-tool-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" />
+                    <path d="M12 7v6M12 17h.01" />
+                  </svg>
+                </span>
+                <span className="organization-workspace-tool-copy">
+                  <small>Incident review</small>
+                  <strong>Available now</strong>
+                  <span>Search covered reports and review them by GN Division.</span>
+                </span>
+                <span className="organization-workspace-tool-action" aria-hidden="true">
+                  Open <b>→</b>
+                </span>
               </button>
             </section>
           </>

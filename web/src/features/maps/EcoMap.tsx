@@ -21,6 +21,7 @@ import {
 } from "./map.constants";
 import type {
   MapLocation,
+  MapBoundaryFeature,
   MapBoundaryFeatureCollection,
   MapMarkerFeature,
   MapViewport,
@@ -60,42 +61,79 @@ function OrganizationBoundaryLayer({
   boundaries: MapBoundaryFeatureCollection;
 }) {
   const map = useMap();
+  const [activeAreaIndex, setActiveAreaIndex] = useState(0);
 
-  const focusBoundaries = () => {
+  const focusArea = useCallback((area: MapBoundaryFeature) => {
     const bounds = geoJSON(
-      boundaries as GeoJsonObject,
+      area as GeoJsonObject,
     ).getBounds();
 
     if (bounds.isValid()) {
       map.fitBounds(bounds, {
-        padding: [30, 30],
-        maxZoom: 15,
+        padding: [42, 42],
+        maxZoom: 16,
       });
     }
+  }, [map]);
+
+  useEffect(() => {
+    const firstArea = boundaries.features[0];
+
+    if (firstArea) {
+      focusArea(firstArea);
+    }
+  }, [boundaries, focusArea]);
+
+  const focusNextArea = () => {
+    const nextIndex = (activeAreaIndex + 1) % boundaries.features.length;
+    setActiveAreaIndex(nextIndex);
+    focusArea(boundaries.features[nextIndex]);
   };
+
+  const activeArea = boundaries.features[activeAreaIndex];
+  const nextArea =
+    boundaries.features[(activeAreaIndex + 1) % boundaries.features.length];
 
   return (
     <>
       <GeoJSON
-        key={boundaries.features.map((feature) => feature.properties.id).join(":")}
+        key={`${boundaries.features.map((feature) => feature.properties.id).join(":")}:${activeArea?.properties.id ?? "none"}`}
         data={boundaries as GeoJsonObject}
-        style={{
-          color: "#101312",
-          fill: false,
-          fillColor: "transparent",
-          fillOpacity: 0,
-          opacity: 0.95,
-          weight: 3,
+        style={(feature) => {
+          const isActive = feature?.properties.id === activeArea?.properties.id;
+
+          return {
+            color: isActive ? "#174c33" : "#101312",
+            fill: true,
+            fillColor: isActive ? "#3f8a5f" : "#ffffff",
+            fillOpacity: isActive ? 0.18 : 0.04,
+            opacity: 0.95,
+            weight: isActive ? 4 : 3,
+          };
+        }}
+        onEachFeature={(feature, layer) => {
+          const area = feature as MapBoundaryFeature;
+          const label = document.createElement("span");
+          label.textContent = `${area.properties.name} — click to focus`;
+          layer.bindTooltip(label, { direction: "top", sticky: true });
+          layer.on("click", () => {
+            const areaIndex = boundaries.features.findIndex(
+              (candidate) => candidate.properties.id === area.properties.id,
+            );
+            if (areaIndex >= 0) setActiveAreaIndex(areaIndex);
+            focusArea(area);
+          });
         }}
       />
       <button
         type="button"
         className="eco-map-boundary-control"
-        onClick={focusBoundaries}
-        aria-label="Focus organization service areas"
-        title="Focus organization service areas"
+        onClick={focusNextArea}
+        aria-label={`Focus next service area${nextArea ? `: ${nextArea.properties.name}` : ""}`}
+        title={nextArea ? `Next: ${nextArea.properties.name}` : "Focus service area"}
       >
-        <span aria-hidden="true">⌖</span>
+        <span aria-hidden="true">→</span>
+        <span>{boundaries.features.length > 1 ? "Next area" : "Focus area"}</span>
       </button>
     </>
   );

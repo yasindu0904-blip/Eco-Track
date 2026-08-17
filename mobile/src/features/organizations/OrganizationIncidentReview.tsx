@@ -8,6 +8,7 @@ import {
   EcoMap,
   type MapBoundaryFeatureCollection,
   type MapMarkerFeature,
+  type MapViewport,
   type MapViewportChangeHandler,
 } from "../map";
 import {
@@ -43,10 +44,11 @@ export function OrganizationIncidentReview({
 }: Props) {
   const [boundaries, setBoundaries] =
     useState<MapBoundaryFeatureCollection>();
-  const [incidents, setIncidents] = useState<OrganizationIncidentSummary[]>([]);
+  const [allIncidents, setAllIncidents] = useState<OrganizationIncidentSummary[]>([]);
+  const [viewport, setViewport] = useState<MapViewport>();
   const [selectedId, setSelectedId] = useState<string>();
   const [status, setStatus] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
 
   useEffect(() => {
@@ -62,41 +64,88 @@ export function OrganizationIncidentReview({
       );
   }, [accessToken, organizationId]);
 
-  const loadViewport = useCallback<MapViewportChangeHandler>(
-    async (viewport, context) => {
-      setLoading(true);
-      setError(undefined);
-      try {
-        const page = await listOrganizationIncidents(
-          accessToken,
-          organizationId,
-          viewport,
-          context.signal,
-          status || undefined,
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void listOrganizationIncidents(
+      accessToken,
+      organizationId,
+      controller.signal,
+    )
+      .then((page) => {
+        if (controller.signal.aborted) return;
+        setAllIncidents(page.items);
+        setSelectedId(page.items[0]?.id);
+      })
+      .catch((requestError: unknown) => {
+        if (controller.signal.aborted) return;
+        setError(
+          describeApiFailure(
+            requestError,
+            "Unable to load covered incidents.",
+          ).message,
         );
-        if (!context.signal.aborted) {
-          setIncidents(page.items);
-          setSelectedId((current) =>
-            page.items.some((item) => item.id === current)
-              ? current
-              : page.items[0]?.id,
-          );
-        }
-      } catch (requestError) {
-        if (!context.signal.aborted) {
-          setError(
-            describeApiFailure(
-              requestError,
-              "Unable to load incidents in this map area.",
-            ).message,
-          );
-        }
-      } finally {
-        if (!context.signal.aborted) setLoading(false);
-      }
-    },
-    [accessToken, organizationId, status],
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [accessToken, organizationId]);
+
+  const incidents = useMemo(
+    () =>
+      allIncidents.filter((incident) => {
+        if (status && incident.status !== status) return false;
+        if (!viewport) return true;
+        return (
+          incident.longitude >= viewport.west &&
+          incident.longitude <= viewport.east &&
+          incident.latitude >= viewport.south &&
+          incident.latitude <= viewport.north
+        );
+      }),
+    [allIncidents, status, viewport],
   );
+
+  const handleViewportChange = useCallback<MapViewportChangeHandler>(
+    (nextViewport) => {
+      setViewport(nextViewport);
+      const nextVisible = allIncidents.filter(
+        (incident) =>
+          (!status || incident.status === status) &&
+          incident.longitude >= nextViewport.west &&
+          incident.longitude <= nextViewport.east &&
+          incident.latitude >= nextViewport.south &&
+          incident.latitude <= nextViewport.north,
+      );
+      setSelectedId((current) =>
+        nextVisible.some((incident) => incident.id === current)
+          ? current
+          : nextVisible[0]?.id,
+      );
+    },
+    [allIncidents, status],
+  );
+
+  const changeStatus = (nextStatus: string) => {
+    setStatus(nextStatus);
+    const nextVisible = allIncidents.filter((incident) => {
+      if (nextStatus && incident.status !== nextStatus) return false;
+      if (!viewport) return true;
+      return (
+        incident.longitude >= viewport.west &&
+        incident.longitude <= viewport.east &&
+        incident.latitude >= viewport.south &&
+        incident.latitude <= viewport.north
+      );
+    });
+    setSelectedId((current) =>
+      nextVisible.some((incident) => incident.id === current)
+        ? current
+        : nextVisible[0]?.id,
+    );
+  };
 
   const markers = useMemo<MapMarkerFeature[]>(
     () => incidents.map((incident) => ({
@@ -123,7 +172,11 @@ export function OrganizationIncidentReview({
       <View style={sharedStyles.spacedRow}>
         <View>
           <Text style={styles.eyebrow}>COVERED INCIDENTS</Text>
-          <Text style={styles.count}>{incidents.length} in view</Text>
+          <Text style={styles.count}>
+            {loading
+              ? "Loading all covered incidents"
+              : `${incidents.length} of ${allIncidents.length} in view`}
+          </Text>
         </View>
         {loading ? <ActivityIndicator color={colors.primary} /> : null}
       </View>
@@ -134,7 +187,7 @@ export function OrganizationIncidentReview({
             key={option.value}
             accessibilityRole="button"
             accessibilityState={{ selected: status === option.value }}
-            onPress={() => setStatus(option.value)}
+            onPress={() => changeStatus(option.value)}
             style={[
               styles.filter,
               status === option.value && styles.filterSelected,
@@ -155,7 +208,6 @@ export function OrganizationIncidentReview({
       {error ? <Notice tone="error" message={error} /> : null}
 
       <EcoMap
-        key={status || "all-current"}
         markers={markers}
         boundaries={boundaries}
         selectedMarkerId={selectedId}
@@ -163,7 +215,7 @@ export function OrganizationIncidentReview({
         height={430}
         accessibleLabel="Organization incident review map"
         onMarkerSelect={(marker) => setSelectedId(marker.properties.id)}
-        onViewportChange={loadViewport}
+        onViewportChange={handleViewportChange}
         onInteractionChange={onMapInteractionChange}
       />
 

@@ -233,11 +233,11 @@ export async function listCoveredOrganizationIncidents(
   prisma: PrismaClient,
   input: {
     organizationId: string;
-    west: number;
-    south: number;
-    east: number;
-    north: number;
-    limit: number;
+    west?: number;
+    south?: number;
+    east?: number;
+    north?: number;
+    limit: number | null;
     cursor: OrganizationIncidentDiscoveryCursor | null;
     status?: OrganizationIncidentDiscoveryRow["status"];
     categoryId?: string;
@@ -259,6 +259,37 @@ export async function listCoveredOrganizationIncidents(
           (${input.cursor.reportedAt}, ${input.cursor.id}::uuid)
       `
     : Prisma.empty;
+  const viewportFilter =
+    input.west !== undefined &&
+    input.south !== undefined &&
+    input.east !== undefined &&
+    input.north !== undefined
+      ? Prisma.sql`
+          AND extensions.ST_Intersects(
+            incident."geo_point",
+            extensions.ST_MakeEnvelope(
+              ${input.west}::double precision,
+              ${input.south}::double precision,
+              ${input.east}::double precision,
+              ${input.north}::double precision,
+              4326
+            )::extensions.geography
+          )
+          AND extensions.ST_Covers(
+            extensions.ST_MakeEnvelope(
+              ${input.west}::double precision,
+              ${input.south}::double precision,
+              ${input.east}::double precision,
+              ${input.north}::double precision,
+              4326
+            )::extensions.geography,
+            incident."geo_point"
+          )
+        `
+      : Prisma.empty;
+  const limitClause = input.limit === null
+    ? Prisma.empty
+    : Prisma.sql`LIMIT ${input.limit + 1}`;
 
   return prisma.$queryRaw<OrganizationIncidentDiscoveryRow[]>`
     SELECT
@@ -292,28 +323,7 @@ export async function listCoveredOrganizationIncidents(
     FROM "incidents" AS incident
     JOIN "incident_categories" AS category
       ON category."id" = incident."category_id"
-    WHERE
-      extensions.ST_Intersects(
-        incident."geo_point",
-        extensions.ST_MakeEnvelope(
-        ${input.west}::double precision,
-        ${input.south}::double precision,
-        ${input.east}::double precision,
-        ${input.north}::double precision,
-        4326
-        )::extensions.geography
-      )
-      AND extensions.ST_Covers(
-        extensions.ST_MakeEnvelope(
-          ${input.west}::double precision,
-          ${input.south}::double precision,
-          ${input.east}::double precision,
-          ${input.north}::double precision,
-          4326
-        )::extensions.geography,
-        incident."geo_point"
-      )
-      AND EXISTS (
+    WHERE EXISTS (
         SELECT 1
         FROM "organization_service_areas" AS service_area
         JOIN "organizations" AS organization
@@ -329,11 +339,12 @@ export async function listCoveredOrganizationIncidents(
             incident."geo_point"
           )
       )
+      ${viewportFilter}
       ${statusFilter}
       ${categoryFilter}
       ${reportedAfterFilter}
       ${cursorFilter}
     ORDER BY incident."reported_at" DESC, incident."id" DESC
-    LIMIT ${input.limit + 1}
+    ${limitClause}
   `;
 }

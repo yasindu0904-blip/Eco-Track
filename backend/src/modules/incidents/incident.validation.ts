@@ -81,18 +81,25 @@ export const incidentListQuerySchema = z.object({
   cursor: z.string().trim().min(1).max(500).optional(),
 }).strict();
 
-export const organizationIncidentDiscoveryQuerySchema =
-  sriLankaMapViewportQuerySchema.safeExtend({
-    status: z.enum([
-      "ACTIVE",
-      "CLEANUP_ORGANIZED",
-      "RESOLVED",
-      "EXPIRED",
-      "ARCHIVED",
-    ]).optional(),
-    categoryId: z.uuid().optional(),
-    reportedAfter: z.iso.datetime({ offset: true }).optional(),
-  });
+const organizationIncidentFilters = {
+  status: z.enum([
+    "ACTIVE",
+    "CLEANUP_ORGANIZED",
+    "RESOLVED",
+    "EXPIRED",
+    "ARCHIVED",
+  ]).optional(),
+  categoryId: z.uuid().optional(),
+  reportedAfter: z.iso.datetime({ offset: true }).optional(),
+};
+
+export const organizationIncidentDiscoveryQuerySchema = z.union([
+  sriLankaMapViewportQuerySchema.safeExtend(organizationIncidentFilters),
+  z.object({
+    ...organizationIncidentFilters,
+    scope: z.literal("all"),
+  }).strict(),
+]);
 
 export type ValidatedCreateIncident = z.infer<typeof createIncidentSchema>;
 export type ValidatedEvidenceUploadRequest = z.infer<typeof createEvidenceUploadIntentsSchema>;

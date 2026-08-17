@@ -279,12 +279,22 @@ export async function listOrganizationIncidents(
   organizationId: string,
   input: ValidatedOrganizationIncidentDiscovery,
 ): Promise<OrganizationIncidentListPageDto> {
+  const viewport = "west" in input
+    ? {
+        west: input.west,
+        south: input.south,
+        east: input.east,
+        north: input.north,
+      }
+    : {};
   const rows = await listCoveredOrganizationIncidents(
     dependencies.prisma,
     {
       organizationId,
       ...input,
-      cursor: input.cursor
+      ...viewport,
+      limit: "limit" in input ? input.limit : null,
+      cursor: "cursor" in input && input.cursor
         ? decodeOrganizationIncidentCursor(input.cursor)
         : null,
       reportedAfter: input.reportedAfter
@@ -292,8 +302,9 @@ export async function listOrganizationIncidents(
         : undefined,
     },
   );
-  const hasMore = rows.length > input.limit;
-  const page = hasMore ? rows.slice(0, input.limit) : rows;
+  const limit = "limit" in input ? input.limit : null;
+  const hasMore = limit !== null && rows.length > limit;
+  const page = hasMore && limit !== null ? rows.slice(0, limit) : rows;
   const last = page.at(-1);
 
   return {

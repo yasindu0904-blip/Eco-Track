@@ -72,8 +72,8 @@ export interface EcoMapProps {
   onInteractionChange?: (isInteracting: boolean) => void;
 }
 
-function getBoundaryBounds(
-  boundaries: MapBoundaryFeatureCollection,
+function getGeometryBounds(
+  coordinates: unknown,
 ): [number, number, number, number] | null {
   let west = Number.POSITIVE_INFINITY;
   let south = Number.POSITIVE_INFINITY;
@@ -99,7 +99,7 @@ function getBoundaryBounds(
     }
   };
 
-  boundaries.features.forEach((feature) => visit(feature.geometry.coordinates));
+  visit(coordinates);
 
   return Number.isFinite(west) ? [west, south, east, north] : null;
 }
@@ -150,6 +150,7 @@ export function EcoMap({
   const [locationBusy, setLocationBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [viewportTooWide, setViewportTooWide] = useState(false);
+  const [activeAreaIndex, setActiveAreaIndex] = useState(0);
   const scheduleViewport = useDebouncedViewport(
     onViewportChange,
     MAP_REQUEST_LIMITS.debounceMilliseconds,
@@ -161,10 +162,19 @@ export function EcoMap({
     }),
     [markers],
   );
-  const boundaryBounds = useMemo(
-    () => boundaries ? getBoundaryBounds(boundaries) : null,
-    [boundaries],
+  const activeArea = boundaries?.features[activeAreaIndex] ?? boundaries?.features[0];
+  const activeAreaBounds = useMemo(
+    () => activeArea ? getGeometryBounds(activeArea.geometry.coordinates) : null,
+    [activeArea],
   );
+
+  useEffect(() => {
+    if (!activeAreaBounds) return;
+    cameraRef.current?.fitBounds(activeAreaBounds, {
+      padding: { top: 42, right: 42, bottom: 42, left: 42 },
+      duration: 400,
+    });
+  }, [activeAreaBounds]);
 
   useEffect(() => {
     if (
@@ -321,6 +331,21 @@ export function EcoMap({
     }
   };
 
+  const handleBoundaryPress = (
+    event: Parameters<NonNullable<React.ComponentProps<typeof GeoJSONSource>["onPress"]>>[0],
+  ) => {
+    const boundaryId = String(event.nativeEvent.features[0]?.properties?.id ?? "");
+    const nextIndex = boundaries?.features.findIndex(
+      (feature) => feature.properties.id === boundaryId,
+    ) ?? -1;
+    if (nextIndex >= 0) setActiveAreaIndex(nextIndex);
+  };
+
+  const focusNextArea = () => {
+    if (!boundaries?.features.length) return;
+    setActiveAreaIndex((current) => (current + 1) % boundaries.features.length);
+  };
+
   const focusMarker = (marker: MapMarkerFeature) => {
     const location = markerLocation(marker);
     cameraRef.current?.easeTo({
@@ -397,7 +422,25 @@ export function EcoMap({
             <GeoJSONSource
               id="eco-map-organization-boundaries"
               data={boundaries}
+              onPress={handleBoundaryPress}
             >
+              <Layer
+                id="eco-map-organization-boundary-fill"
+                type="fill"
+                paint={{
+                  "fill-color": "#ffffff",
+                  "fill-opacity": 0.04,
+                }}
+              />
+              <Layer
+                id="eco-map-active-organization-boundary-fill"
+                type="fill"
+                filter={["==", ["get", "id"], activeArea?.properties.id ?? "__none__"]}
+                paint={{
+                  "fill-color": "#3f8a5f",
+                  "fill-opacity": 0.18,
+                }}
+              />
               <Layer
                 id="eco-map-organization-boundary-lines"
                 type="line"
@@ -405,6 +448,16 @@ export function EcoMap({
                   "line-color": "#101312",
                   "line-opacity": 0.95,
                   "line-width": 3,
+                }}
+              />
+              <Layer
+                id="eco-map-active-organization-boundary-line"
+                type="line"
+                filter={["==", ["get", "id"], activeArea?.properties.id ?? "__none__"]}
+                paint={{
+                  "line-color": "#174c33",
+                  "line-opacity": 1,
+                  "line-width": 4,
                 }}
               />
             </GeoJSONSource>
@@ -524,22 +577,26 @@ export function EcoMap({
           <Text style={styles.locationButtonText}>My location</Text>
         </Pressable>
 
-        {boundaryBounds && (
+        {activeAreaBounds && (
           <Pressable
             style={({ pressed }) => [
               styles.boundaryButton,
               pressed && styles.buttonPressed,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Focus organization service areas"
-            onPress={() =>
-              cameraRef.current?.fitBounds(boundaryBounds, {
-                padding: { top: 36, right: 36, bottom: 36, left: 36 },
-                duration: 400,
-              })
+            accessibilityLabel={
+              boundaries && boundaries.features.length > 1
+                ? "Focus next organization service area"
+                : "Focus organization service area"
             }
+            onPress={focusNextArea}
           >
-            <Text style={styles.boundaryButtonIcon}>⌖</Text>
+            <Text style={styles.boundaryButtonIcon}>→</Text>
+            <Text style={styles.boundaryButtonText}>
+              {boundaries && boundaries.features.length > 1
+                ? "Next area"
+                : "Focus area"}
+            </Text>
           </Pressable>
         )}
 
@@ -674,10 +731,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 62,
     right: 12,
-    width: 42,
     height: 42,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 7,
+    paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: "rgba(16,19,18,0.28)",
     borderRadius: 8,
@@ -686,7 +745,12 @@ const styles = StyleSheet.create({
   },
   boundaryButtonIcon: {
     color: "#101312",
-    fontSize: 23,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  boundaryButtonText: {
+    color: "#101312",
+    fontSize: 12,
     fontWeight: "900",
   },
   centerPinContainer: {

@@ -1,8 +1,5 @@
 import { apiRequest } from "../../api/apiClient";
-import type {
-  MapBoundaryFeatureCollection,
-  MapViewport,
-} from "../map";
+import type { MapBoundaryFeatureCollection } from "../map";
 import type { OrganizationIncidentPage } from "./organizationIncidentReview.types";
 
 type DataResponse<T> = { data: T };
@@ -10,19 +7,11 @@ type DataResponse<T> = { data: T };
 export async function listOrganizationIncidents(
   accessToken: string,
   organizationId: string,
-  viewport: MapViewport,
   signal: AbortSignal,
-  status?: string,
 ): Promise<OrganizationIncidentPage> {
   const query = new URLSearchParams({
-    west: String(viewport.west),
-    south: String(viewport.south),
-    east: String(viewport.east),
-    north: String(viewport.north),
-    zoom: String(Math.round(viewport.zoom)),
-    limit: "100",
+    scope: "all",
   });
-  if (status) query.set("status", status);
 
   return (
     await apiRequest<DataResponse<OrganizationIncidentPage>>(

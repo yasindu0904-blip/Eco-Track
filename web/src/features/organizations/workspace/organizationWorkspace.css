@@ -112,6 +112,13 @@
   background: var(--color-primary-soft);
 }
 
+.organization-workspace-tabs > span {
+  align-self: center;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
 .organization-workspace-access {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -175,6 +182,101 @@
   border-radius: 8px;
   background: var(--color-primary);
   font-weight: 800;
+}
+
+.organization-workspace-overview {
+  margin-top: 20px;
+}
+
+.organization-workspace-tool-card {
+  position: relative;
+  width: min(100%, 560px);
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 24px;
+  overflow: hidden;
+  color: var(--color-text);
+  border: 1px solid #d5dfd6;
+  border-radius: 18px;
+  background: #ffffff;
+  text-align: left;
+  box-shadow: 0 10px 30px rgba(25, 67, 43, 0.04);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.organization-workspace-tool-card:hover,
+.organization-workspace-tool-card:focus-visible {
+  border-color: #98b49c;
+  box-shadow: 0 16px 34px rgba(25, 67, 43, 0.12);
+  transform: translateY(-2px);
+}
+
+.organization-workspace-tool-icon {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  color: #936815;
+  background: #fff4d7;
+}
+
+.organization-workspace-tool-icon svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.organization-workspace-tool-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.organization-workspace-tool-copy small {
+  color: #58675d;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.organization-workspace-tool-copy strong {
+  color: #18321d;
+  font-size: 1.15rem;
+}
+
+.organization-workspace-tool-copy > span {
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.organization-workspace-tool-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  opacity: 0;
+  color: var(--color-primary);
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  font-size: 0.75rem;
+  font-weight: 850;
+  transform: translateX(8px);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.organization-workspace-tool-card:hover .organization-workspace-tool-action,
+.organization-workspace-tool-card:focus-visible .organization-workspace-tool-action {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .organization-incident-review {
@@ -374,6 +476,20 @@
 
   .organization-workspace-access {
     grid-template-columns: 1fr;
+  }
+
+  .organization-workspace-tool-card {
+    grid-template-columns: 52px minmax(0, 1fr);
+    padding: 20px;
+  }
+
+  .organization-workspace-tool-icon {
+    width: 52px;
+    height: 52px;
+  }
+
+  .organization-workspace-tool-action {
+    display: none;
   }
 
   .organization-workspace-access > div {
