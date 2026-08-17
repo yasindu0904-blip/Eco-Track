@@ -13,6 +13,7 @@ React Native + Expo + TypeScript client for EcoTrack.
 - Organization onboarding submission and personal application-status history
 - Super Admin protected-access check
 - Pending organization queue, details, approval, and decline
+- Reusable MapLibre/OpenStreetMap view and confirmed-location picker
 
 All EcoTrack application data is read and written through the Express API. The mobile app never connects directly to Prisma/PostgreSQL and never trusts a locally supplied role.
 
@@ -48,6 +49,40 @@ npm run android
 ```
 
 `npm run android` creates/opens a development build on a USB-connected Android phone. Enable Developer options and USB debugging first.
+
+MapLibre contains native code and does not run in Expo Go. After installing or
+updating map packages, regenerate and rebuild the development app:
+
+```powershell
+npx expo prebuild --clean
+npm run android
+```
+
+The map requests foreground location only after the user presses **My
+location**. Permission denial leaves the fixed-center manual pin and coordinate
+inputs available.
+
+### Windows and OneDrive native-build paths
+
+MapLibre's generated C++ code can exceed Ninja's path limit when this repository
+is built from its full OneDrive path. On this development machine, `C:\e` is a
+junction to the EcoTrack repository. Run native Android commands from the short
+path:
+
+```powershell
+Set-Location C:\e\mobile
+npx expo run:android
+```
+
+If the junction must be recreated, use PowerShell with the real repository
+path as the target:
+
+```powershell
+New-Item -ItemType Junction -Path C:\e -Target "C:\path\to\Eco-Track"
+```
+
+The Gradle 10 compatibility message is a dependency deprecation warning and is
+not the cause of the current Android build failure.
 
 ## Build-tool security note
 

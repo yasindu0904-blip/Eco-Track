@@ -7,11 +7,13 @@ import { LoginForm } from "./features/auth/LoginForm";
 import { ProfileOnboarding } from "./features/auth/ProfileOnboarding";
 import { useAuthentication } from "./features/auth/useAuthentication";
 import { CitizenDashboard } from "./features/citizen/CitizenDashboard";
+import { IncidentPage } from "./features/incidents";
 import { NotificationInbox } from "./features/notifications/NotificationInbox";
 import {
   MembershipSelfServicePage,
   OrganizationMembershipWorkspacesPage,
 } from "./features/memberships";
+import { MapFoundationPreview } from "./features/maps";
 import { OrganizationApplicationPage } from "./features/organizations/application";
 import { SuperAdminDashboard } from "./features/super-admin/SuperAdminDashboard";
 
@@ -40,7 +42,9 @@ type CitizenView =
   | "membership"
   | "organization-workspaces"
   | "organization-apply"
-  | "organization-applications";
+  | "organization-applications"
+  | "incident-create"
+  | "incident-reports";
 
 function BrandHeader() {
   return (
@@ -155,6 +159,13 @@ function App() {
     import.meta.env.DEV &&
     searchParameters.get("citizen-preview") === "1";
 
+  const isMapPreview =
+    import.meta.env.DEV && searchParameters.get("map-preview") === "1";
+
+  if (isMapPreview) {
+    return <MapFoundationPreview />;
+  }
+
   if (isSuperAdminPreview) {
     return (
       <SuperAdminDashboard
@@ -172,6 +183,17 @@ function App() {
   }
 
   if (isCitizenPreview) {
+    if (citizenView === "incident-create" || citizenView === "incident-reports") {
+      return (
+        <IncidentPage
+          accessToken="preview-token"
+          profile={previewCitizenProfile}
+          initialView={citizenView === "incident-reports" ? "reports" : "create"}
+          onBackToDashboard={() => setCitizenView("dashboard")}
+        />
+      );
+    }
+
     if (citizenView !== "dashboard") {
       return (
         <OrganizationApplicationPage
@@ -200,6 +222,8 @@ function App() {
         onViewOrganizationApplications={() => {
           setCitizenView("organization-applications");
         }}
+        onReportIncident={() => setCitizenView("incident-create")}
+        onViewIncidentReports={() => setCitizenView("incident-reports")}
         onSignOut={() => undefined}
       />
     );
@@ -274,6 +298,8 @@ function App() {
           onViewOrganizationApplications={() => {
             setCitizenView("organization-applications");
           }}
+          onReportIncident={() => setCitizenView("incident-create")}
+          onViewIncidentReports={() => setCitizenView("incident-reports")}
           onSignOut={() => {
             setCitizenView("dashboard");
             setShowNotifications(false);
@@ -299,6 +325,21 @@ function App() {
         <OrganizationMembershipWorkspacesPage
           accessToken={accessToken}
           onBack={() => setCitizenView("dashboard")}
+        />
+      );
+    }
+
+    if (citizenView === "incident-create" || citizenView === "incident-reports") {
+      return (
+        <IncidentPage
+          accessToken={accessToken}
+          profile={profile}
+          initialView={citizenView === "incident-reports" ? "reports" : "create"}
+          onBackToDashboard={() => setCitizenView("dashboard")}
+          onSignOut={() => {
+            setCitizenView("dashboard");
+            signOut();
+          }}
         />
       );
     }

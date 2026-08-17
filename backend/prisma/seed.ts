@@ -92,6 +92,36 @@ async function main(): Promise<void> {
     },
   });
 
+  const incidentCategories = await Promise.all(
+    [
+      {
+        name: "Litter and Waste",
+        description: "Dumped rubbish, litter, plastics, or unmanaged solid waste.",
+      },
+      {
+        name: "Pollution",
+        description: "Air, water, soil, smoke, chemical, or drainage pollution.",
+      },
+      {
+        name: "Wildlife Issue",
+        description: "Wildlife hazards, injured animals, or damage to natural habitats.",
+      },
+      {
+        name: "Environmental Damage",
+        description: "Damage to trees, waterways, public green space, or ecosystems.",
+      },
+    ].map((category) =>
+      prisma.incidentCategory.upsert({
+        where: { name: category.name },
+        update: {
+          description: category.description,
+          isActive: true,
+        },
+        create: category,
+      }),
+    ),
+  );
+
   console.log("EcoTrack super-admin profile is ready:");
 
   console.log(
@@ -99,6 +129,7 @@ async function main(): Promise<void> {
       {
         superAdminProfile,
         platformSettings,
+        incidentCategories,
       },
       null,
       2,

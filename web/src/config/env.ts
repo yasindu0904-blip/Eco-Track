@@ -47,4 +47,8 @@ export const webEnv = {
     "VITE_API_BASE_URL",
     import.meta.env.VITE_API_BASE_URL,
   ),
+
+  incidentEvidenceBucket:
+    import.meta.env.VITE_INCIDENT_EVIDENCE_BUCKET?.trim() ||
+    "incident-evidence",
 } as const;

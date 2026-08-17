@@ -31,6 +31,17 @@ const environmentSchema = z.object({
     .string()
     .min(1, "SUPABASE_PUBLISHABLE_KEY is required"),
 
+  SUPABASE_SERVICE_ROLE_KEY: z
+    .string()
+    .trim()
+    .default(""),
+
+  INCIDENT_EVIDENCE_BUCKET: z
+    .string()
+    .trim()
+    .min(1)
+    .default("incident-evidence"),
+
   SUPER_ADMIN_AUTH_USER_ID: z
     .string()
     .trim()

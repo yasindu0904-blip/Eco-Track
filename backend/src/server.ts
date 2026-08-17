@@ -9,6 +9,7 @@ import { cleanupWorkflowDependencies } from "./modules/cleanupWorkflows/cleanupW
 import { membershipAdministrationDependencies } from "./modules/memberships/administration/membershipAdministration.dependencies.js";
 import { notificationDependencies } from "./modules/notifications/notification.dependencies.js";
 import { membershipSelfServiceDependencies } from "./modules/memberships/selfService/membershipSelfService.dependencies.js";
+import { incidentDependencies } from "./modules/incidents/incident.dependencies.js";
 import { organizationApplicationDependencies } from "./modules/organizations/application/application.dependencies.js";
 
 const app = createApp(
@@ -20,6 +21,7 @@ const app = createApp(
     membershipAdministrationDependencies,
     notificationDependencies,
     membershipSelfServiceDependencies,
+    incidentDependencies,
     organizationApplicationDependencies,
   },
 );

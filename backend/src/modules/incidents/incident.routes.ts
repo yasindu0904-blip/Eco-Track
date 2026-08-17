@@ -1,0 +1,66 @@
+import { Router, type Router as ExpressRouter } from "express";
+
+import { Actions } from "../../authorization/actions.js";
+import { Subjects } from "../../authorization/subjects.js";
+import { abilityMiddleware } from "../../middleware/ability.middleware.js";
+import { createAuthenticationMiddleware } from "../../middleware/auth.middleware.js";
+import { authorize } from "../../middleware/authorize.middleware.js";
+import { requireCompletedProfile } from "../../middleware/requireCompletedProfile.middleware.js";
+import type { AuthenticationDependencies } from "../auth/auth.types.js";
+import type { IncidentDependencies } from "./incident.dependencies.js";
+import {
+  createEvidenceUploadIntentsController,
+  createIncidentController,
+  getMyIncidentController,
+  getPublicSafeIncidentController,
+  listIncidentCategoriesController,
+  listMyIncidentsController,
+} from "./controllers/incident.controllers.js";
+
+export function createIncidentRouter(
+  authenticationDependencies: AuthenticationDependencies,
+  incidentDependencies: IncidentDependencies,
+): ExpressRouter {
+  const router = Router();
+  const authenticate = createAuthenticationMiddleware(authenticationDependencies);
+  const protectedRoute = [authenticate, requireCompletedProfile, abilityMiddleware] as const;
+
+  router.get(
+    "/incident-categories",
+    ...protectedRoute,
+    authorize(Actions.Read, Subjects.Incident),
+    listIncidentCategoriesController(incidentDependencies),
+  );
+  router.post(
+    "/incidents/evidence/upload-intents",
+    ...protectedRoute,
+    authorize(Actions.Create, Subjects.Incident),
+    createEvidenceUploadIntentsController(incidentDependencies),
+  );
+  router.post(
+    "/incidents",
+    ...protectedRoute,
+    authorize(Actions.Create, Subjects.Incident),
+    createIncidentController(incidentDependencies),
+  );
+  router.get(
+    "/incidents/me",
+    ...protectedRoute,
+    authorize(Actions.ReadOwn, Subjects.Incident),
+    listMyIncidentsController(incidentDependencies),
+  );
+  router.get(
+    "/incidents/me/:id",
+    ...protectedRoute,
+    authorize(Actions.ReadOwn, Subjects.Incident),
+    getMyIncidentController(incidentDependencies),
+  );
+  router.get(
+    "/incidents/:id",
+    ...protectedRoute,
+    authorize(Actions.Read, Subjects.Incident),
+    getPublicSafeIncidentController(incidentDependencies),
+  );
+
+  return router;
+}

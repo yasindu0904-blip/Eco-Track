@@ -21,9 +21,10 @@ import { colors, spacing } from "./theme";
 type ScreenProps = {
   children: ReactNode;
   contentStyle?: StyleProp<ViewStyle>;
+  scrollEnabled?: boolean;
 };
 
-export function Screen({ children, contentStyle }: ScreenProps) {
+export function Screen({ children, contentStyle, scrollEnabled = true }: ScreenProps) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -31,6 +32,7 @@ export function Screen({ children, contentStyle }: ScreenProps) {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
+          scrollEnabled={scrollEnabled}
           contentContainerStyle={[styles.screenContent, contentStyle]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}

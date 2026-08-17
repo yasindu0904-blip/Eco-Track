@@ -16,6 +16,7 @@ import type { MembershipAdministrationDependencies } from "./modules/memberships
 import { createMembershipAdministrationRouter } from "./modules/memberships/administration/membershipAdministration.routes.js";
 import { createNotificationRouter } from "./modules/notifications/notification.routes.js";
 import { createMembershipSelfServiceRouter } from "./modules/memberships/selfService/membershipSelfService.routes.js";
+import { createIncidentRouter } from "./modules/incidents/incident.routes.js";
 import { createOrganizationApplicationRouter } from "./modules/organizations/application/application.routes.js";
 import { createOrganizationReviewRouter } from "./modules/organizations/review/organizationReview.routes.js";
 import { createProfileRouter } from "./modules/profiles/profile.routes.js";
@@ -23,6 +24,7 @@ import { createProfileRouter } from "./modules/profiles/profile.routes.js";
 import type { AuthenticationDependencies } from "./modules/auth/auth.types.js";
 import type { NotificationDependencies } from "./modules/notifications/notification.dependencies.js";
 import type { MembershipSelfServiceDependencies } from "./modules/memberships/selfService/membershipSelfService.dependencies.js";
+import type { IncidentDependencies } from "./modules/incidents/incident.dependencies.js";
 import type { OrganizationApplicationDependencies } from "./modules/organizations/application/application.dependencies.js";
 
 type CreateAppOptions = {
@@ -32,6 +34,7 @@ type CreateAppOptions = {
   membershipAdministrationDependencies?: MembershipAdministrationDependencies;
   notificationDependencies?: NotificationDependencies;
   membershipSelfServiceDependencies?: MembershipSelfServiceDependencies;
+  incidentDependencies?: IncidentDependencies;
   organizationApplicationDependencies?: OrganizationApplicationDependencies;
 };
 
@@ -92,6 +95,16 @@ export function createApp(
       createMembershipSelfServiceRouter(
         authenticationDependencies,
         options.membershipSelfServiceDependencies,
+      ),
+    );
+  }
+
+  if (options.incidentDependencies) {
+    app.use(
+      "/api/v1",
+      createIncidentRouter(
+        authenticationDependencies,
+        options.incidentDependencies,
       ),
     );
   }

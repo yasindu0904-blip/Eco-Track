@@ -12,6 +12,8 @@ type CitizenDashboardProps = {
   onManageMembership: () => void;
   onCreateOrganizationApplication: () => void;
   onViewApplications: () => void;
+  onReportIncident: () => void;
+  onViewReports: () => void;
   onSignOut: () => void;
 };
 
@@ -22,6 +24,8 @@ export function CitizenDashboard({
   onManageMembership,
   onCreateOrganizationApplication,
   onViewApplications,
+  onReportIncident,
+  onViewReports,
   onSignOut,
 }: CitizenDashboardProps) {
   const displayName = profile.fullName?.trim() || "EcoTrack member";
@@ -76,11 +80,13 @@ export function CitizenDashboard({
       </View>
 
       <View style={[sharedStyles.card, styles.upcomingCard]}>
-        <Text style={styles.upcomingEyebrow}>NEXT MAIN MODULE</Text>
+        <Text style={styles.upcomingEyebrow}>AVAILABLE NOW</Text>
         <Text style={sharedStyles.sectionTitle}>Incident reporting</Text>
         <Text style={sharedStyles.sectionSubtitle}>
-          Map-based incident reporting is intentionally not simulated here because its backend API has not been implemented yet.
+          Confirm your current location or a manually positioned map pin, add evidence, and follow the shared status.
         </Text>
+        <Button label="Report an incident" onPress={onReportIncident} />
+        <Button label="View My Reports" variant="secondary" onPress={onViewReports} />
       </View>
 
       <Button label="Sign out" variant="secondary" onPress={onSignOut} />

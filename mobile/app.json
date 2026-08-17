@@ -14,6 +14,13 @@
     },
     "plugins": [
       "expo-secure-store",
+      "@maplibre/maplibre-react-native",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow EcoTrack to use your location when you choose My location."
+        }
+      ],
       [
         "expo-build-properties",
         {

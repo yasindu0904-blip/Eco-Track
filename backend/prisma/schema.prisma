@@ -495,6 +495,7 @@ model CleanupWorkflowTransition {
 model Incident {
   id             String                               @id @default(uuid()) @db.Uuid
   reporterUserId String                               @map("reporter_user_id") @db.Uuid
+  submissionId   String                               @map("submission_id") @db.Uuid
   categoryId     String                               @map("category_id") @db.Uuid
   title          String
   description    String
@@ -521,6 +522,7 @@ model Incident {
   cleanupEvents      CleanupEvent[]
   contributionEvents ContributionEvent[]
 
+  @@unique([reporterUserId, submissionId], map: "incidents_reporter_submission_key")
   @@index([status, reportedAt])
   @@index([categoryId])
   @@index([reporterUserId])

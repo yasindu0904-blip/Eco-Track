@@ -408,6 +408,7 @@ Table public.incident_categories [headerColor: #F28E2B] {
 Table public.incidents [headerColor: #F28E2B] {
   id uuid [pk]
   reporter_user_id uuid [not null]
+  submission_id uuid [not null, note: 'App-generated UUID used with reporter_user_id to make incident submission retries idempotent. It does not identify another person.']
   category_id uuid [not null]
   title varchar [not null]
   description text [not null]
@@ -428,6 +429,7 @@ Table public.incidents [headerColor: #F28E2B] {
     (status, reported_at)
     category_id
     reporter_user_id
+    (reporter_user_id, submission_id) [unique]
   }
 
   Note: 'Shared platform record with no organization_id. Covering organizations are derived by spatially comparing geo_point with the official administrative-area boundaries referenced by ACTIVE organization_service_areas.'

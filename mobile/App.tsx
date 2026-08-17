@@ -10,12 +10,20 @@ import { BrandHeader, Button, LoadingState, Notice, Screen, sharedStyles } from 
 import { CitizenDashboard } from "./src/features/citizen/CitizenDashboard";
 import { NotificationInboxScreen } from "./src/features/notifications/NotificationInboxScreen";
 import { MembershipSelfServiceScreen } from "./src/features/memberships/MembershipSelfServiceScreen";
+import { IncidentReportScreen, MyReportsScreen } from "./src/features/incidents";
+import type { IncidentDetail } from "./src/features/incidents/incident.types";
 import { MyOrganizationApplicationsScreen } from "./src/features/organizations/MyOrganizationApplicationsScreen";
 import { OrganizationApplicationScreen } from "./src/features/organizations/OrganizationApplicationScreen";
 import type { OrganizationApplication } from "./src/features/organizations/organizationApplication.types";
 import { SuperAdminDashboard } from "./src/features/superAdmin/SuperAdminDashboard";
 
-type CitizenView = "dashboard" | "membership" | "createOrganization" | "organizationApplications";
+type CitizenView =
+  | "dashboard"
+  | "membership"
+  | "createOrganization"
+  | "organizationApplications"
+  | "reportIncident"
+  | "myReports";
 
 export default function App() {
   const authentication = useAuthentication();
@@ -23,11 +31,14 @@ export default function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [submittedApplication, setSubmittedApplication] =
     useState<OrganizationApplication | null>(null);
+  const [submittedIncident, setSubmittedIncident] =
+    useState<IncidentDetail | null>(null);
 
   const signOut = async () => {
     setCitizenView("dashboard");
     setShowNotifications(false);
     setSubmittedApplication(null);
+    setSubmittedIncident(null);
     await authentication.signOut();
   };
 
@@ -131,6 +142,32 @@ export default function App() {
           onBack={() => setCitizenView("dashboard")}
         />
       );
+    } else if (citizenView === "reportIncident") {
+      content = (
+        <IncidentReportScreen
+          accessToken={authentication.accessToken}
+          onBack={() => setCitizenView("dashboard")}
+          onSubmitted={(incident) => {
+            setSubmittedIncident(incident);
+            setCitizenView("myReports");
+          }}
+        />
+      );
+    } else if (citizenView === "myReports") {
+      content = (
+        <MyReportsScreen
+          accessToken={authentication.accessToken}
+          submittedIncident={submittedIncident}
+          onBack={() => {
+            setSubmittedIncident(null);
+            setCitizenView("dashboard");
+          }}
+          onNewReport={() => {
+            setSubmittedIncident(null);
+            setCitizenView("reportIncident");
+          }}
+        />
+      );
     } else {
       content = (
         <CitizenDashboard
@@ -140,6 +177,8 @@ export default function App() {
           onManageMembership={() => setCitizenView("membership")}
           onCreateOrganizationApplication={() => setCitizenView("createOrganization")}
           onViewApplications={() => setCitizenView("organizationApplications")}
+          onReportIncident={() => setCitizenView("reportIncident")}
+          onViewReports={() => setCitizenView("myReports")}
           onSignOut={() => void signOut()}
         />
       );
