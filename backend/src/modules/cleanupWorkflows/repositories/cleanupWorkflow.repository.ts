@@ -82,7 +82,7 @@ export async function ensureDefaultCleanupWorkflow(prisma: PrismaClient, organiz
         update: {},
       });
     }
-  });
+  }, { timeout: 15_000 });
 }
 
 export function findCleanupWorkflow(prisma: PrismaClient, organizationId: string) {

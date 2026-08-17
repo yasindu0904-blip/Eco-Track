@@ -4,16 +4,13 @@ import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import test, { after, before } from "node:test";
 
-import express from "express";
-
+import { createApp } from "../../app.js";
 import { authorizationDependencies } from "../../authorization/authorization.dependencies.js";
 import { prisma } from "../../database/prisma.js";
 import { ApplicationError } from "../../errors/applicationError.js";
 import { AccountStatus, MembershipRole, MembershipSource, MembershipStatus, OrganizationStatus, PlatformRole } from "../../generated/prisma/enums.js";
-import { errorMiddleware } from "../../middleware/error.middleware.js";
 import type { AuthenticationDependencies, AuthenticatedUserProfile } from "../auth/auth.types.js";
 import { cleanupWorkflowDependencies } from "./cleanupWorkflow.dependencies.js";
-import { createCleanupWorkflowRouter } from "./cleanupWorkflow.routes.js";
 import { initializeAndGetCleanupWorkflow, requireAllowedCleanupWorkflowTransition } from "./services/cleanupWorkflow.service.js";
 
 const profileAId = randomUUID();
@@ -76,9 +73,10 @@ before(async () => {
     ],
   });
 
-  const app = express();
-  app.use("/api/v1", createCleanupWorkflowRouter(authenticationDependencies, authorizationDependencies, cleanupWorkflowDependencies));
-  app.use(errorMiddleware);
+  const app = createApp(authenticationDependencies, {
+    authorizationDependencies,
+    cleanupWorkflowDependencies,
+  });
   await new Promise<void>((resolve) => { server = app.listen(0, "127.0.0.1", () => resolve()); });
   if (!server) throw new Error("The cleanup-workflow test server did not start.");
   baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
