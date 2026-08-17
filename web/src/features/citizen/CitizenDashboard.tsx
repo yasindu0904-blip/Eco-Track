@@ -7,6 +7,7 @@ interface CitizenDashboardProps {
   accessToken?: string;
   onOpenNotifications?: () => void;
   onManageMembership: () => void;
+  onOpenOrganizationWorkspaces: () => void;
   onStartOrganizationApplication: () => void;
   onViewOrganizationApplications: () => void;
   onSignOut: () => void;
@@ -81,6 +82,7 @@ export function CitizenDashboard({
   accessToken,
   onOpenNotifications,
   onManageMembership,
+  onOpenOrganizationWorkspaces,
   onStartOrganizationApplication,
   onViewOrganizationApplications,
   onSignOut,
@@ -127,6 +129,10 @@ export function CitizenDashboard({
           <button type="button" onClick={onManageMembership}>
             <CitizenIcon name="organization" />
             Join an organization
+          </button>
+          <button type="button" onClick={onOpenOrganizationWorkspaces}>
+            <CitizenIcon name="shield" />
+            Organization workspaces
           </button>
           {onOpenNotifications && (
             <NotificationButton
@@ -216,6 +222,27 @@ export function CitizenDashboard({
           </div>
 
           <div className="citizen-dashboard-actions">
+            <article className="citizen-action-card citizen-action-card-featured">
+              <span className="citizen-action-icon">
+                <CitizenIcon name="shield" />
+              </span>
+              <span className="citizen-action-badge">Available</span>
+              <h3>Open an organization workspace</h3>
+              <p>
+                View your active organization memberships. Organization Admins
+                can review requests and manage members inside only that
+                organization.
+              </p>
+              <button
+                className="citizen-action-primary"
+                type="button"
+                onClick={onOpenOrganizationWorkspaces}
+              >
+                View workspaces
+                <CitizenIcon name="arrow" />
+              </button>
+            </article>
+
             <article className="citizen-action-card citizen-action-card-featured">
               <span className="citizen-action-icon">
                 <CitizenIcon name="organization" />

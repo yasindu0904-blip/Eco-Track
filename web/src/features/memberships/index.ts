@@ -1,2 +1,5 @@
 export { MembershipSelfServicePage } from "./MembershipSelfServicePage";
-export { MembershipAdministrationPage } from "./administration";
+export {
+  MembershipAdministrationPage,
+  OrganizationMembershipWorkspacesPage,
+} from "./administration";
