@@ -1,0 +1,64 @@
+ECOTRACK INCIDENT GEO_POINT TRIGGER ERROR
+==========================================
+
+Error
+-----
+
+`domainSchema.integration.test.ts` fails while Prisma creates an incident:
+
+Null constraint violation: incidents.geo_point is NULL
+
+The remaining domain-schema tests may then be cancelled because their shared
+test setup did not finish.
+
+Meaning
+-------
+
+This is not caused by the unfinished map or incident-reporting UI/API. The
+incident database foundation already requires the PostGIS trigger below:
+
+incidents_sync_geo_point
+  -> public.sync_incident_geo_point()
+  -> converts longitude/latitude into geography(Point, 4326)
+
+The trigger is defined in migration:
+
+20260813120000_add_incident_and_cleanup_event_foundation
+
+Likely cause
+------------
+
+The configured database has drift: the migration may be recorded as applied,
+but the function or trigger is missing/disabled or was not created correctly.
+
+Safe fix
+--------
+
+1. Confirm which DATABASE_URL is active. Do not assume local Docker and
+   Supabase contain the same objects.
+
+2. Check migration state from `backend`:
+
+   npx prisma migrate status
+
+3. Confirm the database contains both `public.sync_incident_geo_point()` and
+   the `public.incidents` trigger named `incidents_sync_geo_point`.
+
+4. For a disposable local test database, recreate it from all committed Prisma
+   migrations, then rerun the test. Back up anything needed before deleting a
+   Docker volume.
+
+5. For Supabase/shared/production data, do not edit an already-applied
+   migration and do not make `geo_point` nullable. Add a new repair migration
+   that recreates the function and trigger exactly as defined in the original
+   migration, review it, deploy it, and verify it before continuing.
+
+Verification
+------------
+
+From `backend`, run:
+
+   npx tsx --test src/tests/domainSchema.integration.test.ts
+
+The incident insertion and all domain-schema tests must pass before the problem
+is considered fixed.
