@@ -16,6 +16,7 @@ import {
 import { MapFoundationPreview } from "./features/maps";
 import { OrganizationApplicationPage } from "./features/organizations/application";
 import { SuperAdminDashboard } from "./features/super-admin/SuperAdminDashboard";
+import { MyImpactPage } from "./features/rewards";
 
 const previewSuperAdminProfile = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -44,7 +45,8 @@ type CitizenView =
   | "organization-apply"
   | "organization-applications"
   | "incident-create"
-  | "incident-reports";
+  | "incident-reports"
+  | "impact";
 
 function BrandHeader() {
   return (
@@ -224,6 +226,7 @@ function App() {
         }}
         onReportIncident={() => setCitizenView("incident-create")}
         onViewIncidentReports={() => setCitizenView("incident-reports")}
+        onOpenImpact={() => undefined}
         onSignOut={() => undefined}
       />
     );
@@ -300,6 +303,7 @@ function App() {
           }}
           onReportIncident={() => setCitizenView("incident-create")}
           onViewIncidentReports={() => setCitizenView("incident-reports")}
+          onOpenImpact={() => setCitizenView("impact")}
           onSignOut={() => {
             setCitizenView("dashboard");
             setShowNotifications(false);
@@ -323,6 +327,15 @@ function App() {
     if (citizenView === "organization-workspaces") {
       return (
         <OrganizationMembershipWorkspacesPage
+          accessToken={accessToken}
+          onBack={() => setCitizenView("dashboard")}
+        />
+      );
+    }
+
+    if (citizenView === "impact") {
+      return (
+        <MyImpactPage
           accessToken={accessToken}
           onBack={() => setCitizenView("dashboard")}
         />

@@ -12,6 +12,7 @@ interface CitizenDashboardProps {
   onViewOrganizationApplications: () => void;
   onReportIncident: () => void;
   onViewIncidentReports: () => void;
+  onOpenImpact: () => void;
   onSignOut: () => void;
 }
 
@@ -89,6 +90,7 @@ export function CitizenDashboard({
   onViewOrganizationApplications,
   onReportIncident,
   onViewIncidentReports,
+  onOpenImpact,
   onSignOut,
 }: CitizenDashboardProps) {
   const displayName = profile.fullName ?? "EcoTrack member";
@@ -141,6 +143,10 @@ export function CitizenDashboard({
           <button type="button" onClick={onViewIncidentReports}>
             <CitizenIcon name="report" />
             My Reports
+          </button>
+          <button type="button" onClick={onOpenImpact}>
+            <CitizenIcon name="volunteer" />
+            My Impact
           </button>
           {onOpenNotifications && (
             <NotificationButton
@@ -319,6 +325,26 @@ export function CitizenDashboard({
                   View my reports
                 </button>
               </div>
+            </article>
+
+            <article className="citizen-action-card">
+              <span className="citizen-action-icon">
+                <CitizenIcon name="volunteer" />
+              </span>
+              <span className="citizen-action-badge">Available</span>
+              <h3>View My Impact</h3>
+              <p>
+                See non-monetary points, earned achievements, and the private
+                history explaining every verified contribution.
+              </p>
+              <button
+                className="citizen-action-primary"
+                type="button"
+                onClick={onOpenImpact}
+              >
+                Open My Impact
+                <CitizenIcon name="arrow" />
+              </button>
             </article>
 
             <article className="citizen-action-card">

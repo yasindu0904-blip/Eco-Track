@@ -16,6 +16,7 @@ import { MyOrganizationApplicationsScreen } from "./src/features/organizations/M
 import { OrganizationApplicationScreen } from "./src/features/organizations/OrganizationApplicationScreen";
 import type { OrganizationApplication } from "./src/features/organizations/organizationApplication.types";
 import { SuperAdminDashboard } from "./src/features/superAdmin/SuperAdminDashboard";
+import { MyImpactScreen } from "./src/features/rewards";
 
 type CitizenView =
   | "dashboard"
@@ -23,7 +24,8 @@ type CitizenView =
   | "createOrganization"
   | "organizationApplications"
   | "reportIncident"
-  | "myReports";
+  | "myReports"
+  | "impact";
 
 export default function App() {
   const authentication = useAuthentication();
@@ -168,6 +170,13 @@ export default function App() {
           }}
         />
       );
+    } else if (citizenView === "impact") {
+      content = (
+        <MyImpactScreen
+          accessToken={authentication.accessToken}
+          onBack={() => setCitizenView("dashboard")}
+        />
+      );
     } else {
       content = (
         <CitizenDashboard
@@ -179,6 +188,7 @@ export default function App() {
           onViewApplications={() => setCitizenView("organizationApplications")}
           onReportIncident={() => setCitizenView("reportIncident")}
           onViewReports={() => setCitizenView("myReports")}
+          onOpenImpact={() => setCitizenView("impact")}
           onSignOut={() => void signOut()}
         />
       );

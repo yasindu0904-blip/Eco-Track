@@ -1,6 +1,6 @@
 import { ApplicationError } from "../../../errors/applicationError.js";
 
-import type { NotificationDependencies } from "../notification.dependencies.js";
+import type { NotificationWriteDependencies } from "../notification.dependencies.js";
 import {
   sanitizeNotificationData,
   toNotificationDto,
@@ -12,7 +12,7 @@ import type {
 import { createNotificationRecord } from "../repositories/notification.repository.js";
 
 export async function createNotification(
-  dependencies: NotificationDependencies,
+  dependencies: NotificationWriteDependencies,
   command: CreateNotificationCommand,
 ): Promise<NotificationDto> {
   const title = command.title.trim();

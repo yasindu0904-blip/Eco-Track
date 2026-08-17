@@ -29,7 +29,7 @@ services:
       - migrate
       - deploy
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@database:5432/ecotrack_local?schema=public
+      DATABASE_URL: "postgresql://postgres:postgres@database:5432/ecotrack_local?schema=public&options=-c%20search_path%3Dpublic%2Cextensions"
     depends_on:
       database:
         condition: service_healthy
@@ -37,7 +37,7 @@ services:
 
   backend:
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@database:5432/ecotrack_local?schema=public
+      DATABASE_URL: "postgresql://postgres:postgres@database:5432/ecotrack_local?schema=public&options=-c%20search_path%3Dpublic%2Cextensions"
     depends_on:
       migrate:
         condition: service_completed_successfully
