@@ -1,4 +1,5 @@
 import type { AuthenticatedUserProfile } from "../auth/auth.types";
+import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
 import { NotificationButton } from "../notifications/NotificationInbox";
 import "./citizenDashboard.css";
 
@@ -8,10 +9,13 @@ interface CitizenDashboardProps {
   onOpenNotifications?: () => void;
   onManageMembership: () => void;
   onOpenOrganizationWorkspaces: () => void;
+  activeOrganization?: ActiveOrganizationMembership;
+  onOpenOrganizationWorkspace?: () => void;
   onStartOrganizationApplication: () => void;
   onViewOrganizationApplications: () => void;
   onReportIncident: () => void;
   onViewIncidentReports: () => void;
+  onFindCleanupActivity: () => void;
   onOpenImpact: () => void;
   onSignOut: () => void;
 }
@@ -86,10 +90,13 @@ export function CitizenDashboard({
   onOpenNotifications,
   onManageMembership,
   onOpenOrganizationWorkspaces,
+  activeOrganization,
+  onOpenOrganizationWorkspace,
   onStartOrganizationApplication,
   onViewOrganizationApplications,
   onReportIncident,
   onViewIncidentReports,
+  onFindCleanupActivity,
   onOpenImpact,
   onSignOut,
 }: CitizenDashboardProps) {
@@ -128,6 +135,12 @@ export function CitizenDashboard({
             <CitizenIcon name="home" />
             Dashboard
           </button>
+          {activeOrganization && onOpenOrganizationWorkspace && (
+            <button type="button" onClick={onOpenOrganizationWorkspace}>
+              <CitizenIcon name="organization" />
+              Organization workspace
+            </button>
+          )}
           <button type="button" onClick={onViewOrganizationApplications}>
             <CitizenIcon name="organization" />
             My organization requests
@@ -143,6 +156,10 @@ export function CitizenDashboard({
           <button type="button" onClick={onViewIncidentReports}>
             <CitizenIcon name="report" />
             My Reports
+          </button>
+          <button type="button" onClick={onFindCleanupActivity}>
+            <CitizenIcon name="volunteer" />
+            Find cleanup activity
           </button>
           <button type="button" onClick={onOpenImpact}>
             <CitizenIcon name="volunteer" />
@@ -199,9 +216,19 @@ export function CitizenDashboard({
               <CitizenIcon name="organization" />
             </span>
             <div>
-              <small>Organization onboarding</small>
-              <strong>Available now</strong>
-              <p>Request a workspace for an existing organization.</p>
+              <small>
+                {activeOrganization
+                  ? "Organization workspace"
+                  : "Organization onboarding"}
+              </small>
+              <strong>
+                {activeOrganization?.organization.name ?? "Available now"}
+              </strong>
+              <p>
+                {activeOrganization
+                  ? `${activeOrganization.role === "ORG_ADMIN" ? "Admin" : "Member"} access is active.`
+                  : "Request a workspace for an existing organization."}
+              </p>
             </div>
           </article>
           <article>
@@ -282,18 +309,27 @@ export function CitizenDashboard({
                 <CitizenIcon name="organization" />
               </span>
               <span className="citizen-action-badge">Available</span>
-              <h3>Request an organization workspace</h3>
+              <h3>
+                {activeOrganization
+                  ? activeOrganization.organization.name
+                  : "Request an organization workspace"}
+              </h3>
               <p>
-                Submit official details and proposed service areas for Super
-                Admin review. Approval makes the requester the first Org Admin.
+                {activeOrganization
+                  ? "Your accepted organization membership is active."
+                  : "Submit official details and proposed service areas for Super Admin review. Approval makes the requester the first Org Admin."}
               </p>
               <div className="citizen-action-buttons">
                 <button
                   className="citizen-action-primary"
                   type="button"
-                  onClick={onStartOrganizationApplication}
+                  onClick={
+                    activeOrganization && onOpenOrganizationWorkspace
+                      ? onOpenOrganizationWorkspace
+                      : onStartOrganizationApplication
+                  }
                 >
-                  Start request
+                  {activeOrganization ? "Open workspace" : "Start request"}
                   <CitizenIcon name="arrow" />
                 </button>
                 <button
@@ -351,16 +387,19 @@ export function CitizenDashboard({
               <span className="citizen-action-icon">
                 <CitizenIcon name="volunteer" />
               </span>
-              <span className="citizen-action-badge citizen-action-badge-muted">
-                Upcoming
-              </span>
-              <h3>Find cleanup opportunities</h3>
+              <span className="citizen-action-badge">Available</span>
+              <h3>Find cleanup activity</h3>
               <p>
-                Browse published cleanup events and volunteer using this same
-                EcoTrack account.
+                Explore mapped environmental incidents that may become local
+                cleanup opportunities.
               </p>
-              <button className="citizen-action-disabled" type="button" disabled>
-                Cleanup events are not connected
+              <button
+                className="citizen-action-primary"
+                type="button"
+                onClick={onFindCleanupActivity}
+              >
+                Open discovery map
+                <CitizenIcon name="arrow" />
               </button>
             </article>
           </div>

@@ -40,6 +40,40 @@ export interface IncidentSummary {
   thumbnailUrl: string | null;
 }
 
+export interface PublicIncidentSummary
+  extends Omit<IncidentSummary, "thumbnailUrl"> {
+  falseReviewCount: number;
+}
+
+export interface PublicIncidentPage {
+  items: PublicIncidentSummary[];
+  nextCursor: string | null;
+}
+
+export interface IncidentDiscoveryFilters {
+  limit?: number;
+  cursor?: string;
+  status?: IncidentStatus;
+  categoryId?: string;
+  reportedAfter?: string;
+}
+
+export interface IncidentViewportDiscoveryQuery
+  extends IncidentDiscoveryFilters {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+  zoom: number;
+}
+
+export interface IncidentRadiusDiscoveryQuery
+  extends IncidentDiscoveryFilters {
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+}
+
 export interface IncidentDetail extends IncidentSummary {
   description: string;
   highlightUntil: string;

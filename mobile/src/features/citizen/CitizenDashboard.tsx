@@ -4,16 +4,20 @@ import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import { BrandHeader, Button, Notice, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import { NotificationButton } from "../notifications/NotificationInboxScreen";
+import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
 
 type CitizenDashboardProps = {
   profile: AuthenticatedUserProfile;
   accessToken: string;
   onOpenNotifications: () => void;
   onManageMembership: () => void;
+  activeOrganization?: ActiveOrganizationMembership;
+  onOpenOrganizationWorkspace?: () => void;
   onCreateOrganizationApplication: () => void;
   onViewApplications: () => void;
   onReportIncident: () => void;
   onViewReports: () => void;
+  onFindCleanupActivity: () => void;
   onOpenImpact: () => void;
   onSignOut: () => void;
 };
@@ -23,10 +27,13 @@ export function CitizenDashboard({
   accessToken,
   onOpenNotifications,
   onManageMembership,
+  activeOrganization,
+  onOpenOrganizationWorkspace,
   onCreateOrganizationApplication,
   onViewApplications,
   onReportIncident,
   onViewReports,
+  onFindCleanupActivity,
   onOpenImpact,
   onSignOut,
 }: CitizenDashboardProps) {
@@ -55,6 +62,24 @@ export function CitizenDashboard({
         accessToken={accessToken}
         onOpen={onOpenNotifications}
       />
+
+      {activeOrganization && onOpenOrganizationWorkspace ? (
+        <View style={[sharedStyles.card, styles.organizationCard]}>
+          <Text style={styles.organizationEyebrow}>ACTIVE ORGANIZATION</Text>
+          <Text style={sharedStyles.sectionTitle}>
+            {activeOrganization.organization.name}
+          </Text>
+          <Text style={sharedStyles.sectionSubtitle}>
+            {activeOrganization.role === "ORG_ADMIN"
+              ? "Organization admin"
+              : "Organization member"}
+          </Text>
+          <Button
+            label="Open organization workspace"
+            onPress={onOpenOrganizationWorkspace}
+          />
+        </View>
+      ) : null}
 
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.sectionTitle}>Organization membership</Text>
@@ -92,6 +117,16 @@ export function CitizenDashboard({
       </View>
 
       <View style={sharedStyles.card}>
+        <Text style={styles.upcomingEyebrow}>FIND CLEANUP ACTIVITY</Text>
+        <Text style={sharedStyles.sectionTitle}>Discover incidents nearby</Text>
+        <Text style={sharedStyles.sectionSubtitle}>
+          Browse environmental incidents in the visible map area or run an
+          explicit five-kilometre search from your current location.
+        </Text>
+        <Button label="Open discovery map" onPress={onFindCleanupActivity} />
+      </View>
+
+      <View style={sharedStyles.card}>
         <Text style={styles.upcomingEyebrow}>MY IMPACT</Text>
         <Text style={sharedStyles.sectionTitle}>Rewards and achievements</Text>
         <Text style={sharedStyles.sectionSubtitle}>
@@ -122,6 +157,15 @@ const styles = StyleSheet.create({
   email: { color: colors.textMuted, fontSize: 13 },
   upcomingCard: { backgroundColor: colors.surfaceMuted },
   upcomingEyebrow: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.1,
+  },
+  organizationCard: {
+    borderColor: colors.primary,
+  },
+  organizationEyebrow: {
     color: colors.primary,
     fontSize: 11,
     fontWeight: "900",

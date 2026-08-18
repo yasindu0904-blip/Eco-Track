@@ -154,9 +154,10 @@ before(async () => {
   await prisma.incidentCategory.create({
     data: { id: categoryId, name: `Reward Category ${categoryId}`, isActive: true },
   });
+  const incidentNow = Date.now();
   const incidentTimes = {
-    highlightUntil: new Date("2026-08-18T00:00:00Z"),
-    archiveAfter: new Date("2026-08-25T00:00:00Z"),
+    highlightUntil: new Date(incidentNow + 48 * 60 * 60 * 1000),
+    archiveAfter: new Date(incidentNow + 7 * 24 * 60 * 60 * 1000),
   };
   await prisma.incident.createMany({
     data: [

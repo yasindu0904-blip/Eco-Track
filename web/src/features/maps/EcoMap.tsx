@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CircleMarker,
+  GeoJSON,
   MapContainer,
   Popup,
   TileLayer,
   useMap,
   useMapEvents,
 } from "react-leaflet";
+import { geoJSON } from "leaflet";
+import type { GeoJsonObject } from "geojson";
 
 import "leaflet/dist/leaflet.css";
 import "./map.css";
@@ -18,6 +21,8 @@ import {
 } from "./map.constants";
 import type {
   MapLocation,
+  MapBoundaryFeature,
+  MapBoundaryFeatureCollection,
   MapMarkerFeature,
   MapViewport,
   MapViewportChangeHandler,
@@ -32,10 +37,15 @@ interface MarkerCluster {
   markers: MapMarkerFeature[];
 }
 
+const MAX_MAP_ZOOM = 19;
+const CLUSTER_BREAK_ZOOM = 17;
+
 export interface EcoMapProps {
   markers?: MapMarkerFeature[];
+  boundaries?: MapBoundaryFeatureCollection;
   initialCenter?: MapLocation;
   initialZoom?: number;
+  focusLocation?: MapLocation | null;
   selectedMarkerId?: string;
   selectedLocation?: MapLocation | null;
   selectionEnabled?: boolean;
@@ -43,15 +53,113 @@ export interface EcoMapProps {
   height?: number | string;
   className?: string;
   accessibleLabel?: string;
+  showListFallback?: boolean;
   onMarkerSelect?: (marker: MapMarkerFeature) => void;
   onLocationSelect?: (location: MapLocation) => void;
   onViewportChange?: MapViewportChangeHandler;
+}
+
+function OrganizationBoundaryLayer({
+  boundaries,
+}: {
+  boundaries: MapBoundaryFeatureCollection;
+}) {
+  const map = useMap();
+  const [activeAreaIndex, setActiveAreaIndex] = useState(0);
+
+  const focusArea = useCallback((area: MapBoundaryFeature) => {
+    const bounds = geoJSON(
+      area as GeoJsonObject,
+    ).getBounds();
+
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, {
+        padding: [42, 42],
+        maxZoom: 16,
+      });
+    }
+  }, [map]);
+
+  useEffect(() => {
+    const firstArea = boundaries.features[0];
+
+    if (firstArea) {
+      focusArea(firstArea);
+    }
+  }, [boundaries, focusArea]);
+
+  const focusNextArea = () => {
+    const nextIndex = (activeAreaIndex + 1) % boundaries.features.length;
+    setActiveAreaIndex(nextIndex);
+    focusArea(boundaries.features[nextIndex]);
+  };
+
+  const activeArea = boundaries.features[activeAreaIndex];
+  const nextArea =
+    boundaries.features[(activeAreaIndex + 1) % boundaries.features.length];
+
+  return (
+    <>
+      <GeoJSON
+        key={`${boundaries.features.map((feature) => feature.properties.id).join(":")}:${activeArea?.properties.id ?? "none"}`}
+        data={boundaries as GeoJsonObject}
+        style={(feature) => {
+          const isActive = feature?.properties.id === activeArea?.properties.id;
+
+          return {
+            color: isActive ? "#174c33" : "#101312",
+            fill: true,
+            fillColor: isActive ? "#3f8a5f" : "#ffffff",
+            fillOpacity: isActive ? 0.18 : 0.04,
+            opacity: 0.95,
+            weight: isActive ? 4 : 3,
+          };
+        }}
+        onEachFeature={(feature, layer) => {
+          const area = feature as MapBoundaryFeature;
+          const label = document.createElement("span");
+          label.textContent = `${area.properties.name} — click to focus`;
+          layer.bindTooltip(label, { direction: "top", sticky: true });
+          layer.on("click", () => {
+            const areaIndex = boundaries.features.findIndex(
+              (candidate) => candidate.properties.id === area.properties.id,
+            );
+            if (areaIndex >= 0) setActiveAreaIndex(areaIndex);
+            focusArea(area);
+          });
+        }}
+      />
+      <button
+        type="button"
+        className="eco-map-boundary-control"
+        onClick={focusNextArea}
+        aria-label={`Focus next service area${nextArea ? `: ${nextArea.properties.name}` : ""}`}
+        title={nextArea ? `Next: ${nextArea.properties.name}` : "Focus service area"}
+      >
+        <span aria-hidden="true">→</span>
+        <span>{boundaries.features.length > 1 ? "Next area" : "Focus area"}</span>
+      </button>
+    </>
+  );
 }
 
 function clusterMarkers(
   markers: MapMarkerFeature[],
   zoom: number,
 ): MarkerCluster[] {
+  if (zoom >= CLUSTER_BREAK_ZOOM) {
+    return markers.map((marker) => {
+      const location = markerLocation(marker);
+
+      return {
+        id: `marker:${marker.properties.id}`,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        markers: [marker],
+      };
+    });
+  }
+
   const cellSizeDegrees = Math.max(0.008, 45 / 2 ** zoom);
   const groups = new Map<string, MapMarkerFeature[]>();
 
@@ -332,8 +440,10 @@ function ClusteredMarkerLayer({
 
 export function EcoMap({
   markers = [],
+  boundaries,
   initialCenter = COLOMBO_MAP_CENTER,
   initialZoom = 12,
+  focusLocation,
   selectedMarkerId,
   selectedLocation,
   selectionEnabled = false,
@@ -341,6 +451,7 @@ export function EcoMap({
   height = 520,
   className = "",
   accessibleLabel = "EcoTrack incident and cleanup event map",
+  showListFallback = true,
   onMarkerSelect,
   onLocationSelect,
   onViewportChange,
@@ -363,7 +474,7 @@ export function EcoMap({
           center={[initialCenter.latitude, initialCenter.longitude]}
           zoom={initialZoom}
           minZoom={7}
-          maxZoom={19}
+          maxZoom={MAX_MAP_ZOOM}
           maxBounds={[
             [SRI_LANKA_MAP_BOUNDS.south, SRI_LANKA_MAP_BOUNDS.west],
             [SRI_LANKA_MAP_BOUNDS.north, SRI_LANKA_MAP_BOUNDS.east],
@@ -385,8 +496,11 @@ export function EcoMap({
             onZoomChange={setZoom}
           />
           <MapCenterSynchronizer
-            location={selectedLocation}
-            enabled={selectionEnabled && selectionMode === "center"}
+            location={focusLocation ?? selectedLocation}
+            enabled={
+              Boolean(focusLocation) ||
+              (selectionEnabled && selectionMode === "center")
+            }
           />
           <ClusteredMarkerLayer
             markers={markers}
@@ -394,6 +508,9 @@ export function EcoMap({
             selectedMarkerId={selectedMarkerId}
             onMarkerSelect={onMarkerSelect}
           />
+          {boundaries && boundaries.features.length > 0 && (
+            <OrganizationBoundaryLayer boundaries={boundaries} />
+          )}
           {selectedLocation && selectionMode === "point" && (
             <CircleMarker
               center={[
@@ -446,7 +563,7 @@ export function EcoMap({
         </p>
       )}
 
-      {markers.length > 0 && (
+      {showListFallback && markers.length > 0 && (
         <div className="eco-map-list-fallback">
           <div className="eco-map-list-heading">
             <h3>Locations in this view</h3>

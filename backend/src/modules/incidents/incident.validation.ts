@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-import { sriLankaMapLocationSchema } from "../maps/map.validation.js";
+import {
+  ORGANIZATION_BOUNDARY_DISPLAY_LIMITS,
+} from "../maps/map.constants.js";
+import {
+  sriLankaMapLocationSchema,
+  sriLankaMapRadiusQuerySchema,
+  sriLankaMapViewportQuerySchema,
+} from "../maps/map.validation.js";
 import {
   INCIDENT_EVIDENCE_LIMITS,
   INCIDENT_LIST_LIMITS,
@@ -80,5 +87,46 @@ export const incidentListQuerySchema = z.object({
   cursor: z.string().trim().min(1).max(500).optional(),
 }).strict();
 
+const incidentDiscoveryFilters = {
+  status: z.enum([
+    "ACTIVE",
+    "CLEANUP_ORGANIZED",
+    "RESOLVED",
+    "EXPIRED",
+    "ARCHIVED",
+  ]).optional(),
+  categoryId: z.uuid().optional(),
+  reportedAfter: z.iso.datetime({ offset: true }).optional(),
+};
+
+export const publicIncidentViewportDiscoveryQuerySchema =
+  sriLankaMapViewportQuerySchema.safeExtend(incidentDiscoveryFilters);
+
+export const publicIncidentRadiusDiscoveryQuerySchema =
+  sriLankaMapRadiusQuerySchema.safeExtend(incidentDiscoveryFilters);
+
+export const organizationIncidentDiscoveryQuerySchema =
+  sriLankaMapViewportQuerySchema.safeExtend(incidentDiscoveryFilters);
+
+export const organizationServiceAreaBoundaryQuerySchema =
+  sriLankaMapViewportQuerySchema.safeExtend({
+    cursor: z.never().optional(),
+    limit: z.coerce.number().int().min(1)
+      .max(ORGANIZATION_BOUNDARY_DISPLAY_LIMITS.maxFeatureLimit)
+      .default(ORGANIZATION_BOUNDARY_DISPLAY_LIMITS.defaultFeatureLimit),
+  });
+
 export type ValidatedCreateIncident = z.infer<typeof createIncidentSchema>;
 export type ValidatedEvidenceUploadRequest = z.infer<typeof createEvidenceUploadIntentsSchema>;
+export type ValidatedPublicIncidentViewportDiscovery = z.infer<
+  typeof publicIncidentViewportDiscoveryQuerySchema
+>;
+export type ValidatedPublicIncidentRadiusDiscovery = z.infer<
+  typeof publicIncidentRadiusDiscoveryQuerySchema
+>;
+export type ValidatedOrganizationIncidentDiscovery = z.infer<
+  typeof organizationIncidentDiscoveryQuerySchema
+>;
+export type ValidatedOrganizationServiceAreaBoundaryQuery = z.infer<
+  typeof organizationServiceAreaBoundaryQuerySchema
+>;

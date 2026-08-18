@@ -11,10 +11,17 @@ import type {
   IncidentDetailDto,
   IncidentListPageDto,
   IncidentSummaryDto,
+  OrganizationIncidentListPageDto,
+  PublicIncidentListPageDto,
+  PublicIncidentSummaryDto,
 } from "../incident.types.js";
 import type {
   ValidatedCreateIncident,
   ValidatedEvidenceUploadRequest,
+  ValidatedOrganizationIncidentDiscovery,
+  ValidatedOrganizationServiceAreaBoundaryQuery,
+  ValidatedPublicIncidentRadiusDiscovery,
+  ValidatedPublicIncidentViewportDiscovery,
 } from "../incident.validation.js";
 import {
   activeIncidentCategoryExists,
@@ -26,7 +33,13 @@ import {
   listIncidentRecordsByReporter,
   type IncidentDetailRecord,
   type IncidentListCursor,
+  listCoveredOrganizationIncidents,
+  listPublicIncidentsByRadius as queryPublicIncidentsByRadius,
+  listPublicIncidentsByViewport as queryPublicIncidentsByViewport,
+  type OrganizationIncidentDiscoveryCursor,
+  type PublicIncidentDiscoveryRow,
 } from "../repositories/incident.repository.js";
+import { listOrganizationServiceAreaBoundaryFeatures } from "../../maps/repositories/mapSpatial.repository.js";
 
 const recentSubmissionsByUser = new Map<string, number[]>();
 
@@ -242,4 +255,165 @@ export async function getPublicSafeIncident(
   const record = await findPublicSafeIncidentRecordById(dependencies.prisma, id);
   if (!record) throw new ApplicationError(404, "INCIDENT_NOT_FOUND", "The requested incident was not found.");
   return toDetailDto(dependencies, record);
+}
+
+function decodeIncidentDiscoveryCursor(
+  encoded: string,
+): OrganizationIncidentDiscoveryCursor {
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(encoded, "base64url").toString("utf8"),
+    ) as { reportedAt?: unknown; id?: unknown };
+    if (
+      typeof parsed.reportedAt !== "string" ||
+      typeof parsed.id !== "string"
+    ) {
+      throw new Error();
+    }
+    const reportedAt = new Date(parsed.reportedAt);
+    if (Number.isNaN(reportedAt.getTime())) throw new Error();
+    return { reportedAt, id: parsed.id };
+  } catch {
+    throw new ApplicationError(
+      400,
+      "INCIDENT_CURSOR_INVALID",
+      "The incident discovery cursor is invalid.",
+    );
+  }
+}
+
+function encodeIncidentDiscoveryCursor(record: {
+  id: string;
+  reportedAt: Date;
+}): string {
+  return Buffer.from(
+    JSON.stringify({
+      reportedAt: record.reportedAt.toISOString(),
+      id: record.id,
+    }),
+    "utf8",
+  ).toString("base64url");
+}
+
+function toPublicIncidentSummary(
+  row: PublicIncidentDiscoveryRow,
+): PublicIncidentSummaryDto {
+  return {
+    id: row.id,
+    title: row.title,
+    category: {
+      id: row.categoryId,
+      name: row.categoryName,
+      description: row.categoryDescription,
+    },
+    severity: row.severity,
+    status: row.status,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    addressText: row.addressText,
+    reportedAt: row.reportedAt.toISOString(),
+    falseReviewCount: row.falseReviewCount,
+  };
+}
+
+function toPublicIncidentPage(
+  rows: PublicIncidentDiscoveryRow[],
+  limit: number,
+): PublicIncidentListPageDto {
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const last = page.at(-1);
+
+  return {
+    items: page.map(toPublicIncidentSummary),
+    nextCursor:
+      hasMore && last ? encodeIncidentDiscoveryCursor(last) : null,
+  };
+}
+
+export async function listPublicIncidentsByViewport(
+  dependencies: IncidentDependencies,
+  input: ValidatedPublicIncidentViewportDiscovery,
+): Promise<PublicIncidentListPageDto> {
+  const rows = await queryPublicIncidentsByViewport(dependencies.prisma, {
+    ...input,
+    cursor: input.cursor ? decodeIncidentDiscoveryCursor(input.cursor) : null,
+    reportedAfter: input.reportedAfter
+      ? new Date(input.reportedAfter)
+      : undefined,
+  });
+
+  return toPublicIncidentPage(rows, input.limit);
+}
+
+export async function listPublicIncidentsByRadius(
+  dependencies: IncidentDependencies,
+  input: ValidatedPublicIncidentRadiusDiscovery,
+): Promise<PublicIncidentListPageDto> {
+  const rows = await queryPublicIncidentsByRadius(dependencies.prisma, {
+    ...input,
+    cursor: input.cursor ? decodeIncidentDiscoveryCursor(input.cursor) : null,
+    reportedAfter: input.reportedAfter
+      ? new Date(input.reportedAfter)
+      : undefined,
+  });
+
+  return toPublicIncidentPage(rows, input.limit);
+}
+
+export async function listOrganizationIncidents(
+  dependencies: IncidentDependencies,
+  organizationId: string,
+  input: ValidatedOrganizationIncidentDiscovery,
+): Promise<OrganizationIncidentListPageDto> {
+  const rows = await listCoveredOrganizationIncidents(
+    dependencies.prisma,
+    {
+      organizationId,
+      ...input,
+      cursor: input.cursor
+        ? decodeIncidentDiscoveryCursor(input.cursor)
+        : null,
+      reportedAfter: input.reportedAfter
+        ? new Date(input.reportedAfter)
+        : undefined,
+    },
+  );
+  const hasMore = rows.length > input.limit;
+  const page = hasMore ? rows.slice(0, input.limit) : rows;
+  const last = page.at(-1);
+
+  return {
+    items: page.map((row) => ({
+      id: row.id,
+      title: row.title,
+      category: {
+        id: row.categoryId,
+        name: row.categoryName,
+        description: row.categoryDescription,
+      },
+      severity: row.severity,
+      status: row.status,
+      latitude: row.latitude,
+      longitude: row.longitude,
+      addressText: row.addressText,
+      reportedAt: row.reportedAt.toISOString(),
+      falseReviewCount: row.falseReviewCount,
+      currentReviewStatus: row.currentReviewStatus,
+    })),
+    nextCursor:
+      hasMore && last ? encodeIncidentDiscoveryCursor(last) : null,
+  };
+}
+
+export function listOrganizationServiceAreaBoundaries(
+  dependencies: IncidentDependencies,
+  organizationId: string,
+  query: ValidatedOrganizationServiceAreaBoundaryQuery,
+) {
+  return listOrganizationServiceAreaBoundaryFeatures(
+    dependencies.prisma,
+    organizationId,
+    query,
+  );
 }

@@ -5,7 +5,78 @@ Task owner: Member 2
 Reviewed branch: `origin/feature/incident-spatial-discovery`  
 Current integration baseline: `origin/main` at `ae6fcc2`
 
-## Final review decision
+Current corrected branch: `feature/incident-spatial-discovery-2`
+
+Current corrected commit before final integration fixes: `cbebbaa`
+
+## Implementation update (2026-08-18)
+
+The original branch reviewed below has now been merged into
+`feature/incident-spatial-discovery-2`, with a recovery branch retained at
+`backup/incident-spatial-discovery-2-before-merge-20260818`.
+
+The merged INC-02 implementation was committed as `3a46fdf` (`inc-02`). A
+subsequent integration review identified correction work required before
+merging that commit into `main`. Those main corrections were committed as
+`cbebbaa` (`complete_INC-02`). The integration owner then added final
+stale-mobile-request protection, documentation cleanup, and Expo SDK patch
+alignment before the final Pull Request verification.
+
+The corrected INC-02 scope includes:
+
+- authenticated public/citizen bounding-box discovery;
+- explicit foreground-permission "near me" discovery using `ST_DWithin`;
+- removal of the production `scope=all` path;
+- bounded, cursor-paginated viewport requests from organization web and mobile
+  clients, including append/retry behavior and cursor resets;
+- organization category, status, and reported-after controls backed by
+  server-side filtering;
+- viewport-bounded, simplified organization service-area display geometry with
+  a strict 100-feature response limit; authoritative coverage continues to use
+  unsimplified geography;
+- citizen "Find cleanup activity" destinations in web and mobile, including
+  marker/list synchronization, selected public-safe detail, pagination,
+  refresh/retry, and loading/error/empty states;
+- retained organization access through that tenant's own incident review or
+  linked cleanup event after current service-area coverage changes;
+- the full two-organization overlap, boundary, inactive-area/organization,
+  direct-ID, privacy, server-filter, FALSE-count, and stable-cursor matrix;
+- representative `EXPLAIN (ANALYZE, BUFFERS)` evidence in
+  `EcoTrack_INC-02_Spatial_Query_Plans.md`;
+- organization memberships loaded from the dedicated
+  `/organization-memberships/me/active` endpoint instead of every auth query;
+- discovery-specific component naming that does not imply INC-03 mutation;
+- unrelated completed-event history, the machine-specific CMake workaround,
+  and global test serialization removed from the INC-02 diff;
+- Expo SDK 57 patch packages aligned separately by the integration owner so
+  Expo Doctor and native dependency deduplication pass.
+
+Independent verification of `cbebbaa` completed the following checks:
+
+- backend typecheck and build passed;
+- web lint and production build passed;
+- mobile TypeScript and Metro security checks passed;
+- focused PostGIS incident/map integration tests passed 10/10;
+- the complete shared-database run passed 107/109 tests, with the remaining two
+  failing only because the Supabase session pool reached its 15-client limit;
+- no INC-02 assertion failed in the focused serial spatial run;
+- after the final integration fixes, backend typecheck/build, web lint/build,
+  mobile TypeScript/security, and Expo Doctor 21/21 all passed;
+- the Expo dependency tree contains one deduplicated copy of each aligned
+  native module.
+
+The final corrected commit must still pass CI against its isolated PostgreSQL/
+PostGIS service. Interactive device verification remains a separate manual
+requirement:
+
+- manually verify web and mobile clustering, pagination, category/status/time
+  filters, location permission, bounded service-area overlays, and failure
+  recovery with representative data.
+
+The detailed sections below preserve the original 2026-08-17 audit for branch
+history and review context.
+
+## Original 2026-08-17 review decision (historical)
 
 `origin/feature/incident-spatial-discovery` contains useful, substantial INC-02 work, but INC-02 is **not complete and the branch is not ready to merge**.
 

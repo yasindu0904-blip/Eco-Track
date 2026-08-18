@@ -12,6 +12,9 @@ export {
 export { MAP_MARKER_KINDS, markerLocation } from "./map.types";
 export type {
   MapBounds,
+  MapBoundaryFeature,
+  MapBoundaryFeatureCollection,
+  MapBoundaryGeometry,
   MapLocation,
   MapMarkerFeature,
   MapMarkerKind,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import "./App.css";
 
@@ -13,8 +13,11 @@ import {
   MembershipSelfServicePage,
   OrganizationMembershipWorkspacesPage,
 } from "./features/memberships";
+import { listMyActiveOrganizationMemberships } from "./features/memberships/administration/membershipAdministration.api";
+import type { ActiveOrganizationMembership } from "./features/memberships/administration/membershipAdministration.types";
 import { MapFoundationPreview } from "./features/maps";
 import { OrganizationApplicationPage } from "./features/organizations/application";
+import { OrganizationWorkspace } from "./features/organizations/workspace/OrganizationWorkspace";
 import { SuperAdminDashboard } from "./features/super-admin/SuperAdminDashboard";
 import { MyImpactPage } from "./features/rewards";
 
@@ -44,8 +47,10 @@ type CitizenView =
   | "organization-workspaces"
   | "organization-apply"
   | "organization-applications"
+  | "organization-workspace"
   | "incident-create"
   | "incident-reports"
+  | "incident-discovery"
   | "impact";
 
 function BrandHeader() {
@@ -135,6 +140,11 @@ function App() {
     useState<CitizenView>("dashboard");
   const [showNotifications, setShowNotifications] =
     useState(false);
+  const [selectedOrganizationId, setSelectedOrganizationId] =
+    useState("");
+  const [activeMemberships, setActiveMemberships] =
+    useState<ActiveOrganizationMembership[]>([]);
+  const membershipRequestVersion = useRef(0);
 
   const {
     status,
@@ -146,6 +156,41 @@ function App() {
     retry,
     signOut,
   } = useAuthentication();
+
+  const reloadActiveMemberships = useCallback(async () => {
+    const requestVersion = ++membershipRequestVersion.current;
+    await Promise.resolve();
+    if (!accessToken || profile?.platformRole !== "USER") {
+      if (membershipRequestVersion.current === requestVersion) {
+        setActiveMemberships([]);
+      }
+      return;
+    }
+
+    try {
+      const items: ActiveOrganizationMembership[] = [];
+      let cursor: string | undefined;
+      do {
+        const page = await listMyActiveOrganizationMemberships(accessToken, cursor);
+        items.push(...page.items);
+        cursor = page.nextCursor ?? undefined;
+      } while (cursor);
+      if (membershipRequestVersion.current === requestVersion) {
+        setActiveMemberships(items);
+      }
+    } catch {
+      if (membershipRequestVersion.current === requestVersion) {
+        setActiveMemberships([]);
+      }
+    }
+  }, [accessToken, profile?.platformRole]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void reloadActiveMemberships();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [reloadActiveMemberships]);
 
   const searchParameters = new URLSearchParams(window.location.search);
 
@@ -185,12 +230,22 @@ function App() {
   }
 
   if (isCitizenPreview) {
-    if (citizenView === "incident-create" || citizenView === "incident-reports") {
+    if (
+      citizenView === "incident-create" ||
+      citizenView === "incident-reports" ||
+      citizenView === "incident-discovery"
+    ) {
       return (
         <IncidentPage
           accessToken="preview-token"
           profile={previewCitizenProfile}
-          initialView={citizenView === "incident-reports" ? "reports" : "create"}
+          initialView={
+            citizenView === "incident-reports"
+              ? "reports"
+              : citizenView === "incident-discovery"
+                ? "discover"
+                : "create"
+          }
           onBackToDashboard={() => setCitizenView("dashboard")}
         />
       );
@@ -226,6 +281,7 @@ function App() {
         }}
         onReportIncident={() => setCitizenView("incident-create")}
         onViewIncidentReports={() => setCitizenView("incident-reports")}
+        onFindCleanupActivity={() => setCitizenView("incident-discovery")}
         onOpenImpact={() => undefined}
         onSignOut={() => undefined}
       />
@@ -285,7 +341,16 @@ function App() {
       );
     }
 
-    if (citizenView === "dashboard") {
+    const activeMembership =
+      activeMemberships.find(
+        (membership) =>
+          membership.organization.id === selectedOrganizationId,
+      ) ?? activeMemberships[0];
+
+    if (
+      citizenView === "dashboard" ||
+      (citizenView === "organization-workspace" && !activeMembership)
+    ) {
       return (
         <CitizenDashboard
           profile={profile}
@@ -295,6 +360,17 @@ function App() {
           onOpenOrganizationWorkspaces={() =>
             setCitizenView("organization-workspaces")
           }
+          activeOrganization={activeMembership}
+          onOpenOrganizationWorkspace={
+            activeMembership
+              ? () => {
+                  setSelectedOrganizationId(
+                    activeMembership.organization.id,
+                  );
+                  setCitizenView("organization-workspace");
+                }
+              : undefined
+          }
           onStartOrganizationApplication={() => {
             setCitizenView("organization-apply");
           }}
@@ -303,6 +379,7 @@ function App() {
           }}
           onReportIncident={() => setCitizenView("incident-create")}
           onViewIncidentReports={() => setCitizenView("incident-reports")}
+          onFindCleanupActivity={() => setCitizenView("incident-discovery")}
           onOpenImpact={() => setCitizenView("impact")}
           onSignOut={() => {
             setCitizenView("dashboard");
@@ -319,7 +396,10 @@ function App() {
           accessToken={accessToken}
           profile={profile}
           onProfileUpdated={replaceProfile}
-          onBack={() => setCitizenView("dashboard")}
+          onBack={() => {
+            setCitizenView("dashboard");
+            void reloadActiveMemberships();
+          }}
         />
       );
     }
@@ -342,12 +422,43 @@ function App() {
       );
     }
 
-    if (citizenView === "incident-create" || citizenView === "incident-reports") {
+    if (citizenView === "organization-workspace" && activeMembership) {
+      return (
+        <OrganizationWorkspace
+          profile={profile}
+          accessToken={accessToken}
+          memberships={activeMemberships}
+          selectedOrganizationId={activeMembership.organization.id}
+          onSelectOrganization={setSelectedOrganizationId}
+          onBackToDashboard={() => setCitizenView("dashboard")}
+          onViewApplications={() =>
+            setCitizenView("organization-applications")
+          }
+          onSignOut={() => {
+            setCitizenView("dashboard");
+            setSelectedOrganizationId("");
+            signOut();
+          }}
+        />
+      );
+    }
+
+    if (
+      citizenView === "incident-create" ||
+      citizenView === "incident-reports" ||
+      citizenView === "incident-discovery"
+    ) {
       return (
         <IncidentPage
           accessToken={accessToken}
           profile={profile}
-          initialView={citizenView === "incident-reports" ? "reports" : "create"}
+          initialView={
+            citizenView === "incident-reports"
+              ? "reports"
+              : citizenView === "incident-discovery"
+                ? "discover"
+                : "create"
+          }
           onBackToDashboard={() => setCitizenView("dashboard")}
           onSignOut={() => {
             setCitizenView("dashboard");
@@ -369,6 +480,7 @@ function App() {
         }
         onBackToDashboard={() => {
           setCitizenView("dashboard");
+          void reloadActiveMemberships();
         }}
         onSignOut={() => {
           setCitizenView("dashboard");

@@ -17,9 +17,10 @@ import type {
   IncidentSummary,
   UploadedIncidentEvidence,
 } from "./incident.types";
+import { CitizenIncidentDiscovery } from "./CitizenIncidentDiscovery";
 import "./incident.css";
 
-type IncidentView = "create" | "reports" | "detail";
+type IncidentView = "create" | "reports" | "detail" | "discover";
 type IncidentNotification = {
   kind: "success" | "error";
   message: string;
@@ -28,7 +29,7 @@ type IncidentNotification = {
 interface IncidentPageProps {
   accessToken: string;
   profile: AuthenticatedUserProfile;
-  initialView?: "create" | "reports";
+  initialView?: "create" | "reports" | "discover";
   onBackToDashboard: () => void;
   onSignOut?: () => void;
 }
@@ -303,6 +304,10 @@ export function IncidentPage({
             <div className="incident-detail-hero"><div><span>{detail.category.name}</span><h1>{detail.title}</h1><p>Reported {formatDate(detail.reportedAt)}</p></div><span className={`incident-detail-status status-${detail.status.toLowerCase()}`}>{readableStatus(detail.status)}</span></div>
             <div className="incident-detail-grid"><div className="incident-detail-main"><article className="incident-card"><h2>Description</h2><p className="incident-description">{detail.description}</p></article>{detail.photos.length > 0 && <article className="incident-card"><h2>Photo evidence</h2><div className="incident-gallery">{detail.photos.map((photo) => <img key={photo.id} src={photo.url} alt={photo.caption ?? "Incident evidence"} />)}</div></article>}<article className="incident-card"><h2>Status history</h2><ol className="incident-timeline">{detail.statusHistory.map((history) => <li key={history.id}><span /><div><strong>{readableStatus(history.toStatus)}</strong><small>{formatDate(history.changedAt)}</small><p>{history.reason}</p></div></li>)}</ol></article></div><aside><article className="incident-card"><h2>Location</h2><p>{detail.addressText ?? "No address supplied"}</p><strong>{detail.latitude.toFixed(6)}, {detail.longitude.toFixed(6)}</strong></article><article className="incident-card"><h2>Report details</h2><dl><div><dt>Severity</dt><dd>{readableStatus(detail.severity as IncidentStatus)}</dd></div><div><dt>Highlighted until</dt><dd>{formatDate(detail.highlightUntil)}</dd></div><div><dt>Archive after</dt><dd>{formatDate(detail.archiveAfter)}</dd></div></dl></article><button type="button" className="incident-new-button" onClick={startAnotherReport}>Report another incident</button></aside></div>
           </section>
+        )}
+
+        {view === "discover" && (
+          <CitizenIncidentDiscovery accessToken={accessToken} />
         )}
       </section>
     </main>

@@ -76,6 +76,43 @@ export interface IncidentListPageDto {
   nextCursor: string | null;
 }
 
+export interface PublicIncidentSummaryDto {
+  id: string;
+  title: string;
+  category: IncidentCategoryDto;
+  severity: IncidentSeverityDto;
+  status: IncidentStatusDto;
+  latitude: number;
+  longitude: number;
+  addressText: string | null;
+  reportedAt: string;
+  falseReviewCount: number;
+}
+
+export interface PublicIncidentListPageDto {
+  items: PublicIncidentSummaryDto[];
+  nextCursor: string | null;
+}
+
+export interface OrganizationIncidentSummaryDto {
+  id: string;
+  title: string;
+  category: IncidentCategoryDto;
+  severity: IncidentSeverityDto;
+  status: IncidentStatusDto;
+  latitude: number;
+  longitude: number;
+  addressText: string | null;
+  reportedAt: string;
+  falseReviewCount: number;
+  currentReviewStatus: "VIEWED" | "VALID" | "FALSE" | null;
+}
+
+export interface OrganizationIncidentListPageDto {
+  items: OrganizationIncidentSummaryDto[];
+  nextCursor: string | null;
+}
+
 export interface EvidenceUploadIntentDto {
   storagePath: string;
   token: string;
