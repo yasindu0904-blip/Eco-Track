@@ -11,6 +11,8 @@ import {
   listMyIncidents,
   listOrganizationIncidents,
   listOrganizationServiceAreaBoundaries,
+  listPublicIncidentsByRadius,
+  listPublicIncidentsByViewport,
 } from "../services/incident.service.js";
 import {
   createEvidenceUploadIntentsSchema,
@@ -18,6 +20,8 @@ import {
   incidentIdParametersSchema,
   incidentListQuerySchema,
   organizationIncidentDiscoveryQuerySchema,
+  publicIncidentRadiusDiscoveryQuerySchema,
+  publicIncidentViewportDiscoveryQuerySchema,
 } from "../incident.validation.js";
 
 function validationError(validation: { error: { issues: Array<{ path: PropertyKey[]; message: string }> } }) {
@@ -112,6 +116,48 @@ export function getPublicSafeIncidentController(dependencies: IncidentDependenci
         data: await getPublicSafeIncident(dependencies, validateId(request)),
       });
     } catch (error) { next(error); }
+  };
+}
+
+export function listPublicIncidentsController(
+  dependencies: IncidentDependencies,
+) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const validation = publicIncidentViewportDiscoveryQuerySchema.safeParse(
+        request.query,
+      );
+      if (!validation.success) throw validationError(validation);
+      response.status(200).json({
+        data: await listPublicIncidentsByViewport(
+          dependencies,
+          validation.data,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+export function listNearbyPublicIncidentsController(
+  dependencies: IncidentDependencies,
+) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const validation = publicIncidentRadiusDiscoveryQuerySchema.safeParse(
+        request.query,
+      );
+      if (!validation.success) throw validationError(validation);
+      response.status(200).json({
+        data: await listPublicIncidentsByRadius(
+          dependencies,
+          validation.data,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
   };
 }
 

@@ -33,6 +33,7 @@ import type {
 } from "../auth/auth.types.js";
 
 import type {
+  CompletedCleanupEventHistoryDto,
   ContributionPageDto,
   ImpactSummaryDto,
 } from "./reward.types.js";
@@ -154,9 +155,10 @@ before(async () => {
   await prisma.incidentCategory.create({
     data: { id: categoryId, name: `Reward Category ${categoryId}`, isActive: true },
   });
+  const incidentNow = Date.now();
   const incidentTimes = {
-    highlightUntil: new Date("2026-08-18T00:00:00Z"),
-    archiveAfter: new Date("2026-08-25T00:00:00Z"),
+    highlightUntil: new Date(incidentNow + 48 * 60 * 60 * 1000),
+    archiveAfter: new Date(incidentNow + 7 * 24 * 60 * 60 * 1000),
   };
   await prisma.incident.createMany({
     data: [
@@ -375,6 +377,41 @@ test("completed-event rewards derive the volunteer from an eligible participant"
   assert.equal(result.userId, userAId);
   assert.equal(result.points, 30);
   assert.equal(result.created, true);
+
+  const response = await request(
+    userAToken,
+    "/api/v1/rewards/me/completed-events?limit=20",
+  );
+  assert.equal(response.status, 200);
+  const history = (
+    await response.json() as { data: CompletedCleanupEventHistoryDto }
+  ).data;
+  assert.equal(history.totalCount, 1);
+  assert.equal(history.items.length, 1);
+  assert.equal(history.items[0]?.cleanupEventId, cleanupEventId);
+  assert.equal(history.items[0]?.title, "Reward cleanup event");
+  assert.equal("userId" in (history.items[0] ?? {}), false);
+
+  const otherHistoryResponse = await request(
+    userBToken,
+    "/api/v1/rewards/me/completed-events?limit=20",
+  );
+  const otherHistory = (
+    await otherHistoryResponse.json() as {
+      data: CompletedCleanupEventHistoryDto;
+    }
+  ).data;
+  assert.equal(otherHistory.totalCount, 0);
+  assert.deepEqual(otherHistory.items, []);
+  assert.equal(
+    (
+      await request(
+        userAToken,
+        "/api/v1/rewards/me/completed-events?cursor=invalid",
+      )
+    ).status,
+    400,
+  );
 });
 
 test("approved special contributions use a stable source key for retries", async () => {

@@ -6,7 +6,11 @@ import type {
   EvidenceUploadIntent,
   IncidentCategory,
   IncidentDetail,
+  IncidentDiscoveryFilters,
+  IncidentRadiusDiscoveryQuery,
   IncidentSummary,
+  IncidentViewportDiscoveryQuery,
+  PublicIncidentPage,
   UploadedIncidentEvidence,
 } from "./incident.types";
 
@@ -101,4 +105,70 @@ export async function getMyIncident(accessToken: string, id: string): Promise<In
     `/incidents/me/${encodeURIComponent(id)}`,
     { accessToken },
   )).data;
+}
+
+export async function getPublicIncident(
+  accessToken: string,
+  id: string,
+  signal?: AbortSignal,
+): Promise<IncidentDetail> {
+  return (
+    await apiRequest<DataResponse<IncidentDetail>>(
+      `/incidents/${encodeURIComponent(id)}`,
+      { accessToken, signal },
+    )
+  ).data;
+}
+
+function appendDiscoveryFilters(
+  parameters: URLSearchParams,
+  filters: IncidentDiscoveryFilters,
+): void {
+  if (filters.limit !== undefined) parameters.set("limit", String(filters.limit));
+  if (filters.cursor) parameters.set("cursor", filters.cursor);
+  if (filters.status) parameters.set("status", filters.status);
+  if (filters.categoryId) parameters.set("categoryId", filters.categoryId);
+  if (filters.reportedAfter) parameters.set("reportedAfter", filters.reportedAfter);
+}
+
+export async function listPublicIncidents(
+  accessToken: string,
+  query: IncidentViewportDiscoveryQuery,
+  signal?: AbortSignal,
+): Promise<PublicIncidentPage> {
+  const parameters = new URLSearchParams({
+    west: String(query.west),
+    south: String(query.south),
+    east: String(query.east),
+    north: String(query.north),
+    zoom: String(Math.round(query.zoom)),
+  });
+  appendDiscoveryFilters(parameters, query);
+
+  return (
+    await apiRequest<DataResponse<PublicIncidentPage>>(
+      `/incidents?${parameters}`,
+      { accessToken, signal },
+    )
+  ).data;
+}
+
+export async function listNearbyPublicIncidents(
+  accessToken: string,
+  query: IncidentRadiusDiscoveryQuery,
+  signal?: AbortSignal,
+): Promise<PublicIncidentPage> {
+  const parameters = new URLSearchParams({
+    latitude: String(query.latitude),
+    longitude: String(query.longitude),
+    radiusMeters: String(query.radiusMeters),
+  });
+  appendDiscoveryFilters(parameters, query);
+
+  return (
+    await apiRequest<DataResponse<PublicIncidentPage>>(
+      `/incidents/nearby?${parameters}`,
+      { accessToken, signal },
+    )
+  ).data;
 }

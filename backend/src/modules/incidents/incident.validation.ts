@@ -1,7 +1,10 @@
 import { z } from "zod";
 
-import { sriLankaMapLocationSchema } from "../maps/map.validation.js";
-import { sriLankaMapViewportQuerySchema } from "../maps/map.validation.js";
+import {
+  sriLankaMapLocationSchema,
+  sriLankaMapRadiusQuerySchema,
+  sriLankaMapViewportQuerySchema,
+} from "../maps/map.validation.js";
 import {
   INCIDENT_EVIDENCE_LIMITS,
   INCIDENT_LIST_LIMITS,
@@ -81,7 +84,7 @@ export const incidentListQuerySchema = z.object({
   cursor: z.string().trim().min(1).max(500).optional(),
 }).strict();
 
-const organizationIncidentFilters = {
+const incidentDiscoveryFilters = {
   status: z.enum([
     "ACTIVE",
     "CLEANUP_ORGANIZED",
@@ -93,16 +96,23 @@ const organizationIncidentFilters = {
   reportedAfter: z.iso.datetime({ offset: true }).optional(),
 };
 
-export const organizationIncidentDiscoveryQuerySchema = z.union([
-  sriLankaMapViewportQuerySchema.safeExtend(organizationIncidentFilters),
-  z.object({
-    ...organizationIncidentFilters,
-    scope: z.literal("all"),
-  }).strict(),
-]);
+export const publicIncidentViewportDiscoveryQuerySchema =
+  sriLankaMapViewportQuerySchema.safeExtend(incidentDiscoveryFilters);
+
+export const publicIncidentRadiusDiscoveryQuerySchema =
+  sriLankaMapRadiusQuerySchema.safeExtend(incidentDiscoveryFilters);
+
+export const organizationIncidentDiscoveryQuerySchema =
+  sriLankaMapViewportQuerySchema.safeExtend(incidentDiscoveryFilters);
 
 export type ValidatedCreateIncident = z.infer<typeof createIncidentSchema>;
 export type ValidatedEvidenceUploadRequest = z.infer<typeof createEvidenceUploadIntentsSchema>;
+export type ValidatedPublicIncidentViewportDiscovery = z.infer<
+  typeof publicIncidentViewportDiscoveryQuerySchema
+>;
+export type ValidatedPublicIncidentRadiusDiscovery = z.infer<
+  typeof publicIncidentRadiusDiscoveryQuerySchema
+>;
 export type ValidatedOrganizationIncidentDiscovery = z.infer<
   typeof organizationIncidentDiscoveryQuerySchema
 >;

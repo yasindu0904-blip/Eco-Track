@@ -220,7 +220,7 @@ test("rejects a missing bearer token", async () => {
 
 test("searches active GN Division references for the authenticated user", async () => {
   const response = await fetch(
-    `${baseUrl}/api/v1/administrative-areas?search=Integration`,
+    `${baseUrl}/api/v1/administrative-areas?search=${encodeURIComponent(testAdministrativeAreaId)}`,
     {
       headers: {
         authorization: `Bearer ${validAccessToken}`,

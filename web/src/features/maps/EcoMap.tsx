@@ -37,11 +37,15 @@ interface MarkerCluster {
   markers: MapMarkerFeature[];
 }
 
+const MAX_MAP_ZOOM = 19;
+const CLUSTER_BREAK_ZOOM = 17;
+
 export interface EcoMapProps {
   markers?: MapMarkerFeature[];
   boundaries?: MapBoundaryFeatureCollection;
   initialCenter?: MapLocation;
   initialZoom?: number;
+  focusLocation?: MapLocation | null;
   selectedMarkerId?: string;
   selectedLocation?: MapLocation | null;
   selectionEnabled?: boolean;
@@ -143,6 +147,19 @@ function clusterMarkers(
   markers: MapMarkerFeature[],
   zoom: number,
 ): MarkerCluster[] {
+  if (zoom >= CLUSTER_BREAK_ZOOM) {
+    return markers.map((marker) => {
+      const location = markerLocation(marker);
+
+      return {
+        id: `marker:${marker.properties.id}`,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        markers: [marker],
+      };
+    });
+  }
+
   const cellSizeDegrees = Math.max(0.008, 45 / 2 ** zoom);
   const groups = new Map<string, MapMarkerFeature[]>();
 
@@ -426,6 +443,7 @@ export function EcoMap({
   boundaries,
   initialCenter = COLOMBO_MAP_CENTER,
   initialZoom = 12,
+  focusLocation,
   selectedMarkerId,
   selectedLocation,
   selectionEnabled = false,
@@ -456,7 +474,7 @@ export function EcoMap({
           center={[initialCenter.latitude, initialCenter.longitude]}
           zoom={initialZoom}
           minZoom={7}
-          maxZoom={19}
+          maxZoom={MAX_MAP_ZOOM}
           maxBounds={[
             [SRI_LANKA_MAP_BOUNDS.south, SRI_LANKA_MAP_BOUNDS.west],
             [SRI_LANKA_MAP_BOUNDS.north, SRI_LANKA_MAP_BOUNDS.east],
@@ -478,8 +496,11 @@ export function EcoMap({
             onZoomChange={setZoom}
           />
           <MapCenterSynchronizer
-            location={selectedLocation}
-            enabled={selectionEnabled && selectionMode === "center"}
+            location={focusLocation ?? selectedLocation}
+            enabled={
+              Boolean(focusLocation) ||
+              (selectionEnabled && selectionMode === "center")
+            }
           />
           <ClusteredMarkerLayer
             markers={markers}

@@ -6,6 +6,26 @@ export type IncidentSummary = {
   status: IncidentStatus; latitude: number; longitude: number; addressText: string | null;
   reportedAt: string; thumbnailUrl: string | null;
 };
+export type PublicIncidentSummary = Omit<IncidentSummary, "thumbnailUrl"> & {
+  falseReviewCount: number;
+};
+export type PublicIncidentPage = {
+  items: PublicIncidentSummary[];
+  nextCursor: string | null;
+};
+export type IncidentDiscoveryFilters = {
+  limit?: number;
+  cursor?: string;
+  status?: IncidentStatus;
+  categoryId?: string;
+  reportedAfter?: string;
+};
+export type IncidentViewportDiscoveryQuery = IncidentDiscoveryFilters & {
+  west: number; south: number; east: number; north: number; zoom: number;
+};
+export type IncidentRadiusDiscoveryQuery = IncidentDiscoveryFilters & {
+  latitude: number; longitude: number; radiusMeters: number;
+};
 export type IncidentDetail = IncidentSummary & {
   description: string; highlightUntil: string; archiveAfter: string;
   resolvedAt: string | null; archivedAt: string | null;

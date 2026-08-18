@@ -10,14 +10,18 @@ import { BrandHeader, Button, LoadingState, Notice, Screen, sharedStyles } from 
 import { CitizenDashboard } from "./src/features/citizen/CitizenDashboard";
 import { NotificationInboxScreen } from "./src/features/notifications/NotificationInboxScreen";
 import { MembershipSelfServiceScreen } from "./src/features/memberships/MembershipSelfServiceScreen";
-import { IncidentReportScreen, MyReportsScreen } from "./src/features/incidents";
+import {
+  CitizenIncidentDiscoveryScreen,
+  IncidentReportScreen,
+  MyReportsScreen,
+} from "./src/features/incidents";
 import type { IncidentDetail } from "./src/features/incidents/incident.types";
 import { MyOrganizationApplicationsScreen } from "./src/features/organizations/MyOrganizationApplicationsScreen";
 import { OrganizationApplicationScreen } from "./src/features/organizations/OrganizationApplicationScreen";
 import { OrganizationWorkspaceScreen } from "./src/features/organizations/OrganizationWorkspaceScreen";
 import type { OrganizationApplication } from "./src/features/organizations/organizationApplication.types";
 import { SuperAdminDashboard } from "./src/features/superAdmin/SuperAdminDashboard";
-import { MyImpactScreen } from "./src/features/rewards";
+import { HistoricalReviewScreen, MyImpactScreen } from "./src/features/rewards";
 
 type CitizenView =
   | "dashboard"
@@ -25,8 +29,10 @@ type CitizenView =
   | "createOrganization"
   | "organizationApplications"
   | "organizationWorkspace"
+  | "findCleanupActivity"
   | "reportIncident"
   | "myReports"
+  | "historicalReview"
   | "impact";
 
 export default function App() {
@@ -169,6 +175,13 @@ export default function App() {
           onSignOut={() => void signOut()}
         />
       );
+    } else if (citizenView === "findCleanupActivity") {
+      content = (
+        <CitizenIncidentDiscoveryScreen
+          accessToken={authentication.accessToken}
+          onBack={() => setCitizenView("dashboard")}
+        />
+      );
     } else if (citizenView === "reportIncident") {
       content = (
         <IncidentReportScreen
@@ -202,6 +215,13 @@ export default function App() {
           onBack={() => setCitizenView("dashboard")}
         />
       );
+    } else if (citizenView === "historicalReview") {
+      content = (
+        <HistoricalReviewScreen
+          accessToken={authentication.accessToken}
+          onBack={() => setCitizenView("dashboard")}
+        />
+      );
     } else {
       content = (
         <CitizenDashboard
@@ -222,6 +242,8 @@ export default function App() {
           onViewApplications={() => setCitizenView("organizationApplications")}
           onReportIncident={() => setCitizenView("reportIncident")}
           onViewReports={() => setCitizenView("myReports")}
+          onFindCleanupActivity={() => setCitizenView("findCleanupActivity")}
+          onOpenHistoricalReview={() => setCitizenView("historicalReview")}
           onOpenImpact={() => setCitizenView("impact")}
           onSignOut={() => void signOut()}
         />

@@ -18,13 +18,25 @@ const reporterId = randomUUID();
 const reporterAuthId = randomUUID();
 const otherReporterId = randomUUID();
 const otherReporterAuthId = randomUUID();
+const organizationBAdminId = randomUUID();
+const organizationBAdminAuthId = randomUUID();
 const categoryId = randomUUID();
+const alternateCategoryId = randomUUID();
 const reporterToken = `incident-reporter-${reporterId}`;
 const otherToken = `incident-other-${otherReporterId}`;
+const organizationBToken = `incident-organization-b-${organizationBAdminId}`;
 const submissionId = randomUUID();
 const organizationId = randomUUID();
+const organizationMembershipId = randomUUID();
+const organizationBId = randomUUID();
+const organizationBMembershipId = randomUUID();
 const serviceAreaId = randomUUID();
 const overlappingServiceAreaId = randomUUID();
+const organizationBServiceAreaId = randomUUID();
+const organizationBInactiveServiceAreaId = randomUUID();
+const organizationAWorkflowStatusId = randomUUID();
+const inactiveAdministrativeAreaId = randomUUID();
+const inactiveAdministrativeServiceAreaId = randomUUID();
 const uploadedPaths = new Set<string>();
 
 const profiles = {
@@ -41,6 +53,13 @@ const profiles = {
     email: `incident-other-${otherReporterId}@example.com`,
     fullName: "Other Reporter",
     phoneNumber: "+94770000002",
+  },
+  [organizationBToken]: {
+    id: organizationBAdminId,
+    authUserId: organizationBAdminAuthId,
+    email: `incident-organization-b-${organizationBAdminId}@example.com`,
+    fullName: "Organization B Admin",
+    phoneNumber: "+94770000004",
   },
 };
 
@@ -80,6 +99,7 @@ const dependencies: IncidentDependencies = {
 let server: Server | undefined;
 let baseUrl = "";
 let createdIncidentId = "";
+let secondIncidentId = "";
 
 async function request(path: string, token: string, init: RequestInit = {}) {
   return fetch(`${baseUrl}/api/v1${path}`, {
@@ -90,6 +110,32 @@ async function request(path: string, token: string, init: RequestInit = {}) {
       ...init.headers,
     },
   });
+}
+
+async function createSpatialIncident(input: {
+  title: string;
+  latitude: number;
+  longitude: number;
+  categoryId?: string;
+  severity?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+}): Promise<string> {
+  const now = Date.now();
+  const incident = await prisma.incident.create({
+    data: {
+      reporterUserId: reporterId,
+      submissionId: randomUUID(),
+      categoryId: input.categoryId ?? categoryId,
+      title: input.title,
+      description: `${input.title} is an incident created for spatial acceptance testing.`,
+      severity: input.severity ?? "MEDIUM",
+      latitude: input.latitude,
+      longitude: input.longitude,
+      addressText: `${input.title} test location`,
+      highlightUntil: new Date(now + 48 * 60 * 60 * 1000),
+      archiveAfter: new Date(now + 7 * 24 * 60 * 60 * 1000),
+    },
+  });
+  return incident.id;
 }
 
 before(async () => {
@@ -111,6 +157,9 @@ before(async () => {
   await prisma.incidentCategory.create({
     data: { id: categoryId, name: `Integration category ${categoryId}`, isActive: true },
   });
+  await prisma.incidentCategory.create({
+    data: { id: alternateCategoryId, name: `Alternate category ${alternateCategoryId}`, isActive: true },
+  });
   await prisma.organization.create({
     data: {
       id: organizationId,
@@ -123,7 +172,29 @@ before(async () => {
       status: "ACTIVE",
       memberships: {
         create: {
+          id: organizationMembershipId,
           userId: otherReporterId,
+          role: "ORG_ADMIN",
+          status: "ACTIVE",
+          source: "FIRST_ADMIN",
+        },
+      },
+    },
+  });
+  await prisma.organization.create({
+    data: {
+      id: organizationBId,
+      requestedByUserId: organizationBAdminId,
+      name: `Incident organization B ${organizationBId}`,
+      slug: `incident-organization-b-${organizationBId}`,
+      officialEmail: profiles[organizationBToken].email,
+      officialPhone: "+94770000005",
+      officialAddress: "Colombo, Sri Lanka",
+      status: "ACTIVE",
+      memberships: {
+        create: {
+          id: organizationBMembershipId,
+          userId: organizationBAdminId,
           role: "ORG_ADMIN",
           status: "ACTIVE",
           source: "FIRST_ADMIN",
@@ -152,6 +223,45 @@ before(async () => {
       NOW()
     )
   `;
+  await prisma.$executeRaw`
+    INSERT INTO "organization_service_areas" (
+      "id", "organization_id", "area_name", "boundary", "status",
+      "created_at", "updated_at"
+    ) VALUES (
+      ${organizationBServiceAreaId}::uuid,
+      ${organizationBId}::uuid,
+      'Organization B active area',
+      extensions.ST_GeogFromText(
+        'MULTIPOLYGON(((79.90 6.92, 80.00 6.92, 80.00 7.03, 79.90 7.03, 79.90 6.92)))'
+      ),
+      'ACTIVE'::"ServiceAreaStatus", NOW(), NOW()
+    )
+  `;
+  await prisma.$executeRaw`
+    INSERT INTO "organization_service_areas" (
+      "id", "organization_id", "area_name", "boundary", "status",
+      "created_at", "updated_at"
+    ) VALUES (
+      ${organizationBInactiveServiceAreaId}::uuid,
+      ${organizationBId}::uuid,
+      'Organization B inactive area',
+      extensions.ST_GeogFromText(
+        'MULTIPOLYGON(((80.04 6.92, 80.12 6.92, 80.12 7.03, 80.04 7.03, 80.04 6.92)))'
+      ),
+      'INACTIVE'::"ServiceAreaStatus", NOW(), NOW()
+    )
+  `;
+  await prisma.cleanupWorkflowStatus.create({
+    data: {
+      id: organizationAWorkflowStatusId,
+      organizationId,
+      code: `HISTORY_${organizationAWorkflowStatusId}`,
+      label: "Historical event",
+      mappedLifecycleStatus: "DRAFT",
+      position: 900,
+      isInitial: true,
+    },
+  });
   await prisma.$executeRaw`
     INSERT INTO "organization_service_areas" (
       "id",
@@ -186,12 +296,18 @@ before(async () => {
 
 after(async () => {
   if (server) await new Promise<void>((resolve, reject) => server?.close((error) => error ? reject(error) : resolve()));
-  await prisma.incident.deleteMany({ where: { reporterUserId: { in: [reporterId, otherReporterId] } } });
-  await prisma.organizationMembership.deleteMany({ where: { organizationId } });
-  await prisma.organizationServiceArea.deleteMany({ where: { organizationId } });
-  await prisma.organization.deleteMany({ where: { id: organizationId } });
-  await prisma.incidentCategory.deleteMany({ where: { id: categoryId } });
-  await prisma.userProfile.deleteMany({ where: { id: { in: [reporterId, otherReporterId] } } });
+  const organizationIds = [organizationId, organizationBId];
+  const profileIds = [reporterId, otherReporterId, organizationBAdminId];
+  await prisma.cleanupEvent.deleteMany({ where: { organizationId: { in: organizationIds } } });
+  await prisma.incidentReview.deleteMany({ where: { organizationId: { in: organizationIds } } });
+  await prisma.incident.deleteMany({ where: { reporterUserId: { in: profileIds } } });
+  await prisma.cleanupWorkflowStatus.deleteMany({ where: { organizationId: { in: organizationIds } } });
+  await prisma.organizationMembership.deleteMany({ where: { organizationId: { in: organizationIds } } });
+  await prisma.organizationServiceArea.deleteMany({ where: { organizationId: { in: organizationIds } } });
+  await prisma.administrativeArea.deleteMany({ where: { id: inactiveAdministrativeAreaId } });
+  await prisma.organization.deleteMany({ where: { id: { in: organizationIds } } });
+  await prisma.incidentCategory.deleteMany({ where: { id: { in: [categoryId, alternateCategoryId] } } });
+  await prisma.userProfile.deleteMany({ where: { id: { in: profileIds } } });
 });
 
 test("lists active categories", async () => {
@@ -269,6 +385,114 @@ test("lists own reports and protects the own-detail route", async () => {
   assert.equal("submissionId" in publicBody.data, false);
 });
 
+test("public viewport and nearby discovery are bounded, private-safe, and paginated", async () => {
+  const secondResponse = await request("/incidents", reporterToken, {
+    method: "POST",
+    body: JSON.stringify({
+      submissionId: randomUUID(),
+      categoryId,
+      title: "Nearby waste accumulation",
+      description: "A second report used to verify stable spatial pagination.",
+      severity: "MEDIUM",
+      latitude: 6.928,
+      longitude: 79.862,
+      addressText: "Near the integration test canal",
+      evidence: [],
+    }),
+  });
+  assert.equal(secondResponse.status, 201);
+  secondIncidentId = (
+    await secondResponse.json() as { data: { id: string } }
+  ).data.id;
+
+  const viewportQuery =
+    `west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=1&categoryId=${categoryId}`;
+  const unauthenticated = await fetch(
+    `${baseUrl}/api/v1/incidents?${viewportQuery}`,
+  );
+  assert.equal(unauthenticated.status, 401);
+
+  const firstPageResponse = await request(
+    `/incidents?${viewportQuery}`,
+    otherToken,
+  );
+  assert.equal(firstPageResponse.status, 200);
+  const firstPage = await firstPageResponse.json() as {
+    data: {
+      items: Array<Record<string, unknown> & { id: string }>;
+      nextCursor: string | null;
+    };
+  };
+  assert.equal(firstPage.data.items.length, 1);
+  assert.ok(firstPage.data.nextCursor);
+  const firstItem = firstPage.data.items[0]!;
+  assert.equal("reporterUserId" in firstItem, false);
+  assert.equal("submissionId" in firstItem, false);
+  assert.equal("description" in firstItem, false);
+  assert.equal("currentReviewStatus" in firstItem, false);
+  assert.equal(typeof firstItem.falseReviewCount, "number");
+
+  const secondPageResponse = await request(
+    `/incidents?${viewportQuery}&cursor=${encodeURIComponent(firstPage.data.nextCursor!)}`,
+    otherToken,
+  );
+  assert.equal(secondPageResponse.status, 200);
+  const secondPage = await secondPageResponse.json() as {
+    data: { items: Array<{ id: string }> };
+  };
+  assert.equal(secondPage.data.items.length, 1);
+  assert.notEqual(secondPage.data.items[0]?.id, firstItem.id);
+  assert.deepEqual(
+    new Set([firstItem.id, secondPage.data.items[0]?.id]),
+    new Set([createdIncidentId, secondIncidentId]),
+  );
+
+  const nearbyResponse = await request(
+    `/incidents/nearby?latitude=6.9271&longitude=79.8612&radiusMeters=5000&limit=20&categoryId=${categoryId}`,
+    otherToken,
+  );
+  assert.equal(nearbyResponse.status, 200);
+  const nearby = await nearbyResponse.json() as {
+    data: { items: Array<{ id: string }> };
+  };
+  assert.ok(nearby.data.items.some((item) => item.id === createdIncidentId));
+  assert.ok(nearby.data.items.some((item) => item.id === secondIncidentId));
+
+  const filteredResponse = await request(
+    `/incidents?west=79.8&south=6.8&east=80&north=7.1&zoom=12&status=RESOLVED&categoryId=${categoryId}`,
+    otherToken,
+  );
+  assert.equal(filteredResponse.status, 200);
+  const filtered = await filteredResponse.json() as {
+    data: { items: unknown[] };
+  };
+  assert.deepEqual(filtered.data.items, []);
+
+  const outsideResponse = await request(
+    "/incidents?west=80.5&south=7.5&east=80.6&north=7.6&zoom=12",
+    otherToken,
+  );
+  assert.equal(outsideResponse.status, 200);
+  const outside = await outsideResponse.json() as {
+    data: { items: unknown[] };
+  };
+  assert.deepEqual(outside.data.items, []);
+
+  assert.equal(
+    (await request("/incidents?scope=all", otherToken)).status,
+    400,
+  );
+  assert.equal(
+    (
+      await request(
+        "/incidents/nearby?latitude=6.9271&longitude=79.8612&radiusMeters=50001",
+        otherToken,
+      )
+    ).status,
+    400,
+  );
+});
+
 test("organization discovery includes covered boundary incidents and active area outlines", async () => {
   const query = "west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=20";
   const response = await request(
@@ -294,13 +518,7 @@ test("organization discovery includes covered boundary incidents and active area
     `/organizations/${organizationId}/incidents?scope=all`,
     otherToken,
   );
-  assert.equal(allCoveredResponse.status, 200);
-  const allCoveredBody = await allCoveredResponse.json() as {
-    data: { items: Array<{ id: string }> };
-  };
-  assert.ok(
-    allCoveredBody.data.items.some((item) => item.id === createdIncidentId),
-  );
+  assert.equal(allCoveredResponse.status, 400);
 
   const boundaries = await request(
     `/organizations/${organizationId}/service-area-boundaries`,
@@ -338,6 +556,272 @@ test("organization discovery includes covered boundary incidents and active area
   };
   assert.equal(inactiveAreaResponse.status, 200);
   assert.deepEqual(inactiveAreaBody.data.items, []);
+  await prisma.organizationServiceArea.updateMany({
+    where: { organizationId },
+    data: { status: "ACTIVE" },
+  });
+});
+
+test("two-organization discovery preserves tenant-safe spatial and historical access", async () => {
+  const overlapIncidentId = await createSpatialIncident({
+    title: "Two organization overlap incident",
+    latitude: 6.96,
+    longitude: 79.92,
+    categoryId: alternateCategoryId,
+  });
+  const organizationBOnlyIncidentId = await createSpatialIncident({
+    title: "Organization B only incident",
+    latitude: 6.96,
+    longitude: 79.98,
+  });
+  const boundaryIncidentId = await createSpatialIncident({
+    title: "Organization B boundary incident",
+    latitude: 6.97,
+    longitude: 79.90,
+  });
+  const outsideIncidentId = await createSpatialIncident({
+    title: "Outside active service areas incident",
+    latitude: 7.07,
+    longitude: 80.08,
+  });
+
+  await prisma.incident.update({
+    where: { id: organizationBOnlyIncidentId },
+    data: { status: "RESOLVED", resolvedAt: new Date() },
+  });
+  await prisma.incident.update({
+    where: { id: outsideIncidentId },
+    data: { reportedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+  });
+
+  await prisma.$executeRaw`
+    INSERT INTO "administrative_areas" (
+      "id", "official_code", "name_en", "boundary", "source_name",
+      "is_active", "imported_at", "updated_at"
+    ) VALUES (
+      ${inactiveAdministrativeAreaId}::uuid,
+      ${`INACTIVE-${inactiveAdministrativeAreaId}`},
+      'Inactive spatial acceptance area',
+      extensions.ST_GeogFromText(
+        'MULTIPOLYGON(((80.04 7.04, 80.12 7.04, 80.12 7.10, 80.04 7.10, 80.04 7.04)))'
+      ),
+      'INC-02 integration test', false, NOW(), NOW()
+    )
+  `;
+  await prisma.organizationServiceArea.create({
+    data: {
+      id: inactiveAdministrativeServiceAreaId,
+      organizationId,
+      administrativeAreaId: inactiveAdministrativeAreaId,
+      status: "ACTIVE",
+    },
+  });
+
+  const query = "west=79.8&south=6.85&east=80.15&north=7.12&zoom=12&limit=50";
+  const organizationAResponse = await request(
+    `/organizations/${organizationId}/incidents?${query}`,
+    otherToken,
+  );
+  assert.equal(organizationAResponse.status, 200);
+  const organizationAItems = (
+    await organizationAResponse.json() as {
+      data: { items: Array<Record<string, unknown> & { id: string }> };
+    }
+  ).data.items;
+  assert.equal(organizationAItems.some(({ id }) => id === overlapIncidentId), true);
+  assert.equal(organizationAItems.some(({ id }) => id === boundaryIncidentId), true);
+  assert.equal(organizationAItems.some(({ id }) => id === organizationBOnlyIncidentId), false);
+  assert.equal(organizationAItems.some(({ id }) => id === outsideIncidentId), false);
+  assert.equal(
+    organizationAItems.filter(({ id }) => id === overlapIncidentId).length,
+    1,
+  );
+
+  const organizationBResponse = await request(
+    `/organizations/${organizationBId}/incidents?${query}`,
+    organizationBToken,
+  );
+  assert.equal(organizationBResponse.status, 200);
+  const organizationBItems = (
+    await organizationBResponse.json() as {
+      data: { items: Array<{ id: string }> };
+    }
+  ).data.items;
+  assert.equal(organizationBItems.some(({ id }) => id === overlapIncidentId), true);
+  assert.equal(organizationBItems.some(({ id }) => id === organizationBOnlyIncidentId), true);
+  assert.equal(organizationBItems.some(({ id }) => id === boundaryIncidentId), true);
+  assert.equal(organizationBItems.some(({ id }) => id === createdIncidentId), false);
+  assert.equal(organizationBItems.some(({ id }) => id === outsideIncidentId), false);
+  assert.equal(
+    organizationBItems.filter(({ id }) => id === overlapIncidentId).length,
+    1,
+  );
+
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationBId}/incidents?${query}`,
+        otherToken,
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationId}/incidents?${query}`,
+        organizationBToken,
+      )
+    ).status,
+    403,
+  );
+
+  const alternateCategoryResponse = await request(
+    `/organizations/${organizationId}/incidents?${query}&categoryId=${alternateCategoryId}`,
+    otherToken,
+  );
+  const alternateItems = (
+    await alternateCategoryResponse.json() as {
+      data: { items: Array<{ id: string }> };
+    }
+  ).data.items;
+  assert.deepEqual(alternateItems.map(({ id }) => id), [overlapIncidentId]);
+
+  const resolvedResponse = await request(
+    `/organizations/${organizationBId}/incidents?${query}&status=RESOLVED`,
+    organizationBToken,
+  );
+  const resolvedItems = (
+    await resolvedResponse.json() as {
+      data: { items: Array<{ id: string }> };
+    }
+  ).data.items;
+  assert.deepEqual(resolvedItems.map(({ id }) => id), [organizationBOnlyIncidentId]);
+
+  const recentResponse = await request(
+    `/incidents?${query}&reportedAfter=${encodeURIComponent(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())}`,
+    reporterToken,
+  );
+  const recentItems = (
+    await recentResponse.json() as {
+      data: { items: Array<{ id: string }> };
+    }
+  ).data.items;
+  assert.equal(recentItems.some(({ id }) => id === outsideIncidentId), false);
+
+  const pagedIds: string[] = [];
+  let cursor: string | null = null;
+  do {
+    const pageResponse = await request(
+      `/organizations/${organizationBId}/incidents?west=79.8&south=6.85&east=80.15&north=7.12&zoom=12&limit=1${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+      organizationBToken,
+    );
+    assert.equal(pageResponse.status, 200);
+    const page = (
+      await pageResponse.json() as {
+        data: { items: Array<{ id: string }>; nextCursor: string | null };
+      }
+    ).data;
+    pagedIds.push(...page.items.map(({ id }) => id));
+    cursor = page.nextCursor;
+  } while (cursor);
+  assert.equal(new Set(pagedIds).size, pagedIds.length);
+  assert.deepEqual(new Set(pagedIds), new Set(organizationBItems.map(({ id }) => id)));
+
+  await prisma.incidentReview.createMany({
+    data: [
+      {
+        incidentId: overlapIncidentId,
+        organizationId,
+        status: "FALSE",
+        privateNotes: "Organization A private overlap note",
+        reviewedByMembershipId: organizationMembershipId,
+        reviewedAt: new Date(),
+      },
+      {
+        incidentId: overlapIncidentId,
+        organizationId: organizationBId,
+        status: "FALSE",
+        privateNotes: "Organization B private overlap note",
+        reviewedByMembershipId: organizationBMembershipId,
+        reviewedAt: new Date(),
+      },
+      {
+        incidentId: outsideIncidentId,
+        organizationId,
+        status: "VALID",
+        privateNotes: "Retained organization A private note",
+        reviewedByMembershipId: organizationMembershipId,
+        reviewedAt: new Date(),
+      },
+    ],
+  });
+  await prisma.cleanupEvent.create({
+    data: {
+      organizationId,
+      incidentId: organizationBOnlyIncidentId,
+      currentWorkflowStatusId: organizationAWorkflowStatusId,
+      lifecycleStatus: "DRAFT",
+      createdByMembershipId: organizationMembershipId,
+      title: "Retained organization A cleanup event",
+      description: "A linked event preserves organization incident access.",
+      eventLatitude: 6.96,
+      eventLongitude: 79.98,
+    },
+  });
+
+  const publicOverlapResponse = await request(
+    `/incidents?${query}&categoryId=${alternateCategoryId}`,
+    reporterToken,
+  );
+  const publicOverlap = (
+    await publicOverlapResponse.json() as {
+      data: { items: Array<Record<string, unknown> & { id: string }> };
+    }
+  ).data.items.find(({ id }) => id === overlapIncidentId);
+  assert.ok(publicOverlap);
+  assert.equal(publicOverlap.falseReviewCount, 2);
+  assert.equal("currentReviewStatus" in publicOverlap, false);
+  assert.equal("privateNotes" in publicOverlap, false);
+
+  await prisma.organizationServiceArea.updateMany({
+    where: { organizationId },
+    data: { status: "INACTIVE" },
+  });
+  const retainedResponse = await request(
+    `/organizations/${organizationId}/incidents?${query}`,
+    otherToken,
+  );
+  const retainedItems = (
+    await retainedResponse.json() as {
+      data: { items: Array<Record<string, unknown> & { id: string }> };
+    }
+  ).data.items;
+  assert.deepEqual(
+    new Set(retainedItems.map(({ id }) => id)),
+    new Set([overlapIncidentId, organizationBOnlyIncidentId, outsideIncidentId]),
+  );
+  const retainedReview = retainedItems.find(({ id }) => id === outsideIncidentId);
+  assert.equal(retainedReview?.currentReviewStatus, "VALID");
+  assert.equal("privateNotes" in (retainedReview ?? {}), false);
+
+  await prisma.organization.update({
+    where: { id: organizationBId },
+    data: { status: "SUSPENDED" },
+  });
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationBId}/incidents?${query}`,
+        organizationBToken,
+      )
+    ).status,
+    403,
+  );
+  await prisma.organization.update({
+    where: { id: organizationBId },
+    data: { status: "ACTIVE" },
+  });
   await prisma.organizationServiceArea.updateMany({
     where: { organizationId },
     data: { status: "ACTIVE" },

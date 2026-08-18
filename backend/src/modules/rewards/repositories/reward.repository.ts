@@ -325,3 +325,53 @@ export async function listContributionRecords(
     },
   });
 }
+
+export async function listCompletedCleanupEventRecords(
+  prisma: PrismaClient,
+  input: {
+    userId: string;
+    limit: number;
+    cursor: ContributionCursor | null;
+  },
+) {
+  const where = {
+    userId: input.userId,
+    type: ContributionType.EVENT_COMPLETED,
+    cleanupEventId: { not: null },
+  } as const;
+
+  const [totalCount, records] = await Promise.all([
+    prisma.contributionEvent.count({ where }),
+    prisma.contributionEvent.findMany({
+      where: {
+        ...where,
+        ...(input.cursor
+          ? {
+              OR: [
+                { createdAt: { lt: input.cursor.createdAt } },
+                {
+                  createdAt: input.cursor.createdAt,
+                  id: { lt: input.cursor.id },
+                },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: input.limit + 1,
+      select: {
+        id: true,
+        createdAt: true,
+        cleanupEvent: {
+          select: {
+            id: true,
+            title: true,
+            completedAt: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  return { totalCount, records };
+}

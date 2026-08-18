@@ -5,6 +5,48 @@ Task owner: Member 2
 Reviewed branch: `origin/feature/incident-spatial-discovery`  
 Current integration baseline: `origin/main` at `ae6fcc2`
 
+## Implementation update (2026-08-18)
+
+The original branch reviewed below has now been merged into
+`feature/incident-spatial-discovery-2`, with a recovery branch retained at
+`backup/incident-spatial-discovery-2-before-merge-20260818`.
+
+The following original blockers are now implemented in the working tree:
+
+- authenticated public/citizen bounding-box discovery;
+- explicit foreground-permission "near me" discovery using `ST_DWithin`;
+- removal of the production `scope=all` path;
+- bounded, paginated viewport requests from organization web and mobile clients;
+- server-side category, status, and reported-after filtering;
+- citizen "Find cleanup activity" destinations in web and mobile, including
+  marker/list synchronization, selected public-safe detail, pagination,
+  refresh/retry, and loading/error/empty states;
+- a citizen "Historical review" dashboard box and web/mobile screens showing
+  the verified successfully-concluded cleanup-event count and event names;
+- retained organization access through that tenant's own incident review or
+  linked cleanup event after current service-area coverage changes;
+- the full two-organization overlap, boundary, inactive-area/organization,
+  direct-ID, privacy, server-filter, FALSE-count, and stable-cursor matrix;
+- representative `EXPLAIN (ANALYZE, BUFFERS)` evidence in
+  `EcoTrack_INC-02_Spatial_Query_Plans.md`;
+- Expo SDK patch alignment and a clean 21/21 Expo Doctor result;
+- serialized backend integration execution, with all 111 backend tests passing;
+- web production build/lint, mobile typecheck/security checks, and backend
+  typecheck/build.
+
+The only remaining non-commit handoff check is interactive device verification:
+
+- manually verify web and mobile clustering, pagination, location permission,
+  historical review, and failure recovery with representative data. The local
+  web preview responded successfully, but this Codex session had no connected
+  Browser instance or native mobile device, so interactive behavior was not
+  claimed as passed.
+
+Changes intentionally remain uncommitted at the requester's direction.
+
+The detailed sections below preserve the original 2026-08-17 audit for branch
+history and review context.
+
 ## Final review decision
 
 `origin/feature/incident-spatial-discovery` contains useful, substantial INC-02 work, but INC-02 is **not complete and the branch is not ready to merge**.

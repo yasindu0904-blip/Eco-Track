@@ -1,17 +1,30 @@
 import { apiRequest } from "../../api/apiClient";
 import type { MapBoundaryFeatureCollection } from "../map";
-import type { OrganizationIncidentPage } from "./organizationIncidentReview.types";
+import type {
+  OrganizationIncidentPage,
+  OrganizationIncidentQuery,
+} from "./organizationIncidentReview.types";
 
 type DataResponse<T> = { data: T };
 
 export async function listOrganizationIncidents(
   accessToken: string,
   organizationId: string,
+  input: OrganizationIncidentQuery,
   signal: AbortSignal,
 ): Promise<OrganizationIncidentPage> {
   const query = new URLSearchParams({
-    scope: "all",
+    west: String(input.west),
+    south: String(input.south),
+    east: String(input.east),
+    north: String(input.north),
+    zoom: String(Math.round(input.zoom)),
+    limit: String(input.limit ?? 100),
   });
+  if (input.cursor) query.set("cursor", input.cursor);
+  if (input.status) query.set("status", input.status);
+  if (input.categoryId) query.set("categoryId", input.categoryId);
+  if (input.reportedAfter) query.set("reportedAfter", input.reportedAfter);
 
   return (
     await apiRequest<DataResponse<OrganizationIncidentPage>>(

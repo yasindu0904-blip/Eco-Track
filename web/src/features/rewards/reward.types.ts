@@ -43,3 +43,17 @@ export type ContributionPage = {
   items: Contribution[];
   nextCursor: string | null;
 };
+
+export type CompletedCleanupEvent = {
+  contributionId: string;
+  cleanupEventId: string;
+  title: string;
+  completedAt: string;
+  verifiedAt: string;
+};
+
+export type CompletedCleanupEventHistory = {
+  totalCount: number;
+  items: CompletedCleanupEvent[];
+  nextCursor: string | null;
+};

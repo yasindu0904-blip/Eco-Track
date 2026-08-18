@@ -9,6 +9,7 @@ import { requireCompletedProfile } from "../../middleware/requireCompletedProfil
 import type { AuthenticationDependencies } from "../auth/auth.types.js";
 
 import { getMyImpactSummaryController } from "./controllers/getMyImpactSummary.controller.js";
+import { listMyCompletedCleanupEventsController } from "./controllers/listMyCompletedCleanupEvents.controller.js";
 import { listMyContributionsController } from "./controllers/listMyContributions.controller.js";
 import type { RewardDependencies } from "./reward.dependencies.js";
 
@@ -38,6 +39,15 @@ export function createRewardRouter(
     abilityMiddleware,
     readOwnContributions,
     listMyContributionsController(rewardDependencies),
+  );
+
+  router.get(
+    "/rewards/me/completed-events",
+    authenticate,
+    requireCompletedProfile,
+    abilityMiddleware,
+    readOwnContributions,
+    listMyCompletedCleanupEventsController(rewardDependencies),
   );
 
   return router;

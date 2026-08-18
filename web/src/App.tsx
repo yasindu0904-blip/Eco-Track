@@ -17,7 +17,7 @@ import { MapFoundationPreview } from "./features/maps";
 import { OrganizationApplicationPage } from "./features/organizations/application";
 import { OrganizationWorkspace } from "./features/organizations/workspace/OrganizationWorkspace";
 import { SuperAdminDashboard } from "./features/super-admin/SuperAdminDashboard";
-import { MyImpactPage } from "./features/rewards";
+import { HistoricalReviewPage, MyImpactPage } from "./features/rewards";
 
 const previewSuperAdminProfile = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -48,6 +48,8 @@ type CitizenView =
   | "organization-workspace"
   | "incident-create"
   | "incident-reports"
+  | "incident-discovery"
+  | "historical-review"
   | "impact";
 
 function BrandHeader() {
@@ -190,18 +192,36 @@ function App() {
   }
 
   if (isCitizenPreview) {
-    if (citizenView === "incident-create" || citizenView === "incident-reports") {
+    if (
+      citizenView === "incident-create" ||
+      citizenView === "incident-reports" ||
+      citizenView === "incident-discovery"
+    ) {
       return (
         <IncidentPage
           accessToken="preview-token"
           profile={previewCitizenProfile}
-          initialView={citizenView === "incident-reports" ? "reports" : "create"}
+          initialView={
+            citizenView === "incident-reports"
+              ? "reports"
+              : citizenView === "incident-discovery"
+                ? "discover"
+                : "create"
+          }
           onBackToDashboard={() => setCitizenView("dashboard")}
         />
       );
     }
 
     if (citizenView !== "dashboard") {
+      if (citizenView === "historical-review") {
+        return (
+          <HistoricalReviewPage
+            accessToken="preview-token"
+            onBack={() => setCitizenView("dashboard")}
+          />
+        );
+      }
       return (
         <OrganizationApplicationPage
           key={citizenView}
@@ -231,6 +251,8 @@ function App() {
         }}
         onReportIncident={() => setCitizenView("incident-create")}
         onViewIncidentReports={() => setCitizenView("incident-reports")}
+        onFindCleanupActivity={() => setCitizenView("incident-discovery")}
+        onOpenHistoricalReview={() => setCitizenView("historical-review")}
         onOpenImpact={() => undefined}
         onSignOut={() => undefined}
       />
@@ -329,6 +351,8 @@ function App() {
           }}
           onReportIncident={() => setCitizenView("incident-create")}
           onViewIncidentReports={() => setCitizenView("incident-reports")}
+          onFindCleanupActivity={() => setCitizenView("incident-discovery")}
+          onOpenHistoricalReview={() => setCitizenView("historical-review")}
           onOpenImpact={() => setCitizenView("impact")}
           onSignOut={() => {
             setCitizenView("dashboard");
@@ -368,6 +392,15 @@ function App() {
       );
     }
 
+    if (citizenView === "historical-review") {
+      return (
+        <HistoricalReviewPage
+          accessToken={accessToken}
+          onBack={() => setCitizenView("dashboard")}
+        />
+      );
+    }
+
     if (citizenView === "organization-workspace" && activeMembership) {
       return (
         <OrganizationWorkspace
@@ -389,12 +422,22 @@ function App() {
       );
     }
 
-    if (citizenView === "incident-create" || citizenView === "incident-reports") {
+    if (
+      citizenView === "incident-create" ||
+      citizenView === "incident-reports" ||
+      citizenView === "incident-discovery"
+    ) {
       return (
         <IncidentPage
           accessToken={accessToken}
           profile={profile}
-          initialView={citizenView === "incident-reports" ? "reports" : "create"}
+          initialView={
+            citizenView === "incident-reports"
+              ? "reports"
+              : citizenView === "incident-discovery"
+                ? "discover"
+                : "create"
+          }
           onBackToDashboard={() => setCitizenView("dashboard")}
           onSignOut={() => {
             setCitizenView("dashboard");

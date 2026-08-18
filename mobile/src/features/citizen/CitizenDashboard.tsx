@@ -19,6 +19,8 @@ type CitizenDashboardProps = {
   onViewApplications: () => void;
   onReportIncident: () => void;
   onViewReports: () => void;
+  onFindCleanupActivity: () => void;
+  onOpenHistoricalReview: () => void;
   onOpenImpact: () => void;
   onSignOut: () => void;
 };
@@ -34,6 +36,8 @@ export function CitizenDashboard({
   onViewApplications,
   onReportIncident,
   onViewReports,
+  onFindCleanupActivity,
+  onOpenHistoricalReview,
   onOpenImpact,
   onSignOut,
 }: CitizenDashboardProps) {
@@ -114,6 +118,25 @@ export function CitizenDashboard({
         </Text>
         <Button label="Report an incident" onPress={onReportIncident} />
         <Button label="View My Reports" variant="secondary" onPress={onViewReports} />
+      </View>
+
+      <View style={sharedStyles.card}>
+        <Text style={styles.upcomingEyebrow}>FIND CLEANUP ACTIVITY</Text>
+        <Text style={sharedStyles.sectionTitle}>Discover incidents nearby</Text>
+        <Text style={sharedStyles.sectionSubtitle}>
+          Browse environmental incidents in the visible map area or run an
+          explicit five-kilometre search from your current location.
+        </Text>
+        <Button label="Open discovery map" onPress={onFindCleanupActivity} />
+      </View>
+
+      <View style={sharedStyles.card}>
+        <Text style={styles.upcomingEyebrow}>HISTORICAL REVIEW</Text>
+        <Text style={sharedStyles.sectionTitle}>Successfully concluded events</Text>
+        <Text style={sharedStyles.sectionSubtitle}>
+          See your verified completed-event count and review each cleanup event name.
+        </Text>
+        <Button label="Open historical review" onPress={onOpenHistoricalReview} />
       </View>
 
       <View style={sharedStyles.card}>

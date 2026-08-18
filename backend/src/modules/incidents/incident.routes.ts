@@ -16,8 +16,10 @@ import {
   getPublicSafeIncidentController,
   listIncidentCategoriesController,
   listMyIncidentsController,
+  listNearbyPublicIncidentsController,
   listOrganizationIncidentsController,
   listOrganizationServiceAreaBoundariesController,
+  listPublicIncidentsController,
 } from "./controllers/incident.controllers.js";
 
 export function createIncidentRouter(
@@ -51,6 +53,18 @@ export function createIncidentRouter(
     ...protectedRoute,
     authorize(Actions.Create, Subjects.Incident),
     createIncidentController(incidentDependencies),
+  );
+  router.get(
+    "/incidents",
+    ...protectedRoute,
+    authorize(Actions.Read, Subjects.Incident),
+    listPublicIncidentsController(incidentDependencies),
+  );
+  router.get(
+    "/incidents/nearby",
+    ...protectedRoute,
+    authorize(Actions.Read, Subjects.Incident),
+    listNearbyPublicIncidentsController(incidentDependencies),
   );
   router.get(
     "/incidents/me",

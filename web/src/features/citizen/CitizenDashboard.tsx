@@ -17,6 +17,8 @@ interface CitizenDashboardProps {
   onViewOrganizationApplications: () => void;
   onReportIncident: () => void;
   onViewIncidentReports: () => void;
+  onFindCleanupActivity: () => void;
+  onOpenHistoricalReview: () => void;
   onOpenImpact: () => void;
   onSignOut: () => void;
 }
@@ -97,6 +99,8 @@ export function CitizenDashboard({
   onViewOrganizationApplications,
   onReportIncident,
   onViewIncidentReports,
+  onFindCleanupActivity,
+  onOpenHistoricalReview,
   onOpenImpact,
   onSignOut,
 }: CitizenDashboardProps) {
@@ -156,6 +160,10 @@ export function CitizenDashboard({
           <button type="button" onClick={onViewIncidentReports}>
             <CitizenIcon name="report" />
             My Reports
+          </button>
+          <button type="button" onClick={onFindCleanupActivity}>
+            <CitizenIcon name="volunteer" />
+            Find cleanup activity
           </button>
           <button type="button" onClick={onOpenImpact}>
             <CitizenIcon name="volunteer" />
@@ -383,16 +391,39 @@ export function CitizenDashboard({
               <span className="citizen-action-icon">
                 <CitizenIcon name="volunteer" />
               </span>
-              <span className="citizen-action-badge citizen-action-badge-muted">
-                Upcoming
-              </span>
-              <h3>Find cleanup opportunities</h3>
+              <span className="citizen-action-badge">Available</span>
+              <h3>Historical review</h3>
               <p>
-                Browse published cleanup events and volunteer using this same
-                EcoTrack account.
+                See how many cleanup events you successfully concluded and
+                review each verified event name.
               </p>
-              <button className="citizen-action-disabled" type="button" disabled>
-                Cleanup events are not connected
+              <button
+                className="citizen-action-primary"
+                type="button"
+                onClick={onOpenHistoricalReview}
+              >
+                Open historical review
+                <CitizenIcon name="arrow" />
+              </button>
+            </article>
+
+            <article className="citizen-action-card">
+              <span className="citizen-action-icon">
+                <CitizenIcon name="volunteer" />
+              </span>
+              <span className="citizen-action-badge">Available</span>
+              <h3>Find cleanup activity</h3>
+              <p>
+                Explore mapped environmental incidents that may become local
+                cleanup opportunities.
+              </p>
+              <button
+                className="citizen-action-primary"
+                type="button"
+                onClick={onFindCleanupActivity}
+              >
+                Open discovery map
+                <CitizenIcon name="arrow" />
               </button>
             </article>
           </div>

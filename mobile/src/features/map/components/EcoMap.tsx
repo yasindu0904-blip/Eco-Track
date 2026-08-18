@@ -53,12 +53,15 @@ const cleanupEventFilter: FilterSpecification = [
   unclusteredFilter,
   ["==", ["get", "kind"], "CLEANUP_EVENT"],
 ];
+const MAX_MAP_ZOOM = 19;
+const CLUSTER_BREAK_ZOOM = 17;
 
 export interface EcoMapProps {
   markers?: MapMarkerFeature[];
   boundaries?: MapBoundaryFeatureCollection;
   initialCenter?: MapLocation;
   initialZoom?: number;
+  focusLocation?: MapLocation | null;
   selectedMarkerId?: string;
   selectedLocation?: MapLocation | null;
   selectionEnabled?: boolean;
@@ -132,6 +135,7 @@ export function EcoMap({
   boundaries,
   initialCenter = COLOMBO_MAP_CENTER,
   initialZoom = 12,
+  focusLocation,
   selectedMarkerId,
   selectedLocation,
   selectionEnabled = false,
@@ -177,22 +181,24 @@ export function EcoMap({
   }, [activeAreaBounds]);
 
   useEffect(() => {
+    const location = focusLocation ?? selectedLocation;
     if (
-      selectionEnabled &&
-      selectionMode === "center" &&
-      selectedLocation &&
-      locationsDiffer(lastMapCenterRef.current, selectedLocation)
+      location &&
+      (Boolean(focusLocation) ||
+        (selectionEnabled && selectionMode === "center")) &&
+      locationsDiffer(lastMapCenterRef.current, location)
     ) {
-      lastMapCenterRef.current = selectedLocation;
+      lastMapCenterRef.current = location;
       cameraRef.current?.easeTo({
         center: [
-          selectedLocation.longitude,
-          selectedLocation.latitude,
+          location.longitude,
+          location.latitude,
         ],
+        zoom: focusLocation ? 14 : undefined,
         duration: 250,
       });
     }
-  }, [selectedLocation, selectionEnabled, selectionMode]);
+  }, [focusLocation, selectedLocation, selectionEnabled, selectionMode]);
 
   const selectLocation = useCallback(
     (location: MapLocation) => {
@@ -409,7 +415,7 @@ export function EcoMap({
               zoom: initialZoom,
             }}
             minZoom={7}
-            maxZoom={19}
+            maxZoom={MAX_MAP_ZOOM}
             maxBounds={[
               SRI_LANKA_MAP_BOUNDS.west,
               SRI_LANKA_MAP_BOUNDS.south,
@@ -470,7 +476,7 @@ export function EcoMap({
               data={markerCollection}
               cluster
               clusterRadius={48}
-              clusterMaxZoom={14}
+              clusterMaxZoom={CLUSTER_BREAK_ZOOM - 1}
               onPress={(event) => void handleMarkerPress(event)}
             >
               <Layer

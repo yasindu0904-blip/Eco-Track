@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { describeApiFailure } from "../../../api/apiError";
 import {
@@ -39,12 +39,15 @@ export function OrganizationIncidentReview({
 }: OrganizationIncidentReviewProps) {
   const [boundaries, setBoundaries] =
     useState<MapBoundaryFeatureCollection>();
-  const [allIncidents, setAllIncidents] = useState<OrganizationIncidentSummary[]>([]);
+  const [incidents, setIncidents] = useState<OrganizationIncidentSummary[]>([]);
   const [viewport, setViewport] = useState<MapViewport>();
   const [selectedId, setSelectedId] = useState<string>();
-  const [status, setStatus] = useState("");
+  const [status, setStatus] =
+    useState<(typeof statusOptions)[number]["value"]>("");
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const activeRequest = useRef<AbortController | undefined>(undefined);
 
   useEffect(() => {
     void listOrganizationServiceAreaBoundaries(accessToken, organizationId)
@@ -59,20 +62,43 @@ export function OrganizationIncidentReview({
       });
   }, [accessToken, organizationId]);
 
-  useEffect(() => {
-    const controller = new AbortController();
+  useEffect(() => () => activeRequest.current?.abort(), []);
 
-    void listOrganizationIncidents(
-      accessToken,
-      organizationId,
-      controller.signal,
-    )
-      .then((page) => {
+  const loadIncidents = useCallback(
+    async (
+      nextViewport: MapViewport,
+      nextStatus: (typeof statusOptions)[number]["value"],
+      externalSignal?: AbortSignal,
+    ) => {
+      activeRequest.current?.abort();
+      const controller = new AbortController();
+      activeRequest.current = controller;
+      const abortFromExternal = () => controller.abort();
+      externalSignal?.addEventListener("abort", abortFromExternal, { once: true });
+      if (externalSignal?.aborted) controller.abort();
+
+      setLoading(true);
+      setError(undefined);
+      try {
+        const page = await listOrganizationIncidents(
+          accessToken,
+          organizationId,
+          {
+            ...nextViewport,
+            limit: 100,
+            status: nextStatus || undefined,
+          },
+          controller.signal,
+        );
         if (controller.signal.aborted) return;
-        setAllIncidents(page.items);
-        setSelectedId(page.items[0]?.id);
-      })
-      .catch((requestError: unknown) => {
+        setIncidents(page.items);
+        setHasMore(page.nextCursor !== null);
+        setSelectedId((current) =>
+          page.items.some((incident) => incident.id === current)
+            ? current
+            : page.items[0]?.id,
+        );
+      } catch (requestError) {
         if (controller.signal.aborted) return;
         setError(
           describeApiFailure(
@@ -80,67 +106,25 @@ export function OrganizationIncidentReview({
             "Unable to load covered incidents.",
           ).message,
         );
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-
-    return () => controller.abort();
-  }, [accessToken, organizationId]);
-
-  const incidents = useMemo(
-    () =>
-      allIncidents.filter((incident) => {
-        if (status && incident.status !== status) return false;
-        if (!viewport) return true;
-
-        return (
-          incident.longitude >= viewport.west &&
-          incident.longitude <= viewport.east &&
-          incident.latitude >= viewport.south &&
-          incident.latitude <= viewport.north
-        );
-      }),
-    [allIncidents, status, viewport],
+      } finally {
+        externalSignal?.removeEventListener("abort", abortFromExternal);
+        if (activeRequest.current === controller) setLoading(false);
+      }
+    },
+    [accessToken, organizationId],
   );
 
   const handleViewportChange = useCallback<MapViewportChangeHandler>(
-    (nextViewport) => {
+    (nextViewport, context) => {
       setViewport(nextViewport);
-      const nextVisible = allIncidents.filter(
-        (incident) =>
-          (!status || incident.status === status) &&
-          incident.longitude >= nextViewport.west &&
-          incident.longitude <= nextViewport.east &&
-          incident.latitude >= nextViewport.south &&
-          incident.latitude <= nextViewport.north,
-      );
-      setSelectedId((current) =>
-        nextVisible.some((incident) => incident.id === current)
-          ? current
-          : nextVisible[0]?.id,
-      );
+      return loadIncidents(nextViewport, status, context.signal);
     },
-    [allIncidents, status],
+    [loadIncidents, status],
   );
 
-  const changeStatus = (nextStatus: string) => {
+  const changeStatus = (nextStatus: (typeof statusOptions)[number]["value"]) => {
     setStatus(nextStatus);
-    const nextVisible = allIncidents.filter((incident) => {
-      if (nextStatus && incident.status !== nextStatus) return false;
-      if (!viewport) return true;
-      return (
-        incident.longitude >= viewport.west &&
-        incident.longitude <= viewport.east &&
-        incident.latitude >= viewport.south &&
-        incident.latitude <= viewport.north
-      );
-    });
-    setSelectedId((current) =>
-      nextVisible.some((incident) => incident.id === current)
-        ? current
-        : nextVisible[0]?.id,
-    );
+    if (viewport) void loadIncidents(viewport, nextStatus);
   };
 
   const markers = useMemo<MapMarkerFeature[]>(
@@ -171,13 +155,22 @@ export function OrganizationIncidentReview({
           <span>Covered incidents</span>
           <strong>
             {loading
-              ? "Loading all covered incidents"
-              : `${incidents.length} of ${allIncidents.length} in view`}
+              ? "Loading incidents in this view"
+              : hasMore
+                ? `Showing the first ${incidents.length} incidents in view`
+                : `${incidents.length} incidents in view`}
           </strong>
         </div>
         <label>
           Status
-          <select value={status} onChange={(event) => changeStatus(event.target.value)}>
+          <select
+            value={status}
+            onChange={(event) =>
+              changeStatus(
+                event.target.value as (typeof statusOptions)[number]["value"],
+              )
+            }
+          >
             {statusOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
