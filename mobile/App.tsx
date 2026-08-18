@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -43,17 +43,23 @@ export default function App() {
   const [selectedOrganizationId, setSelectedOrganizationId] = useState("");
   const [activeMemberships, setActiveMemberships] =
     useState<ActiveOrganizationMembership[]>([]);
+  const membershipRequestVersion = useRef(0);
   const [submittedApplication, setSubmittedApplication] =
     useState<OrganizationApplication | null>(null);
   const [submittedIncident, setSubmittedIncident] =
     useState<IncidentDetail | null>(null);
 
   const reloadActiveMemberships = useCallback(async () => {
+    const requestVersion = ++membershipRequestVersion.current;
+
     if (
       !authentication.accessToken ||
       authentication.profile?.platformRole !== "USER"
     ) {
-      setActiveMemberships([]);
+      if (membershipRequestVersion.current === requestVersion) {
+        setActiveMemberships([]);
+      }
+
       return;
     }
 
@@ -68,9 +74,13 @@ export default function App() {
         items.push(...page.items);
         cursor = page.nextCursor ?? undefined;
       } while (cursor);
-      setActiveMemberships(items);
+      if (membershipRequestVersion.current === requestVersion) {
+        setActiveMemberships(items);
+      }
     } catch {
-      setActiveMemberships([]);
+      if (membershipRequestVersion.current === requestVersion) {
+        setActiveMemberships([]);
+      }
     }
   }, [authentication.accessToken, authentication.profile?.platformRole]);
 
@@ -79,6 +89,8 @@ export default function App() {
   }, [reloadActiveMemberships]);
 
   const signOut = async () => {
+    membershipRequestVersion.current += 1;
+    setActiveMemberships([]);
     setCitizenView("dashboard");
     setShowNotifications(false);
     setSelectedOrganizationId("");

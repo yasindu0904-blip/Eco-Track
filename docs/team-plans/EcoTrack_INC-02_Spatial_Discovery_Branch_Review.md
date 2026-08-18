@@ -5,6 +5,10 @@ Task owner: Member 2
 Reviewed branch: `origin/feature/incident-spatial-discovery`  
 Current integration baseline: `origin/main` at `ae6fcc2`
 
+Current corrected branch: `feature/incident-spatial-discovery-2`
+
+Current corrected commit before final integration fixes: `cbebbaa`
+
 ## Implementation update (2026-08-18)
 
 The original branch reviewed below has now been merged into
@@ -13,9 +17,10 @@ The original branch reviewed below has now been merged into
 
 The merged INC-02 implementation was committed as `3a46fdf` (`inc-02`). A
 subsequent integration review identified correction work required before
-merging that commit into `main`. The current working tree applies those
-corrections on top of `3a46fdf`; they remain uncommitted until review at the
-requester's direction.
+merging that commit into `main`. Those main corrections were committed as
+`cbebbaa` (`complete_INC-02`). The integration owner then added final
+stale-mobile-request protection, documentation cleanup, and Expo SDK patch
+alignment before the final Pull Request verification.
 
 The corrected INC-02 scope includes:
 
@@ -41,12 +46,28 @@ The corrected INC-02 scope includes:
 - organization memberships loaded from the dedicated
   `/organization-memberships/me/active` endpoint instead of every auth query;
 - discovery-specific component naming that does not imply INC-03 mutation;
-- unrelated completed-event history, Expo/CMake maintenance, and global test
-  serialization removed from the INC-02 diff.
+- unrelated completed-event history, the machine-specific CMake workaround,
+  and global test serialization removed from the INC-02 diff;
+- Expo SDK 57 patch packages aligned separately by the integration owner so
+  Expo Doctor and native dependency deduplication pass.
 
-Verification results for the corrected working tree must be recorded after the
-final correction pass. Interactive device verification remains a separate
-manual requirement:
+Independent verification of `cbebbaa` completed the following checks:
+
+- backend typecheck and build passed;
+- web lint and production build passed;
+- mobile TypeScript and Metro security checks passed;
+- focused PostGIS incident/map integration tests passed 10/10;
+- the complete shared-database run passed 107/109 tests, with the remaining two
+  failing only because the Supabase session pool reached its 15-client limit;
+- no INC-02 assertion failed in the focused serial spatial run;
+- after the final integration fixes, backend typecheck/build, web lint/build,
+  mobile TypeScript/security, and Expo Doctor 21/21 all passed;
+- the Expo dependency tree contains one deduplicated copy of each aligned
+  native module.
+
+The final corrected commit must still pass CI against its isolated PostgreSQL/
+PostGIS service. Interactive device verification remains a separate manual
+requirement:
 
 - manually verify web and mobile clustering, pagination, category/status/time
   filters, location permission, bounded service-area overlays, and failure
@@ -55,7 +76,7 @@ manual requirement:
 The detailed sections below preserve the original 2026-08-17 audit for branch
 history and review context.
 
-## Final review decision
+## Original 2026-08-17 review decision (historical)
 
 `origin/feature/incident-spatial-discovery` contains useful, substantial INC-02 work, but INC-02 is **not complete and the branch is not ready to merge**.
 
