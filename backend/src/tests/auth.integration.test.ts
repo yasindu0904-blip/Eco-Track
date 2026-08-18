@@ -17,6 +17,7 @@ const activeUser: AuthenticatedUserProfile = {
   profileCompletedAt: null,
   platformRole: "USER",
   accountStatus: "ACTIVE",
+  activeMemberships: [],
 };
 
 const runningServers = new Set<Server>();
@@ -188,6 +189,44 @@ test(
       ),
       false,
     );
+  },
+);
+
+test(
+  "GET /api/v1/auth/me returns active accepted organization memberships",
+  async () => {
+    const organizationMember: AuthenticatedUserProfile = {
+      ...activeUser,
+      activeMemberships: [
+        {
+          id: "40000000-0000-4000-8000-000000000001",
+          organizationId:
+            "30000000-0000-4000-8000-000000000001",
+          organizationName: "Green Colombo",
+          organizationSlug: "green-colombo",
+          role: "ORG_ADMIN",
+          status: "ACTIVE",
+        },
+      ],
+    };
+
+    const baseUrl = await startTestServer(
+      createFakeDependencies(organizationMember),
+    );
+
+    const response = await fetch(
+      `${baseUrl}/api/v1/auth/me`,
+      {
+        headers: {
+          authorization: "Bearer valid-token",
+        },
+      },
+    );
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(await readJson(response), {
+      data: organizationMember,
+    });
   },
 );
 

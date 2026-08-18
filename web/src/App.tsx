@@ -15,6 +15,7 @@ import {
 } from "./features/memberships";
 import { MapFoundationPreview } from "./features/maps";
 import { OrganizationApplicationPage } from "./features/organizations/application";
+import { OrganizationWorkspace } from "./features/organizations/workspace/OrganizationWorkspace";
 import { SuperAdminDashboard } from "./features/super-admin/SuperAdminDashboard";
 import { MyImpactPage } from "./features/rewards";
 
@@ -44,6 +45,7 @@ type CitizenView =
   | "organization-workspaces"
   | "organization-apply"
   | "organization-applications"
+  | "organization-workspace"
   | "incident-create"
   | "incident-reports"
   | "impact";
@@ -135,6 +137,8 @@ function App() {
     useState<CitizenView>("dashboard");
   const [showNotifications, setShowNotifications] =
     useState(false);
+  const [selectedOrganizationId, setSelectedOrganizationId] =
+    useState("");
 
   const {
     status,
@@ -142,6 +146,7 @@ function App() {
     accessToken,
     errorMessage,
     checkSuperAdminAccess,
+    refreshProfile,
     replaceProfile,
     retry,
     signOut,
@@ -285,7 +290,17 @@ function App() {
       );
     }
 
-    if (citizenView === "dashboard") {
+    const activeMemberships = profile.activeMemberships ?? [];
+    const activeMembership =
+      activeMemberships.find(
+        (membership) =>
+          membership.organizationId === selectedOrganizationId,
+      ) ?? activeMemberships[0];
+
+    if (
+      citizenView === "dashboard" ||
+      (citizenView === "organization-workspace" && !activeMembership)
+    ) {
       return (
         <CitizenDashboard
           profile={profile}
@@ -294,6 +309,17 @@ function App() {
           onManageMembership={() => setCitizenView("membership")}
           onOpenOrganizationWorkspaces={() =>
             setCitizenView("organization-workspaces")
+          }
+          activeOrganization={activeMembership}
+          onOpenOrganizationWorkspace={
+            activeMembership
+              ? () => {
+                  setSelectedOrganizationId(
+                    activeMembership.organizationId,
+                  );
+                  setCitizenView("organization-workspace");
+                }
+              : undefined
           }
           onStartOrganizationApplication={() => {
             setCitizenView("organization-apply");
@@ -342,6 +368,27 @@ function App() {
       );
     }
 
+    if (citizenView === "organization-workspace" && activeMembership) {
+      return (
+        <OrganizationWorkspace
+          profile={profile}
+          accessToken={accessToken}
+          memberships={activeMemberships}
+          selectedOrganizationId={activeMembership.organizationId}
+          onSelectOrganization={setSelectedOrganizationId}
+          onBackToDashboard={() => setCitizenView("dashboard")}
+          onViewApplications={() =>
+            setCitizenView("organization-applications")
+          }
+          onSignOut={() => {
+            setCitizenView("dashboard");
+            setSelectedOrganizationId("");
+            signOut();
+          }}
+        />
+      );
+    }
+
     if (citizenView === "incident-create" || citizenView === "incident-reports") {
       return (
         <IncidentPage
@@ -369,6 +416,7 @@ function App() {
         }
         onBackToDashboard={() => {
           setCitizenView("dashboard");
+          void refreshProfile();
         }}
         onSignOut={() => {
           setCitizenView("dashboard");

@@ -20,11 +20,17 @@ export async function completeProfileController(
       );
     }
 
+    const profile = await completeProfile(
+      request.authentication.profile.id,
+      parsed.data,
+    );
+
     response.status(200).json({
-      data: await completeProfile(
-        request.authentication.profile.id,
-        parsed.data,
-      ),
+      data: {
+        ...profile,
+        activeMemberships:
+          request.authentication.profile.activeMemberships ?? [],
+      },
     });
   } catch (error) {
     next(error);
