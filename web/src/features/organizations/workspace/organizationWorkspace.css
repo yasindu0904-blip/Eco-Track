@@ -454,6 +454,80 @@
   font-weight: 800;
 }
 
+.organization-review-form {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.organization-review-form-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.organization-review-form h3 {
+  margin: 5px 0 0;
+  color: #18321d;
+  font-size: 1rem;
+  text-transform: capitalize;
+}
+
+.organization-review-form small,
+.organization-review-description {
+  color: var(--color-text-muted);
+}
+
+.organization-review-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.organization-review-form select,
+.organization-review-form textarea {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #ffffff;
+  font: inherit;
+}
+
+.organization-review-form textarea {
+  resize: vertical;
+}
+
+.organization-review-submit {
+  justify-self: start;
+  min-height: 42px;
+  padding: 9px 16px;
+  color: #ffffff;
+  border: 0;
+  border-radius: 8px;
+  background: var(--color-primary);
+  font-weight: 800;
+}
+
+.organization-review-submit:disabled {
+  opacity: 0.6;
+}
+
+.organization-review-success {
+  margin: 0;
+  padding: 10px 12px;
+  color: #17643a;
+  border-left: 3px solid #2f9d5b;
+  background: #eaf7ee;
+}
+
 @media (max-width: 700px) {
   .organization-workspace-header {
     grid-template-columns: 1fr auto;

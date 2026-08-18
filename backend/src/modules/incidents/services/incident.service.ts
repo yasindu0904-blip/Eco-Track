@@ -2,6 +2,9 @@ import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 
 import { ApplicationError } from "../../../errors/applicationError.js";
+import { NotificationType } from "../../../generated/prisma/enums.js";
+import { createNotification } from "../../notifications/services/createNotification.service.js";
+import { awardVerifiedIncidentReportContribution } from "../../rewards/services/awardContribution.service.js";
 import {
   INCIDENT_SUBMISSION_RATE_LIMIT,
 } from "../incident.constants.js";
@@ -11,7 +14,10 @@ import type {
   IncidentDetailDto,
   IncidentListPageDto,
   IncidentSummaryDto,
+  OrganizationIncidentDetailDto,
   OrganizationIncidentListPageDto,
+  OrganizationIncidentReviewDto,
+  OrganizationIncidentReviewMutationDto,
   PublicIncidentListPageDto,
   PublicIncidentSummaryDto,
 } from "../incident.types.js";
@@ -19,6 +25,7 @@ import type {
   ValidatedCreateIncident,
   ValidatedEvidenceUploadRequest,
   ValidatedOrganizationIncidentDiscovery,
+  ValidatedOrganizationIncidentReview,
   ValidatedOrganizationServiceAreaBoundaryQuery,
   ValidatedPublicIncidentRadiusDiscovery,
   ValidatedPublicIncidentViewportDiscovery,
@@ -28,16 +35,22 @@ import {
   createIncidentRecord,
   findIncidentBySubmission,
   findIncidentRecordByIdAndReporter,
+  findCurrentOrganizationIncidentReview,
+  findOrganizationIncidentAccess,
+  findOrganizationIncidentDetailRecord,
   findPublicSafeIncidentRecordById,
   listActiveIncidentCategories,
   listIncidentRecordsByReporter,
   type IncidentDetailRecord,
   type IncidentListCursor,
   listCoveredOrganizationIncidents,
+  lockOrganizationIncidentReview,
   listPublicIncidentsByRadius as queryPublicIncidentsByRadius,
   listPublicIncidentsByViewport as queryPublicIncidentsByViewport,
   type OrganizationIncidentDiscoveryCursor,
   type PublicIncidentDiscoveryRow,
+  type OrganizationIncidentReviewRecord,
+  upsertOrganizationIncidentReview,
 } from "../repositories/incident.repository.js";
 import { listOrganizationServiceAreaBoundaryFeatures } from "../../maps/repositories/mapSpatial.repository.js";
 
@@ -106,6 +119,21 @@ async function toDetailDto(
       reason: history.reason,
       changedAt: history.changedAt.toISOString(),
     })),
+  };
+}
+
+function toOrganizationIncidentReviewDto(
+  review: OrganizationIncidentReviewRecord,
+): OrganizationIncidentReviewDto {
+  return {
+    id: review.id,
+    status: review.status,
+    reasonCode: review.reasonCode,
+    privateNotes: review.privateNotes,
+    reviewerName: review.reviewedBy.user.fullName ?? "Organization reviewer",
+    firstViewedAt: review.firstViewedAt.toISOString(),
+    reviewedAt: review.reviewedAt?.toISOString() ?? null,
+    updatedAt: review.updatedAt.toISOString(),
   };
 }
 
@@ -255,6 +283,168 @@ export async function getPublicSafeIncident(
   const record = await findPublicSafeIncidentRecordById(dependencies.prisma, id);
   if (!record) throw new ApplicationError(404, "INCIDENT_NOT_FOUND", "The requested incident was not found.");
   return toDetailDto(dependencies, record);
+}
+
+export async function getOrganizationIncidentDetail(
+  dependencies: IncidentDependencies,
+  organizationId: string,
+  incidentId: string,
+): Promise<OrganizationIncidentDetailDto> {
+  const record = await findOrganizationIncidentDetailRecord(
+    dependencies.prisma,
+    organizationId,
+    incidentId,
+  );
+  if (!record) {
+    throw new ApplicationError(
+      404,
+      "ORGANIZATION_INCIDENT_NOT_FOUND",
+      "The incident is not available in this organization workspace.",
+    );
+  }
+
+  return {
+    ...(await toDetailDto(dependencies, record.incident)),
+    falseReviewCount: record.falseReviewCount,
+    accessSource: record.access.accessSource,
+    currentReview: record.currentReview
+      ? toOrganizationIncidentReviewDto(record.currentReview)
+      : null,
+  };
+}
+
+function normalizedPrivateNotes(value: string | null | undefined): string | null {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+export async function updateOrganizationIncidentReview(
+  dependencies: IncidentDependencies,
+  context: {
+    organizationId: string;
+    membershipId: string;
+    reviewerUserId: string;
+  },
+  incidentId: string,
+  input: ValidatedOrganizationIncidentReview,
+): Promise<OrganizationIncidentReviewMutationDto> {
+  return dependencies.prisma.$transaction(async (transaction) => {
+    await lockOrganizationIncidentReview(
+      transaction,
+      context.organizationId,
+      incidentId,
+    );
+
+    const access = await findOrganizationIncidentAccess(
+      transaction,
+      context.organizationId,
+      incidentId,
+    );
+    if (!access) {
+      throw new ApplicationError(
+        404,
+        "ORGANIZATION_INCIDENT_NOT_FOUND",
+        "The incident is not available in this organization workspace.",
+      );
+    }
+
+    const current = await findCurrentOrganizationIncidentReview(
+      transaction,
+      context.organizationId,
+      incidentId,
+    );
+    if (
+      input.status === "VIEWED" &&
+      current &&
+      current.status !== "VIEWED"
+    ) {
+      throw new ApplicationError(
+        409,
+        "INCIDENT_REVIEW_TRANSITION_INVALID",
+        "A completed VALID or FALSE decision cannot be changed back to VIEWED.",
+      );
+    }
+
+    const reasonCode = input.status === "FALSE"
+      ? input.reasonCode ?? null
+      : null;
+    const privateNotes = normalizedPrivateNotes(input.privateNotes);
+    const idempotentReplay =
+      current?.status === input.status &&
+      current.reasonCode === reasonCode &&
+      current.privateNotes === privateNotes;
+
+    if (idempotentReplay && current) {
+      return {
+        review: toOrganizationIncidentReviewDto(current),
+        rewardAwarded: false,
+        idempotentReplay: true,
+      };
+    }
+
+    const reviewedAt = input.status === "VIEWED" ? null : new Date();
+    const review = await upsertOrganizationIncidentReview(transaction, {
+      organizationId: context.organizationId,
+      incidentId,
+      membershipId: context.membershipId,
+      status: input.status,
+      reasonCode,
+      privateNotes,
+      reviewedAt,
+    });
+
+    await transaction.auditLog.create({
+      data: {
+        actorUserId: context.reviewerUserId,
+        organizationId: context.organizationId,
+        action: "INCIDENT_REVIEW_UPDATED",
+        entityType: "IncidentReview",
+        entityId: review.id,
+        metadata: {
+          incidentId,
+          previousStatus: current?.status ?? null,
+          status: input.status,
+          reasonCode,
+          hasPrivateNotes: privateNotes !== null,
+        },
+      },
+    });
+
+    let rewardAwarded = false;
+    if (input.status === "VALID") {
+      const reward = await awardVerifiedIncidentReportContribution(
+        transaction,
+        incidentId,
+      );
+      rewardAwarded = reward.created;
+    }
+
+    if (input.status !== "VIEWED") {
+      await createNotification(
+        { prisma: transaction },
+        {
+          userId: access.reporterUserId,
+          organizationId: context.organizationId,
+          type: NotificationType.INCIDENT_STATUS_CHANGED,
+          title: "Incident report reviewed",
+          message: input.status === "VALID"
+            ? "An authorized cleanup organization validated your incident report."
+            : "A cleanup organization marked your incident report as needing further verification.",
+          data: {
+            incidentId,
+            organizationId: context.organizationId,
+            status: input.status,
+          },
+        },
+      );
+    }
+
+    return {
+      review: toOrganizationIncidentReviewDto(review),
+      rewardAwarded,
+      idempotentReplay: false,
+    };
+  });
 }
 
 function decodeIncidentDiscoveryCursor(

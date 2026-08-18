@@ -5,6 +5,7 @@ import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import { BrandHeader, Button, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
+import { CleanupWorkflowScreen } from "../cleanupWorkflows";
 import { OrganizationIncidentDiscovery } from "./OrganizationIncidentDiscovery";
 
 type OrganizationWorkspaceScreenProps = {
@@ -28,7 +29,7 @@ export function OrganizationWorkspaceScreen({
   onViewApplications,
   onSignOut,
 }: OrganizationWorkspaceScreenProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "incidentDiscovery">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "incidentDiscovery" | "cleanupWorkflow">("overview");
   const [mapInteracting, setMapInteracting] = useState(false);
   const membership =
     memberships.find(
@@ -93,6 +94,8 @@ export function OrganizationWorkspaceScreen({
         </Pressable>
         {activeTab === "incidentDiscovery" ? (
           <Text style={styles.breadcrumb}>/ Incident discovery</Text>
+        ) : activeTab === "cleanupWorkflow" ? (
+          <Text style={styles.breadcrumb}>/ Cleanup workflow</Text>
         ) : null}
       </View>
 
@@ -155,7 +158,34 @@ export function OrganizationWorkspaceScreen({
             </View>
             <Text style={styles.toolArrow}>→</Text>
           </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open cleanup event planning"
+            onPress={() => setActiveTab("cleanupWorkflow")}
+            style={({ pressed }) => [
+              styles.toolCard,
+              pressed && styles.toolCardPressed,
+            ]}
+          >
+            <View style={styles.toolIcon}>
+              <Text style={styles.toolIconText}>+</Text>
+            </View>
+            <View style={styles.toolCopy}>
+              <Text style={styles.toolEyebrow}>CLEANUP EVENTS</Text>
+              <Text style={styles.toolTitle}>Plan an activity</Text>
+              <Text style={styles.toolDescription}>
+                Review the protected event stages available to your organization.
+              </Text>
+            </View>
+            <Text style={styles.toolArrow}>→</Text>
+          </Pressable>
         </>
+      ) : activeTab === "cleanupWorkflow" ? (
+        <CleanupWorkflowScreen
+          accessToken={accessToken}
+          organizationId={membership.organization.id}
+          onBack={() => setActiveTab("overview")}
+        />
       ) : (
         <OrganizationIncidentDiscovery
           key={membership.organization.id}

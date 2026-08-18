@@ -208,6 +208,226 @@ export async function findPublicSafeIncidentRecordById(
   });
 }
 
+type IncidentDatabase = PrismaClient | Prisma.TransactionClient;
+
+const organizationIncidentReviewSelect = {
+  id: true,
+  status: true,
+  reasonCode: true,
+  privateNotes: true,
+  firstViewedAt: true,
+  reviewedAt: true,
+  updatedAt: true,
+  reviewedBy: {
+    select: {
+      user: {
+        select: { fullName: true },
+      },
+    },
+  },
+} satisfies Prisma.IncidentReviewSelect;
+
+export type OrganizationIncidentReviewRecord = Prisma.IncidentReviewGetPayload<{
+  select: typeof organizationIncidentReviewSelect;
+}>;
+
+type OrganizationIncidentAccessRow = {
+  reporterUserId: string;
+  hasCurrentCoverage: boolean;
+  hasHistoricalReview: boolean;
+  hasLinkedEvent: boolean;
+};
+
+export type OrganizationIncidentAccessRecord = OrganizationIncidentAccessRow & {
+  accessSource:
+    | "CURRENT_SERVICE_AREA"
+    | "HISTORICAL_REVIEW"
+    | "LINKED_EVENT";
+};
+
+export async function findOrganizationIncidentAccess(
+  database: IncidentDatabase,
+  organizationId: string,
+  incidentId: string,
+): Promise<OrganizationIncidentAccessRecord | null> {
+  const rows = await database.$queryRaw<OrganizationIncidentAccessRow[]>`
+    SELECT
+      incident."reporter_user_id" AS "reporterUserId",
+      EXISTS (
+        SELECT 1
+        FROM "organization_service_areas" AS service_area
+        JOIN "organizations" AS organization
+          ON organization."id" = service_area."organization_id"
+         AND organization."status" = 'ACTIVE'::"OrganizationStatus"
+        LEFT JOIN "administrative_areas" AS administrative_area
+          ON administrative_area."id" = service_area."administrative_area_id"
+         AND administrative_area."is_active" = true
+        WHERE service_area."organization_id" = ${organizationId}::uuid
+          AND service_area."status" = 'ACTIVE'::"ServiceAreaStatus"
+          AND extensions.ST_Covers(
+            COALESCE(service_area."boundary", administrative_area."boundary"),
+            incident."geo_point"
+          )
+      ) AS "hasCurrentCoverage",
+      EXISTS (
+        SELECT 1
+        FROM "incident_reviews" AS review
+        WHERE review."incident_id" = incident."id"
+          AND review."organization_id" = ${organizationId}::uuid
+      ) AS "hasHistoricalReview",
+      EXISTS (
+        SELECT 1
+        FROM "cleanup_events" AS cleanup_event
+        WHERE cleanup_event."incident_id" = incident."id"
+          AND cleanup_event."organization_id" = ${organizationId}::uuid
+      ) AS "hasLinkedEvent"
+    FROM "incidents" AS incident
+    WHERE incident."id" = ${incidentId}::uuid
+      AND (
+        EXISTS (
+          SELECT 1
+          FROM "organization_service_areas" AS service_area
+          JOIN "organizations" AS organization
+            ON organization."id" = service_area."organization_id"
+           AND organization."status" = 'ACTIVE'::"OrganizationStatus"
+          LEFT JOIN "administrative_areas" AS administrative_area
+            ON administrative_area."id" = service_area."administrative_area_id"
+           AND administrative_area."is_active" = true
+          WHERE service_area."organization_id" = ${organizationId}::uuid
+            AND service_area."status" = 'ACTIVE'::"ServiceAreaStatus"
+            AND extensions.ST_Covers(
+              COALESCE(service_area."boundary", administrative_area."boundary"),
+              incident."geo_point"
+            )
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM "incident_reviews" AS review
+          WHERE review."incident_id" = incident."id"
+            AND review."organization_id" = ${organizationId}::uuid
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM "cleanup_events" AS cleanup_event
+          WHERE cleanup_event."incident_id" = incident."id"
+            AND cleanup_event."organization_id" = ${organizationId}::uuid
+        )
+      )
+    LIMIT 1
+  `;
+
+  const row = rows[0];
+  if (!row) return null;
+
+  return {
+    ...row,
+    accessSource: row.hasCurrentCoverage
+      ? "CURRENT_SERVICE_AREA"
+      : row.hasHistoricalReview
+        ? "HISTORICAL_REVIEW"
+        : "LINKED_EVENT",
+  };
+}
+
+export async function findOrganizationIncidentDetailRecord(
+  database: IncidentDatabase,
+  organizationId: string,
+  incidentId: string,
+) {
+  const access = await findOrganizationIncidentAccess(
+    database,
+    organizationId,
+    incidentId,
+  );
+  if (!access) return null;
+
+  const [incident, currentReview, falseReviewCount] = await Promise.all([
+    database.incident.findUnique({
+      where: { id: incidentId },
+      select: incidentDetailSelect,
+    }),
+    database.incidentReview.findUnique({
+      where: {
+        incidentId_organizationId: { incidentId, organizationId },
+      },
+      select: organizationIncidentReviewSelect,
+    }),
+    database.incidentReview.count({
+      where: {
+        incidentId,
+        status: "FALSE",
+        organization: { status: "ACTIVE" },
+      },
+    }),
+  ]);
+
+  if (!incident) return null;
+  return { incident, access, currentReview, falseReviewCount };
+}
+
+export async function lockOrganizationIncidentReview(
+  transaction: Prisma.TransactionClient,
+  organizationId: string,
+  incidentId: string,
+): Promise<void> {
+  const lockKey = `incident-review:${organizationId}:${incidentId}`;
+  await transaction.$executeRaw`
+    SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))
+  `;
+}
+
+export async function findCurrentOrganizationIncidentReview(
+  transaction: Prisma.TransactionClient,
+  organizationId: string,
+  incidentId: string,
+): Promise<OrganizationIncidentReviewRecord | null> {
+  return transaction.incidentReview.findUnique({
+    where: {
+      incidentId_organizationId: { incidentId, organizationId },
+    },
+    select: organizationIncidentReviewSelect,
+  });
+}
+
+export async function upsertOrganizationIncidentReview(
+  transaction: Prisma.TransactionClient,
+  input: {
+    organizationId: string;
+    incidentId: string;
+    membershipId: string;
+    status: "VIEWED" | "VALID" | "FALSE";
+    reasonCode: string | null;
+    privateNotes: string | null;
+    reviewedAt: Date | null;
+  },
+): Promise<OrganizationIncidentReviewRecord> {
+  return transaction.incidentReview.upsert({
+    where: {
+      incidentId_organizationId: {
+        incidentId: input.incidentId,
+        organizationId: input.organizationId,
+      },
+    },
+    create: {
+      incidentId: input.incidentId,
+      organizationId: input.organizationId,
+      reviewedByMembershipId: input.membershipId,
+      status: input.status,
+      reasonCode: input.reasonCode,
+      privateNotes: input.privateNotes,
+      reviewedAt: input.reviewedAt,
+    },
+    update: {
+      reviewedByMembershipId: input.membershipId,
+      status: input.status,
+      reasonCode: input.reasonCode,
+      privateNotes: input.privateNotes,
+      reviewedAt: input.reviewedAt,
+    },
+    select: organizationIncidentReviewSelect,
+  });
+}
+
 export type OrganizationIncidentDiscoveryCursor = {
   reportedAt: Date;
   id: string;

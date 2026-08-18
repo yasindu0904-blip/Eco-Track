@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import type { ActiveOrganizationMembership } from "../../memberships/administration/membershipAdministration.types";
+import { CleanupWorkflowView } from "../../cleanup-workflows";
 
 import "./organizationWorkspace.css";
 import { OrganizationIncidentDiscovery } from "./OrganizationIncidentDiscovery";
@@ -28,7 +29,7 @@ export function OrganizationWorkspace({
   onSignOut,
 }: OrganizationWorkspaceProps) {
   const [activeTab, setActiveTab] =
-    useState<"overview" | "incident-discovery">("overview");
+    useState<"overview" | "incident-discovery" | "cleanup-workflow">("overview");
   const membership =
     memberships.find(
       (item) => item.organization.id === selectedOrganizationId,
@@ -96,6 +97,9 @@ export function OrganizationWorkspace({
           {activeTab === "incident-discovery" && (
             <span aria-current="page">/ Incident discovery</span>
           )}
+          {activeTab === "cleanup-workflow" && (
+            <span aria-current="page">/ Cleanup workflow</span>
+          )}
         </nav>
 
         {activeTab === "incident-discovery" ? (
@@ -103,6 +107,12 @@ export function OrganizationWorkspace({
             key={membership.organization.id}
             accessToken={accessToken}
             organizationId={membership.organization.id}
+          />
+        ) : activeTab === "cleanup-workflow" ? (
+          <CleanupWorkflowView
+            accessToken={accessToken}
+            organizationId={membership.organization.id}
+            onBack={() => setActiveTab("overview")}
           />
         ) : (
           <>
@@ -151,6 +161,26 @@ export function OrganizationWorkspace({
                   <small>Incident discovery</small>
                   <strong>Available now</strong>
                   <span>Search covered reports and review them by GN Division.</span>
+                </span>
+                <span className="organization-workspace-tool-action" aria-hidden="true">
+                  Open <b>→</b>
+                </span>
+              </button>
+              <button
+                type="button"
+                className="organization-workspace-tool-card"
+                onClick={() => setActiveTab("cleanup-workflow")}
+              >
+                <span className="organization-workspace-tool-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M4 5h16v14H4Z" />
+                    <path d="M8 3v4M16 3v4M4 9h16M8 13h3M13 13h3M8 16h3" />
+                  </svg>
+                </span>
+                <span className="organization-workspace-tool-copy">
+                  <small>Cleanup events</small>
+                  <strong>Plan an activity</strong>
+                  <span>Review the protected event stages available to your organization.</span>
                 </span>
                 <span className="organization-workspace-tool-action" aria-hidden="true">
                   Open <b>→</b>

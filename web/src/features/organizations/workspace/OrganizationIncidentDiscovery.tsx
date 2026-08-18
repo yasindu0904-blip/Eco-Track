@@ -11,10 +11,17 @@ import {
   type MapViewportChangeHandler,
 } from "../../maps";
 import {
+  getOrganizationIncidentDetail,
   listOrganizationIncidents,
   listOrganizationServiceAreaBoundaries,
+  updateOrganizationIncidentReview,
 } from "./organizationIncidentDiscovery.api";
-import type { OrganizationIncidentSummary } from "./organizationIncidentDiscovery.types";
+import type {
+  OrganizationIncidentDetail,
+  OrganizationIncidentFalseReasonCode,
+  OrganizationIncidentReviewStatus,
+  OrganizationIncidentSummary,
+} from "./organizationIncidentDiscovery.types";
 
 interface OrganizationIncidentDiscoveryProps {
   accessToken: string;
@@ -34,6 +41,18 @@ const timeOptions = [
   { value: "7d", label: "Last 7 days", milliseconds: 7 * 24 * 60 * 60 * 1000 },
   { value: "30d", label: "Last 30 days", milliseconds: 30 * 24 * 60 * 60 * 1000 },
 ] as const;
+
+const reviewReasonOptions: Array<{
+  value: OrganizationIncidentFalseReasonCode;
+  label: string;
+}> = [
+  { value: "INSUFFICIENT_EVIDENCE", label: "Insufficient evidence" },
+  { value: "LOCATION_INCORRECT", label: "Location is incorrect" },
+  { value: "DUPLICATE_REPORT", label: "Duplicate report" },
+  { value: "NOT_AN_ENVIRONMENTAL_INCIDENT", label: "Not an environmental incident" },
+  { value: "OUTSIDE_SERVICE_SCOPE", label: "Outside service scope" },
+  { value: "OTHER", label: "Other" },
+];
 
 type DiscoveryFilters = {
   status: (typeof statusOptions)[number]["value"];
@@ -83,7 +102,15 @@ export function OrganizationIncidentDiscovery({
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string>();
+  const [detail, setDetail] = useState<OrganizationIncidentDetail>();
+  const [reviewStatus, setReviewStatus] = useState<OrganizationIncidentReviewStatus>("VIEWED");
+  const [reasonCode, setReasonCode] = useState<OrganizationIncidentFalseReasonCode>();
+  const [privateNotes, setPrivateNotes] = useState("");
+  const [reviewError, setReviewError] = useState<string>();
+  const [reviewNotice, setReviewNotice] = useState<string>();
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const activeRequest = useRef<AbortController | undefined>(undefined);
+  const detailRequest = useRef<AbortController | undefined>(undefined);
 
   useEffect(() => {
     let active = true;
@@ -105,6 +132,40 @@ export function OrganizationIncidentDiscovery({
   }, [accessToken]);
 
   useEffect(() => () => activeRequest.current?.abort(), []);
+
+  useEffect(() => {
+    detailRequest.current?.abort();
+    if (!selectedId) {
+      return;
+    }
+
+    const controller = new AbortController();
+    detailRequest.current = controller;
+    void getOrganizationIncidentDetail(
+      accessToken,
+      organizationId,
+      selectedId,
+      controller.signal,
+    )
+      .then((loaded) => {
+        if (controller.signal.aborted) return;
+        setDetail(loaded);
+        setReviewStatus(loaded.currentReview?.status ?? "VIEWED");
+        setReasonCode(
+          (loaded.currentReview?.reasonCode as OrganizationIncidentFalseReasonCode | null) ?? undefined,
+        );
+        setPrivateNotes(loaded.currentReview?.privateNotes ?? "");
+      })
+      .catch((requestError: unknown) => {
+        if (!controller.signal.aborted) {
+          setReviewError(
+            describeApiFailure(requestError, "Unable to load the incident details.").message,
+          );
+        }
+      });
+
+    return () => controller.abort();
+  }, [accessToken, organizationId, selectedId]);
 
   const loadDiscovery = useCallback(
     async (
@@ -233,6 +294,53 @@ export function OrganizationIncidentDiscovery({
     [incidents],
   );
   const selected = incidents.find((incident) => incident.id === selectedId);
+  const selectedDetail = detail?.id === selectedId ? detail : undefined;
+  const detailLoading = Boolean(selectedId && !selectedDetail && !reviewError);
+
+  const submitReview = async () => {
+    if (!selectedId) return;
+    if (reviewStatus === "FALSE" && !reasonCode) {
+      setReviewError("Choose a reason before marking this incident false.");
+      return;
+    }
+    if (reviewStatus === "FALSE" && reasonCode === "OTHER" && privateNotes.trim().length < 10) {
+      setReviewError("Explain an OTHER reason in at least 10 characters.");
+      return;
+    }
+
+    setReviewSubmitting(true);
+    setReviewError(undefined);
+    setReviewNotice(undefined);
+    try {
+      const result = await updateOrganizationIncidentReview(
+        accessToken,
+        organizationId,
+        selectedId,
+        {
+          status: reviewStatus,
+          ...(reviewStatus === "FALSE" && reasonCode ? { reasonCode } : {}),
+          privateNotes: privateNotes.trim() || null,
+        },
+      );
+      setDetail((current) => current ? { ...current, currentReview: result.review } : current);
+      setIncidents((current) => current.map((incident) =>
+        incident.id === selectedId
+          ? { ...incident, currentReviewStatus: result.review.status }
+          : incident,
+      ));
+      setReviewNotice(
+        result.rewardAwarded
+          ? "Review saved. Your verified incident contribution was recorded."
+          : result.idempotentReplay
+            ? "This review was already saved."
+            : "Review saved.",
+      );
+    } catch (requestError) {
+      setReviewError(describeApiFailure(requestError, "Unable to save this review.").message);
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
 
   return (
     <section className="organization-incident-discovery">
@@ -368,6 +476,68 @@ export function OrganizationIncidentDiscovery({
             <div><dt>Your review</dt><dd>{selected.currentReviewStatus ? readable(selected.currentReviewStatus) : "Not reviewed"}</dd></div>
             <div><dt>Public false count</dt><dd>{selected.falseReviewCount}</dd></div>
           </dl>
+          {detailLoading ? <p role="status">Loading incident details...</p> : null}
+          {selectedDetail ? (
+            <div className="organization-review-form">
+              <div className="organization-review-form-heading">
+                <div>
+                  <span>Organization review</span>
+                  <h3>{selectedDetail.accessSource.replaceAll("_", " ")}</h3>
+                </div>
+                <small>{selectedDetail.photos.length} evidence photo{selectedDetail.photos.length === 1 ? "" : "s"}</small>
+              </div>
+              <p className="organization-review-description">{selectedDetail.description}</p>
+              <label>
+                Review status
+                <select
+                  value={reviewStatus}
+                  disabled={reviewSubmitting}
+                  onChange={(event) => {
+                    const next = event.target.value as OrganizationIncidentReviewStatus;
+                    setReviewStatus(next);
+                    if (next !== "FALSE") setReasonCode(undefined);
+                  }}
+                >
+                  <option value="VIEWED">Viewed</option>
+                  <option value="VALID">Valid</option>
+                  <option value="FALSE">False</option>
+                </select>
+              </label>
+              {reviewStatus === "FALSE" ? (
+                <>
+                  <label>
+                    False reason
+                    <select
+                      value={reasonCode ?? ""}
+                      disabled={reviewSubmitting}
+                      onChange={(event) => setReasonCode(event.target.value as OrganizationIncidentFalseReasonCode)}
+                    >
+                      <option value="">Choose a reason</option>
+                      {reviewReasonOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Private notes
+                    <textarea
+                      value={privateNotes}
+                      disabled={reviewSubmitting}
+                      maxLength={1000}
+                      onChange={(event) => setPrivateNotes(event.target.value)}
+                      placeholder="Visible only to authorized organization users."
+                      rows={4}
+                    />
+                  </label>
+                </>
+              ) : null}
+              {reviewError ? <p className="organization-review-error" role="alert">{reviewError}</p> : null}
+              {reviewNotice ? <p className="organization-review-success" role="status">{reviewNotice}</p> : null}
+              <button type="button" className="organization-review-submit" disabled={reviewSubmitting} onClick={() => void submitReview()}>
+                {reviewSubmitting ? "Saving review..." : "Save review"}
+              </button>
+            </div>
+          ) : null}
         </article>
       )}
     </section>

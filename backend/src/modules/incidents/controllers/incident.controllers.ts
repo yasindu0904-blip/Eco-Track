@@ -7,12 +7,14 @@ import {
   createIncident,
   getActiveIncidentCategories,
   getMyIncident,
+  getOrganizationIncidentDetail,
   getPublicSafeIncident,
   listMyIncidents,
   listOrganizationIncidents,
   listOrganizationServiceAreaBoundaries,
   listPublicIncidentsByRadius,
   listPublicIncidentsByViewport,
+  updateOrganizationIncidentReview,
 } from "../services/incident.service.js";
 import {
   createEvidenceUploadIntentsSchema,
@@ -23,6 +25,7 @@ import {
   organizationServiceAreaBoundaryQuerySchema,
   publicIncidentRadiusDiscoveryQuerySchema,
   publicIncidentViewportDiscoveryQuerySchema,
+  updateOrganizationIncidentReviewSchema,
 } from "../incident.validation.js";
 
 function validationError(validation: { error: { issues: Array<{ path: PropertyKey[]; message: string }> } }) {
@@ -91,9 +94,56 @@ export function listMyIncidentsController(dependencies: IncidentDependencies) {
 }
 
 function validateId(request: Request): string {
-  const validation = incidentIdParametersSchema.safeParse(request.params);
+  const validation = incidentIdParametersSchema.safeParse({
+    id: request.params.id,
+  });
   if (!validation.success) throw validationError(validation);
   return validation.data.id;
+}
+
+export function getOrganizationIncidentDetailController(
+  dependencies: IncidentDependencies,
+) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      response.status(200).json({
+        data: await getOrganizationIncidentDetail(
+          dependencies,
+          request.tenant!.organization.id,
+          validateId(request),
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+export function updateOrganizationIncidentReviewController(
+  dependencies: IncidentDependencies,
+) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const validation = updateOrganizationIncidentReviewSchema.safeParse(
+        request.body,
+      );
+      if (!validation.success) throw validationError(validation);
+      response.status(200).json({
+        data: await updateOrganizationIncidentReview(
+          dependencies,
+          {
+            organizationId: request.tenant!.organization.id,
+            membershipId: request.tenant!.membership.id,
+            reviewerUserId: request.authentication.profile.id,
+          },
+          validateId(request),
+          validation.data,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 export function getMyIncidentController(dependencies: IncidentDependencies) {
