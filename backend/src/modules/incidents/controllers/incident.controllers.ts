@@ -20,6 +20,7 @@ import {
   incidentIdParametersSchema,
   incidentListQuerySchema,
   organizationIncidentDiscoveryQuerySchema,
+  organizationServiceAreaBoundaryQuerySchema,
   publicIncidentRadiusDiscoveryQuerySchema,
   publicIncidentViewportDiscoveryQuerySchema,
 } from "../incident.validation.js";
@@ -188,10 +189,15 @@ export function listOrganizationServiceAreaBoundariesController(
 ) {
   return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
     try {
+      const validation = organizationServiceAreaBoundaryQuerySchema.safeParse(
+        request.query,
+      );
+      if (!validation.success) throw validationError(validation);
       response.status(200).json({
         data: await listOrganizationServiceAreaBoundaries(
           dependencies,
           request.tenant!.organization.id,
+          validation.data,
         ),
       });
     } catch (error) {

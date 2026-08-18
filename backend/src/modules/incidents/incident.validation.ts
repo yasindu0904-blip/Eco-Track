@@ -1,6 +1,9 @@
 import { z } from "zod";
 
 import {
+  ORGANIZATION_BOUNDARY_DISPLAY_LIMITS,
+} from "../maps/map.constants.js";
+import {
   sriLankaMapLocationSchema,
   sriLankaMapRadiusQuerySchema,
   sriLankaMapViewportQuerySchema,
@@ -105,6 +108,14 @@ export const publicIncidentRadiusDiscoveryQuerySchema =
 export const organizationIncidentDiscoveryQuerySchema =
   sriLankaMapViewportQuerySchema.safeExtend(incidentDiscoveryFilters);
 
+export const organizationServiceAreaBoundaryQuerySchema =
+  sriLankaMapViewportQuerySchema.safeExtend({
+    cursor: z.never().optional(),
+    limit: z.coerce.number().int().min(1)
+      .max(ORGANIZATION_BOUNDARY_DISPLAY_LIMITS.maxFeatureLimit)
+      .default(ORGANIZATION_BOUNDARY_DISPLAY_LIMITS.defaultFeatureLimit),
+  });
+
 export type ValidatedCreateIncident = z.infer<typeof createIncidentSchema>;
 export type ValidatedEvidenceUploadRequest = z.infer<typeof createEvidenceUploadIntentsSchema>;
 export type ValidatedPublicIncidentViewportDiscovery = z.infer<
@@ -115,4 +126,7 @@ export type ValidatedPublicIncidentRadiusDiscovery = z.infer<
 >;
 export type ValidatedOrganizationIncidentDiscovery = z.infer<
   typeof organizationIncidentDiscoveryQuerySchema
+>;
+export type ValidatedOrganizationServiceAreaBoundaryQuery = z.infer<
+  typeof organizationServiceAreaBoundaryQuerySchema
 >;

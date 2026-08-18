@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type {
-  ActiveOrganizationMembership,
-  AuthenticatedUserProfile,
-} from "../../auth/auth.types";
+import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import { BrandHeader, Button, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
-import { OrganizationIncidentReview } from "./OrganizationIncidentReview";
+import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
+import { OrganizationIncidentDiscovery } from "./OrganizationIncidentDiscovery";
 
 type OrganizationWorkspaceScreenProps = {
   profile: AuthenticatedUserProfile;
@@ -30,11 +28,11 @@ export function OrganizationWorkspaceScreen({
   onViewApplications,
   onSignOut,
 }: OrganizationWorkspaceScreenProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "incidentReview">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "incidentDiscovery">("overview");
   const [mapInteracting, setMapInteracting] = useState(false);
   const membership =
     memberships.find(
-      (item) => item.organizationId === selectedOrganizationId,
+      (item) => item.organization.id === selectedOrganizationId,
     ) ?? memberships[0];
 
   if (!membership) {
@@ -45,7 +43,7 @@ export function OrganizationWorkspaceScreen({
     <Screen scrollEnabled={!mapInteracting}>
       <BrandHeader
         eyebrow="Organization workspace"
-        title={membership.organizationName}
+        title={membership.organization.name}
         subtitle={profile.email}
         compact
       />
@@ -53,13 +51,13 @@ export function OrganizationWorkspaceScreen({
       {memberships.length > 1 ? (
         <View style={styles.organizationSwitcher}>
           {memberships.map((item) => {
-            const selected = item.organizationId === membership.organizationId;
+            const selected = item.organization.id === membership.organization.id;
 
             return (
               <Pressable
                 accessibilityRole="button"
-                key={item.organizationId}
-                onPress={() => onSelectOrganization(item.organizationId)}
+                key={item.organization.id}
+                onPress={() => onSelectOrganization(item.organization.id)}
                 style={[
                   styles.organizationOption,
                   selected && styles.organizationOptionSelected,
@@ -71,7 +69,7 @@ export function OrganizationWorkspaceScreen({
                     selected && styles.organizationOptionTextSelected,
                   ]}
                 >
-                  {item.organizationName}
+                  {item.organization.name}
                 </Text>
               </Pressable>
             );
@@ -93,8 +91,8 @@ export function OrganizationWorkspaceScreen({
             Overview
           </Text>
         </Pressable>
-        {activeTab === "incidentReview" ? (
-          <Text style={styles.breadcrumb}>/ Incident review</Text>
+        {activeTab === "incidentDiscovery" ? (
+          <Text style={styles.breadcrumb}>/ Incident discovery</Text>
         ) : null}
       </View>
 
@@ -117,7 +115,7 @@ export function OrganizationWorkspaceScreen({
             <View style={sharedStyles.divider} />
             <View style={styles.accessValue}>
               <Text style={styles.label}>WORKSPACE</Text>
-              <Text style={styles.value}>{membership.organizationSlug}</Text>
+              <Text style={styles.value}>{membership.organization.slug}</Text>
             </View>
           </View>
 
@@ -138,8 +136,8 @@ export function OrganizationWorkspaceScreen({
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Open incident review"
-            onPress={() => setActiveTab("incidentReview")}
+            accessibilityLabel="Open incident discovery"
+            onPress={() => setActiveTab("incidentDiscovery")}
             style={({ pressed }) => [
               styles.toolCard,
               pressed && styles.toolCardPressed,
@@ -149,7 +147,7 @@ export function OrganizationWorkspaceScreen({
               <Text style={styles.toolIconText}>!</Text>
             </View>
             <View style={styles.toolCopy}>
-              <Text style={styles.toolEyebrow}>INCIDENT REVIEW</Text>
+              <Text style={styles.toolEyebrow}>INCIDENT DISCOVERY</Text>
               <Text style={styles.toolTitle}>Available now</Text>
               <Text style={styles.toolDescription}>
                 Search covered reports and review them by GN Division.
@@ -159,10 +157,10 @@ export function OrganizationWorkspaceScreen({
           </Pressable>
         </>
       ) : (
-        <OrganizationIncidentReview
-          key={membership.organizationId}
+        <OrganizationIncidentDiscovery
+          key={membership.organization.id}
           accessToken={accessToken}
-          organizationId={membership.organizationId}
+          organizationId={membership.organization.id}
           onMapInteractionChange={setMapInteracting}
         />
       )}

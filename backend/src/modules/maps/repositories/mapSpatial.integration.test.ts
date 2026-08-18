@@ -147,9 +147,18 @@ test("returns an organization-scoped GeoJSON service-area overlay", async () => 
     await listOrganizationServiceAreaBoundaryFeatures(
       prisma,
       organizationId,
+      {
+        west: 79.8,
+        south: 6.8,
+        east: 80,
+        north: 7.1,
+        zoom: 12,
+        limit: 100,
+      },
     );
 
   assert.equal(collection.type, "FeatureCollection");
+  assert.equal(collection.truncated, false);
   assert.equal(collection.features.length, 1);
   assert.equal(
     collection.features[0]?.geometry.type,

@@ -1,7 +1,5 @@
-import type {
-  ActiveOrganizationMembership,
-  AuthenticatedUserProfile,
-} from "../auth/auth.types";
+import type { AuthenticatedUserProfile } from "../auth/auth.types";
+import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
 import { NotificationButton } from "../notifications/NotificationInbox";
 import "./citizenDashboard.css";
 
@@ -18,7 +16,6 @@ interface CitizenDashboardProps {
   onReportIncident: () => void;
   onViewIncidentReports: () => void;
   onFindCleanupActivity: () => void;
-  onOpenHistoricalReview: () => void;
   onOpenImpact: () => void;
   onSignOut: () => void;
 }
@@ -100,7 +97,6 @@ export function CitizenDashboard({
   onReportIncident,
   onViewIncidentReports,
   onFindCleanupActivity,
-  onOpenHistoricalReview,
   onOpenImpact,
   onSignOut,
 }: CitizenDashboardProps) {
@@ -226,7 +222,7 @@ export function CitizenDashboard({
                   : "Organization onboarding"}
               </small>
               <strong>
-                {activeOrganization?.organizationName ?? "Available now"}
+                {activeOrganization?.organization.name ?? "Available now"}
               </strong>
               <p>
                 {activeOrganization
@@ -315,7 +311,7 @@ export function CitizenDashboard({
               <span className="citizen-action-badge">Available</span>
               <h3>
                 {activeOrganization
-                  ? activeOrganization.organizationName
+                  ? activeOrganization.organization.name
                   : "Request an organization workspace"}
               </h3>
               <p>
@@ -383,26 +379,6 @@ export function CitizenDashboard({
                 onClick={onOpenImpact}
               >
                 Open My Impact
-                <CitizenIcon name="arrow" />
-              </button>
-            </article>
-
-            <article className="citizen-action-card">
-              <span className="citizen-action-icon">
-                <CitizenIcon name="volunteer" />
-              </span>
-              <span className="citizen-action-badge">Available</span>
-              <h3>Historical review</h3>
-              <p>
-                See how many cleanup events you successfully concluded and
-                review each verified event name.
-              </p>
-              <button
-                className="citizen-action-primary"
-                type="button"
-                onClick={onOpenHistoricalReview}
-              >
-                Open historical review
                 <CitizenIcon name="arrow" />
               </button>
             </article>

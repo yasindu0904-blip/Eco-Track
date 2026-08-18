@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { describeApiFailure } from "../../api/apiError";
-import { Notice, sharedStyles } from "../../components/ui";
+import { Button, Notice, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
+import { listIncidentCategories } from "../incidents/incident.api";
+import type { IncidentCategory } from "../incidents/incident.types";
 import {
   EcoMap,
   type MapBoundaryFeatureCollection,
@@ -14,8 +16,8 @@ import {
 import {
   listOrganizationIncidents,
   listOrganizationServiceAreaBoundaries,
-} from "./organizationIncidentReview.api";
-import type { OrganizationIncidentSummary } from "./organizationIncidentReview.types";
+} from "./organizationIncidentDiscovery.api";
+import type { OrganizationIncidentSummary } from "./organizationIncidentDiscovery.types";
 
 type Props = {
   accessToken: string;
@@ -30,6 +32,35 @@ const statuses = [
   { value: "RESOLVED", label: "Resolved" },
 ] as const;
 
+const times = [
+  { value: "", label: "Any time", milliseconds: 0 },
+  { value: "24h", label: "24 hours", milliseconds: 24 * 60 * 60 * 1000 },
+  { value: "7d", label: "7 days", milliseconds: 7 * 24 * 60 * 60 * 1000 },
+  { value: "30d", label: "30 days", milliseconds: 30 * 24 * 60 * 60 * 1000 },
+] as const;
+
+type DiscoveryFilters = {
+  status: (typeof statuses)[number]["value"];
+  categoryId: string;
+  timeRange: (typeof times)[number]["value"];
+};
+
+function reportedAfterFor(value: DiscoveryFilters["timeRange"]): string | undefined {
+  const option = times.find((candidate) => candidate.value === value);
+  return option?.milliseconds
+    ? new Date(Date.now() - option.milliseconds).toISOString()
+    : undefined;
+}
+
+function mergeUnique(
+  current: OrganizationIncidentSummary[],
+  incoming: OrganizationIncidentSummary[],
+): OrganizationIncidentSummary[] {
+  const byId = new Map(current.map((incident) => [incident.id, incident]));
+  incoming.forEach((incident) => byId.set(incident.id, incident));
+  return [...byId.values()];
+}
+
 function readable(value: string): string {
   return value
     .toLowerCase()
@@ -37,11 +68,12 @@ function readable(value: string): string {
     .replace(/^./, (letter) => letter.toUpperCase());
 }
 
-export function OrganizationIncidentReview({
+export function OrganizationIncidentDiscovery({
   accessToken,
   organizationId,
   onMapInteractionChange,
 }: Props) {
+  const [categories, setCategories] = useState<IncidentCategory[]>([]);
   const [boundaries, setBoundaries] =
     useState<MapBoundaryFeatureCollection>();
   const [incidents, setIncidents] = useState<OrganizationIncidentSummary[]>([]);
@@ -49,40 +81,59 @@ export function OrganizationIncidentReview({
   const [selectedId, setSelectedId] = useState<string>();
   const [status, setStatus] =
     useState<(typeof statuses)[number]["value"]>("");
-  const [hasMore, setHasMore] = useState(false);
+  const [categoryId, setCategoryId] = useState("");
+  const [timeRange, setTimeRange] =
+    useState<(typeof times)[number]["value"]>("");
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string>();
   const activeRequest = useRef<AbortController | undefined>(undefined);
 
   useEffect(() => {
-    void listOrganizationServiceAreaBoundaries(accessToken, organizationId)
-      .then(setBoundaries)
+    let active = true;
+    void listIncidentCategories(accessToken)
+      .then((loaded) => {
+        if (active) setCategories(loaded);
+      })
       .catch((requestError: unknown) =>
-        setError(
+        active && setError(
           describeApiFailure(
             requestError,
-            "Unable to load organization service areas.",
+            "Unable to load incident categories.",
           ).message,
         ),
       );
-  }, [accessToken, organizationId]);
+    return () => {
+      active = false;
+    };
+  }, [accessToken]);
 
   useEffect(() => () => activeRequest.current?.abort(), []);
 
-  const loadIncidents = useCallback(
+  const loadDiscovery = useCallback(
     async (
       nextViewport: MapViewport,
-      nextStatus: (typeof statuses)[number]["value"],
-      externalSignal?: AbortSignal,
+      filters: DiscoveryFilters,
+      options: {
+        append?: boolean;
+        cursor?: string;
+        includeBoundaries?: boolean;
+        externalSignal?: AbortSignal;
+      } = {},
     ) => {
       activeRequest.current?.abort();
       const controller = new AbortController();
       activeRequest.current = controller;
       const abortFromExternal = () => controller.abort();
-      externalSignal?.addEventListener("abort", abortFromExternal, { once: true });
-      if (externalSignal?.aborted) controller.abort();
+      options.externalSignal?.addEventListener("abort", abortFromExternal, { once: true });
+      if (options.externalSignal?.aborted) controller.abort();
 
-      setLoading(true);
+      if (options.append) setLoadingMore(true);
+      else {
+        setLoading(true);
+        setNextCursor(null);
+      }
       setError(undefined);
       try {
         const page = await listOrganizationIncidents(
@@ -91,18 +142,36 @@ export function OrganizationIncidentReview({
           {
             ...nextViewport,
             limit: 100,
-            status: nextStatus || undefined,
+            cursor: options.cursor,
+            status: filters.status || undefined,
+            categoryId: filters.categoryId || undefined,
+            reportedAfter: reportedAfterFor(filters.timeRange),
           },
           controller.signal,
         );
         if (controller.signal.aborted) return;
-        setIncidents(page.items);
-        setHasMore(page.nextCursor !== null);
+        setIncidents((current) =>
+          options.append ? mergeUnique(current, page.items) : page.items,
+        );
+        setNextCursor(page.nextCursor);
         setSelectedId((current) =>
+          options.append && current
+            ? current
+            :
           page.items.some((incident) => incident.id === current)
             ? current
             : page.items[0]?.id,
         );
+
+        if (options.includeBoundaries) {
+          const overlay = await listOrganizationServiceAreaBoundaries(
+            accessToken,
+            organizationId,
+            { ...nextViewport, limit: 100 },
+            controller.signal,
+          );
+          if (!controller.signal.aborted) setBoundaries(overlay);
+        }
       } catch (requestError) {
         if (controller.signal.aborted) return;
         setError(
@@ -112,8 +181,11 @@ export function OrganizationIncidentReview({
           ).message,
         );
       } finally {
-        externalSignal?.removeEventListener("abort", abortFromExternal);
-        if (activeRequest.current === controller) setLoading(false);
+        options.externalSignal?.removeEventListener("abort", abortFromExternal);
+        if (activeRequest.current === controller) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
     [accessToken, organizationId],
@@ -122,14 +194,28 @@ export function OrganizationIncidentReview({
   const handleViewportChange = useCallback<MapViewportChangeHandler>(
     (nextViewport, context) => {
       setViewport(nextViewport);
-      return loadIncidents(nextViewport, status, context.signal);
+      return loadDiscovery(
+        nextViewport,
+        { status, categoryId, timeRange },
+        { includeBoundaries: true, externalSignal: context.signal },
+      );
     },
-    [loadIncidents, status],
+    [categoryId, loadDiscovery, status, timeRange],
   );
 
   const changeStatus = (nextStatus: (typeof statuses)[number]["value"]) => {
     setStatus(nextStatus);
-    if (viewport) void loadIncidents(viewport, nextStatus);
+    if (viewport) void loadDiscovery(viewport, { status: nextStatus, categoryId, timeRange });
+  };
+
+  const changeCategory = (nextCategoryId: string) => {
+    setCategoryId(nextCategoryId);
+    if (viewport) void loadDiscovery(viewport, { status, categoryId: nextCategoryId, timeRange });
+  };
+
+  const changeTimeRange = (nextTimeRange: DiscoveryFilters["timeRange"]) => {
+    setTimeRange(nextTimeRange);
+    if (viewport) void loadDiscovery(viewport, { status, categoryId, timeRange: nextTimeRange });
   };
 
   const markers = useMemo<MapMarkerFeature[]>(
@@ -160,7 +246,7 @@ export function OrganizationIncidentReview({
           <Text style={styles.count}>
             {loading
               ? "Loading incidents in this view"
-              : hasMore
+              : nextCursor
                 ? `Showing the first ${incidents.length} incidents in view`
                 : `${incidents.length} incidents in view`}
           </Text>
@@ -192,7 +278,44 @@ export function OrganizationIncidentReview({
         ))}
       </View>
 
+      <Text style={styles.filterLabel}>CATEGORY</Text>
+      <View style={styles.filters}>
+        {[{ id: "", name: "All categories" }, ...categories].map((category) => (
+          <Pressable
+            key={category.id}
+            accessibilityRole="button"
+            accessibilityState={{ selected: categoryId === category.id }}
+            onPress={() => changeCategory(category.id)}
+            style={[styles.filter, categoryId === category.id && styles.filterSelected]}
+          >
+            <Text style={[styles.filterText, categoryId === category.id && styles.filterTextSelected]}>
+              {category.name}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <Text style={styles.filterLabel}>REPORTED</Text>
+      <View style={styles.filters}>
+        {times.map((option) => (
+          <Pressable
+            key={option.value}
+            accessibilityRole="button"
+            accessibilityState={{ selected: timeRange === option.value }}
+            onPress={() => changeTimeRange(option.value)}
+            style={[styles.filter, timeRange === option.value && styles.filterSelected]}
+          >
+            <Text style={[styles.filterText, timeRange === option.value && styles.filterTextSelected]}>
+              {option.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
       {error ? <Notice tone="error" message={error} /> : null}
+      {boundaries?.truncated ? (
+        <Notice tone="warning" message="The service-area overlay reached its 100-feature display limit. Zoom in to view the remaining boundaries." />
+      ) : null}
 
       <EcoMap
         markers={markers}
@@ -200,7 +323,7 @@ export function OrganizationIncidentReview({
         selectedMarkerId={selectedId}
         showListFallback={false}
         height={430}
-        accessibleLabel="Organization incident review map"
+        accessibleLabel="Organization incident discovery map"
         onMarkerSelect={(marker) => setSelectedId(marker.properties.id)}
         onViewportChange={handleViewportChange}
         onInteractionChange={onMapInteractionChange}
@@ -234,6 +357,22 @@ export function OrganizationIncidentReview({
         ))
       )}
 
+      {nextCursor && viewport ? (
+        <Button
+          label={loadingMore ? "Loading more..." : "Load more incidents"}
+          loading={loadingMore}
+          disabled={loadingMore}
+          variant="secondary"
+          onPress={() =>
+            void loadDiscovery(
+              viewport,
+              { status, categoryId, timeRange },
+              { append: true, cursor: nextCursor },
+            )
+          }
+        />
+      ) : null}
+
       {selected ? (
         <View style={[sharedStyles.card, styles.detail]}>
           <Text style={sharedStyles.sectionTitle}>{selected.title}</Text>
@@ -263,6 +402,7 @@ const styles = StyleSheet.create({
   container: { gap: spacing.md },
   eyebrow: { color: colors.primary, fontSize: 11, fontWeight: "900", letterSpacing: 1 },
   count: { color: colors.text, fontSize: 18, fontWeight: "900", marginTop: 4 },
+  filterLabel: { color: colors.textMuted, fontSize: 11, fontWeight: "900", letterSpacing: 1 },
   filters: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
   filter: {
     minHeight: 38,

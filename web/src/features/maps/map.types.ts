@@ -64,6 +64,7 @@ export interface MapBoundaryFeature {
 export interface MapBoundaryFeatureCollection {
   type: "FeatureCollection";
   features: MapBoundaryFeature[];
+  truncated: boolean;
 }
 
 export interface MapViewportRequestContext {

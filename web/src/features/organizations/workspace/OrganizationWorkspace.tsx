@@ -1,12 +1,10 @@
 import { useState } from "react";
 
-import type {
-  ActiveOrganizationMembership,
-  AuthenticatedUserProfile,
-} from "../../auth/auth.types";
+import type { AuthenticatedUserProfile } from "../../auth/auth.types";
+import type { ActiveOrganizationMembership } from "../../memberships/administration/membershipAdministration.types";
 
 import "./organizationWorkspace.css";
-import { OrganizationIncidentReview } from "./OrganizationIncidentReview";
+import { OrganizationIncidentDiscovery } from "./OrganizationIncidentDiscovery";
 
 interface OrganizationWorkspaceProps {
   profile: AuthenticatedUserProfile;
@@ -30,10 +28,10 @@ export function OrganizationWorkspace({
   onSignOut,
 }: OrganizationWorkspaceProps) {
   const [activeTab, setActiveTab] =
-    useState<"overview" | "incident-review">("overview");
+    useState<"overview" | "incident-discovery">("overview");
   const membership =
     memberships.find(
-      (item) => item.organizationId === selectedOrganizationId,
+      (item) => item.organization.id === selectedOrganizationId,
     ) ?? memberships[0];
 
   if (!membership) {
@@ -61,7 +59,7 @@ export function OrganizationWorkspace({
         <section className="organization-workspace-heading">
           <div>
             <span>Organization workspace</span>
-            <h1>{membership.organizationName}</h1>
+            <h1>{membership.organization.name}</h1>
             <p>{profile.email}</p>
           </div>
 
@@ -69,17 +67,17 @@ export function OrganizationWorkspace({
             <label>
               Active organization
               <select
-                value={membership.organizationId}
+                value={membership.organization.id}
                 onChange={(event) =>
                   onSelectOrganization(event.target.value)
                 }
               >
                 {memberships.map((item) => (
                   <option
-                    key={item.organizationId}
-                    value={item.organizationId}
+                    key={item.organization.id}
+                    value={item.organization.id}
                   >
-                    {item.organizationName}
+                    {item.organization.name}
                   </option>
                 ))}
               </select>
@@ -95,16 +93,16 @@ export function OrganizationWorkspace({
           >
             Overview
           </button>
-          {activeTab === "incident-review" && (
-            <span aria-current="page">/ Incident review</span>
+          {activeTab === "incident-discovery" && (
+            <span aria-current="page">/ Incident discovery</span>
           )}
         </nav>
 
-        {activeTab === "incident-review" ? (
-          <OrganizationIncidentReview
-            key={membership.organizationId}
+        {activeTab === "incident-discovery" ? (
+          <OrganizationIncidentDiscovery
+            key={membership.organization.id}
             accessToken={accessToken}
-            organizationId={membership.organizationId}
+            organizationId={membership.organization.id}
           />
         ) : (
           <>
@@ -119,7 +117,7 @@ export function OrganizationWorkspace({
               </div>
               <div>
                 <small>Workspace</small>
-                <strong>{membership.organizationSlug}</strong>
+                <strong>{membership.organization.slug}</strong>
               </div>
             </section>
 
@@ -141,7 +139,7 @@ export function OrganizationWorkspace({
               <button
                 type="button"
                 className="organization-workspace-tool-card"
-                onClick={() => setActiveTab("incident-review")}
+                onClick={() => setActiveTab("incident-discovery")}
               >
                 <span className="organization-workspace-tool-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24">
@@ -150,7 +148,7 @@ export function OrganizationWorkspace({
                   </svg>
                 </span>
                 <span className="organization-workspace-tool-copy">
-                  <small>Incident review</small>
+                  <small>Incident discovery</small>
                   <strong>Available now</strong>
                   <span>Search covered reports and review them by GN Division.</span>
                 </span>

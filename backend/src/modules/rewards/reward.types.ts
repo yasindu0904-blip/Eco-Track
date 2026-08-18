@@ -52,20 +52,6 @@ export type ContributionPageDto = {
   nextCursor: string | null;
 };
 
-export type CompletedCleanupEventDto = {
-  contributionId: string;
-  cleanupEventId: string;
-  title: string;
-  completedAt: string;
-  verifiedAt: string;
-};
-
-export type CompletedCleanupEventHistoryDto = {
-  totalCount: number;
-  items: CompletedCleanupEventDto[];
-  nextCursor: string | null;
-};
-
 export type AwardContributionResult = {
   contributionId: string;
   userId: string;

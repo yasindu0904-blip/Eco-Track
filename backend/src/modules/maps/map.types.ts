@@ -77,6 +77,7 @@ export type OrganizationServiceAreaBoundaryFeature = {
 export type OrganizationServiceAreaBoundaryCollection = {
   type: "FeatureCollection";
   features: OrganizationServiceAreaBoundaryFeature[];
+  truncated: boolean;
 };
 
 export function toGeoJsonPoint(

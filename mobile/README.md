@@ -66,12 +66,8 @@ inputs available.
 
 MapLibre's generated C++ code can exceed Ninja's path limit when this repository
 is built from its full OneDrive path. On this development machine, `C:\e` is a
-junction to the EcoTrack repository. The Android build now detects that verified
-junction and automatically stages CMake output at the short physical path
-`C:\ecotrack-android-cxx`, including when Expo is started from the full OneDrive
-path. A local Expo config plugin restores this setting after prebuilds. Set
-`ECOTRACK_ANDROID_CXX_DIR` to override that staging location. Using the short
-project path directly is still recommended:
+junction to the EcoTrack repository. Run native Android commands from the short
+path:
 
 ```powershell
 Set-Location C:\e\mobile

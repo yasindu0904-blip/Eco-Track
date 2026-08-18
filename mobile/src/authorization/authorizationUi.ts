@@ -1,11 +1,17 @@
-import type {
-  ActiveOrganizationMembership,
-  AuthenticatedUserProfile,
-} from "../auth/auth.types";
+import type { AuthenticatedUserProfile } from "../auth/auth.types";
+
+export type MembershipRole = "ORG_MEMBER" | "ORG_ADMIN";
+export type MembershipStatus = "ACTIVE" | "SUSPENDED" | "ENDED";
+
+export type ActiveMembershipSummary = {
+  organizationId: string;
+  role: MembershipRole;
+  status: MembershipStatus;
+};
 
 export type AuthorizationUiContext = {
   profile: AuthenticatedUserProfile;
-  activeMembership?: ActiveOrganizationMembership;
+  activeMembership?: ActiveMembershipSummary;
   coordinatedEventIds?: readonly string[];
 };
 

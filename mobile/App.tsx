@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -10,6 +10,8 @@ import { BrandHeader, Button, LoadingState, Notice, Screen, sharedStyles } from 
 import { CitizenDashboard } from "./src/features/citizen/CitizenDashboard";
 import { NotificationInboxScreen } from "./src/features/notifications/NotificationInboxScreen";
 import { MembershipSelfServiceScreen } from "./src/features/memberships/MembershipSelfServiceScreen";
+import { listMyActiveOrganizationMemberships } from "./src/features/memberships/administration/membershipAdministration.api";
+import type { ActiveOrganizationMembership } from "./src/features/memberships/administration/membershipAdministration.types";
 import {
   CitizenIncidentDiscoveryScreen,
   IncidentReportScreen,
@@ -21,7 +23,7 @@ import { OrganizationApplicationScreen } from "./src/features/organizations/Orga
 import { OrganizationWorkspaceScreen } from "./src/features/organizations/OrganizationWorkspaceScreen";
 import type { OrganizationApplication } from "./src/features/organizations/organizationApplication.types";
 import { SuperAdminDashboard } from "./src/features/superAdmin/SuperAdminDashboard";
-import { HistoricalReviewScreen, MyImpactScreen } from "./src/features/rewards";
+import { MyImpactScreen } from "./src/features/rewards";
 
 type CitizenView =
   | "dashboard"
@@ -32,7 +34,6 @@ type CitizenView =
   | "findCleanupActivity"
   | "reportIncident"
   | "myReports"
-  | "historicalReview"
   | "impact";
 
 export default function App() {
@@ -40,10 +41,42 @@ export default function App() {
   const [citizenView, setCitizenView] = useState<CitizenView>("dashboard");
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState("");
+  const [activeMemberships, setActiveMemberships] =
+    useState<ActiveOrganizationMembership[]>([]);
   const [submittedApplication, setSubmittedApplication] =
     useState<OrganizationApplication | null>(null);
   const [submittedIncident, setSubmittedIncident] =
     useState<IncidentDetail | null>(null);
+
+  const reloadActiveMemberships = useCallback(async () => {
+    if (
+      !authentication.accessToken ||
+      authentication.profile?.platformRole !== "USER"
+    ) {
+      setActiveMemberships([]);
+      return;
+    }
+
+    try {
+      const items: ActiveOrganizationMembership[] = [];
+      let cursor: string | undefined;
+      do {
+        const page = await listMyActiveOrganizationMemberships(
+          authentication.accessToken,
+          cursor,
+        );
+        items.push(...page.items);
+        cursor = page.nextCursor ?? undefined;
+      } while (cursor);
+      setActiveMemberships(items);
+    } catch {
+      setActiveMemberships([]);
+    }
+  }, [authentication.accessToken, authentication.profile?.platformRole]);
+
+  useEffect(() => {
+    void reloadActiveMemberships();
+  }, [reloadActiveMemberships]);
 
   const signOut = async () => {
     setCitizenView("dashboard");
@@ -107,11 +140,10 @@ export default function App() {
       />
     );
   } else if (authentication.profile && authentication.accessToken) {
-    const activeMemberships = authentication.profile.activeMemberships ?? [];
     const activeMembership =
       activeMemberships.find(
         (membership) =>
-          membership.organizationId === selectedOrganizationId,
+          membership.organization.id === selectedOrganizationId,
       ) ?? activeMemberships[0];
 
     if (showNotifications) {
@@ -130,7 +162,10 @@ export default function App() {
         <OrganizationApplicationScreen
           accessToken={authentication.accessToken}
           initialEmail={authentication.profile.email}
-          onBack={() => setCitizenView("dashboard")}
+          onBack={() => {
+            setCitizenView("dashboard");
+            void reloadActiveMemberships();
+          }}
           onSubmitted={(application) => {
             setSubmittedApplication(application);
             setCitizenView("organizationApplications");
@@ -145,7 +180,7 @@ export default function App() {
           onBack={() => {
             setSubmittedApplication(null);
             setCitizenView("dashboard");
-            void authentication.refreshProfile();
+            void reloadActiveMemberships();
           }}
           onCreateAnother={() => {
             setSubmittedApplication(null);
@@ -159,7 +194,10 @@ export default function App() {
           accessToken={authentication.accessToken}
           profile={authentication.profile}
           onProfileUpdated={authentication.replaceProfile}
-          onBack={() => setCitizenView("dashboard")}
+          onBack={() => {
+            setCitizenView("dashboard");
+            void reloadActiveMemberships();
+          }}
         />
       );
     } else if (citizenView === "organizationWorkspace" && activeMembership) {
@@ -168,7 +206,7 @@ export default function App() {
           profile={authentication.profile}
           accessToken={authentication.accessToken}
           memberships={activeMemberships}
-          selectedOrganizationId={activeMembership.organizationId}
+          selectedOrganizationId={activeMembership.organization.id}
           onSelectOrganization={setSelectedOrganizationId}
           onBack={() => setCitizenView("dashboard")}
           onViewApplications={() => setCitizenView("organizationApplications")}
@@ -215,13 +253,6 @@ export default function App() {
           onBack={() => setCitizenView("dashboard")}
         />
       );
-    } else if (citizenView === "historicalReview") {
-      content = (
-        <HistoricalReviewScreen
-          accessToken={authentication.accessToken}
-          onBack={() => setCitizenView("dashboard")}
-        />
-      );
     } else {
       content = (
         <CitizenDashboard
@@ -233,7 +264,7 @@ export default function App() {
           onOpenOrganizationWorkspace={
             activeMembership
               ? () => {
-                  setSelectedOrganizationId(activeMembership.organizationId);
+                  setSelectedOrganizationId(activeMembership.organization.id);
                   setCitizenView("organizationWorkspace");
                 }
               : undefined
@@ -243,7 +274,6 @@ export default function App() {
           onReportIncident={() => setCitizenView("reportIncident")}
           onViewReports={() => setCitizenView("myReports")}
           onFindCleanupActivity={() => setCitizenView("findCleanupActivity")}
-          onOpenHistoricalReview={() => setCitizenView("historicalReview")}
           onOpenImpact={() => setCitizenView("impact")}
           onSignOut={() => void signOut()}
         />

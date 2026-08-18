@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { describeApiFailure } from "../../../api/apiError";
+import { listIncidentCategories } from "../../incidents/incident.api";
+import type { IncidentCategory } from "../../incidents/incident.types";
 import {
   EcoMap,
   type MapBoundaryFeatureCollection,
@@ -11,10 +13,10 @@ import {
 import {
   listOrganizationIncidents,
   listOrganizationServiceAreaBoundaries,
-} from "./organizationIncidentReview.api";
-import type { OrganizationIncidentSummary } from "./organizationIncidentReview.types";
+} from "./organizationIncidentDiscovery.api";
+import type { OrganizationIncidentSummary } from "./organizationIncidentDiscovery.types";
 
-interface OrganizationIncidentReviewProps {
+interface OrganizationIncidentDiscoveryProps {
   accessToken: string;
   organizationId: string;
 }
@@ -26,6 +28,35 @@ const statusOptions = [
   { value: "RESOLVED", label: "Resolved" },
 ] as const;
 
+const timeOptions = [
+  { value: "", label: "Any time", milliseconds: 0 },
+  { value: "24h", label: "Last 24 hours", milliseconds: 24 * 60 * 60 * 1000 },
+  { value: "7d", label: "Last 7 days", milliseconds: 7 * 24 * 60 * 60 * 1000 },
+  { value: "30d", label: "Last 30 days", milliseconds: 30 * 24 * 60 * 60 * 1000 },
+] as const;
+
+type DiscoveryFilters = {
+  status: (typeof statusOptions)[number]["value"];
+  categoryId: string;
+  timeRange: (typeof timeOptions)[number]["value"];
+};
+
+function reportedAfterFor(value: DiscoveryFilters["timeRange"]): string | undefined {
+  const option = timeOptions.find((candidate) => candidate.value === value);
+  return option?.milliseconds
+    ? new Date(Date.now() - option.milliseconds).toISOString()
+    : undefined;
+}
+
+function mergeUnique(
+  current: OrganizationIncidentSummary[],
+  incoming: OrganizationIncidentSummary[],
+): OrganizationIncidentSummary[] {
+  const byId = new Map(current.map((incident) => [incident.id, incident]));
+  incoming.forEach((incident) => byId.set(incident.id, incident));
+  return [...byId.values()];
+}
+
 function readable(value: string): string {
   return value
     .toLowerCase()
@@ -33,10 +64,11 @@ function readable(value: string): string {
     .replace(/^./, (letter) => letter.toUpperCase());
 }
 
-export function OrganizationIncidentReview({
+export function OrganizationIncidentDiscovery({
   accessToken,
   organizationId,
-}: OrganizationIncidentReviewProps) {
+}: OrganizationIncidentDiscoveryProps) {
+  const [categories, setCategories] = useState<IncidentCategory[]>([]);
   const [boundaries, setBoundaries] =
     useState<MapBoundaryFeatureCollection>();
   const [incidents, setIncidents] = useState<OrganizationIncidentSummary[]>([]);
@@ -44,40 +76,59 @@ export function OrganizationIncidentReview({
   const [selectedId, setSelectedId] = useState<string>();
   const [status, setStatus] =
     useState<(typeof statusOptions)[number]["value"]>("");
-  const [hasMore, setHasMore] = useState(false);
+  const [categoryId, setCategoryId] = useState("");
+  const [timeRange, setTimeRange] =
+    useState<(typeof timeOptions)[number]["value"]>("");
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string>();
   const activeRequest = useRef<AbortController | undefined>(undefined);
 
   useEffect(() => {
-    void listOrganizationServiceAreaBoundaries(accessToken, organizationId)
-      .then(setBoundaries)
+    let active = true;
+    void listIncidentCategories(accessToken)
+      .then((loaded) => {
+        if (active) setCategories(loaded);
+      })
       .catch((requestError: unknown) => {
-        setError(
+        if (active) setError(
           describeApiFailure(
             requestError,
-            "Unable to load organization service areas.",
+            "Unable to load incident categories.",
           ).message,
         );
       });
-  }, [accessToken, organizationId]);
+    return () => {
+      active = false;
+    };
+  }, [accessToken]);
 
   useEffect(() => () => activeRequest.current?.abort(), []);
 
-  const loadIncidents = useCallback(
+  const loadDiscovery = useCallback(
     async (
       nextViewport: MapViewport,
-      nextStatus: (typeof statusOptions)[number]["value"],
-      externalSignal?: AbortSignal,
+      filters: DiscoveryFilters,
+      options: {
+        append?: boolean;
+        cursor?: string;
+        includeBoundaries?: boolean;
+        externalSignal?: AbortSignal;
+      } = {},
     ) => {
       activeRequest.current?.abort();
       const controller = new AbortController();
       activeRequest.current = controller;
       const abortFromExternal = () => controller.abort();
-      externalSignal?.addEventListener("abort", abortFromExternal, { once: true });
-      if (externalSignal?.aborted) controller.abort();
+      options.externalSignal?.addEventListener("abort", abortFromExternal, { once: true });
+      if (options.externalSignal?.aborted) controller.abort();
 
-      setLoading(true);
+      if (options.append) setLoadingMore(true);
+      else {
+        setLoading(true);
+        setNextCursor(null);
+      }
       setError(undefined);
       try {
         const page = await listOrganizationIncidents(
@@ -86,18 +137,36 @@ export function OrganizationIncidentReview({
           {
             ...nextViewport,
             limit: 100,
-            status: nextStatus || undefined,
+            cursor: options.cursor,
+            status: filters.status || undefined,
+            categoryId: filters.categoryId || undefined,
+            reportedAfter: reportedAfterFor(filters.timeRange),
           },
           controller.signal,
         );
         if (controller.signal.aborted) return;
-        setIncidents(page.items);
-        setHasMore(page.nextCursor !== null);
+        setIncidents((current) =>
+          options.append ? mergeUnique(current, page.items) : page.items,
+        );
+        setNextCursor(page.nextCursor);
         setSelectedId((current) =>
+          options.append && current
+            ? current
+            :
           page.items.some((incident) => incident.id === current)
             ? current
             : page.items[0]?.id,
         );
+
+        if (options.includeBoundaries) {
+          const overlay = await listOrganizationServiceAreaBoundaries(
+            accessToken,
+            organizationId,
+            { ...nextViewport, limit: 100 },
+            controller.signal,
+          );
+          if (!controller.signal.aborted) setBoundaries(overlay);
+        }
       } catch (requestError) {
         if (controller.signal.aborted) return;
         setError(
@@ -107,8 +176,11 @@ export function OrganizationIncidentReview({
           ).message,
         );
       } finally {
-        externalSignal?.removeEventListener("abort", abortFromExternal);
-        if (activeRequest.current === controller) setLoading(false);
+        options.externalSignal?.removeEventListener("abort", abortFromExternal);
+        if (activeRequest.current === controller) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
     [accessToken, organizationId],
@@ -117,14 +189,28 @@ export function OrganizationIncidentReview({
   const handleViewportChange = useCallback<MapViewportChangeHandler>(
     (nextViewport, context) => {
       setViewport(nextViewport);
-      return loadIncidents(nextViewport, status, context.signal);
+      return loadDiscovery(
+        nextViewport,
+        { status, categoryId, timeRange },
+        { includeBoundaries: true, externalSignal: context.signal },
+      );
     },
-    [loadIncidents, status],
+    [categoryId, loadDiscovery, status, timeRange],
   );
 
   const changeStatus = (nextStatus: (typeof statusOptions)[number]["value"]) => {
     setStatus(nextStatus);
-    if (viewport) void loadIncidents(viewport, nextStatus);
+    if (viewport) void loadDiscovery(viewport, { status: nextStatus, categoryId, timeRange });
+  };
+
+  const changeCategory = (nextCategoryId: string) => {
+    setCategoryId(nextCategoryId);
+    if (viewport) void loadDiscovery(viewport, { status, categoryId: nextCategoryId, timeRange });
+  };
+
+  const changeTimeRange = (nextTimeRange: DiscoveryFilters["timeRange"]) => {
+    setTimeRange(nextTimeRange);
+    if (viewport) void loadDiscovery(viewport, { status, categoryId, timeRange: nextTimeRange });
   };
 
   const markers = useMemo<MapMarkerFeature[]>(
@@ -149,14 +235,14 @@ export function OrganizationIncidentReview({
   const selected = incidents.find((incident) => incident.id === selectedId);
 
   return (
-    <section className="organization-incident-review">
+    <section className="organization-incident-discovery">
       <div className="organization-review-toolbar">
         <div>
           <span>Covered incidents</span>
           <strong>
             {loading
               ? "Loading incidents in this view"
-              : hasMore
+              : nextCursor
                 ? `Showing the first ${incidents.length} incidents in view`
                 : `${incidents.length} incidents in view`}
           </strong>
@@ -178,9 +264,43 @@ export function OrganizationIncidentReview({
             ))}
           </select>
         </label>
+        <label>
+          Category
+          <select
+            value={categoryId}
+            onChange={(event) => changeCategory(event.target.value)}
+          >
+            <option value="">All categories</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Reported
+          <select
+            value={timeRange}
+            onChange={(event) =>
+              changeTimeRange(event.target.value as DiscoveryFilters["timeRange"])
+            }
+          >
+            {timeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {error && <p className="organization-review-error" role="alert">{error}</p>}
+      {boundaries?.truncated && (
+        <p className="organization-review-error" role="status">
+          The service-area overlay reached its 100-feature display limit. Zoom in to view the remaining boundaries.
+        </p>
+      )}
 
       <div className="organization-review-layout">
         <EcoMap
@@ -189,7 +309,7 @@ export function OrganizationIncidentReview({
           selectedMarkerId={selectedId}
           showListFallback={false}
           height={560}
-          accessibleLabel="Organization incident review map"
+          accessibleLabel="Organization incident discovery map"
           onMarkerSelect={(marker) => setSelectedId(marker.properties.id)}
           onViewportChange={handleViewportChange}
         />
@@ -218,6 +338,23 @@ export function OrganizationIncidentReview({
           )}
         </aside>
       </div>
+
+      {nextCursor && viewport && (
+        <button
+          className="organization-review-load-more"
+          type="button"
+          disabled={loadingMore}
+          onClick={() =>
+            void loadDiscovery(
+              viewport,
+              { status, categoryId, timeRange },
+              { append: true, cursor: nextCursor },
+            )
+          }
+        >
+          {loadingMore ? "Loading more..." : "Load more incidents"}
+        </button>
+      )}
 
       {selected && (
         <article className="organization-review-detail">

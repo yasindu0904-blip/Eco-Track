@@ -33,7 +33,6 @@ import type {
 } from "../auth/auth.types.js";
 
 import type {
-  CompletedCleanupEventHistoryDto,
   ContributionPageDto,
   ImpactSummaryDto,
 } from "./reward.types.js";
@@ -377,41 +376,6 @@ test("completed-event rewards derive the volunteer from an eligible participant"
   assert.equal(result.userId, userAId);
   assert.equal(result.points, 30);
   assert.equal(result.created, true);
-
-  const response = await request(
-    userAToken,
-    "/api/v1/rewards/me/completed-events?limit=20",
-  );
-  assert.equal(response.status, 200);
-  const history = (
-    await response.json() as { data: CompletedCleanupEventHistoryDto }
-  ).data;
-  assert.equal(history.totalCount, 1);
-  assert.equal(history.items.length, 1);
-  assert.equal(history.items[0]?.cleanupEventId, cleanupEventId);
-  assert.equal(history.items[0]?.title, "Reward cleanup event");
-  assert.equal("userId" in (history.items[0] ?? {}), false);
-
-  const otherHistoryResponse = await request(
-    userBToken,
-    "/api/v1/rewards/me/completed-events?limit=20",
-  );
-  const otherHistory = (
-    await otherHistoryResponse.json() as {
-      data: CompletedCleanupEventHistoryDto;
-    }
-  ).data;
-  assert.equal(otherHistory.totalCount, 0);
-  assert.deepEqual(otherHistory.items, []);
-  assert.equal(
-    (
-      await request(
-        userAToken,
-        "/api/v1/rewards/me/completed-events?cursor=invalid",
-      )
-    ).status,
-    400,
-  );
 });
 
 test("approved special contributions use a stable source key for retries", async () => {

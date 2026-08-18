@@ -1,11 +1,16 @@
-import { apiRequest } from "../../api/apiClient";
-import type { MapBoundaryFeatureCollection } from "../map";
+import { apiRequest } from "../../../api/apiClient";
+import type {
+  MapBoundaryFeatureCollection,
+  MapViewport,
+} from "../../maps";
 import type {
   OrganizationIncidentPage,
   OrganizationIncidentQuery,
-} from "./organizationIncidentReview.types";
+} from "./organizationIncidentDiscovery.types";
 
-type DataResponse<T> = { data: T };
+interface DataResponse<T> {
+  data: T;
+}
 
 export async function listOrganizationIncidents(
   accessToken: string,
@@ -37,11 +42,21 @@ export async function listOrganizationIncidents(
 export async function listOrganizationServiceAreaBoundaries(
   accessToken: string,
   organizationId: string,
+  viewport: MapViewport & { limit?: number },
+  signal?: AbortSignal,
 ): Promise<MapBoundaryFeatureCollection> {
+  const query = new URLSearchParams({
+    west: String(viewport.west),
+    south: String(viewport.south),
+    east: String(viewport.east),
+    north: String(viewport.north),
+    zoom: String(Math.round(viewport.zoom)),
+    limit: String(viewport.limit ?? 100),
+  });
   return (
     await apiRequest<DataResponse<MapBoundaryFeatureCollection>>(
-      `/organizations/${encodeURIComponent(organizationId)}/service-area-boundaries`,
-      { accessToken },
+      `/organizations/${encodeURIComponent(organizationId)}/service-area-boundaries?${query}`,
+      { accessToken, signal },
     )
   ).data;
 }

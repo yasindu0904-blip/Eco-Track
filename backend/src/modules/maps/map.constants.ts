@@ -8,6 +8,11 @@ export const MAP_LIMITS = {
   maxLongitudeSpanDegrees: 1.5,
 } as const;
 
+export const ORGANIZATION_BOUNDARY_DISPLAY_LIMITS = {
+  defaultFeatureLimit: 100,
+  maxFeatureLimit: 100,
+} as const;
+
 export const SRI_LANKA_MAP_DEFAULTS = {
   latitude: 7.8731,
   longitude: 80.7718,

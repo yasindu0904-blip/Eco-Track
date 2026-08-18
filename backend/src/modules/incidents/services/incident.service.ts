@@ -19,6 +19,7 @@ import type {
   ValidatedCreateIncident,
   ValidatedEvidenceUploadRequest,
   ValidatedOrganizationIncidentDiscovery,
+  ValidatedOrganizationServiceAreaBoundaryQuery,
   ValidatedPublicIncidentRadiusDiscovery,
   ValidatedPublicIncidentViewportDiscovery,
 } from "../incident.validation.js";
@@ -408,9 +409,11 @@ export async function listOrganizationIncidents(
 export function listOrganizationServiceAreaBoundaries(
   dependencies: IncidentDependencies,
   organizationId: string,
+  query: ValidatedOrganizationServiceAreaBoundaryQuery,
 ) {
   return listOrganizationServiceAreaBoundaryFeatures(
     dependencies.prisma,
     organizationId,
+    query,
   );
 }

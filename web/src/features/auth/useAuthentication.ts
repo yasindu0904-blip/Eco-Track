@@ -244,26 +244,6 @@ export function useAuthentication() {
     return pingSuperAdmin(accessToken);
   }
 
-  async function refreshProfile(): Promise<void> {
-    const accessToken = state.accessToken;
-
-    if (!accessToken) {
-      return;
-    }
-
-    try {
-      const profile = await fetchCurrentUser(accessToken);
-
-      setState((current) =>
-        current.accessToken === accessToken
-          ? { ...current, profile }
-          : current,
-      );
-    } catch {
-      // Keep the current signed-in screen when a background refresh fails.
-    }
-  }
-
   function replaceProfile(
     profile: AuthenticatedUserProfile,
   ): void {
@@ -277,7 +257,6 @@ export function useAuthentication() {
     ...state,
 
     checkSuperAdminAccess,
-    refreshProfile,
     replaceProfile,
 
     retry: () => {

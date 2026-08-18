@@ -56,6 +56,7 @@ export type MapBoundaryFeatureCollection = {
       status: string;
     };
   }>;
+  truncated: boolean;
 };
 
 export interface MapViewportRequestContext {

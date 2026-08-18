@@ -1,12 +1,10 @@
 import { StyleSheet, Text, View } from "react-native";
 
-import type {
-  ActiveOrganizationMembership,
-  AuthenticatedUserProfile,
-} from "../../auth/auth.types";
+import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import { BrandHeader, Button, Notice, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import { NotificationButton } from "../notifications/NotificationInboxScreen";
+import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
 
 type CitizenDashboardProps = {
   profile: AuthenticatedUserProfile;
@@ -20,7 +18,6 @@ type CitizenDashboardProps = {
   onReportIncident: () => void;
   onViewReports: () => void;
   onFindCleanupActivity: () => void;
-  onOpenHistoricalReview: () => void;
   onOpenImpact: () => void;
   onSignOut: () => void;
 };
@@ -37,7 +34,6 @@ export function CitizenDashboard({
   onReportIncident,
   onViewReports,
   onFindCleanupActivity,
-  onOpenHistoricalReview,
   onOpenImpact,
   onSignOut,
 }: CitizenDashboardProps) {
@@ -71,7 +67,7 @@ export function CitizenDashboard({
         <View style={[sharedStyles.card, styles.organizationCard]}>
           <Text style={styles.organizationEyebrow}>ACTIVE ORGANIZATION</Text>
           <Text style={sharedStyles.sectionTitle}>
-            {activeOrganization.organizationName}
+            {activeOrganization.organization.name}
           </Text>
           <Text style={sharedStyles.sectionSubtitle}>
             {activeOrganization.role === "ORG_ADMIN"
@@ -128,15 +124,6 @@ export function CitizenDashboard({
           explicit five-kilometre search from your current location.
         </Text>
         <Button label="Open discovery map" onPress={onFindCleanupActivity} />
-      </View>
-
-      <View style={sharedStyles.card}>
-        <Text style={styles.upcomingEyebrow}>HISTORICAL REVIEW</Text>
-        <Text style={sharedStyles.sectionTitle}>Successfully concluded events</Text>
-        <Text style={sharedStyles.sectionSubtitle}>
-          See your verified completed-event count and review each cleanup event name.
-        </Text>
-        <Button label="Open historical review" onPress={onOpenHistoricalReview} />
       </View>
 
       <View style={sharedStyles.card}>

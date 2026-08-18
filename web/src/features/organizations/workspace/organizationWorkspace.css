@@ -279,16 +279,32 @@
   transform: translateX(0);
 }
 
-.organization-incident-review {
+.organization-incident-discovery {
   margin-top: 20px;
 }
 
 .organization-review-toolbar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 20px;
   align-items: end;
   margin-bottom: 14px;
+}
+
+.organization-review-load-more {
+  min-height: 44px;
+  margin: 16px 0 4px;
+  padding: 10px 16px;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: 8px;
+  background: #ffffff;
+  font-weight: 800;
+}
+
+.organization-review-load-more:disabled {
+  opacity: 0.6;
 }
 
 .organization-review-toolbar > div,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import "./App.css";
 
@@ -13,11 +13,13 @@ import {
   MembershipSelfServicePage,
   OrganizationMembershipWorkspacesPage,
 } from "./features/memberships";
+import { listMyActiveOrganizationMemberships } from "./features/memberships/administration/membershipAdministration.api";
+import type { ActiveOrganizationMembership } from "./features/memberships/administration/membershipAdministration.types";
 import { MapFoundationPreview } from "./features/maps";
 import { OrganizationApplicationPage } from "./features/organizations/application";
 import { OrganizationWorkspace } from "./features/organizations/workspace/OrganizationWorkspace";
 import { SuperAdminDashboard } from "./features/super-admin/SuperAdminDashboard";
-import { HistoricalReviewPage, MyImpactPage } from "./features/rewards";
+import { MyImpactPage } from "./features/rewards";
 
 const previewSuperAdminProfile = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -49,7 +51,6 @@ type CitizenView =
   | "incident-create"
   | "incident-reports"
   | "incident-discovery"
-  | "historical-review"
   | "impact";
 
 function BrandHeader() {
@@ -141,6 +142,9 @@ function App() {
     useState(false);
   const [selectedOrganizationId, setSelectedOrganizationId] =
     useState("");
+  const [activeMemberships, setActiveMemberships] =
+    useState<ActiveOrganizationMembership[]>([]);
+  const membershipRequestVersion = useRef(0);
 
   const {
     status,
@@ -148,11 +152,45 @@ function App() {
     accessToken,
     errorMessage,
     checkSuperAdminAccess,
-    refreshProfile,
     replaceProfile,
     retry,
     signOut,
   } = useAuthentication();
+
+  const reloadActiveMemberships = useCallback(async () => {
+    const requestVersion = ++membershipRequestVersion.current;
+    await Promise.resolve();
+    if (!accessToken || profile?.platformRole !== "USER") {
+      if (membershipRequestVersion.current === requestVersion) {
+        setActiveMemberships([]);
+      }
+      return;
+    }
+
+    try {
+      const items: ActiveOrganizationMembership[] = [];
+      let cursor: string | undefined;
+      do {
+        const page = await listMyActiveOrganizationMemberships(accessToken, cursor);
+        items.push(...page.items);
+        cursor = page.nextCursor ?? undefined;
+      } while (cursor);
+      if (membershipRequestVersion.current === requestVersion) {
+        setActiveMemberships(items);
+      }
+    } catch {
+      if (membershipRequestVersion.current === requestVersion) {
+        setActiveMemberships([]);
+      }
+    }
+  }, [accessToken, profile?.platformRole]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void reloadActiveMemberships();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [reloadActiveMemberships]);
 
   const searchParameters = new URLSearchParams(window.location.search);
 
@@ -214,14 +252,6 @@ function App() {
     }
 
     if (citizenView !== "dashboard") {
-      if (citizenView === "historical-review") {
-        return (
-          <HistoricalReviewPage
-            accessToken="preview-token"
-            onBack={() => setCitizenView("dashboard")}
-          />
-        );
-      }
       return (
         <OrganizationApplicationPage
           key={citizenView}
@@ -252,7 +282,6 @@ function App() {
         onReportIncident={() => setCitizenView("incident-create")}
         onViewIncidentReports={() => setCitizenView("incident-reports")}
         onFindCleanupActivity={() => setCitizenView("incident-discovery")}
-        onOpenHistoricalReview={() => setCitizenView("historical-review")}
         onOpenImpact={() => undefined}
         onSignOut={() => undefined}
       />
@@ -312,11 +341,10 @@ function App() {
       );
     }
 
-    const activeMemberships = profile.activeMemberships ?? [];
     const activeMembership =
       activeMemberships.find(
         (membership) =>
-          membership.organizationId === selectedOrganizationId,
+          membership.organization.id === selectedOrganizationId,
       ) ?? activeMemberships[0];
 
     if (
@@ -337,7 +365,7 @@ function App() {
             activeMembership
               ? () => {
                   setSelectedOrganizationId(
-                    activeMembership.organizationId,
+                    activeMembership.organization.id,
                   );
                   setCitizenView("organization-workspace");
                 }
@@ -352,7 +380,6 @@ function App() {
           onReportIncident={() => setCitizenView("incident-create")}
           onViewIncidentReports={() => setCitizenView("incident-reports")}
           onFindCleanupActivity={() => setCitizenView("incident-discovery")}
-          onOpenHistoricalReview={() => setCitizenView("historical-review")}
           onOpenImpact={() => setCitizenView("impact")}
           onSignOut={() => {
             setCitizenView("dashboard");
@@ -369,7 +396,10 @@ function App() {
           accessToken={accessToken}
           profile={profile}
           onProfileUpdated={replaceProfile}
-          onBack={() => setCitizenView("dashboard")}
+          onBack={() => {
+            setCitizenView("dashboard");
+            void reloadActiveMemberships();
+          }}
         />
       );
     }
@@ -392,22 +422,13 @@ function App() {
       );
     }
 
-    if (citizenView === "historical-review") {
-      return (
-        <HistoricalReviewPage
-          accessToken={accessToken}
-          onBack={() => setCitizenView("dashboard")}
-        />
-      );
-    }
-
     if (citizenView === "organization-workspace" && activeMembership) {
       return (
         <OrganizationWorkspace
           profile={profile}
           accessToken={accessToken}
           memberships={activeMemberships}
-          selectedOrganizationId={activeMembership.organizationId}
+          selectedOrganizationId={activeMembership.organization.id}
           onSelectOrganization={setSelectedOrganizationId}
           onBackToDashboard={() => setCitizenView("dashboard")}
           onViewApplications={() =>
@@ -459,7 +480,7 @@ function App() {
         }
         onBackToDashboard={() => {
           setCitizenView("dashboard");
-          void refreshProfile();
+          void reloadActiveMemberships();
         }}
         onSignOut={() => {
           setCitizenView("dashboard");

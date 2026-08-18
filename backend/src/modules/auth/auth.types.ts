@@ -1,22 +1,11 @@
 import type {
   AccountStatus,
-  MembershipRole,
-  MembershipStatus,
   PlatformRole,
 } from "../../generated/prisma/enums.js";
 
 export type VerifiedSupabaseIdentity = {
   authUserId: string;
   email: string;
-};
-
-export type ActiveOrganizationMembership = {
-  id: string;
-  organizationId: string;
-  organizationName: string;
-  organizationSlug: string;
-  role: MembershipRole;
-  status: MembershipStatus;
 };
 
 export type AuthenticatedUserProfile = {
@@ -27,7 +16,6 @@ export type AuthenticatedUserProfile = {
   profileCompletedAt: Date | null;
   platformRole: PlatformRole;
   accountStatus: AccountStatus;
-  activeMemberships?: ActiveOrganizationMembership[];
 };
 
 export type AuthenticationContext = {

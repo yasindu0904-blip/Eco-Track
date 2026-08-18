@@ -18,8 +18,6 @@ export function getCurrentUserController(
       profileCompletedAt: profile.profileCompletedAt,
       platformRole: profile.platformRole,
       accountStatus: profile.accountStatus,
-      activeMemberships:
-        profile.activeMemberships ?? [],
     },
   });
 }

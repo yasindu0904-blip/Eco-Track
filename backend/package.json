@@ -6,7 +6,7 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "test": "tsx --test --test-concurrency=1 \"src/**/*.test.ts\"",
+    "test": "tsx --test \"src/**/*.test.ts\"",
     "test:organization": "tsx --test src/modules/organizations/application/application.integration.test.ts",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",

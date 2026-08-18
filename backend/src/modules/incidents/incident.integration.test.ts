@@ -521,15 +521,59 @@ test("organization discovery includes covered boundary incidents and active area
   assert.equal(allCoveredResponse.status, 400);
 
   const boundaries = await request(
-    `/organizations/${organizationId}/service-area-boundaries`,
+    `/organizations/${organizationId}/service-area-boundaries?west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=1`,
     otherToken,
   );
   assert.equal(boundaries.status, 200);
   const boundaryBody = await boundaries.json() as {
-    data: { type: string; features: Array<{ properties: { id: string } }> };
+    data: {
+      type: string;
+      features: Array<{ properties: { id: string } }>;
+      truncated: boolean;
+    };
   };
   assert.equal(boundaryBody.data.type, "FeatureCollection");
+  assert.equal(boundaryBody.data.features.length, 1);
   assert.equal(boundaryBody.data.features[0]?.properties.id, serviceAreaId);
+  assert.equal(boundaryBody.data.truncated, true);
+
+  const outsideBoundaries = await request(
+    `/organizations/${organizationId}/service-area-boundaries?west=80.5&south=7.5&east=80.6&north=7.6&zoom=12`,
+    otherToken,
+  );
+  assert.equal(outsideBoundaries.status, 200);
+  assert.deepEqual(
+    (await outsideBoundaries.json() as { data: { features: unknown[] } }).data.features,
+    [],
+  );
+
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationId}/service-area-boundaries`,
+        otherToken,
+      )
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationId}/service-area-boundaries?west=79.4&south=5.8&east=82.1&north=10&zoom=7`,
+        otherToken,
+      )
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationId}/service-area-boundaries?${query}`,
+        organizationBToken,
+      )
+    ).status,
+    403,
+  );
 
   const crossTenant = await request(
     `/organizations/${organizationId}/incidents?${query}`,
