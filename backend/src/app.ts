@@ -29,6 +29,7 @@ import type { MembershipSelfServiceDependencies } from "./modules/memberships/se
 import type { IncidentDependencies } from "./modules/incidents/incident.dependencies.js";
 import type { OrganizationApplicationDependencies } from "./modules/organizations/application/application.dependencies.js";
 import type { RewardDependencies } from "./modules/rewards/reward.dependencies.js";
+import type { CleanupEventDependencies } from "./modules/cleanupEvents/cleanupEvent.dependencies.js";
 
 type CreateAppOptions = {
   webOrigin?: string;
@@ -40,7 +41,7 @@ type CreateAppOptions = {
   incidentDependencies?: IncidentDependencies;
   organizationApplicationDependencies?: OrganizationApplicationDependencies;
   rewardDependencies?: RewardDependencies;
-  cleanupEventDependencies?: import("./modules/cleanupEvents/cleanupEvent.dependencies.js").CleanupEventDependencies;
+  cleanupEventDependencies?: CleanupEventDependencies;
 };
 
 export function createApp(

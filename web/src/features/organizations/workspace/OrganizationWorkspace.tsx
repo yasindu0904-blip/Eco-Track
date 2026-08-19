@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import type { ActiveOrganizationMembership } from "../../memberships/administration/membershipAdministration.types";
+import { CleanupEventDraftEditor } from "../../cleanup-events";
 
 import "./organizationWorkspace.css";
 import { OrganizationIncidentDiscovery } from "./OrganizationIncidentDiscovery";
@@ -28,7 +29,8 @@ export function OrganizationWorkspace({
   onSignOut,
 }: OrganizationWorkspaceProps) {
   const [activeTab, setActiveTab] =
-    useState<"overview" | "incident-discovery">("overview");
+    useState<"overview" | "incident-discovery" | "event-drafts">("overview");
+  const [linkedIncidentId, setLinkedIncidentId] = useState<string>();
   const membership =
     memberships.find(
       (item) => item.organization.id === selectedOrganizationId,
@@ -68,9 +70,11 @@ export function OrganizationWorkspace({
               Active organization
               <select
                 value={membership.organization.id}
-                onChange={(event) =>
-                  onSelectOrganization(event.target.value)
-                }
+                onChange={(event) => {
+                  setActiveTab("overview");
+                  setLinkedIncidentId(undefined);
+                  onSelectOrganization(event.target.value);
+                }}
               >
                 {memberships.map((item) => (
                   <option
@@ -96,13 +100,31 @@ export function OrganizationWorkspace({
           {activeTab === "incident-discovery" && (
             <span aria-current="page">/ Incident discovery</span>
           )}
+          {activeTab === "event-drafts" && (
+            <span aria-current="page">/ Cleanup-event drafts</span>
+          )}
         </nav>
 
-        {activeTab === "incident-discovery" ? (
+        {activeTab === "event-drafts" ? (
+          <CleanupEventDraftEditor
+            key={`${membership.organization.id}-${linkedIncidentId ?? "direct"}`}
+            accessToken={accessToken}
+            organizationId={membership.organization.id}
+            incidentId={linkedIncidentId}
+            onBack={() => {
+              setLinkedIncidentId(undefined);
+              setActiveTab("overview");
+            }}
+          />
+        ) : activeTab === "incident-discovery" ? (
           <OrganizationIncidentDiscovery
             key={membership.organization.id}
             accessToken={accessToken}
             organizationId={membership.organization.id}
+            onCreateDraftFromIncident={membership.role === "ORG_ADMIN" ? (incidentId) => {
+              setLinkedIncidentId(incidentId);
+              setActiveTab("event-drafts");
+            } : undefined}
           />
         ) : (
           <>
@@ -156,6 +178,24 @@ export function OrganizationWorkspace({
                   Open <b>→</b>
                 </span>
               </button>
+              {membership.role === "ORG_ADMIN" && (
+                <button
+                  type="button"
+                  className="organization-workspace-tool-card"
+                  onClick={() => {
+                    setLinkedIncidentId(undefined);
+                    setActiveTab("event-drafts");
+                  }}
+                >
+                  <span className="organization-workspace-tool-icon" aria-hidden="true">+</span>
+                  <span className="organization-workspace-tool-copy">
+                    <small>Cleanup-event planning</small>
+                    <strong>Draft workspace</strong>
+                    <span>Create private plans, sessions, and coordinator assignments.</span>
+                  </span>
+                  <span className="organization-workspace-tool-action" aria-hidden="true">Open →</span>
+                </button>
+              )}
             </section>
           </>
         )}

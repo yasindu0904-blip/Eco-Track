@@ -23,6 +23,7 @@ type Props = {
   accessToken: string;
   organizationId: string;
   onMapInteractionChange: (interacting: boolean) => void;
+  onCreateDraftFromIncident?: (incidentId: string) => void;
 };
 
 const statuses = [
@@ -72,6 +73,7 @@ export function OrganizationIncidentDiscovery({
   accessToken,
   organizationId,
   onMapInteractionChange,
+  onCreateDraftFromIncident,
 }: Props) {
   const [categories, setCategories] = useState<IncidentCategory[]>([]);
   const [boundaries, setBoundaries] =
@@ -392,6 +394,12 @@ export function OrganizationIncidentDiscovery({
             <Text style={styles.detailLabel}>PUBLIC FALSE COUNT</Text>
             <Text style={styles.detailValue}>{selected.falseReviewCount}</Text>
           </View>
+          {onCreateDraftFromIncident ? (
+            <Button
+              label="Create cleanup-event draft"
+              onPress={() => onCreateDraftFromIncident(selected.id)}
+            />
+          ) : null}
         </View>
       ) : null}
     </View>

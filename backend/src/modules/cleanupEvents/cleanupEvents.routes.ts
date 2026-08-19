@@ -10,9 +10,10 @@ import type { AuthenticationDependencies } from "../auth/auth.types.js";
 import type { CleanupEventDependencies } from "./cleanupEvent.dependencies.js";
 import {
   createDraftController,
+  discardDraftController,
   updateDraftController,
-  listMyDraftsController,
-  getMyDraftController,
+  listOrganizationDraftsController,
+  getOrganizationDraftController,
   createSessionController,
   removeSessionController,
   updateSessionController,
@@ -36,14 +37,14 @@ export function createCleanupEventRouter(authenticationDependencies: Authenticat
     "/organizations/:organizationId/events/drafts",
     ...tenantRoute,
     authorize(Actions.Read, Subjects.CleanupEvent),
-    listMyDraftsController(deps),
+    listOrganizationDraftsController(deps),
   );
 
   router.get(
     "/organizations/:organizationId/events/drafts/:id",
     ...tenantRoute,
     authorize(Actions.Read, Subjects.CleanupEvent),
-    getMyDraftController(deps),
+    getOrganizationDraftController(deps),
   );
 
   router.patch(
@@ -51,6 +52,13 @@ export function createCleanupEventRouter(authenticationDependencies: Authenticat
     ...tenantRoute,
     authorize(Actions.Update, Subjects.CleanupEvent),
     updateDraftController(deps),
+  );
+
+  router.delete(
+    "/organizations/:organizationId/events/drafts/:id",
+    ...tenantRoute,
+    authorize(Actions.Update, Subjects.CleanupEvent),
+    discardDraftController(deps),
   );
 
   router.post(

@@ -5,6 +5,7 @@ import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import { BrandHeader, Button, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
+import { CleanupEventDraftScreen } from "../cleanupEvents";
 import { OrganizationIncidentDiscovery } from "./OrganizationIncidentDiscovery";
 
 type OrganizationWorkspaceScreenProps = {
@@ -28,7 +29,8 @@ export function OrganizationWorkspaceScreen({
   onViewApplications,
   onSignOut,
 }: OrganizationWorkspaceScreenProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "incidentDiscovery">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "incidentDiscovery" | "eventDrafts">("overview");
+  const [linkedIncidentId, setLinkedIncidentId] = useState<string>();
   const [mapInteracting, setMapInteracting] = useState(false);
   const membership =
     memberships.find(
@@ -57,7 +59,12 @@ export function OrganizationWorkspaceScreen({
               <Pressable
                 accessibilityRole="button"
                 key={item.organization.id}
-                onPress={() => onSelectOrganization(item.organization.id)}
+                onPress={() => {
+                  setMapInteracting(false);
+                  setLinkedIncidentId(undefined);
+                  setActiveTab("overview");
+                  onSelectOrganization(item.organization.id);
+                }}
                 style={[
                   styles.organizationOption,
                   selected && styles.organizationOptionSelected,
@@ -94,9 +101,25 @@ export function OrganizationWorkspaceScreen({
         {activeTab === "incidentDiscovery" ? (
           <Text style={styles.breadcrumb}>/ Incident discovery</Text>
         ) : null}
+        {activeTab === "eventDrafts" ? (
+          <Text style={styles.breadcrumb}>/ Cleanup-event drafts</Text>
+        ) : null}
       </View>
 
-      {activeTab === "overview" ? (
+      {activeTab === "eventDrafts" ? (
+        <CleanupEventDraftScreen
+          key={`${membership.organization.id}-${linkedIncidentId ?? "direct"}`}
+          accessToken={accessToken}
+          organizationId={membership.organization.id}
+          incidentId={linkedIncidentId}
+          onMapInteractionChange={setMapInteracting}
+          onBack={() => {
+            setMapInteracting(false);
+            setLinkedIncidentId(undefined);
+            setActiveTab("overview");
+          }}
+        />
+      ) : activeTab === "overview" ? (
         <>
           <View style={sharedStyles.card}>
             <View style={sharedStyles.spacedRow}>
@@ -155,6 +178,25 @@ export function OrganizationWorkspaceScreen({
             </View>
             <Text style={styles.toolArrow}>→</Text>
           </Pressable>
+          {membership.role === "ORG_ADMIN" ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open cleanup-event drafts"
+              onPress={() => {
+                setLinkedIncidentId(undefined);
+                setActiveTab("eventDrafts");
+              }}
+              style={({ pressed }) => [styles.toolCard, pressed && styles.toolCardPressed]}
+            >
+              <View style={styles.toolIcon}><Text style={styles.toolIconText}>+</Text></View>
+              <View style={styles.toolCopy}>
+                <Text style={styles.toolEyebrow}>CLEANUP-EVENT PLANNING</Text>
+                <Text style={styles.toolTitle}>Draft workspace</Text>
+                <Text style={styles.toolDescription}>Create private plans, sessions, and coordinator assignments.</Text>
+              </View>
+              <Text style={styles.toolArrow}>→</Text>
+            </Pressable>
+          ) : null}
         </>
       ) : (
         <OrganizationIncidentDiscovery
@@ -162,6 +204,11 @@ export function OrganizationWorkspaceScreen({
           accessToken={accessToken}
           organizationId={membership.organization.id}
           onMapInteractionChange={setMapInteracting}
+          onCreateDraftFromIncident={membership.role === "ORG_ADMIN" ? (incidentId) => {
+            setMapInteracting(false);
+            setLinkedIncidentId(incidentId);
+            setActiveTab("eventDrafts");
+          } : undefined}
         />
       )}
 

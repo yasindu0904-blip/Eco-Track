@@ -1,141 +1,238 @@
 import type { NextFunction, Request, Response } from "express";
+
+import { ApplicationError } from "../../../errors/applicationError.js";
 import type { CleanupEventDependencies } from "../cleanupEvent.dependencies.js";
 import {
-  createDraftSchema,
-  draftIdParametersSchema,
-  updateDraftSchema,
-  createSessionSchema,
-  eventSessionParametersSchema,
-  assignCoordinatorSchema,
-} from "../cleanupEvent.validation.js";
-import {
-  createDraft,
-  updateDraft,
-  listMyDrafts,
-  getMyDraft,
-  createSession,
-  removeSession,
-  updateSession,
   assignCoordinator,
+  createDraft,
+  createSession,
+  discardDraft,
+  getOrganizationDraft,
+  listOrganizationDrafts,
   removeCoordinator,
+  removeSession,
+  updateDraft,
+  updateSession,
 } from "../services/cleanupEvent.service.js";
-import { ApplicationError } from "../../../errors/applicationError.js";
+import {
+  assignCoordinatorSchema,
+  createDraftSchema,
+  createSessionSchema,
+  draftIdParametersSchema,
+  eventParametersSchema,
+  eventSessionParametersSchema,
+  listDraftQuerySchema,
+  updateDraftSchema,
+} from "../cleanupEvent.validation.js";
 
-function validationError(validation: { error: { issues: Array<{ path: PropertyKey[]; message: string }> } }) {
+type FailedValidation = {
+  error: { issues: Array<{ path: PropertyKey[]; message: string }> };
+};
+
+function validationError(validation: FailedValidation): ApplicationError {
   const issue = validation.error.issues[0];
   const field = issue?.path.map(String).join(".");
   return new ApplicationError(
     400,
     "CLEANUP_EVENT_REQUEST_INVALID",
-    issue ? `${field ? `${field}: ` : ""}${issue.message}` : "The cleanup event request is invalid.",
+    issue
+      ? `${field ? `${field}: ` : ""}${issue.message}`
+      : "The cleanup-event request is invalid.",
   );
 }
 
-export function createDraftController(deps: CleanupEventDependencies) {
+export function createDraftController(dependencies: CleanupEventDependencies) {
   return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
     try {
       const validation = createDraftSchema.safeParse(request.body);
       if (!validation.success) throw validationError(validation);
-      const tenant = request.tenant!;
-      const result = await createDraft(deps, tenant.organization.id, tenant.membership.id, validation.data);
-      response.status(201).json({ data: result });
-    } catch (error) { next(error); }
+      response.status(201).json({
+        data: await createDraft(
+          dependencies,
+          request.tenant!.organization.id,
+          request.tenant!.membership.id,
+          validation.data,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
   };
 }
 
-export function updateDraftController(deps: CleanupEventDependencies) {
+export function updateDraftController(dependencies: CleanupEventDependencies) {
   return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
     try {
-      const idValidation = draftIdParametersSchema.safeParse(request.params);
-      if (!idValidation.success) throw validationError(idValidation as any);
+      const parameters = draftIdParametersSchema.safeParse(request.params);
+      if (!parameters.success) throw validationError(parameters);
       const validation = updateDraftSchema.safeParse(request.body);
-      if (!validation.success) throw validationError(validation as any);
-      const tenant = request.tenant!;
-      const result = await updateDraft(deps, tenant.organization.id, tenant.membership.id, idValidation.data.id, validation.data);
-      response.status(200).json({ data: result });
-    } catch (error) { next(error); }
+      if (!validation.success) throw validationError(validation);
+      response.status(200).json({
+        data: await updateDraft(
+          dependencies,
+          request.tenant!.organization.id,
+          parameters.data.id,
+          validation.data,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
   };
 }
 
-export function listMyDraftsController(deps: CleanupEventDependencies) {
+export function listOrganizationDraftsController(dependencies: CleanupEventDependencies) {
   return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
     try {
-      const tenant = request.tenant!;
-      response.status(200).json({ data: await listMyDrafts(deps, tenant.organization.id, tenant.membership.id) });
-    } catch (error) { next(error); }
+      const validation = listDraftQuerySchema.safeParse(request.query);
+      if (!validation.success) throw validationError(validation);
+      response.status(200).json({
+        data: await listOrganizationDrafts(
+          dependencies,
+          request.tenant!.organization.id,
+          validation.data,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
   };
 }
 
-export function getMyDraftController(deps: CleanupEventDependencies) {
+export function getOrganizationDraftController(dependencies: CleanupEventDependencies) {
   return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
     try {
-      const idValidation = draftIdParametersSchema.safeParse(request.params);
-      if (!idValidation.success) throw validationError(idValidation as any);
-      const tenant = request.tenant!;
-      response.status(200).json({ data: await getMyDraft(deps, tenant.organization.id, tenant.membership.id, idValidation.data.id) });
-    } catch (error) { next(error); }
+      const parameters = draftIdParametersSchema.safeParse(request.params);
+      if (!parameters.success) throw validationError(parameters);
+      response.status(200).json({
+        data: await getOrganizationDraft(
+          dependencies,
+          request.tenant!.organization.id,
+          parameters.data.id,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
   };
 }
 
-export function createSessionController(deps: CleanupEventDependencies) {
+export function discardDraftController(dependencies: CleanupEventDependencies) {
   return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
     try {
-      const validation = createSessionSchema.safeParse(request.body);
-      if (!validation.success) throw validationError(validation as any);
-      const tenant = request.tenant!;
-      const cleanupEventId = String(request.params.eventId);
-      const result = await createSession(deps, tenant.organization.id, cleanupEventId, validation.data);
-      response.status(201).json({ data: result });
-    } catch (error) { next(error); }
-  };
-}
-
-export function removeSessionController(deps: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
-    try {
-      const idValidation = eventSessionParametersSchema.safeParse(request.params);
-      if (!idValidation.success) throw validationError(idValidation as any);
-      const tenant = request.tenant!;
-      await removeSession(deps, tenant.organization.id, idValidation.data.eventId, idValidation.data.sessionId);
+      const parameters = draftIdParametersSchema.safeParse(request.params);
+      if (!parameters.success) throw validationError(parameters);
+      await discardDraft(
+        dependencies,
+        request.tenant!.organization.id,
+        parameters.data.id,
+      );
       response.status(204).send();
-    } catch (error) { next(error); }
+    } catch (error) {
+      next(error);
+    }
   };
 }
 
-export function updateSessionController(deps: CleanupEventDependencies) {
+export function createSessionController(dependencies: CleanupEventDependencies) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parameters = eventParametersSchema.safeParse(request.params);
+      if (!parameters.success) throw validationError(parameters);
+      const validation = createSessionSchema.safeParse(request.body);
+      if (!validation.success) throw validationError(validation);
+      response.status(201).json({
+        data: await createSession(
+          dependencies,
+          request.tenant!.organization.id,
+          parameters.data.eventId,
+          validation.data,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+export function updateSessionController(dependencies: CleanupEventDependencies) {
   return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
     try {
       const parameters = eventSessionParametersSchema.safeParse(request.params);
-      if (!parameters.success) throw validationError(parameters as any);
+      if (!parameters.success) throw validationError(parameters);
       const validation = createSessionSchema.safeParse(request.body);
-      if (!validation.success) throw validationError(validation as any);
-      response.status(200).json({ data: await updateSession(deps, request.tenant!.organization.id, parameters.data.eventId, parameters.data.sessionId, validation.data) });
-    } catch (error) { next(error); }
+      if (!validation.success) throw validationError(validation);
+      response.status(200).json({
+        data: await updateSession(
+          dependencies,
+          request.tenant!.organization.id,
+          parameters.data.eventId,
+          parameters.data.sessionId,
+          validation.data,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
   };
 }
 
-export function assignCoordinatorController(deps: CleanupEventDependencies) {
+export function removeSessionController(dependencies: CleanupEventDependencies) {
   return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
     try {
-      const validation = assignCoordinatorSchema.safeParse(request.body);
-      if (!validation.success) throw validationError(validation as any);
-      const tenant = request.tenant!;
-      const cleanupEventId = String(request.params.eventId);
-      const result = await assignCoordinator(deps, tenant.organization.id, cleanupEventId, validation.data.membershipId, tenant.membership.id);
-      response.status(201).json({ data: result });
-    } catch (error) { next(error); }
-  };
-}
-
-export function removeCoordinatorController(deps: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
-    try {
-      const validation = assignCoordinatorSchema.safeParse(request.body);
-      if (!validation.success) throw validationError(validation as any);
-      const tenant = request.tenant!;
-      const cleanupEventId = String(request.params.eventId);
-      await removeCoordinator(deps, tenant.organization.id, cleanupEventId, validation.data.membershipId);
+      const parameters = eventSessionParametersSchema.safeParse(request.params);
+      if (!parameters.success) throw validationError(parameters);
+      await removeSession(
+        dependencies,
+        request.tenant!.organization.id,
+        parameters.data.eventId,
+        parameters.data.sessionId,
+      );
       response.status(204).send();
-    } catch (error) { next(error); }
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+export function assignCoordinatorController(dependencies: CleanupEventDependencies) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parameters = eventParametersSchema.safeParse(request.params);
+      if (!parameters.success) throw validationError(parameters);
+      const validation = assignCoordinatorSchema.safeParse(request.body);
+      if (!validation.success) throw validationError(validation);
+      response.status(201).json({
+        data: await assignCoordinator(
+          dependencies,
+          request.tenant!.organization.id,
+          parameters.data.eventId,
+          validation.data.membershipId,
+          request.tenant!.membership.id,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+export function removeCoordinatorController(dependencies: CleanupEventDependencies) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parameters = eventParametersSchema.safeParse(request.params);
+      if (!parameters.success) throw validationError(parameters);
+      const validation = assignCoordinatorSchema.safeParse(request.body);
+      if (!validation.success) throw validationError(validation);
+      await removeCoordinator(
+        dependencies,
+        request.tenant!.organization.id,
+        parameters.data.eventId,
+        validation.data.membershipId,
+      );
+      response.status(204).send();
+    } catch (error) {
+      next(error);
+    }
   };
 }
