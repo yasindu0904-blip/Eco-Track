@@ -18,6 +18,7 @@ type CitizenDashboardProps = {
   onReportIncident: () => void;
   onViewReports: () => void;
   onFindCleanupActivity: () => void;
+  onBrowseCleanupEvents: () => void;
   onOpenImpact: () => void;
   onSignOut: () => void;
 };
@@ -34,6 +35,7 @@ export function CitizenDashboard({
   onReportIncident,
   onViewReports,
   onFindCleanupActivity,
+  onBrowseCleanupEvents,
   onOpenImpact,
   onSignOut,
 }: CitizenDashboardProps) {
@@ -124,6 +126,13 @@ export function CitizenDashboard({
           explicit five-kilometre search from your current location.
         </Text>
         <Button label="Open discovery map" onPress={onFindCleanupActivity} />
+      </View>
+
+      <View style={sharedStyles.card}>
+        <Text style={styles.upcomingEyebrow}>PUBLISHED CLEANUPS</Text>
+        <Text style={sharedStyles.sectionTitle}>Browse cleanup events</Text>
+        <Text style={sharedStyles.sectionSubtitle}>See public schedules, event locations, and volunteer instructions.</Text>
+        <Button label="View published events" onPress={onBrowseCleanupEvents} />
       </View>
 
       <View style={sharedStyles.card}>

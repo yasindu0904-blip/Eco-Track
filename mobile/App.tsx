@@ -24,6 +24,7 @@ import { OrganizationWorkspaceScreen } from "./src/features/organizations/Organi
 import type { OrganizationApplication } from "./src/features/organizations/organizationApplication.types";
 import { SuperAdminDashboard } from "./src/features/superAdmin/SuperAdminDashboard";
 import { MyImpactScreen } from "./src/features/rewards";
+import { PublicCleanupEventsScreen } from "./src/features/cleanupEvents";
 
 type CitizenView =
   | "dashboard"
@@ -32,6 +33,7 @@ type CitizenView =
   | "organizationApplications"
   | "organizationWorkspace"
   | "findCleanupActivity"
+  | "cleanupEvents"
   | "reportIncident"
   | "myReports"
   | "impact";
@@ -232,6 +234,8 @@ export default function App() {
           onBack={() => setCitizenView("dashboard")}
         />
       );
+    } else if (citizenView === "cleanupEvents") {
+      content = <PublicCleanupEventsScreen accessToken={authentication.accessToken} onBack={() => setCitizenView("dashboard")} />;
     } else if (citizenView === "reportIncident") {
       content = (
         <IncidentReportScreen
@@ -286,6 +290,7 @@ export default function App() {
           onReportIncident={() => setCitizenView("reportIncident")}
           onViewReports={() => setCitizenView("myReports")}
           onFindCleanupActivity={() => setCitizenView("findCleanupActivity")}
+          onBrowseCleanupEvents={() => setCitizenView("cleanupEvents")}
           onOpenImpact={() => setCitizenView("impact")}
           onSignOut={() => void signOut()}
         />

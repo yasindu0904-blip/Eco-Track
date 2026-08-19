@@ -16,6 +16,7 @@ interface CitizenDashboardProps {
   onReportIncident: () => void;
   onViewIncidentReports: () => void;
   onFindCleanupActivity: () => void;
+  onBrowseCleanupEvents: () => void;
   onOpenImpact: () => void;
   onSignOut: () => void;
 }
@@ -97,6 +98,7 @@ export function CitizenDashboard({
   onReportIncident,
   onViewIncidentReports,
   onFindCleanupActivity,
+  onBrowseCleanupEvents,
   onOpenImpact,
   onSignOut,
 }: CitizenDashboardProps) {
@@ -400,6 +402,16 @@ export function CitizenDashboard({
               >
                 Open discovery map
                 <CitizenIcon name="arrow" />
+              </button>
+            </article>
+
+            <article className="citizen-action-card">
+              <span className="citizen-action-icon"><CitizenIcon name="volunteer" /></span>
+              <span className="citizen-action-badge">Available</span>
+              <h3>Browse cleanup events</h3>
+              <p>See published event schedules, locations, and public volunteer instructions.</p>
+              <button className="citizen-action-primary" type="button" onClick={onBrowseCleanupEvents}>
+                View published events <CitizenIcon name="arrow" />
               </button>
             </article>
           </div>

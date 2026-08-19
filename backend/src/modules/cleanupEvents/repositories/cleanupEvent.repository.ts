@@ -3,8 +3,22 @@ import { Prisma, type PrismaClient } from "../../../generated/prisma/client.js";
 import type {
   ValidatedCreateDraft,
   ValidatedCreateSession,
+  ValidatedCleanupEventMapQuery,
   ValidatedUpdateDraft,
 } from "../cleanupEvent.validation.js";
+
+export const publicCleanupEventLifecycleStatuses = [
+  "PUBLISHED",
+  "SCHEDULED",
+  "IN_PROGRESS",
+  "COMPLETION_SUBMITTED",
+] as const;
+
+export const visibleCleanupEventLifecycleStatuses = [
+  ...publicCleanupEventLifecycleStatuses,
+  "COMPLETED",
+  "CANCELLED",
+] as const;
 
 export const cleanupEventDraftInclude = {
   sessions: {
@@ -43,6 +57,76 @@ export type CleanupEventDraftCursor = {
   createdAt: Date;
   id: string;
 };
+
+export type CleanupEventPublicCursor = {
+  publishedAt: Date;
+  id: string;
+};
+
+export type CleanupEventOwnedCursor = {
+  updatedAt: Date;
+  id: string;
+};
+
+const publicEventSelect = {
+  id: true,
+  organizationId: true,
+  incidentId: true,
+  lifecycleStatus: true,
+  title: true,
+  description: true,
+  publicInstructions: true,
+  eventLatitude: true,
+  eventLongitude: true,
+  eventAddress: true,
+  meetingLatitude: true,
+  meetingLongitude: true,
+  meetingAddress: true,
+  publishedAt: true,
+  updatedAt: true,
+  organization: { select: { id: true, name: true } },
+  sessions: {
+    where: { status: { not: "CANCELLED" } },
+    orderBy: [{ sessionDate: "asc" }, { startTime: "asc" }],
+    select: {
+      id: true,
+      sessionDate: true,
+      startTime: true,
+      endTime: true,
+      capacity: true,
+      locationLatitude: true,
+      locationLongitude: true,
+      locationAddress: true,
+    },
+  },
+} satisfies Prisma.CleanupEventSelect;
+
+export type CleanupEventPublicRecord = Prisma.CleanupEventGetPayload<{
+  select: typeof publicEventSelect;
+}>;
+
+export const publishCandidateInclude = {
+  organization: { select: { id: true, name: true, status: true } },
+  currentWorkflowStatus: true,
+  sessions: { orderBy: [{ sessionDate: "asc" }, { startTime: "asc" }] },
+  coordinators: {
+    where: { removedAt: null },
+    include: {
+      membership: {
+        select: { id: true, userId: true, organizationId: true, status: true },
+      },
+    },
+  },
+  incident: {
+    include: {
+      reviews: true,
+    },
+  },
+} satisfies Prisma.CleanupEventInclude;
+
+export type CleanupEventPublishCandidate = Prisma.CleanupEventGetPayload<{
+  include: typeof publishCandidateInclude;
+}>;
 
 export async function isIncidentVisibleToOrganization(
   prisma: PrismaClient,
@@ -310,4 +394,244 @@ export async function removeCoordinatorRecord(
     data: { removedAt: new Date() },
   });
   return updated.count === 1;
+}
+
+export function findPublishCandidate(
+  prisma: PrismaClient | Prisma.TransactionClient,
+  organizationId: string,
+  eventId: string,
+): Promise<CleanupEventPublishCandidate | null> {
+  return prisma.cleanupEvent.findFirst({
+    where: { id: eventId, organizationId },
+    include: publishCandidateInclude,
+  });
+}
+
+export function findPublishedWorkflowTransition(
+  prisma: PrismaClient | Prisma.TransactionClient,
+  organizationId: string,
+  fromStatusId: string,
+) {
+  return prisma.cleanupWorkflowTransition.findFirst({
+    where: {
+      organizationId,
+      fromStatusId,
+      fromStatus: { isActive: true },
+      toStatus: { mappedLifecycleStatus: "PUBLISHED", isActive: true },
+    },
+    include: { toStatus: true },
+  });
+}
+
+export function findClaimingEventForIncident(
+  prisma: PrismaClient | Prisma.TransactionClient,
+  incidentId: string,
+  excludedEventId?: string,
+) {
+  return prisma.cleanupEvent.findFirst({
+    where: {
+      incidentId,
+      lifecycleStatus: { in: [...publicCleanupEventLifecycleStatuses] },
+      ...(excludedEventId ? { id: { not: excludedEventId } } : {}),
+    },
+    select: { id: true, title: true },
+  });
+}
+
+export async function publishCleanupEventRecord(
+  prisma: Prisma.TransactionClient,
+  command: {
+    organizationId: string;
+    eventId: string;
+    actorUserId: string;
+    actorMembershipId: string;
+    fromWorkflowStatusId: string;
+    toWorkflowStatusId: string;
+    incidentId: string | null;
+    incidentFromStatus: "ACTIVE" | "EXPIRED" | null;
+    publishedAt: Date;
+  },
+): Promise<boolean> {
+  const updated = await prisma.cleanupEvent.updateMany({
+    where: {
+      id: command.eventId,
+      organizationId: command.organizationId,
+      lifecycleStatus: "DRAFT",
+      currentWorkflowStatusId: command.fromWorkflowStatusId,
+    },
+    data: {
+      lifecycleStatus: "PUBLISHED",
+      currentWorkflowStatusId: command.toWorkflowStatusId,
+      publishedAt: command.publishedAt,
+    },
+  });
+  if (updated.count !== 1) return false;
+
+  await prisma.eventStatusHistory.create({
+    data: {
+      cleanupEventId: command.eventId,
+      fromWorkflowStatusId: command.fromWorkflowStatusId,
+      toWorkflowStatusId: command.toWorkflowStatusId,
+      changedByMembershipId: command.actorMembershipId,
+      notes: "Cleanup event published.",
+      changedAt: command.publishedAt,
+    },
+  });
+
+  if (command.incidentId && command.incidentFromStatus) {
+    const incidentUpdated = await prisma.incident.updateMany({
+      where: {
+        id: command.incidentId,
+        status: command.incidentFromStatus,
+      },
+      data: { status: "CLEANUP_ORGANIZED" },
+    });
+    if (incidentUpdated.count !== 1) return false;
+    await prisma.incidentStatusHistory.create({
+      data: {
+        incidentId: command.incidentId,
+        fromStatus: command.incidentFromStatus,
+        toStatus: "CLEANUP_ORGANIZED",
+        changedByUserId: command.actorUserId,
+        relatedCleanupEventId: command.eventId,
+        reason: "A cleanup event was published for this incident.",
+        changedAt: command.publishedAt,
+      },
+    });
+  }
+
+  await prisma.auditLog.create({
+    data: {
+      actorUserId: command.actorUserId,
+      organizationId: command.organizationId,
+      action: "CLEANUP_EVENT_PUBLISHED",
+      entityType: "CleanupEvent",
+      entityId: command.eventId,
+      metadata: command.incidentId ? { incidentId: command.incidentId } : undefined,
+    },
+  });
+
+  return true;
+}
+
+export function findPublicCleanupEventById(
+  prisma: PrismaClient | Prisma.TransactionClient,
+  eventId: string,
+): Promise<CleanupEventPublicRecord | null> {
+  return prisma.cleanupEvent.findFirst({
+    where: {
+      id: eventId,
+      lifecycleStatus: { in: [...visibleCleanupEventLifecycleStatuses] },
+      publishedAt: { not: null },
+      organization: { status: "ACTIVE" },
+    },
+    select: publicEventSelect,
+  });
+}
+
+export function listPublicCleanupEventRecords(
+  prisma: PrismaClient,
+  command: { cursor: CleanupEventPublicCursor | null; limit: number },
+): Promise<CleanupEventPublicRecord[]> {
+  return prisma.cleanupEvent.findMany({
+    where: {
+      lifecycleStatus: { in: [...publicCleanupEventLifecycleStatuses] },
+      publishedAt: { not: null },
+      organization: { status: "ACTIVE" },
+      ...(command.cursor
+        ? {
+            OR: [
+              { publishedAt: { lt: command.cursor.publishedAt } },
+              {
+                publishedAt: command.cursor.publishedAt,
+                id: { lt: command.cursor.id },
+              },
+            ],
+          }
+        : {}),
+    },
+    orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+    take: command.limit + 1,
+    select: publicEventSelect,
+  });
+}
+
+export function listOwnedCleanupEventRecords(
+  prisma: PrismaClient,
+  command: {
+    organizationId: string;
+    cursor: CleanupEventOwnedCursor | null;
+    limit: number;
+  },
+): Promise<CleanupEventPublicRecord[]> {
+  return prisma.cleanupEvent.findMany({
+    where: {
+      organizationId: command.organizationId,
+      ...(command.cursor
+        ? {
+            OR: [
+              { updatedAt: { lt: command.cursor.updatedAt } },
+              {
+                updatedAt: command.cursor.updatedAt,
+                id: { lt: command.cursor.id },
+              },
+            ],
+          }
+        : {}),
+    },
+    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+    take: command.limit + 1,
+    select: publicEventSelect,
+  });
+}
+
+export type CleanupEventMapRow = {
+  id: string;
+  title: string;
+  lifecycleStatus: string;
+  latitude: number;
+  longitude: number;
+  publishedAt: Date;
+};
+
+export function listPublicCleanupEventMapRecords(
+  prisma: PrismaClient,
+  query: ValidatedCleanupEventMapQuery,
+): Promise<CleanupEventMapRow[]> {
+  const cursor = query.cursor
+    ? Prisma.sql`AND event."id" < ${query.cursor}::uuid`
+    : Prisma.empty;
+  return prisma.$queryRaw<CleanupEventMapRow[]>(Prisma.sql`
+    SELECT
+      event."id",
+      event."title",
+      event."lifecycle_status"::text AS "lifecycleStatus",
+      event."event_latitude"::double precision AS "latitude",
+      event."event_longitude"::double precision AS "longitude",
+      event."published_at" AS "publishedAt"
+    FROM "cleanup_events" AS event
+    JOIN "organizations" AS organization
+      ON organization."id" = event."organization_id"
+     AND organization."status" = 'ACTIVE'::"OrganizationStatus"
+    WHERE event."lifecycle_status" IN (
+      'PUBLISHED'::"CleanupLifecycleStatus",
+      'SCHEDULED'::"CleanupLifecycleStatus",
+      'IN_PROGRESS'::"CleanupLifecycleStatus",
+      'COMPLETION_SUBMITTED'::"CleanupLifecycleStatus"
+    )
+      AND event."published_at" IS NOT NULL
+      AND extensions.ST_Covers(
+        extensions.ST_MakeEnvelope(
+          ${query.west}::double precision,
+          ${query.south}::double precision,
+          ${query.east}::double precision,
+          ${query.north}::double precision,
+          4326
+        )::extensions.geography,
+        event."event_geo_point"
+      )
+      ${cursor}
+    ORDER BY event."id" DESC
+    LIMIT ${query.limit + 1}
+  `);
 }

@@ -4,6 +4,11 @@ import type {
   CleanupEventDraftInput,
   CleanupEventDraftPage,
   CleanupEventSessionInput,
+  CleanupEventOwnedPage,
+  CleanupEventPublicDetail,
+  CleanupEventPublicPage,
+  CleanupEventPublishReadiness,
+  CleanupEventPublishResult,
   EventSession,
 } from "./cleanupEvent.types";
 
@@ -136,4 +141,37 @@ export async function removeCoordinator(
     `${root(organizationId)}/${encodeURIComponent(eventId)}/coordinators`,
     { accessToken: token, method: "DELETE", ...json({ membershipId }) },
   );
+}
+
+export async function getPublishReadiness(token: string, organizationId: string, eventId: string) {
+  return (await apiRequest<{ data: CleanupEventPublishReadiness }>(
+    `${root(organizationId)}/${encodeURIComponent(eventId)}/publish-readiness`,
+    { accessToken: token },
+  )).data;
+}
+
+export async function publishCleanupEvent(token: string, organizationId: string, eventId: string) {
+  return (await apiRequest<{ data: CleanupEventPublishResult }>(
+    `${root(organizationId)}/${encodeURIComponent(eventId)}/publish`,
+    { accessToken: token, method: "POST" },
+  )).data;
+}
+
+export async function listOwnedCleanupEvents(token: string, organizationId: string, cursor?: string) {
+  const query = new URLSearchParams({ limit: "25" });
+  if (cursor) query.set("cursor", cursor);
+  return (await apiRequest<{ data: CleanupEventOwnedPage }>(`${root(organizationId)}?${query}`, { accessToken: token })).data;
+}
+
+export async function listPublicCleanupEvents(token: string, cursor?: string) {
+  const query = new URLSearchParams({ limit: "25" });
+  if (cursor) query.set("cursor", cursor);
+  return (await apiRequest<{ data: CleanupEventPublicPage }>(`/events?${query}`, { accessToken: token })).data;
+}
+
+export async function getPublicCleanupEvent(token: string, eventId: string) {
+  return (await apiRequest<{ data: CleanupEventPublicDetail }>(
+    `/events/${encodeURIComponent(eventId)}`,
+    { accessToken: token },
+  )).data;
 }

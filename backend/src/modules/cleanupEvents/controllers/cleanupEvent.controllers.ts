@@ -8,9 +8,15 @@ import {
   createSession,
   discardDraft,
   getOrganizationDraft,
+  getPublicCleanupEvent,
+  getPublishReadiness,
+  listOwnedCleanupEvents,
+  listPublicCleanupEventMap,
+  listPublicCleanupEvents,
   listOrganizationDrafts,
   removeCoordinator,
   removeSession,
+  publishEvent,
   updateDraft,
   updateSession,
 } from "../services/cleanupEvent.service.js";
@@ -18,10 +24,13 @@ import {
   assignCoordinatorSchema,
   createDraftSchema,
   createSessionSchema,
+  cleanupEventMapQuerySchema,
   draftIdParametersSchema,
   eventParametersSchema,
   eventSessionParametersSchema,
   listDraftQuerySchema,
+  listCleanupEventsQuerySchema,
+  publicEventParametersSchema,
   updateDraftSchema,
 } from "../cleanupEvent.validation.js";
 
@@ -231,6 +240,101 @@ export function removeCoordinatorController(dependencies: CleanupEventDependenci
         validation.data.membershipId,
       );
       response.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+export function publishReadinessController(dependencies: CleanupEventDependencies) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parameters = eventParametersSchema.safeParse(request.params);
+      if (!parameters.success) throw validationError(parameters);
+      response.status(200).json({
+        data: await getPublishReadiness(
+          dependencies,
+          request.tenant!.organization.id,
+          parameters.data.eventId,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+export function publishEventController(dependencies: CleanupEventDependencies) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parameters = eventParametersSchema.safeParse(request.params);
+      if (!parameters.success) throw validationError(parameters);
+      response.status(200).json({
+        data: await publishEvent(dependencies, {
+          organizationId: request.tenant!.organization.id,
+          eventId: parameters.data.eventId,
+          actorUserId: request.authentication.profile.id,
+          actorMembershipId: request.tenant!.membership.id,
+        }),
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+export function listOwnedEventsController(dependencies: CleanupEventDependencies) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const validation = listCleanupEventsQuerySchema.safeParse(request.query);
+      if (!validation.success) throw validationError(validation);
+      response.status(200).json({
+        data: await listOwnedCleanupEvents(
+          dependencies,
+          request.tenant!.organization.id,
+          validation.data,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+export function listPublicEventsController(dependencies: CleanupEventDependencies) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const validation = listCleanupEventsQuerySchema.safeParse(request.query);
+      if (!validation.success) throw validationError(validation);
+      response.status(200).json({ data: await listPublicCleanupEvents(dependencies, validation.data) });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+export function getPublicEventController(dependencies: CleanupEventDependencies) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const validation = publicEventParametersSchema.safeParse(request.params);
+      if (!validation.success) throw validationError(validation);
+      response.status(200).json({
+        data: await getPublicCleanupEvent(dependencies, validation.data.eventId),
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
+export function listPublicEventMapController(dependencies: CleanupEventDependencies) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const validation = cleanupEventMapQuerySchema.safeParse(request.query);
+      if (!validation.success) throw validationError(validation);
+      response.status(200).json({
+        data: await listPublicCleanupEventMap(dependencies, validation.data),
+      });
     } catch (error) {
       next(error);
     }

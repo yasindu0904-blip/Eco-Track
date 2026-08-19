@@ -15,6 +15,7 @@ const serviceAreaId = randomUUID();
 const categoryId = randomUUID();
 const visibleIncidentId = randomUUID();
 const invisibleIncidentId = randomUUID();
+const claimIncidentId = randomUUID();
 
 const identities = {
   adminA: { token: "evt02-admin-a", id: randomUUID(), authUserId: randomUUID(), membershipId: randomUUID() },
@@ -88,6 +89,47 @@ async function createDirectDraft(title = "Direct cleanup draft"): Promise<string
   );
   assert.equal(response.status, 201);
   return (await response.json()).data.id as string;
+}
+
+async function makeDraftPublishable(
+  token: string,
+  organizationId: string,
+  eventId: string,
+  coordinatorMembershipId: string,
+): Promise<void> {
+  const update = await request(
+    token,
+    `/organizations/${organizationId}/events/drafts/${eventId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        publicInstructions: "Wear closed shoes and bring drinking water.",
+        eventAddress: "Community meeting point, Colombo",
+      }),
+    },
+  );
+  assert.equal(update.status, 200);
+  const session = await request(
+    token,
+    `/organizations/${organizationId}/events/${eventId}/sessions`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        sessionDate: "2099-09-01",
+        startTime: "09:00:00",
+        endTime: "12:00:00",
+        capacity: 30,
+        notes: "Internal setup note that must not become public.",
+      }),
+    },
+  );
+  assert.equal(session.status, 201);
+  const coordinator = await request(
+    token,
+    `/organizations/${organizationId}/events/${eventId}/coordinators`,
+    { method: "POST", body: JSON.stringify({ membershipId: coordinatorMembershipId }) },
+  );
+  assert.equal(coordinator.status, 201);
 }
 
 before(async () => {
@@ -166,6 +208,19 @@ before(async () => {
         highlightUntil: new Date(now + 86_400_000),
         archiveAfter: new Date(now + 604_800_000),
       },
+      {
+        id: claimIncidentId,
+        reporterUserId: identities.reporter.id,
+        submissionId: randomUUID(),
+        categoryId,
+        title: "Concurrent publication incident",
+        description: "A shared incident used to verify database-backed event claiming.",
+        severity: "HIGH",
+        latitude: 6.96,
+        longitude: 79.92,
+        highlightUntil: new Date(now + 86_400_000),
+        archiveAfter: new Date(now + 604_800_000),
+      },
     ],
   });
   await prisma.$executeRaw`
@@ -202,7 +257,7 @@ after(async () => {
     where: { organizationId: { in: [organizationAId, organizationBId] } },
   });
   await prisma.organizationServiceArea.deleteMany({ where: { id: serviceAreaId } });
-  await prisma.incident.deleteMany({ where: { id: { in: [visibleIncidentId, invisibleIncidentId] } } });
+  await prisma.incident.deleteMany({ where: { id: { in: [visibleIncidentId, invisibleIncidentId, claimIncidentId] } } });
   await prisma.incidentCategory.deleteMany({ where: { id: categoryId } });
   await prisma.cleanupWorkflowStatus.deleteMany({
     where: { organizationId: { in: [organizationAId, organizationBId] } },
@@ -438,4 +493,233 @@ test("discard removes only a tenant-owned private DRAFT", async () => {
   );
   assert.equal(discarded.status, 204);
   assert.equal(await prisma.cleanupEvent.count({ where: { id: draftId } }), 0);
+});
+
+test("publish readiness is server-derived and only ORG_ADMIN can publish", async () => {
+  const eventId = await createDirectDraft("Readiness protected event");
+  const initial = await request(
+    identities.adminA.token,
+    `/organizations/${organizationAId}/events/${eventId}/publish-readiness`,
+  );
+  assert.equal(initial.status, 200);
+  const initialBody = await initial.json();
+  assert.equal(initialBody.data.ready, false);
+  assert.ok(initialBody.data.checks.some((item: { ready: boolean }) => !item.ready));
+
+  const memberPublish = await request(
+    identities.memberA.token,
+    `/organizations/${organizationAId}/events/${eventId}/publish`,
+    { method: "POST" },
+  );
+  assert.equal(memberPublish.status, 403);
+
+  const crossTenantPublish = await request(
+    identities.adminB.token,
+    `/organizations/${organizationAId}/events/${eventId}/publish`,
+    { method: "POST" },
+  );
+  assert.equal(crossTenantPublish.status, 403);
+
+  const notReady = await request(
+    identities.adminA.token,
+    `/organizations/${organizationAId}/events/${eventId}/publish`,
+    { method: "POST" },
+  );
+  assert.equal(notReady.status, 409);
+  assert.equal((await notReady.json()).error.code, "CLEANUP_EVENT_NOT_READY");
+  assert.equal(
+    await prisma.cleanupEvent.findUniqueOrThrow({ where: { id: eventId }, select: { lifecycleStatus: true } }).then((event) => event.lifecycleStatus),
+    "DRAFT",
+  );
+});
+
+test("a direct event publishes atomically and exposes only public-safe detail", async () => {
+  const eventId = await createDirectDraft("Public direct cleanup event");
+  await makeDraftPublishable(
+    identities.adminA.token,
+    organizationAId,
+    eventId,
+    identities.memberA.membershipId,
+  );
+
+  const readiness = await request(
+    identities.adminA.token,
+    `/organizations/${organizationAId}/events/${eventId}/publish-readiness`,
+  );
+  assert.equal(readiness.status, 200);
+  assert.equal((await readiness.json()).data.ready, true);
+
+  const published = await request(
+    identities.adminA.token,
+    `/organizations/${organizationAId}/events/${eventId}/publish`,
+    { method: "POST" },
+  );
+  assert.equal(published.status, 200);
+  const publishedBody = await published.json();
+  assert.equal(publishedBody.data.event.lifecycleStatus, "PUBLISHED");
+  assert.equal(publishedBody.data.incidentUpdated, false);
+
+  const replay = await request(
+    identities.adminA.token,
+    `/organizations/${organizationAId}/events/${eventId}/publish`,
+    { method: "POST" },
+  );
+  assert.equal(replay.status, 200);
+  assert.equal(await prisma.eventStatusHistory.count({ where: { cleanupEventId: eventId } }), 1);
+  assert.equal(await prisma.auditLog.count({ where: { action: "CLEANUP_EVENT_PUBLISHED", entityId: eventId } }), 1);
+
+  const detail = await request(identities.reporter.token, `/events/${eventId}`);
+  assert.equal(detail.status, 200);
+  const detailBody = (await detail.json()).data as Record<string, unknown>;
+  assert.equal("coordinators" in detailBody, false);
+  assert.equal("createdByMembershipId" in detailBody, false);
+  assert.equal(JSON.stringify(detailBody).includes("officialPhone"), false);
+  assert.equal(JSON.stringify(detailBody).includes("notes"), false);
+
+  const listed = await request(identities.reporter.token, "/events?limit=50");
+  assert.equal(listed.status, 200);
+  assert.ok((await listed.json()).data.items.some((item: { id: string }) => item.id === eventId));
+
+  const map = await request(
+    identities.reporter.token,
+    "/events/map?west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=50",
+  );
+  assert.equal(map.status, 200);
+  assert.ok((await map.json()).data.features.some(
+    (feature: { properties: { id: string; kind: string } }) =>
+      feature.properties.id === eventId && feature.properties.kind === "CLEANUP_EVENT",
+  ));
+});
+
+test("linked publication requires VALID review and updates incident, histories, audit, and notification", async () => {
+  const create = await request(
+    identities.adminA.token,
+    `/organizations/${organizationAId}/events/drafts`,
+    { method: "POST", body: JSON.stringify(draftInput({ incidentId: visibleIncidentId, title: "Validated incident cleanup" })) },
+  );
+  assert.equal(create.status, 201);
+  const eventId = (await create.json()).data.id as string;
+  await makeDraftPublishable(
+    identities.adminA.token,
+    organizationAId,
+    eventId,
+    identities.memberA.membershipId,
+  );
+
+  const blocked = await request(
+    identities.adminA.token,
+    `/organizations/${organizationAId}/events/${eventId}/publish`,
+    { method: "POST" },
+  );
+  assert.equal(blocked.status, 409);
+
+  await prisma.incidentReview.create({
+    data: {
+      incidentId: visibleIncidentId,
+      organizationId: organizationAId,
+      status: "VALID",
+      reviewedByMembershipId: identities.adminA.membershipId,
+      reviewedAt: new Date(),
+    },
+  });
+  const published = await request(
+    identities.adminA.token,
+    `/organizations/${organizationAId}/events/${eventId}/publish`,
+    { method: "POST" },
+  );
+  assert.equal(published.status, 200);
+  assert.equal((await published.json()).data.incidentUpdated, true);
+
+  const incident = await prisma.incident.findUniqueOrThrow({ where: { id: visibleIncidentId } });
+  assert.equal(incident.status, "CLEANUP_ORGANIZED");
+  assert.equal(
+    await prisma.incidentStatusHistory.count({
+      where: { incidentId: visibleIncidentId, relatedCleanupEventId: eventId, toStatus: "CLEANUP_ORGANIZED" },
+    }),
+    1,
+  );
+  assert.equal(
+    await prisma.notification.count({
+      where: { userId: identities.reporter.id, type: "EVENT_PUBLISHED", data: { path: ["eventId"], equals: eventId } },
+    }),
+    1,
+  );
+});
+
+test("concurrent linked publication produces one winner and one stable 409", async () => {
+  await prisma.incidentReview.createMany({
+    data: [
+      {
+        incidentId: claimIncidentId,
+        organizationId: organizationAId,
+        status: "VALID",
+        reviewedByMembershipId: identities.adminA.membershipId,
+        reviewedAt: new Date(),
+      },
+      {
+        incidentId: claimIncidentId,
+        organizationId: organizationBId,
+        status: "VALID",
+        reviewedByMembershipId: identities.adminB.membershipId,
+        reviewedAt: new Date(),
+      },
+    ],
+  });
+  const [draftA, draftB] = await Promise.all([
+    request(
+      identities.adminA.token,
+      `/organizations/${organizationAId}/events/drafts`,
+      { method: "POST", body: JSON.stringify(draftInput({ incidentId: claimIncidentId, title: "Organization A claim" })) },
+    ),
+    request(
+      identities.adminB.token,
+      `/organizations/${organizationBId}/events/drafts`,
+      { method: "POST", body: JSON.stringify(draftInput({ incidentId: claimIncidentId, title: "Organization B claim" })) },
+    ),
+  ]);
+  assert.equal(draftA.status, 201);
+  assert.equal(draftB.status, 201);
+  const eventA = (await draftA.json()).data.id as string;
+  const eventB = (await draftB.json()).data.id as string;
+  await Promise.all([
+    makeDraftPublishable(identities.adminA.token, organizationAId, eventA, identities.adminA.membershipId),
+    makeDraftPublishable(identities.adminB.token, organizationBId, eventB, identities.adminB.membershipId),
+  ]);
+
+  const responses = await Promise.all([
+    request(identities.adminA.token, `/organizations/${organizationAId}/events/${eventA}/publish`, { method: "POST" }),
+    request(identities.adminB.token, `/organizations/${organizationBId}/events/${eventB}/publish`, { method: "POST" }),
+  ]);
+  assert.deepEqual(responses.map((response) => response.status).sort(), [200, 409]);
+  const conflict = responses.find((response) => response.status === 409)!;
+  const conflictBody = await conflict.json();
+  assert.equal(conflictBody.error.code, "INCIDENT_ALREADY_CLAIMED");
+  assert.ok(conflictBody.error.details.eventId);
+  const winningEventId = conflictBody.error.details.eventId as string;
+  const losingEventId = winningEventId === eventA ? eventB : eventA;
+  assert.equal(
+    await prisma.cleanupEvent.count({
+      where: { incidentId: claimIncidentId, lifecycleStatus: "PUBLISHED" },
+    }),
+    1,
+  );
+  assert.equal(
+    await prisma.cleanupEvent.findUniqueOrThrow({ where: { id: losingEventId } })
+      .then((event) => event.lifecycleStatus),
+    "DRAFT",
+  );
+  assert.equal(
+    await prisma.eventStatusHistory.count({ where: { cleanupEventId: losingEventId } }),
+    0,
+  );
+  assert.equal(
+    await prisma.auditLog.count({ where: { action: "CLEANUP_EVENT_PUBLISHED", entityId: losingEventId } }),
+    0,
+  );
+  assert.equal(
+    await prisma.incidentStatusHistory.count({
+      where: { incidentId: claimIncidentId, toStatus: "CLEANUP_ORGANIZED" },
+    }),
+    1,
+  );
 });

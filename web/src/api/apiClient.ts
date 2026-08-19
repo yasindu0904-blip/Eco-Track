@@ -4,6 +4,7 @@ interface ApiErrorResponse {
   error?: {
     code?: string;
     message?: string;
+    details?: Record<string, unknown>;
   };
 }
 
@@ -14,17 +15,20 @@ interface ApiRequestOptions extends RequestInit {
 export class ApiRequestError extends Error {
   public readonly statusCode: number;
   public readonly code: string;
+  public readonly details?: Record<string, unknown>;
 
   constructor(
     statusCode: number,
     code: string,
     message: string,
+    details?: Record<string, unknown>,
   ) {
     super(message);
 
     this.name = "ApiRequestError";
     this.statusCode = statusCode;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -81,6 +85,7 @@ export async function apiRequest<T>(
         "API_REQUEST_FAILED",
       errorResponse?.error?.message ??
         "The API request failed.",
+      errorResponse?.error?.details,
     );
   }
 

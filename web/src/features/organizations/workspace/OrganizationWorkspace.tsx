@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import type { ActiveOrganizationMembership } from "../../memberships/administration/membershipAdministration.types";
-import { CleanupEventDraftEditor } from "../../cleanup-events";
+import { CleanupEventDraftEditor, OrganizationCleanupEventList } from "../../cleanup-events";
 
 import "./organizationWorkspace.css";
 import { OrganizationIncidentDiscovery } from "./OrganizationIncidentDiscovery";
@@ -29,7 +29,7 @@ export function OrganizationWorkspace({
   onSignOut,
 }: OrganizationWorkspaceProps) {
   const [activeTab, setActiveTab] =
-    useState<"overview" | "incident-discovery" | "event-drafts">("overview");
+    useState<"overview" | "incident-discovery" | "event-drafts" | "events">("overview");
   const [linkedIncidentId, setLinkedIncidentId] = useState<string>();
   const membership =
     memberships.find(
@@ -103,6 +103,7 @@ export function OrganizationWorkspace({
           {activeTab === "event-drafts" && (
             <span aria-current="page">/ Cleanup-event drafts</span>
           )}
+          {activeTab === "events" && <span aria-current="page">/ Organization events</span>}
         </nav>
 
         {activeTab === "event-drafts" ? (
@@ -116,6 +117,8 @@ export function OrganizationWorkspace({
               setActiveTab("overview");
             }}
           />
+        ) : activeTab === "events" ? (
+          <OrganizationCleanupEventList accessToken={accessToken} organizationId={membership.organization.id} />
         ) : activeTab === "incident-discovery" ? (
           <OrganizationIncidentDiscovery
             key={membership.organization.id}
@@ -197,6 +200,11 @@ export function OrganizationWorkspace({
                   <span className="organization-workspace-tool-action" aria-hidden="true">Open →</span>
                 </button>
               )}
+              <button type="button" className="organization-workspace-tool-card" onClick={() => setActiveTab("events")}>
+                <span className="organization-workspace-tool-icon" aria-hidden="true">✓</span>
+                <span className="organization-workspace-tool-copy"><small>Cleanup events</small><strong>Lifecycle overview</strong><span>See this organization’s private drafts and published events.</span></span>
+                <span className="organization-workspace-tool-action" aria-hidden="true">Open →</span>
+              </button>
             </section>
           </>
         )}
