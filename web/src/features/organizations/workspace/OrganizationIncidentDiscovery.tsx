@@ -26,6 +26,7 @@ import type {
 interface OrganizationIncidentDiscoveryProps {
   accessToken: string;
   organizationId: string;
+  canReview: boolean;
   onCreateDraftFromIncident?: (incidentId: string) => void;
 }
 
@@ -87,6 +88,7 @@ function readable(value: string): string {
 export function OrganizationIncidentDiscovery({
   accessToken,
   organizationId,
+  canReview,
   onCreateDraftFromIncident,
 }: OrganizationIncidentDiscoveryProps) {
   const [categories, setCategories] = useState<IncidentCategory[]>([]);
@@ -105,6 +107,7 @@ export function OrganizationIncidentDiscovery({
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string>();
   const [detail, setDetail] = useState<OrganizationIncidentDetail>();
+  const [detailLoading, setDetailLoading] = useState(false);
   const [reviewStatus, setReviewStatus] = useState<OrganizationIncidentReviewStatus>("VIEWED");
   const [reasonCode, setReasonCode] = useState<OrganizationIncidentFalseReasonCode>();
   const [privateNotes, setPrivateNotes] = useState("");
@@ -113,6 +116,11 @@ export function OrganizationIncidentDiscovery({
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const activeRequest = useRef<AbortController | undefined>(undefined);
   const detailRequest = useRef<AbortController | undefined>(undefined);
+  const selectedIdRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
 
   useEffect(() => {
     let active = true;
@@ -137,39 +145,54 @@ export function OrganizationIncidentDiscovery({
 
   useEffect(() => {
     detailRequest.current?.abort();
-    if (!selectedId) {
-      return;
-    }
+    const timeout = window.setTimeout(() => {
+      setDetail(undefined);
+      setDetailLoading(false);
+      setReviewError(undefined);
+      setReviewNotice(undefined);
+      setReviewStatus("VIEWED");
+      setReasonCode(undefined);
+      setPrivateNotes("");
 
-    const controller = new AbortController();
-    detailRequest.current = controller;
-    void getOrganizationIncidentDetail(
-      accessToken,
-      organizationId,
-      selectedId,
-      controller.signal,
-    )
-      .then((loaded) => {
-        if (controller.signal.aborted) return;
-        setDetail(loaded);
-        setReviewError(undefined);
-        setReviewNotice(undefined);
-        setReviewStatus(loaded.currentReview?.status ?? "VIEWED");
-        setReasonCode(
-          (loaded.currentReview?.reasonCode as OrganizationIncidentFalseReasonCode | null) ?? undefined,
-        );
-        setPrivateNotes(loaded.currentReview?.privateNotes ?? "");
-      })
-      .catch((requestError: unknown) => {
-        if (!controller.signal.aborted) {
-          setReviewError(
-            describeApiFailure(requestError, "Unable to load the incident details.").message,
+      if (!selectedId || !canReview) {
+        return;
+      }
+
+      const controller = new AbortController();
+      detailRequest.current = controller;
+      setDetailLoading(true);
+      void getOrganizationIncidentDetail(
+        accessToken,
+        organizationId,
+        selectedId,
+        controller.signal,
+      )
+        .then((loaded) => {
+          if (controller.signal.aborted) return;
+          setDetail(loaded);
+          setReviewStatus(loaded.currentReview?.status ?? "VIEWED");
+          setReasonCode(
+            (loaded.currentReview?.reasonCode as OrganizationIncidentFalseReasonCode | null) ?? undefined,
           );
-        }
-      });
+          setPrivateNotes(loaded.currentReview?.privateNotes ?? "");
+        })
+        .catch((requestError: unknown) => {
+          if (!controller.signal.aborted) {
+            setReviewError(
+              describeApiFailure(requestError, "Unable to load the incident details.").message,
+            );
+          }
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setDetailLoading(false);
+        });
+    }, 0);
 
-    return () => controller.abort();
-  }, [accessToken, organizationId, selectedId]);
+    return () => {
+      window.clearTimeout(timeout);
+      detailRequest.current?.abort();
+    };
+  }, [accessToken, canReview, organizationId, selectedId]);
 
   const loadDiscovery = useCallback(
     async (
@@ -299,10 +322,9 @@ export function OrganizationIncidentDiscovery({
   );
   const selected = incidents.find((incident) => incident.id === selectedId);
   const selectedDetail = detail?.id === selectedId ? detail : undefined;
-  const detailLoading = Boolean(selectedId && !selectedDetail);
 
   const submitReview = async () => {
-    if (!selectedId) return;
+    if (!canReview || !selectedId || selectedDetail?.id !== selectedId) return;
     if (reviewStatus === "FALSE" && !reasonCode) {
       setReviewError("Choose a reason before marking this incident false.");
       return;
@@ -327,7 +349,7 @@ export function OrganizationIncidentDiscovery({
         },
       );
       setDetail((current) => {
-        if (!current) return current;
+        if (!current || current.id !== selectedId) return current;
         const wasFalse = current.currentReview?.status === "FALSE";
         const isFalse = result.review.status === "FALSE";
         return {
@@ -356,15 +378,21 @@ export function OrganizationIncidentDiscovery({
             }
           : incident,
       ));
-      setReviewNotice(
-        result.rewardAwarded
-          ? "Review saved. The reporter's verified-incident contribution was recorded."
-          : result.idempotentReplay
-            ? "This review was already saved."
-            : "Review saved.",
-      );
+      if (selectedIdRef.current === selectedId) {
+        setReviewNotice(
+          result.rewardAwarded
+            ? "Review saved. The reporter's verified-incident contribution was recorded."
+            : result.idempotentReplay
+              ? "This review was already saved."
+              : "Review saved.",
+        );
+      }
     } catch (requestError) {
-      setReviewError(describeApiFailure(requestError, "Unable to save this review.").message);
+      if (selectedIdRef.current === selectedId) {
+        setReviewError(
+          describeApiFailure(requestError, "Unable to save this review.").message,
+        );
+      }
     } finally {
       setReviewSubmitting(false);
     }
@@ -506,7 +534,14 @@ export function OrganizationIncidentDiscovery({
             <div><dt>Public false count</dt><dd>{selected.falseReviewCount}</dd></div>
           </dl>
           {detailLoading ? <p role="status">Loading incident details...</p> : null}
-          {selectedDetail ? (
+          {canReview && reviewError && !selectedDetail ? (
+            <p className="organization-review-error" role="alert">{reviewError}</p>
+          ) : null}
+          {!canReview ? (
+            <p className="organization-review-no-evidence">
+              Incident review actions require Organization Admin access.
+            </p>
+          ) : selectedDetail ? (
             <div className="organization-review-form">
               <div className="organization-review-form-heading">
                 <div>
@@ -578,7 +613,7 @@ export function OrganizationIncidentDiscovery({
               ) : null}
               {reviewError ? <p className="organization-review-error" role="alert">{reviewError}</p> : null}
               {reviewNotice ? <p className="organization-review-success" role="status">{reviewNotice}</p> : null}
-              <button type="button" className="organization-review-submit" disabled={reviewSubmitting} onClick={() => void submitReview()}>
+              <button type="button" className="organization-review-submit" disabled={reviewSubmitting || !selectedDetail} onClick={() => void submitReview()}>
                 {reviewSubmitting ? "Saving review..." : "Save review"}
               </button>
             </div>

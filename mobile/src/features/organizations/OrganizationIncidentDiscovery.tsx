@@ -29,6 +29,7 @@ import type {
 type Props = {
   accessToken: string;
   organizationId: string;
+  canReview: boolean;
   onMapInteractionChange: (interacting: boolean) => void;
   onCreateDraftFromIncident?: (incidentId: string) => void;
 };
@@ -91,6 +92,7 @@ function readable(value: string): string {
 export function OrganizationIncidentDiscovery({
   accessToken,
   organizationId,
+  canReview,
   onMapInteractionChange,
   onCreateDraftFromIncident,
 }: Props) {
@@ -119,6 +121,11 @@ export function OrganizationIncidentDiscovery({
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const activeRequest = useRef<AbortController | undefined>(undefined);
   const detailRequest = useRef<AbortController | undefined>(undefined);
+  const selectedIdRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
 
   useEffect(() => {
     let active = true;
@@ -143,16 +150,21 @@ export function OrganizationIncidentDiscovery({
 
   useEffect(() => {
     detailRequest.current?.abort();
+    setDetail(undefined);
+    setDetailLoading(false);
+    setReviewError(undefined);
     setReviewNotice(undefined);
-    if (!selectedId) {
-      setDetail(undefined);
+    setReviewStatus("VIEWED");
+    setReasonCode(undefined);
+    setPrivateNotes("");
+
+    if (!selectedId || !canReview) {
       return;
     }
 
     const controller = new AbortController();
     detailRequest.current = controller;
     setDetailLoading(true);
-    setReviewError(undefined);
     void getOrganizationIncidentDetail(
       accessToken,
       organizationId,
@@ -180,7 +192,7 @@ export function OrganizationIncidentDiscovery({
       });
 
     return () => controller.abort();
-  }, [accessToken, organizationId, selectedId]);
+  }, [accessToken, canReview, organizationId, selectedId]);
 
   const loadDiscovery = useCallback(
     async (
@@ -308,9 +320,10 @@ export function OrganizationIncidentDiscovery({
     [incidents],
   );
   const selected = incidents.find((incident) => incident.id === selectedId);
+  const selectedDetail = detail?.id === selectedId ? detail : undefined;
 
   const submitReview = async () => {
-    if (!selectedId) return;
+    if (!canReview || !selectedId || selectedDetail?.id !== selectedId) return;
     if (reviewStatus === "FALSE" && !reasonCode) {
       setReviewError("Choose a reason before marking this incident false.");
       return;
@@ -335,7 +348,7 @@ export function OrganizationIncidentDiscovery({
         },
       );
       setDetail((current) => {
-        if (!current) return current;
+        if (!current || current.id !== selectedId) return current;
         const wasFalse = current.currentReview?.status === "FALSE";
         const isFalse = result.review.status === "FALSE";
         return {
@@ -364,15 +377,21 @@ export function OrganizationIncidentDiscovery({
             }
           : incident,
       ));
-      setReviewNotice(
-        result.rewardAwarded
-          ? "Review saved. Contribution recorded."
-          : result.idempotentReplay
-            ? "This review was already saved."
-            : "Review saved.",
-      );
+      if (selectedIdRef.current === selectedId) {
+        setReviewNotice(
+          result.rewardAwarded
+            ? "Review saved. Contribution recorded."
+            : result.idempotentReplay
+              ? "This review was already saved."
+              : "Review saved.",
+        );
+      }
     } catch (requestError) {
-      setReviewError(describeApiFailure(requestError, "Unable to save this review.").message);
+      if (selectedIdRef.current === selectedId) {
+        setReviewError(
+          describeApiFailure(requestError, "Unable to save this review.").message,
+        );
+      }
     } finally {
       setReviewSubmitting(false);
     }
@@ -533,15 +552,20 @@ export function OrganizationIncidentDiscovery({
             <Text style={styles.detailLabel}>PUBLIC FALSE COUNT</Text>
             <Text style={styles.detailValue}>{selected.falseReviewCount}</Text>
           </View>
-          {detailLoading ? <ActivityIndicator color={colors.primary} /> : null}
-          {detail ? (
+          {canReview && detailLoading ? <ActivityIndicator color={colors.primary} /> : null}
+          {!canReview ? (
+            <Notice
+              tone="info"
+              message="Incident review actions require Organization Admin access."
+            />
+          ) : selectedDetail ? (
             <View style={styles.reviewForm}>
               <Text style={styles.reviewEyebrow}>ORGANIZATION REVIEW</Text>
-              <Text style={styles.reviewContext}>{readable(detail.accessSource)}</Text>
-              <Text style={styles.reviewDescription}>{detail.description}</Text>
-              {detail.photos.length > 0 ? (
+              <Text style={styles.reviewContext}>{readable(selectedDetail.accessSource)}</Text>
+              <Text style={styles.reviewDescription}>{selectedDetail.description}</Text>
+              {selectedDetail.photos.length > 0 ? (
                 <View style={styles.evidenceGrid} accessibilityLabel="Incident evidence">
-                  {detail.photos.map((photo, index) => (
+                  {selectedDetail.photos.map((photo, index) => (
                     <View key={photo.id} style={styles.evidenceItem}>
                       <Image
                         source={{ uri: photo.url }}
@@ -611,8 +635,8 @@ export function OrganizationIncidentDiscovery({
               <Button
                 label={reviewSubmitting ? "Saving review..." : "Save review"}
                 loading={reviewSubmitting}
-                disabled={reviewSubmitting}
-               onPress={() => void submitReview()}
+                disabled={reviewSubmitting || !selectedDetail}
+                onPress={() => void submitReview()}
               />
             </View>
           ) : null}

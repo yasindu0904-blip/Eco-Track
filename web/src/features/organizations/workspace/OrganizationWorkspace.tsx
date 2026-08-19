@@ -121,6 +121,7 @@ export function OrganizationWorkspace({
             key={membership.organization.id}
             accessToken={accessToken}
             organizationId={membership.organization.id}
+            canReview={membership.role === "ORG_ADMIN"}
             onCreateDraftFromIncident={membership.role === "ORG_ADMIN" ? (incidentId) => {
               setLinkedIncidentId(incidentId);
               setActiveTab("event-drafts");

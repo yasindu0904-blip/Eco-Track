@@ -18,16 +18,20 @@ const reporterId = randomUUID();
 const reporterAuthId = randomUUID();
 const otherReporterId = randomUUID();
 const otherReporterAuthId = randomUUID();
+const organizationMemberId = randomUUID();
+const organizationMemberAuthId = randomUUID();
 const organizationBAdminId = randomUUID();
 const organizationBAdminAuthId = randomUUID();
 const categoryId = randomUUID();
 const alternateCategoryId = randomUUID();
 const reporterToken = `incident-reporter-${reporterId}`;
 const otherToken = `incident-other-${otherReporterId}`;
+const organizationMemberToken = `incident-member-${organizationMemberId}`;
 const organizationBToken = `incident-organization-b-${organizationBAdminId}`;
 const submissionId = randomUUID();
 const organizationId = randomUUID();
 const organizationMembershipId = randomUUID();
+const organizationMemberMembershipId = randomUUID();
 const organizationBId = randomUUID();
 const organizationBMembershipId = randomUUID();
 const serviceAreaId = randomUUID();
@@ -53,6 +57,13 @@ const profiles = {
     email: `incident-other-${otherReporterId}@example.com`,
     fullName: "Other Reporter",
     phoneNumber: "+94770000002",
+  },
+  [organizationMemberToken]: {
+    id: organizationMemberId,
+    authUserId: organizationMemberAuthId,
+    email: `incident-member-${organizationMemberId}@example.com`,
+    fullName: "Organization A Member",
+    phoneNumber: "+94770000006",
   },
   [organizationBToken]: {
     id: organizationBAdminId,
@@ -171,13 +182,22 @@ before(async () => {
       officialAddress: "Colombo, Sri Lanka",
       status: "ACTIVE",
       memberships: {
-        create: {
-          id: organizationMembershipId,
-          userId: otherReporterId,
-          role: "ORG_ADMIN",
-          status: "ACTIVE",
-          source: "FIRST_ADMIN",
-        },
+        create: [
+          {
+            id: organizationMembershipId,
+            userId: otherReporterId,
+            role: "ORG_ADMIN",
+            status: "ACTIVE",
+            source: "FIRST_ADMIN",
+          },
+          {
+            id: organizationMemberMembershipId,
+            userId: organizationMemberId,
+            role: "ORG_MEMBER",
+            status: "ACTIVE",
+            source: "ADMIN_ADDED",
+          },
+        ],
       },
     },
   });
@@ -297,7 +317,12 @@ before(async () => {
 after(async () => {
   if (server) await new Promise<void>((resolve, reject) => server?.close((error) => error ? reject(error) : resolve()));
   const organizationIds = [organizationId, organizationBId];
-  const profileIds = [reporterId, otherReporterId, organizationBAdminId];
+  const profileIds = [
+    reporterId,
+    otherReporterId,
+    organizationMemberId,
+    organizationBAdminId,
+  ];
   const contributionIds = (
     await prisma.contributionEvent.findMany({
       where: { incident: { reporterUserId: { in: profileIds } } },
@@ -999,6 +1024,25 @@ test("organization review detail and mutation remain tenant-private and idempote
       await request(
         `/organizations/${organizationId}/incidents/${createdIncidentId}/review`,
         reporterToken,
+        { method: "PATCH", body: JSON.stringify({ status: "VALID" }) },
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationId}/incidents/${createdIncidentId}`,
+        organizationMemberToken,
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationId}/incidents/${createdIncidentId}/review`,
+        organizationMemberToken,
         { method: "PATCH", body: JSON.stringify({ status: "VALID" }) },
       )
     ).status,
