@@ -203,6 +203,7 @@ export function OrganizationWorkspaceScreen({
           key={membership.organization.id}
           accessToken={accessToken}
           organizationId={membership.organization.id}
+          canReview={membership.role === "ORG_ADMIN"}
           onMapInteractionChange={setMapInteracting}
           onCreateDraftFromIncident={membership.role === "ORG_ADMIN" ? (incidentId) => {
             setMapInteracting(false);

@@ -1,8 +1,11 @@
 import { apiRequest } from "../../api/apiClient";
 import type { MapBoundaryFeatureCollection, MapViewport } from "../map";
 import type {
+  OrganizationIncidentDetail,
   OrganizationIncidentPage,
   OrganizationIncidentQuery,
+  OrganizationIncidentReviewInput,
+  OrganizationIncidentReviewMutation,
 } from "./organizationIncidentDiscovery.types";
 
 type DataResponse<T> = { data: T };
@@ -30,6 +33,39 @@ export async function listOrganizationIncidents(
     await apiRequest<DataResponse<OrganizationIncidentPage>>(
       `/organizations/${encodeURIComponent(organizationId)}/incidents?${query}`,
       { accessToken, signal },
+    )
+  ).data;
+}
+
+export async function getOrganizationIncidentDetail(
+  accessToken: string,
+  organizationId: string,
+  incidentId: string,
+  signal?: AbortSignal,
+): Promise<OrganizationIncidentDetail> {
+  return (
+    await apiRequest<DataResponse<OrganizationIncidentDetail>>(
+      `/organizations/${encodeURIComponent(organizationId)}/incidents/${encodeURIComponent(incidentId)}`,
+      { accessToken, signal },
+    )
+  ).data;
+}
+
+export async function updateOrganizationIncidentReview(
+  accessToken: string,
+  organizationId: string,
+  incidentId: string,
+  input: OrganizationIncidentReviewInput,
+): Promise<OrganizationIncidentReviewMutation> {
+  return (
+    await apiRequest<DataResponse<OrganizationIncidentReviewMutation>>(
+      `/organizations/${encodeURIComponent(organizationId)}/incidents/${encodeURIComponent(incidentId)}/review`,
+      {
+        method: "PATCH",
+        accessToken,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(input),
+      },
     )
   ).data;
 }

@@ -113,6 +113,50 @@ export interface OrganizationIncidentListPageDto {
   nextCursor: string | null;
 }
 
+export type IncidentReviewStatusDto = "VIEWED" | "VALID" | "FALSE";
+
+export type IncidentFalseReviewReasonCodeDto =
+  | "INSUFFICIENT_EVIDENCE"
+  | "LOCATION_INCORRECT"
+  | "DUPLICATE_REPORT"
+  | "NOT_AN_ENVIRONMENTAL_INCIDENT"
+  | "OUTSIDE_SERVICE_SCOPE"
+  | "OTHER";
+
+export type OrganizationIncidentAccessSourceDto =
+  | "CURRENT_SERVICE_AREA"
+  | "HISTORICAL_REVIEW"
+  | "LINKED_EVENT";
+
+export interface OrganizationIncidentReviewDto {
+  id: string;
+  status: IncidentReviewStatusDto;
+  reasonCode: string | null;
+  privateNotes: string | null;
+  reviewerName: string;
+  firstViewedAt: string;
+  reviewedAt: string | null;
+  updatedAt: string;
+}
+
+export interface OrganizationIncidentDetailDto extends IncidentDetailDto {
+  falseReviewCount: number;
+  accessSource: OrganizationIncidentAccessSourceDto;
+  currentReview: OrganizationIncidentReviewDto | null;
+}
+
+export interface UpdateOrganizationIncidentReviewInput {
+  status: IncidentReviewStatusDto;
+  reasonCode?: IncidentFalseReviewReasonCodeDto;
+  privateNotes?: string | null;
+}
+
+export interface OrganizationIncidentReviewMutationDto {
+  review: OrganizationIncidentReviewDto;
+  rewardAwarded: boolean;
+  idempotentReplay: boolean;
+}
+
 export interface EvidenceUploadIntentDto {
   storagePath: string;
   token: string;
