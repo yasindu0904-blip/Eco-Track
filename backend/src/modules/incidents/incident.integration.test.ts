@@ -638,6 +638,26 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
     data: { reportedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
   });
 
+  // Keep these rows inside one JavaScript millisecond while retaining distinct
+  // PostgreSQL microseconds. Keyset pagination must not lose any row when an
+  // opaque cursor makes a round trip through the API.
+  await prisma.$executeRaw`
+    UPDATE "incidents"
+    SET "reported_at" =
+      date_trunc('second', NOW()) - INTERVAL '1 hour' +
+      CASE "id"
+        WHEN ${overlapIncidentId}::uuid THEN INTERVAL '900 microseconds'
+        WHEN ${organizationBOnlyIncidentId}::uuid THEN INTERVAL '800 microseconds'
+        WHEN ${boundaryIncidentId}::uuid THEN INTERVAL '700 microseconds'
+        ELSE INTERVAL '0 microseconds'
+      END
+    WHERE "id" IN (
+      ${overlapIncidentId}::uuid,
+      ${organizationBOnlyIncidentId}::uuid,
+      ${boundaryIncidentId}::uuid
+    )
+  `;
+
   await prisma.$executeRaw`
     INSERT INTO "administrative_areas" (
       "id", "official_code", "name_en", "boundary", "source_name",

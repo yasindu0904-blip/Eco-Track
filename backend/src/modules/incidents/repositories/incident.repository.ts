@@ -209,7 +209,7 @@ export async function findPublicSafeIncidentRecordById(
 }
 
 export type OrganizationIncidentDiscoveryCursor = {
-  reportedAt: Date;
+  reportedAt: string;
   id: string;
 };
 
@@ -225,6 +225,7 @@ export type PublicIncidentDiscoveryRow = {
   longitude: number;
   addressText: string | null;
   reportedAt: Date;
+  cursorReportedAt: string;
   falseReviewCount: number;
 };
 
@@ -250,7 +251,7 @@ function incidentDiscoveryFilters(input: PublicIncidentDiscoveryInput) {
     cursor: input.cursor
       ? Prisma.sql`
           AND (incident."reported_at", incident."id") <
-            (${input.cursor.reportedAt}, ${input.cursor.id}::uuid)
+            (${input.cursor.reportedAt}::timestamptz, ${input.cursor.id}::uuid)
         `
       : Prisma.empty,
   };
@@ -280,6 +281,10 @@ export async function listPublicIncidentsByViewport(
       incident."longitude"::double precision AS "longitude",
       incident."address_text" AS "addressText",
       incident."reported_at" AS "reportedAt",
+      to_char(
+        incident."reported_at" AT TIME ZONE 'UTC',
+        'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
+      ) AS "cursorReportedAt",
       (
         SELECT COUNT(DISTINCT review."organization_id")::integer
         FROM "incident_reviews" AS review
@@ -344,6 +349,10 @@ export async function listPublicIncidentsByRadius(
       incident."longitude"::double precision AS "longitude",
       incident."address_text" AS "addressText",
       incident."reported_at" AS "reportedAt",
+      to_char(
+        incident."reported_at" AT TIME ZONE 'UTC',
+        'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
+      ) AS "cursorReportedAt",
       (
         SELECT COUNT(DISTINCT review."organization_id")::integer
         FROM "incident_reviews" AS review
@@ -388,6 +397,7 @@ export type OrganizationIncidentDiscoveryRow = {
   longitude: number;
   addressText: string | null;
   reportedAt: Date;
+  cursorReportedAt: string;
   falseReviewCount: number;
   currentReviewStatus: "VIEWED" | "VALID" | "FALSE" | null;
 };
@@ -419,7 +429,7 @@ export async function listCoveredOrganizationIncidents(
   const cursorFilter = input.cursor
     ? Prisma.sql`
         AND (incident."reported_at", incident."id") <
-          (${input.cursor.reportedAt}, ${input.cursor.id}::uuid)
+          (${input.cursor.reportedAt}::timestamptz, ${input.cursor.id}::uuid)
       `
     : Prisma.empty;
   const viewportFilter = Prisma.sql`
@@ -458,6 +468,10 @@ export async function listCoveredOrganizationIncidents(
       incident."longitude"::double precision AS "longitude",
       incident."address_text" AS "addressText",
       incident."reported_at" AS "reportedAt",
+      to_char(
+        incident."reported_at" AT TIME ZONE 'UTC',
+        'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
+      ) AS "cursorReportedAt",
       (
         SELECT COUNT(DISTINCT review."organization_id")::integer
         FROM "incident_reviews" AS review

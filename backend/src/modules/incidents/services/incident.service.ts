@@ -266,13 +266,15 @@ function decodeIncidentDiscoveryCursor(
     ) as { reportedAt?: unknown; id?: unknown };
     if (
       typeof parsed.reportedAt !== "string" ||
-      typeof parsed.id !== "string"
+      typeof parsed.id !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(
+        parsed.reportedAt,
+      ) ||
+      Number.isNaN(new Date(parsed.reportedAt).getTime())
     ) {
       throw new Error();
     }
-    const reportedAt = new Date(parsed.reportedAt);
-    if (Number.isNaN(reportedAt.getTime())) throw new Error();
-    return { reportedAt, id: parsed.id };
+    return { reportedAt: parsed.reportedAt, id: parsed.id };
   } catch {
     throw new ApplicationError(
       400,
@@ -284,11 +286,11 @@ function decodeIncidentDiscoveryCursor(
 
 function encodeIncidentDiscoveryCursor(record: {
   id: string;
-  reportedAt: Date;
+  cursorReportedAt: string;
 }): string {
   return Buffer.from(
     JSON.stringify({
-      reportedAt: record.reportedAt.toISOString(),
+      reportedAt: record.cursorReportedAt,
       id: record.id,
     }),
     "utf8",
