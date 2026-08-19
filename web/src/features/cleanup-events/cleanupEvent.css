@@ -18,6 +18,19 @@
 .public-event-detail h3 { margin-bottom: .25rem; }
 .public-event-status { display: inline-block; padding: .35rem .65rem; border-radius: 999px; background: #e5f3e8; color: #176c2c; font-weight: 800; font-size: .78rem; }
 .public-event-session { display: grid; gap: .2rem; padding: .8rem 0; border-top: 1px solid #dbe4dc; }
+.event-participation { display: grid; gap: 1rem; margin-top: 1rem; padding: 1.1rem; border: 1px solid #b9d4bf; border-radius: 1rem; background: #f4faf5; }
+.event-participation h3, .event-participation p { margin: .25rem 0; }
+.event-participation-eyebrow { color: #176c2c; font-size: .72rem; font-weight: 900; letter-spacing: .08em; }
+.participation-status { justify-self: start; padding: .3rem .6rem; border-radius: 999px; background: #e5f3e8; color: #176c2c; font-size: .75rem; font-weight: 900; }
+.participation-status.withdrawn, .participation-status.removed { background: #f6e9e5; color: #933629; }
+.participation-session-options { display: grid; gap: .6rem; }
+.participation-session-options label { display: flex; align-items: flex-start; gap: .7rem; padding: .75rem; border: 1px solid #d4dfd4; border-radius: .7rem; background: #fff; cursor: pointer; }
+.participation-session-options input { width: 18px; height: 18px; margin-top: .15rem; }
+.participation-session-options span { display: grid; gap: .2rem; }
+.participation-session-options small { color: #53665a; }
+.participation-tabs { display: flex; gap: .6rem; margin: 1rem 0; }
+.participation-tabs button { padding: .65rem 1rem; border: 1px solid #176c2c; border-radius: .65rem; background: #fff; color: #176c2c; font-weight: 800; cursor: pointer; }
+.participation-tabs button.selected { background: #176c2c; color: #fff; }
 @media (max-width: 800px) { .public-events-layout { grid-template-columns: 1fr; } .public-events-shell { padding: 1rem; } }
 
 .event-editor-header,

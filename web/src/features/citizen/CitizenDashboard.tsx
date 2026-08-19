@@ -17,6 +17,7 @@ interface CitizenDashboardProps {
   onViewIncidentReports: () => void;
   onFindCleanupActivity: () => void;
   onBrowseCleanupEvents: () => void;
+  onViewJoinedCleanupEvents: () => void;
   onOpenImpact: () => void;
   onSignOut: () => void;
 }
@@ -99,6 +100,7 @@ export function CitizenDashboard({
   onViewIncidentReports,
   onFindCleanupActivity,
   onBrowseCleanupEvents,
+  onViewJoinedCleanupEvents,
   onOpenImpact,
   onSignOut,
 }: CitizenDashboardProps) {
@@ -412,6 +414,9 @@ export function CitizenDashboard({
               <p>See published event schedules, locations, and public volunteer instructions.</p>
               <button className="citizen-action-primary" type="button" onClick={onBrowseCleanupEvents}>
                 View published events <CitizenIcon name="arrow" />
+              </button>
+              <button className="citizen-action-secondary" type="button" onClick={onViewJoinedCleanupEvents}>
+                My joined events
               </button>
             </article>
           </div>

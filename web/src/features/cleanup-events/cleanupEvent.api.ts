@@ -10,6 +10,9 @@ import type {
   CleanupEventPublishReadiness,
   CleanupEventPublishResult,
   EventSession,
+  EventParticipation,
+  EventParticipationPage,
+  JoinEventResult,
 } from "./cleanupEvent.types";
 
 const root = (organizationId: string) =>
@@ -172,6 +175,47 @@ export async function listPublicCleanupEvents(token: string, cursor?: string) {
 export async function getPublicCleanupEvent(token: string, eventId: string) {
   return (await apiRequest<{ data: CleanupEventPublicDetail }>(
     `/events/${encodeURIComponent(eventId)}`,
+    { accessToken: token },
+  )).data;
+}
+
+export async function getMyEventParticipation(token: string, eventId: string) {
+  return (await apiRequest<{ data: EventParticipation | null }>(
+    `/events/${encodeURIComponent(eventId)}/participation`,
+    { accessToken: token },
+  )).data;
+}
+
+export async function joinCleanupEvent(token: string, eventId: string, sessionIds: string[]) {
+  return (await apiRequest<{ data: JoinEventResult }>(
+    `/events/${encodeURIComponent(eventId)}/participation`,
+    { accessToken: token, method: "POST", ...json({ sessionIds }) },
+  )).data;
+}
+
+export async function updateEventAvailability(token: string, eventId: string, sessionIds: string[]) {
+  return (await apiRequest<{ data: EventParticipation }>(
+    `/events/${encodeURIComponent(eventId)}/participation/availability`,
+    { accessToken: token, method: "PUT", ...json({ sessionIds }) },
+  )).data;
+}
+
+export async function withdrawFromCleanupEvent(token: string, eventId: string) {
+  return (await apiRequest<{ data: EventParticipation }>(
+    `/events/${encodeURIComponent(eventId)}/participation/withdraw`,
+    { accessToken: token, method: "POST" },
+  )).data;
+}
+
+export async function listMyEventParticipations(
+  token: string,
+  scope: "active" | "history" | "all" = "active",
+  cursor?: string,
+) {
+  const query = new URLSearchParams({ scope, limit: "20" });
+  if (cursor) query.set("cursor", cursor);
+  return (await apiRequest<{ data: EventParticipationPage }>(
+    `/event-participations/me?${query}`,
     { accessToken: token },
   )).data;
 }

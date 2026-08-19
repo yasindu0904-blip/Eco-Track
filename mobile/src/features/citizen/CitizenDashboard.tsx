@@ -19,6 +19,7 @@ type CitizenDashboardProps = {
   onViewReports: () => void;
   onFindCleanupActivity: () => void;
   onBrowseCleanupEvents: () => void;
+  onViewJoinedCleanupEvents: () => void;
   onOpenImpact: () => void;
   onSignOut: () => void;
 };
@@ -36,6 +37,7 @@ export function CitizenDashboard({
   onViewReports,
   onFindCleanupActivity,
   onBrowseCleanupEvents,
+  onViewJoinedCleanupEvents,
   onOpenImpact,
   onSignOut,
 }: CitizenDashboardProps) {
@@ -133,6 +135,7 @@ export function CitizenDashboard({
         <Text style={sharedStyles.sectionTitle}>Browse cleanup events</Text>
         <Text style={sharedStyles.sectionSubtitle}>See public schedules, event locations, and volunteer instructions.</Text>
         <Button label="View published events" onPress={onBrowseCleanupEvents} />
+        <Button label="My joined events" variant="secondary" onPress={onViewJoinedCleanupEvents} />
       </View>
 
       <View style={sharedStyles.card}>

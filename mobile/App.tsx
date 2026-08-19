@@ -24,7 +24,7 @@ import { OrganizationWorkspaceScreen } from "./src/features/organizations/Organi
 import type { OrganizationApplication } from "./src/features/organizations/organizationApplication.types";
 import { SuperAdminDashboard } from "./src/features/superAdmin/SuperAdminDashboard";
 import { MyImpactScreen } from "./src/features/rewards";
-import { PublicCleanupEventsScreen } from "./src/features/cleanupEvents";
+import { MyJoinedCleanupEventsScreen, PublicCleanupEventsScreen } from "./src/features/cleanupEvents";
 
 type CitizenView =
   | "dashboard"
@@ -34,6 +34,7 @@ type CitizenView =
   | "organizationWorkspace"
   | "findCleanupActivity"
   | "cleanupEvents"
+  | "joinedCleanupEvents"
   | "reportIncident"
   | "myReports"
   | "impact";
@@ -50,6 +51,7 @@ export default function App() {
     useState<OrganizationApplication | null>(null);
   const [submittedIncident, setSubmittedIncident] =
     useState<IncidentDetail | null>(null);
+  const [selectedCleanupEventId, setSelectedCleanupEventId] = useState<string>();
 
   const reloadActiveMemberships = useCallback(async () => {
     const requestVersion = ++membershipRequestVersion.current;
@@ -235,7 +237,9 @@ export default function App() {
         />
       );
     } else if (citizenView === "cleanupEvents") {
-      content = <PublicCleanupEventsScreen accessToken={authentication.accessToken} onBack={() => setCitizenView("dashboard")} />;
+      content = <PublicCleanupEventsScreen accessToken={authentication.accessToken} initialEventId={selectedCleanupEventId} onBack={() => { setSelectedCleanupEventId(undefined); setCitizenView("dashboard"); }} />;
+    } else if (citizenView === "joinedCleanupEvents") {
+      content = <MyJoinedCleanupEventsScreen accessToken={authentication.accessToken} onBack={() => setCitizenView("dashboard")} onOpenEvent={(eventId) => { setSelectedCleanupEventId(eventId); setCitizenView("cleanupEvents"); }} />;
     } else if (citizenView === "reportIncident") {
       content = (
         <IncidentReportScreen
@@ -291,6 +295,7 @@ export default function App() {
           onViewReports={() => setCitizenView("myReports")}
           onFindCleanupActivity={() => setCitizenView("findCleanupActivity")}
           onBrowseCleanupEvents={() => setCitizenView("cleanupEvents")}
+          onViewJoinedCleanupEvents={() => setCitizenView("joinedCleanupEvents")}
           onOpenImpact={() => setCitizenView("impact")}
           onSignOut={() => void signOut()}
         />

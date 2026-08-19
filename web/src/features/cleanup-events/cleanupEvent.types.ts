@@ -101,3 +101,23 @@ export type CleanupEventPublishReadiness = {
   checks: Array<{ code: string; ready: boolean; message: string }>;
 };
 export type CleanupEventPublishResult = { event: CleanupEventPublicDetail; incidentUpdated: boolean };
+
+export type EventParticipation = {
+  id: string;
+  status: "JOINED" | "WITHDRAWN" | "REMOVED";
+  joinedAt: string;
+  withdrawnAt: string | null;
+  availableSessionIds: string[];
+  event: CleanupEventPublicDetail;
+};
+
+export type EventParticipationPage = {
+  items: EventParticipation[];
+  nextCursor: string | null;
+};
+
+export type JoinEventResult = {
+  participation: EventParticipation;
+  created: boolean;
+  rejoined: boolean;
+};

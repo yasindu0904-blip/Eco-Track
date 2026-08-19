@@ -106,6 +106,9 @@ export function buildAbilityForRequest(
   can(Actions.Read, Subjects.CleanupEvent);
   can(Actions.Read, Subjects.EventSession);
   can(Actions.Join, Subjects.CleanupEvent);
+  can(Actions.ReadOwn, Subjects.EventParticipant, {
+    userId: profile.id,
+  });
   can(Actions.Withdraw, Subjects.EventParticipant, {
     userId: profile.id,
   });
