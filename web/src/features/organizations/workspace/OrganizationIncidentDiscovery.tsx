@@ -19,6 +19,7 @@ import type { OrganizationIncidentSummary } from "./organizationIncidentDiscover
 interface OrganizationIncidentDiscoveryProps {
   accessToken: string;
   organizationId: string;
+  onCreateDraftFromIncident?: (incidentId: string) => void;
 }
 
 const statusOptions = [
@@ -67,6 +68,7 @@ function readable(value: string): string {
 export function OrganizationIncidentDiscovery({
   accessToken,
   organizationId,
+  onCreateDraftFromIncident,
 }: OrganizationIncidentDiscoveryProps) {
   const [categories, setCategories] = useState<IncidentCategory[]>([]);
   const [boundaries, setBoundaries] =
@@ -368,6 +370,14 @@ export function OrganizationIncidentDiscovery({
             <div><dt>Your review</dt><dd>{selected.currentReviewStatus ? readable(selected.currentReviewStatus) : "Not reviewed"}</dd></div>
             <div><dt>Public false count</dt><dd>{selected.falseReviewCount}</dd></div>
           </dl>
+          {onCreateDraftFromIncident && (
+            <button
+              type="button"
+              onClick={() => onCreateDraftFromIncident(selected.id)}
+            >
+              Create cleanup-event draft
+            </button>
+          )}
         </article>
       )}
     </section>

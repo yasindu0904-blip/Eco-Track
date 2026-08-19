@@ -1,0 +1,139 @@
+import { apiRequest } from "../../api/apiClient";
+import type {
+  CleanupEventDraft,
+  CleanupEventDraftInput,
+  CleanupEventDraftPage,
+  CleanupEventSessionInput,
+  EventSession,
+} from "./cleanupEvent.types";
+
+const root = (organizationId: string) =>
+  `/organizations/${encodeURIComponent(organizationId)}/events`;
+
+const json = (body: unknown) => ({
+  body: JSON.stringify(body),
+  headers: { "Content-Type": "application/json" },
+});
+
+export async function listDrafts(
+  token: string,
+  organizationId: string,
+  cursor?: string,
+) {
+  const query = new URLSearchParams({ limit: "50" });
+  if (cursor) query.set("cursor", cursor);
+  return (
+    await apiRequest<{ data: CleanupEventDraftPage }>(
+      `${root(organizationId)}/drafts?${query}`,
+      { accessToken: token },
+    )
+  ).data;
+}
+
+export async function getDraft(token: string, organizationId: string, draftId: string) {
+  return (
+    await apiRequest<{ data: CleanupEventDraft }>(
+      `${root(organizationId)}/drafts/${encodeURIComponent(draftId)}`,
+      { accessToken: token },
+    )
+  ).data;
+}
+
+export async function createDraft(
+  token: string,
+  organizationId: string,
+  input: CleanupEventDraftInput,
+) {
+  return (
+    await apiRequest<{ data: CleanupEventDraft }>(
+      `${root(organizationId)}/drafts`,
+      { accessToken: token, method: "POST", ...json(input) },
+    )
+  ).data;
+}
+
+export async function updateDraft(
+  token: string,
+  organizationId: string,
+  draftId: string,
+  input: Partial<CleanupEventDraftInput>,
+) {
+  return (
+    await apiRequest<{ data: CleanupEventDraft }>(
+      `${root(organizationId)}/drafts/${encodeURIComponent(draftId)}`,
+      { accessToken: token, method: "PATCH", ...json(input) },
+    )
+  ).data;
+}
+
+export async function discardDraft(token: string, organizationId: string, draftId: string) {
+  await apiRequest(
+    `${root(organizationId)}/drafts/${encodeURIComponent(draftId)}`,
+    { accessToken: token, method: "DELETE" },
+  );
+}
+
+export async function addSession(
+  token: string,
+  organizationId: string,
+  eventId: string,
+  input: CleanupEventSessionInput,
+) {
+  return (
+    await apiRequest<{ data: EventSession }>(
+      `${root(organizationId)}/${encodeURIComponent(eventId)}/sessions`,
+      { accessToken: token, method: "POST", ...json(input) },
+    )
+  ).data;
+}
+
+export async function updateSession(
+  token: string,
+  organizationId: string,
+  eventId: string,
+  sessionId: string,
+  input: CleanupEventSessionInput,
+) {
+  return (
+    await apiRequest<{ data: EventSession }>(
+      `${root(organizationId)}/${encodeURIComponent(eventId)}/sessions/${encodeURIComponent(sessionId)}`,
+      { accessToken: token, method: "PATCH", ...json(input) },
+    )
+  ).data;
+}
+
+export async function removeSession(
+  token: string,
+  organizationId: string,
+  eventId: string,
+  sessionId: string,
+) {
+  await apiRequest(
+    `${root(organizationId)}/${encodeURIComponent(eventId)}/sessions/${encodeURIComponent(sessionId)}`,
+    { accessToken: token, method: "DELETE" },
+  );
+}
+
+export async function assignCoordinator(
+  token: string,
+  organizationId: string,
+  eventId: string,
+  membershipId: string,
+) {
+  await apiRequest(
+    `${root(organizationId)}/${encodeURIComponent(eventId)}/coordinators`,
+    { accessToken: token, method: "POST", ...json({ membershipId }) },
+  );
+}
+
+export async function removeCoordinator(
+  token: string,
+  organizationId: string,
+  eventId: string,
+  membershipId: string,
+) {
+  await apiRequest(
+    `${root(organizationId)}/${encodeURIComponent(eventId)}/coordinators`,
+    { accessToken: token, method: "DELETE", ...json({ membershipId }) },
+  );
+}

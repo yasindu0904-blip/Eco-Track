@@ -21,6 +21,7 @@ import { createOrganizationApplicationRouter } from "./modules/organizations/app
 import { createOrganizationReviewRouter } from "./modules/organizations/review/organizationReview.routes.js";
 import { createProfileRouter } from "./modules/profiles/profile.routes.js";
 import { createRewardRouter } from "./modules/rewards/reward.routes.js";
+import { createCleanupEventRouter } from "./modules/cleanupEvents/cleanupEvents.routes.js";
 
 import type { AuthenticationDependencies } from "./modules/auth/auth.types.js";
 import type { NotificationDependencies } from "./modules/notifications/notification.dependencies.js";
@@ -28,6 +29,7 @@ import type { MembershipSelfServiceDependencies } from "./modules/memberships/se
 import type { IncidentDependencies } from "./modules/incidents/incident.dependencies.js";
 import type { OrganizationApplicationDependencies } from "./modules/organizations/application/application.dependencies.js";
 import type { RewardDependencies } from "./modules/rewards/reward.dependencies.js";
+import type { CleanupEventDependencies } from "./modules/cleanupEvents/cleanupEvent.dependencies.js";
 
 type CreateAppOptions = {
   webOrigin?: string;
@@ -39,6 +41,7 @@ type CreateAppOptions = {
   incidentDependencies?: IncidentDependencies;
   organizationApplicationDependencies?: OrganizationApplicationDependencies;
   rewardDependencies?: RewardDependencies;
+  cleanupEventDependencies?: CleanupEventDependencies;
 };
 
 export function createApp(
@@ -133,6 +136,13 @@ export function createApp(
         options.authorizationDependencies,
         options.cleanupWorkflowDependencies,
       ),
+    );
+  }
+
+  if (options.cleanupEventDependencies) {
+    app.use(
+      "/api/v1",
+      createCleanupEventRouter(authenticationDependencies, options.cleanupEventDependencies),
     );
   }
 
