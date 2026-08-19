@@ -822,7 +822,7 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
   let cursor: string | null = null;
   do {
     const pageResponse = await request(
-      `/organizations/${organizationBId}/incidents?west=79.8&south=6.85&east=80.15&north=7.12&zoom=12&limit=1${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+      `/organizations/${organizationBId}/incidents?west=79.8&south=6.85&east=80.15&north=7.12&zoom=12&limit=1&categoryId=${categoryId}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
       organizationBToken,
     );
     assert.equal(pageResponse.status, 200);
@@ -835,7 +835,10 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
     cursor = page.nextCursor;
   } while (cursor);
   assert.equal(new Set(pagedIds).size, pagedIds.length);
-  assert.deepEqual(new Set(pagedIds), new Set(organizationBItems.map(({ id }) => id)));
+  assert.deepEqual(
+    new Set(pagedIds),
+    new Set([organizationBOnlyIncidentId, boundaryIncidentId]),
+  );
 
   await prisma.incidentReview.createMany({
     data: [
