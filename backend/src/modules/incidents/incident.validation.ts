@@ -10,7 +10,9 @@ import {
 } from "../maps/map.validation.js";
 import {
   INCIDENT_EVIDENCE_LIMITS,
+  INCIDENT_FALSE_REVIEW_REASON_CODES,
   INCIDENT_LIST_LIMITS,
+  INCIDENT_REVIEW_LIMITS,
 } from "./incident.constants.js";
 
 const contentTypeSchema = z.enum(
@@ -81,6 +83,44 @@ export const createIncidentSchema = z.object({
 
 export const incidentIdParametersSchema = z.object({ id: z.uuid() }).strict();
 
+export const updateOrganizationIncidentReviewSchema = z.object({
+  status: z.enum(["VIEWED", "VALID", "FALSE"]),
+  reasonCode: z.enum(INCIDENT_FALSE_REVIEW_REASON_CODES).optional(),
+  privateNotes: z.string().trim()
+    .max(INCIDENT_REVIEW_LIMITS.privateNotesMaximumLength)
+    .nullable()
+    .optional(),
+}).strict().superRefine((review, context) => {
+  if (review.status === "FALSE" && !review.reasonCode) {
+    context.addIssue({
+      code: "custom",
+      path: ["reasonCode"],
+      message: "A controlled reason code is required for a FALSE review.",
+    });
+  }
+
+  if (review.status !== "FALSE" && review.reasonCode) {
+    context.addIssue({
+      code: "custom",
+      path: ["reasonCode"],
+      message: "A reason code is only allowed for a FALSE review.",
+    });
+  }
+
+  if (
+    review.status === "FALSE" &&
+    review.reasonCode === "OTHER" &&
+    (review.privateNotes?.length ?? 0) <
+      INCIDENT_REVIEW_LIMITS.otherReasonMinimumNotesLength
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["privateNotes"],
+      message: "Explain an OTHER reason in at least 10 characters.",
+    });
+  }
+});
+
 export const incidentListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(INCIDENT_LIST_LIMITS.maxLimit)
     .default(INCIDENT_LIST_LIMITS.defaultLimit),
@@ -129,4 +169,7 @@ export type ValidatedOrganizationIncidentDiscovery = z.infer<
 >;
 export type ValidatedOrganizationServiceAreaBoundaryQuery = z.infer<
   typeof organizationServiceAreaBoundaryQuerySchema
+>;
+export type ValidatedOrganizationIncidentReview = z.infer<
+  typeof updateOrganizationIncidentReviewSchema
 >;

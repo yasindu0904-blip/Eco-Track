@@ -5,6 +5,8 @@ import { Subjects } from "../../authorization/subjects.js";
 import { abilityMiddleware } from "../../middleware/ability.middleware.js";
 import { createAuthenticationMiddleware } from "../../middleware/auth.middleware.js";
 import { authorize } from "../../middleware/authorize.middleware.js";
+import { authorizeResource } from "../../middleware/authorize.middleware.js";
+import { createAuthorizationSubject } from "../../authorization/subjects.js";
 import { requireCompletedProfile } from "../../middleware/requireCompletedProfile.middleware.js";
 import { createTenantMiddleware } from "../../middleware/tenant.middleware.js";
 import type { AuthenticationDependencies } from "../auth/auth.types.js";
@@ -13,6 +15,7 @@ import {
   createEvidenceUploadIntentsController,
   createIncidentController,
   getMyIncidentController,
+  getOrganizationIncidentDetailController,
   getPublicSafeIncidentController,
   listIncidentCategoriesController,
   listMyIncidentsController,
@@ -20,6 +23,7 @@ import {
   listOrganizationIncidentsController,
   listOrganizationServiceAreaBoundariesController,
   listPublicIncidentsController,
+  updateOrganizationIncidentReviewController,
 } from "./controllers/incident.controllers.js";
 
 export function createIncidentRouter(
@@ -83,6 +87,28 @@ export function createIncidentRouter(
     ...tenantRoute,
     authorize(Actions.Read, Subjects.Incident),
     listOrganizationIncidentsController(incidentDependencies),
+  );
+  router.get(
+    "/organizations/:organizationId/incidents/:id",
+    ...tenantRoute,
+    authorizeResource(
+      Actions.Read,
+      (request) => createAuthorizationSubject(Subjects.IncidentReview, {
+        organizationId: request.tenant!.organization.id,
+      }),
+    ),
+    getOrganizationIncidentDetailController(incidentDependencies),
+  );
+  router.patch(
+    "/organizations/:organizationId/incidents/:id/review",
+    ...tenantRoute,
+    authorizeResource(
+      Actions.Review,
+      (request) => createAuthorizationSubject(Subjects.IncidentReview, {
+        organizationId: request.tenant!.organization.id,
+      }),
+    ),
+    updateOrganizationIncidentReviewController(incidentDependencies),
   );
   router.get(
     "/organizations/:organizationId/service-area-boundaries",

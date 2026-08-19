@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { describeApiFailure } from "../../api/apiError";
 import { Button, Notice, sharedStyles } from "../../components/ui";
@@ -14,10 +14,17 @@ import {
   type MapViewportChangeHandler,
 } from "../map";
 import {
+  getOrganizationIncidentDetail,
   listOrganizationIncidents,
   listOrganizationServiceAreaBoundaries,
+  updateOrganizationIncidentReview,
 } from "./organizationIncidentDiscovery.api";
-import type { OrganizationIncidentSummary } from "./organizationIncidentDiscovery.types";
+import type {
+  OrganizationIncidentDetail,
+  OrganizationIncidentFalseReasonCode,
+  OrganizationIncidentReviewStatus,
+  OrganizationIncidentSummary,
+} from "./organizationIncidentDiscovery.types";
 
 type Props = {
   accessToken: string;
@@ -39,6 +46,18 @@ const times = [
   { value: "7d", label: "7 days", milliseconds: 7 * 24 * 60 * 60 * 1000 },
   { value: "30d", label: "30 days", milliseconds: 30 * 24 * 60 * 60 * 1000 },
 ] as const;
+
+const reviewReasons: Array<{
+  value: OrganizationIncidentFalseReasonCode;
+  label: string;
+}> = [
+  { value: "INSUFFICIENT_EVIDENCE", label: "Insufficient evidence" },
+  { value: "LOCATION_INCORRECT", label: "Location is incorrect" },
+  { value: "DUPLICATE_REPORT", label: "Duplicate report" },
+  { value: "NOT_AN_ENVIRONMENTAL_INCIDENT", label: "Not an environmental incident" },
+  { value: "OUTSIDE_SERVICE_SCOPE", label: "Outside service scope" },
+  { value: "OTHER", label: "Other" },
+];
 
 type DiscoveryFilters = {
   status: (typeof statuses)[number]["value"];
@@ -90,7 +109,16 @@ export function OrganizationIncidentDiscovery({
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string>();
+  const [detail, setDetail] = useState<OrganizationIncidentDetail>();
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [reviewStatus, setReviewStatus] = useState<OrganizationIncidentReviewStatus>("VIEWED");
+  const [reasonCode, setReasonCode] = useState<OrganizationIncidentFalseReasonCode>();
+  const [privateNotes, setPrivateNotes] = useState("");
+  const [reviewError, setReviewError] = useState<string>();
+  const [reviewNotice, setReviewNotice] = useState<string>();
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const activeRequest = useRef<AbortController | undefined>(undefined);
+  const detailRequest = useRef<AbortController | undefined>(undefined);
 
   useEffect(() => {
     let active = true;
@@ -112,6 +140,47 @@ export function OrganizationIncidentDiscovery({
   }, [accessToken]);
 
   useEffect(() => () => activeRequest.current?.abort(), []);
+
+  useEffect(() => {
+    detailRequest.current?.abort();
+    setReviewNotice(undefined);
+    if (!selectedId) {
+      setDetail(undefined);
+      return;
+    }
+
+    const controller = new AbortController();
+    detailRequest.current = controller;
+    setDetailLoading(true);
+    setReviewError(undefined);
+    void getOrganizationIncidentDetail(
+      accessToken,
+      organizationId,
+      selectedId,
+      controller.signal,
+    )
+      .then((loaded) => {
+        if (controller.signal.aborted) return;
+        setDetail(loaded);
+        setReviewStatus(loaded.currentReview?.status ?? "VIEWED");
+        setReasonCode(
+          (loaded.currentReview?.reasonCode as OrganizationIncidentFalseReasonCode | null) ?? undefined,
+        );
+        setPrivateNotes(loaded.currentReview?.privateNotes ?? "");
+      })
+      .catch((requestError: unknown) => {
+        if (!controller.signal.aborted) {
+          setReviewError(
+            describeApiFailure(requestError, "Unable to load the incident details.").message,
+          );
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDetailLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [accessToken, organizationId, selectedId]);
 
   const loadDiscovery = useCallback(
     async (
@@ -239,6 +308,75 @@ export function OrganizationIncidentDiscovery({
     [incidents],
   );
   const selected = incidents.find((incident) => incident.id === selectedId);
+
+  const submitReview = async () => {
+    if (!selectedId) return;
+    if (reviewStatus === "FALSE" && !reasonCode) {
+      setReviewError("Choose a reason before marking this incident false.");
+      return;
+    }
+    if (reviewStatus === "FALSE" && reasonCode === "OTHER" && privateNotes.trim().length < 10) {
+      setReviewError("Explain an OTHER reason in at least 10 characters.");
+      return;
+    }
+
+    setReviewSubmitting(true);
+    setReviewError(undefined);
+    setReviewNotice(undefined);
+    try {
+      const result = await updateOrganizationIncidentReview(
+        accessToken,
+        organizationId,
+        selectedId,
+        {
+          status: reviewStatus,
+          ...(reviewStatus === "FALSE" && reasonCode ? { reasonCode } : {}),
+          privateNotes: privateNotes.trim() || null,
+        },
+      );
+      setDetail((current) => {
+        if (!current) return current;
+        const wasFalse = current.currentReview?.status === "FALSE";
+        const isFalse = result.review.status === "FALSE";
+        return {
+          ...current,
+          currentReview: result.review,
+          falseReviewCount: Math.max(
+            0,
+            current.falseReviewCount + (isFalse && !wasFalse ? 1 : wasFalse && !isFalse ? -1 : 0),
+          ),
+        };
+      });
+      setIncidents((current) => current.map((incident) =>
+        incident.id === selectedId
+          ? {
+              ...incident,
+              falseReviewCount: Math.max(
+                0,
+                incident.falseReviewCount +
+                  (result.review.status === "FALSE" && incident.currentReviewStatus !== "FALSE"
+                    ? 1
+                    : result.review.status !== "FALSE" && incident.currentReviewStatus === "FALSE"
+                      ? -1
+                      : 0),
+              ),
+              currentReviewStatus: result.review.status,
+            }
+          : incident,
+      ));
+      setReviewNotice(
+        result.rewardAwarded
+          ? "Review saved. Contribution recorded."
+          : result.idempotentReplay
+            ? "This review was already saved."
+            : "Review saved.",
+      );
+    } catch (requestError) {
+      setReviewError(describeApiFailure(requestError, "Unable to save this review.").message);
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -395,6 +533,89 @@ export function OrganizationIncidentDiscovery({
             <Text style={styles.detailLabel}>PUBLIC FALSE COUNT</Text>
             <Text style={styles.detailValue}>{selected.falseReviewCount}</Text>
           </View>
+          {detailLoading ? <ActivityIndicator color={colors.primary} /> : null}
+          {detail ? (
+            <View style={styles.reviewForm}>
+              <Text style={styles.reviewEyebrow}>ORGANIZATION REVIEW</Text>
+              <Text style={styles.reviewContext}>{readable(detail.accessSource)}</Text>
+              <Text style={styles.reviewDescription}>{detail.description}</Text>
+              {detail.photos.length > 0 ? (
+                <View style={styles.evidenceGrid} accessibilityLabel="Incident evidence">
+                  {detail.photos.map((photo, index) => (
+                    <View key={photo.id} style={styles.evidenceItem}>
+                      <Image
+                        source={{ uri: photo.url }}
+                        accessibilityLabel={photo.caption || `Incident evidence ${index + 1}`}
+                        style={styles.evidencePhoto}
+                      />
+                      {photo.caption ? <Text style={styles.evidenceCaption}>{photo.caption}</Text> : null}
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.reviewDescription}>No photo evidence was submitted.</Text>
+              )}
+              <Text style={styles.reviewLabel}>REVIEW STATUS</Text>
+              <View style={styles.reviewChoices}>
+                {(["VIEWED", "VALID", "FALSE"] as OrganizationIncidentReviewStatus[]).map((statusOption) => (
+                  <Pressable
+                    key={statusOption}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: reviewStatus === statusOption }}
+                    disabled={reviewSubmitting}
+                    onPress={() => {
+                      setReviewStatus(statusOption);
+                      if (statusOption !== "FALSE") setReasonCode(undefined);
+                    }}
+                    style={[styles.reviewChoice, reviewStatus === statusOption && styles.reviewChoiceSelected]}
+                  >
+                    <Text style={[styles.reviewChoiceText, reviewStatus === statusOption && styles.reviewChoiceTextSelected]}>
+                      {readable(statusOption)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              {reviewStatus === "FALSE" ? (
+                <>
+                  <Text style={styles.reviewLabel}>FALSE REASON</Text>
+                  <View style={styles.reviewChoices}>
+                    {reviewReasons.map((reason) => (
+                      <Pressable
+                        key={reason.value}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: reasonCode === reason.value }}
+                        disabled={reviewSubmitting}
+                        onPress={() => setReasonCode(reason.value)}
+                        style={[styles.reviewChoice, reasonCode === reason.value && styles.reviewChoiceSelected]}
+                      >
+                        <Text style={[styles.reviewChoiceText, reasonCode === reason.value && styles.reviewChoiceTextSelected]}>
+                          {reason.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  <Text style={styles.reviewLabel}>PRIVATE NOTES</Text>
+                  <TextInput
+                    multiline
+                    value={privateNotes}
+                    editable={!reviewSubmitting}
+                    maxLength={2000}
+                    onChangeText={setPrivateNotes}
+                    placeholder="Visible only to authorized organization users."
+                    style={styles.reviewInput}
+                  />
+                </>
+              ) : null}
+              {reviewError ? <Notice tone="error" message={reviewError} /> : null}
+              {reviewNotice ? <Notice tone="success" message={reviewNotice} /> : null}
+              <Button
+                label={reviewSubmitting ? "Saving review..." : "Save review"}
+                loading={reviewSubmitting}
+                disabled={reviewSubmitting}
+               onPress={() => void submitReview()}
+              />
+            </View>
+          ) : null}
           {onCreateDraftFromIncident ? (
             <Button
               label="Create cleanup-event draft"
@@ -433,4 +654,36 @@ const styles = StyleSheet.create({
   detail: { borderRadius: 8 },
   detailLabel: { color: colors.textMuted, fontSize: 11, fontWeight: "900" },
   detailValue: { color: colors.text, fontSize: 14, fontWeight: "900" },
+  reviewForm: { gap: spacing.sm, marginTop: spacing.sm },
+  reviewEyebrow: { color: colors.primary, fontSize: 11, fontWeight: "900", letterSpacing: 1 },
+  reviewContext: { color: colors.text, fontSize: 15, fontWeight: "900" },
+  reviewDescription: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
+  evidenceGrid: { gap: spacing.sm },
+  evidenceItem: { gap: spacing.xs },
+  evidencePhoto: { width: "100%", height: 180, borderRadius: 8, backgroundColor: colors.border },
+  evidenceCaption: { color: colors.textMuted, fontSize: 12 },
+  reviewLabel: { color: colors.textMuted, fontSize: 11, fontWeight: "900", letterSpacing: 1 },
+  reviewChoices: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+  reviewChoice: {
+    minHeight: 38,
+    justifyContent: "center",
+    paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+  },
+  reviewChoiceSelected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  reviewChoiceText: { color: colors.textMuted, fontSize: 12, fontWeight: "800" },
+  reviewChoiceTextSelected: { color: colors.primary },
+  reviewInput: {
+    minHeight: 100,
+    padding: spacing.sm,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+    textAlignVertical: "top",
+  },
 });

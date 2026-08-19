@@ -13,3 +13,17 @@ export const INCIDENT_SUBMISSION_RATE_LIMIT = {
   maximum: 5,
   windowMilliseconds: 10 * 60 * 1000,
 } as const;
+
+export const INCIDENT_FALSE_REVIEW_REASON_CODES = [
+  "INSUFFICIENT_EVIDENCE",
+  "LOCATION_INCORRECT",
+  "DUPLICATE_REPORT",
+  "NOT_AN_ENVIRONMENTAL_INCIDENT",
+  "OUTSIDE_SERVICE_SCOPE",
+  "OTHER",
+] as const;
+
+export const INCIDENT_REVIEW_LIMITS = {
+  privateNotesMaximumLength: 2_000,
+  otherReasonMinimumNotesLength: 10,
+} as const;

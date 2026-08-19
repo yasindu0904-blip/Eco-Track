@@ -298,6 +298,26 @@ after(async () => {
   if (server) await new Promise<void>((resolve, reject) => server?.close((error) => error ? reject(error) : resolve()));
   const organizationIds = [organizationId, organizationBId];
   const profileIds = [reporterId, otherReporterId, organizationBAdminId];
+  const contributionIds = (
+    await prisma.contributionEvent.findMany({
+      where: { incident: { reporterUserId: { in: profileIds } } },
+      select: { id: true },
+    })
+  ).map(({ id }) => id);
+  if (contributionIds.length > 0) {
+    await prisma.userAchievement.deleteMany({
+      where: { awardedFromContributionId: { in: contributionIds } },
+    });
+    await prisma.contributionEvent.deleteMany({
+      where: { id: { in: contributionIds } },
+    });
+  }
+  await prisma.auditLog.deleteMany({
+    where: {
+      organizationId: { in: organizationIds },
+      action: "INCIDENT_REVIEW_UPDATED",
+    },
+  });
   await prisma.cleanupEvent.deleteMany({ where: { organizationId: { in: organizationIds } } });
   await prisma.incidentReview.deleteMany({ where: { organizationId: { in: organizationIds } } });
   await prisma.incident.deleteMany({ where: { reporterUserId: { in: profileIds } } });
@@ -752,7 +772,7 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
   assert.deepEqual(alternateItems.map(({ id }) => id), [overlapIncidentId]);
 
   const resolvedResponse = await request(
-    `/organizations/${organizationBId}/incidents?${query}&status=RESOLVED`,
+    `/organizations/${organizationBId}/incidents?${query}&status=RESOLVED&categoryId=${categoryId}`,
     organizationBToken,
   );
   const resolvedItems = (
@@ -848,6 +868,49 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
   assert.equal("currentReviewStatus" in publicOverlap, false);
   assert.equal("privateNotes" in publicOverlap, false);
 
+  const organizationAOverlapDetail = await request(
+    `/organizations/${organizationId}/incidents/${overlapIncidentId}`,
+    otherToken,
+  );
+  assert.equal(organizationAOverlapDetail.status, 200);
+  const organizationAOverlapReview = (
+    await organizationAOverlapDetail.json() as {
+      data: { currentReview: { privateNotes: string } };
+    }
+  ).data.currentReview;
+  assert.equal(organizationAOverlapReview.privateNotes, "Organization A private overlap note");
+
+  const organizationBOverlapDetail = await request(
+    `/organizations/${organizationBId}/incidents/${overlapIncidentId}`,
+    organizationBToken,
+  );
+  assert.equal(organizationBOverlapDetail.status, 200);
+  const organizationBOverlapReview = (
+    await organizationBOverlapDetail.json() as {
+      data: { currentReview: { privateNotes: string } };
+    }
+  ).data.currentReview;
+  assert.equal(organizationBOverlapReview.privateNotes, "Organization B private overlap note");
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationId}/incidents/${overlapIncidentId}`,
+        organizationBToken,
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationId}/incidents/${overlapIncidentId}/review`,
+        organizationBToken,
+        { method: "PATCH", body: JSON.stringify({ status: "VALID" }) },
+      )
+    ).status,
+    403,
+  );
+
   await prisma.organizationServiceArea.updateMany({
     where: { organizationId },
     data: { status: "INACTIVE" },
@@ -890,6 +953,179 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
     where: { organizationId },
     data: { status: "ACTIVE" },
   });
+});
+
+test("organization review detail and mutation remain tenant-private and idempotent", async () => {
+  const detailResponse = await request(
+    `/organizations/${organizationId}/incidents/${createdIncidentId}`,
+    otherToken,
+  );
+  assert.equal(detailResponse.status, 200);
+  const initialDetail = (
+    await detailResponse.json() as {
+      data: Record<string, unknown> & {
+        accessSource: string;
+        currentReview: unknown;
+      };
+    }
+  ).data;
+  assert.equal(initialDetail.accessSource, "CURRENT_SERVICE_AREA");
+  assert.equal(initialDetail.currentReview, null);
+  assert.equal("reporterUserId" in initialDetail, false);
+  assert.equal("email" in initialDetail, false);
+  assert.equal("phoneNumber" in initialDetail, false);
+
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationBId}/incidents/${createdIncidentId}`,
+        organizationBToken,
+      )
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationBId}/incidents/${createdIncidentId}/review`,
+        organizationBToken,
+        { method: "PATCH", body: JSON.stringify({ status: "VALID" }) },
+      )
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationId}/incidents/${createdIncidentId}/review`,
+        reporterToken,
+        { method: "PATCH", body: JSON.stringify({ status: "VALID" }) },
+      )
+    ).status,
+    403,
+  );
+
+  const invalidFalse = await request(
+    `/organizations/${organizationId}/incidents/${createdIncidentId}/review`,
+    otherToken,
+    { method: "PATCH", body: JSON.stringify({ status: "FALSE" }) },
+  );
+  assert.equal(invalidFalse.status, 400);
+
+  const viewedResponse = await request(
+    `/organizations/${organizationId}/incidents/${createdIncidentId}/review`,
+    otherToken,
+    { method: "PATCH", body: JSON.stringify({ status: "VIEWED" }) },
+  );
+  assert.equal(viewedResponse.status, 200);
+  const viewed = (
+    await viewedResponse.json() as { data: { review: { id: string; status: string } } }
+  ).data.review;
+  assert.equal(viewed.status, "VIEWED");
+
+  const privateNote = "Internal verification note that must never reach the reporter.";
+  const falseResponse = await request(
+    `/organizations/${organizationId}/incidents/${createdIncidentId}/review`,
+    otherToken,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: "FALSE",
+        reasonCode: "INSUFFICIENT_EVIDENCE",
+        privateNotes: privateNote,
+      }),
+    },
+  );
+  assert.equal(falseResponse.status, 200);
+  const falseReview = (
+    await falseResponse.json() as {
+      data: { review: { id: string; status: string; privateNotes: string } };
+    }
+  ).data.review;
+  assert.equal(falseReview.id, viewed.id);
+  assert.equal(falseReview.status, "FALSE");
+  assert.equal(falseReview.privateNotes, privateNote);
+
+  const invalidTransition = await request(
+    `/organizations/${organizationId}/incidents/${createdIncidentId}/review`,
+    otherToken,
+    { method: "PATCH", body: JSON.stringify({ status: "VIEWED" }) },
+  );
+  assert.equal(invalidTransition.status, 409);
+
+  const validBody = {
+    status: "VALID",
+    privateNotes: "Validated after the organization inspected the evidence.",
+  };
+  const validResponse = await request(
+    `/organizations/${organizationId}/incidents/${createdIncidentId}/review`,
+    otherToken,
+    { method: "PATCH", body: JSON.stringify(validBody) },
+  );
+  assert.equal(validResponse.status, 200);
+  const validResult = (
+    await validResponse.json() as {
+      data: {
+        review: { id: string; status: string };
+        rewardAwarded: boolean;
+        idempotentReplay: boolean;
+      };
+    }
+  ).data;
+  assert.equal(validResult.review.id, viewed.id);
+  assert.equal(validResult.review.status, "VALID");
+  assert.equal(validResult.rewardAwarded, true);
+  assert.equal(validResult.idempotentReplay, false);
+
+  const replayResponse = await request(
+    `/organizations/${organizationId}/incidents/${createdIncidentId}/review`,
+    otherToken,
+    { method: "PATCH", body: JSON.stringify(validBody) },
+  );
+  assert.equal(replayResponse.status, 200);
+  const replay = (
+    await replayResponse.json() as {
+      data: { rewardAwarded: boolean; idempotentReplay: boolean };
+    }
+  ).data;
+  assert.equal(replay.rewardAwarded, false);
+  assert.equal(replay.idempotentReplay, true);
+
+  assert.equal(
+    await prisma.incidentReview.count({
+      where: { incidentId: createdIncidentId, organizationId },
+    }),
+    1,
+  );
+  assert.equal(
+    await prisma.contributionEvent.count({
+      where: {
+        incidentId: createdIncidentId,
+        type: "VERIFIED_INCIDENT_REPORT",
+      },
+    }),
+    1,
+  );
+  assert.equal(
+    (await prisma.incident.findUniqueOrThrow({
+      where: { id: createdIncidentId },
+      select: { status: true },
+    })).status,
+    "ACTIVE",
+  );
+
+  const reporterNotifications = await prisma.notification.findMany({
+    where: {
+      userId: reporterId,
+      data: { path: ["incidentId"], equals: createdIncidentId },
+    },
+    select: { message: true, data: true },
+  });
+  assert.equal(reporterNotifications.length, 2);
+  for (const notification of reporterNotifications) {
+    assert.equal(notification.message.includes(privateNote), false);
+    assert.equal(JSON.stringify(notification.data).includes(privateNote), false);
+  }
 });
 
 test("rejects invalid coordinates and inactive categories", async () => {
