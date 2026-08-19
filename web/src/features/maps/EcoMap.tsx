@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CircleMarker,
   GeoJSON,
@@ -54,6 +54,7 @@ export interface EcoMapProps {
   className?: string;
   accessibleLabel?: string;
   showListFallback?: boolean;
+  showCurrentLocation?: boolean;
   onMarkerSelect?: (marker: MapMarkerFeature) => void;
   onLocationSelect?: (location: MapLocation) => void;
   onViewportChange?: MapViewportChangeHandler;
@@ -66,6 +67,7 @@ function OrganizationBoundaryLayer({
 }) {
   const map = useMap();
   const [activeAreaIndex, setActiveAreaIndex] = useState(0);
+  const hasFocusedInitialBoundaries = useRef(false);
 
   const focusArea = useCallback((area: MapBoundaryFeature) => {
     const bounds = geoJSON(
@@ -81,12 +83,19 @@ function OrganizationBoundaryLayer({
   }, [map]);
 
   useEffect(() => {
-    const firstArea = boundaries.features[0];
-
-    if (firstArea) {
-      focusArea(firstArea);
+    if (hasFocusedInitialBoundaries.current || boundaries.features.length === 0) {
+      return;
     }
-  }, [boundaries, focusArea]);
+
+    const bounds = geoJSON(boundaries as GeoJsonObject).getBounds();
+    if (bounds.isValid()) {
+      hasFocusedInitialBoundaries.current = true;
+      map.fitBounds(bounds, {
+        padding: [42, 42],
+        maxZoom: 16,
+      });
+    }
+  }, [boundaries, map]);
 
   const focusNextArea = () => {
     const nextIndex = (activeAreaIndex + 1) % boundaries.features.length;
@@ -452,6 +461,7 @@ export function EcoMap({
   className = "",
   accessibleLabel = "EcoTrack incident and cleanup event map",
   showListFallback = true,
+  showCurrentLocation = true,
   onMarkerSelect,
   onLocationSelect,
   onViewportChange,
@@ -528,10 +538,12 @@ export function EcoMap({
               <Popup>Selected location</Popup>
             </CircleMarker>
           )}
-          <CurrentLocationControl
-            onLocationSelect={onLocationSelect}
-            onError={setLocationError}
-          />
+          {showCurrentLocation && (
+            <CurrentLocationControl
+              onLocationSelect={onLocationSelect}
+              onError={setLocationError}
+            />
+          )}
         </MapContainer>
 
         {selectionEnabled && selectionMode === "center" && (

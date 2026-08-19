@@ -69,6 +69,7 @@ export interface EcoMapProps {
   height?: number;
   accessibleLabel?: string;
   showListFallback?: boolean;
+  showCurrentLocation?: boolean;
   onMarkerSelect?: (marker: MapMarkerFeature) => void;
   onLocationSelect?: (location: MapLocation) => void;
   onViewportChange?: MapViewportChangeHandler;
@@ -143,6 +144,7 @@ export function EcoMap({
   height = 480,
   accessibleLabel = "EcoTrack incident and cleanup event map",
   showListFallback = true,
+  showCurrentLocation = true,
   onMarkerSelect,
   onLocationSelect,
   onViewportChange,
@@ -151,6 +153,7 @@ export function EcoMap({
   const cameraRef = useRef<CameraRef>(null);
   const markerSourceRef = useRef<GeoJSONSourceRef>(null);
   const lastMapCenterRef = useRef<MapLocation | null>(initialCenter);
+  const hasFocusedInitialBoundaries = useRef(false);
   const [locationBusy, setLocationBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [viewportTooWide, setViewportTooWide] = useState(false);
@@ -171,14 +174,27 @@ export function EcoMap({
     () => activeArea ? getGeometryBounds(activeArea.geometry.coordinates) : null,
     [activeArea],
   );
+  const allBoundaryBounds = useMemo(
+    () => boundaries
+      ? getGeometryBounds(
+          boundaries.features.map((feature) => feature.geometry.coordinates),
+        )
+      : null,
+    [boundaries],
+  );
 
-  useEffect(() => {
-    if (!activeAreaBounds) return;
-    cameraRef.current?.fitBounds(activeAreaBounds, {
+  const focusBounds = useCallback((bounds: [number, number, number, number]) => {
+    cameraRef.current?.fitBounds(bounds, {
       padding: { top: 42, right: 42, bottom: 42, left: 42 },
       duration: 400,
     });
-  }, [activeAreaBounds]);
+  }, []);
+
+  useEffect(() => {
+    if (hasFocusedInitialBoundaries.current || !allBoundaryBounds) return;
+    hasFocusedInitialBoundaries.current = true;
+    focusBounds(allBoundaryBounds);
+  }, [allBoundaryBounds, focusBounds]);
 
   useEffect(() => {
     const location = focusLocation ?? selectedLocation;
@@ -344,12 +360,23 @@ export function EcoMap({
     const nextIndex = boundaries?.features.findIndex(
       (feature) => feature.properties.id === boundaryId,
     ) ?? -1;
-    if (nextIndex >= 0) setActiveAreaIndex(nextIndex);
+    if (nextIndex >= 0 && boundaries) {
+      const area = boundaries.features[nextIndex];
+      if (!area) return;
+      setActiveAreaIndex(nextIndex);
+      const bounds = getGeometryBounds(area.geometry.coordinates);
+      if (bounds) focusBounds(bounds);
+    }
   };
 
   const focusNextArea = () => {
     if (!boundaries?.features.length) return;
-    setActiveAreaIndex((current) => (current + 1) % boundaries.features.length);
+    const nextIndex = (activeAreaIndex + 1) % boundaries.features.length;
+    const area = boundaries.features[nextIndex];
+    if (!area) return;
+    setActiveAreaIndex(nextIndex);
+    const bounds = getGeometryBounds(area.geometry.coordinates);
+    if (bounds) focusBounds(bounds);
   };
 
   const focusMarker = (marker: MapMarkerFeature) => {
@@ -565,7 +592,7 @@ export function EcoMap({
           )}
         </Map>
 
-        <Pressable
+        {showCurrentLocation && <Pressable
           style={({ pressed }) => [
             styles.locationButton,
             pressed && styles.buttonPressed,
@@ -581,7 +608,7 @@ export function EcoMap({
             <Text style={styles.locationButtonIcon}>◎</Text>
           )}
           <Text style={styles.locationButtonText}>My location</Text>
-        </Pressable>
+        </Pressable>}
 
         {activeAreaBounds && (
           <Pressable
