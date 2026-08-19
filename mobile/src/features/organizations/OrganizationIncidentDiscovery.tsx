@@ -324,6 +324,7 @@ export function OrganizationIncidentDiscovery({
         boundaries={boundaries}
         selectedMarkerId={selectedId}
         showListFallback={false}
+        showCurrentLocation={false}
         height={430}
         accessibleLabel="Organization incident discovery map"
         onMarkerSelect={(marker) => setSelectedId(marker.properties.id)}
