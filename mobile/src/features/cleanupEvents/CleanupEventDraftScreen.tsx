@@ -23,6 +23,7 @@ import type {
   CleanupEventSessionInput,
   EventSession,
 } from "./cleanupEvent.types";
+import { CleanupEventPublishPanel } from "./CleanupEventPublishPanel";
 
 type Props = {
   accessToken: string;
@@ -312,6 +313,23 @@ export function CleanupEventDraftScreen({
             {availableMembers.length > 0 ? <Text style={styles.label}>ASSIGN ACTIVE MEMBER</Text> : null}
             {availableMembers.map((member) => <Button key={member.id} label={`Assign ${displayName(member)}`} variant="secondary" onPress={() => void run(async () => { await assignCoordinator(accessToken, organizationId, selected.id, member.id); await reloadDraft(selected.id); setNotice({ tone: "success", message: "Coordinator assigned." }); }, "Unable to assign the coordinator.")} />)}
           </View>
+
+          <CleanupEventPublishPanel
+            accessToken={accessToken}
+            organizationId={organizationId}
+            eventId={selected.id}
+            onPublished={(result) => {
+              setDrafts((current) => current.filter((draft) => draft.id !== selected.id));
+              setSelected(undefined);
+              setMode("list");
+              setNotice({
+                tone: "success",
+                message: result.incidentUpdated
+                  ? "Event published and the linked incident was claimed."
+                  : "Direct cleanup event published.",
+              });
+            }}
+          />
 
           <Button label="Discard private draft" variant="danger" onPress={() => Alert.alert("Discard draft?", "All draft sessions and coordinator assignments will be removed.", [{ text: "Keep draft", style: "cancel" }, { text: "Discard", style: "destructive", onPress: () => void run(async () => { await discardDraft(accessToken, organizationId, selected.id); setDrafts((current) => current.filter((draft) => draft.id !== selected.id)); setSelected(undefined); setMode("list"); setNotice({ tone: "success", message: "Private draft discarded." }); }, "Unable to discard the draft.") }])} />
         </>

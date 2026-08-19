@@ -63,3 +63,41 @@ export type CleanupEventDraftPage = {
   items: CleanupEventDraft[];
   nextCursor: string | null;
 };
+
+export type CleanupEventPublicStatus = "PUBLISHED" | "SCHEDULED" | "IN_PROGRESS" | "COMPLETION_SUBMITTED" | "COMPLETED" | "CANCELLED";
+
+export type CleanupEventPublicSummary = {
+  id: string;
+  organization: { id: string; name: string };
+  incidentId: string | null;
+  title: string;
+  description: string;
+  lifecycleStatus: CleanupEventPublicStatus;
+  eventLatitude: number;
+  eventLongitude: number;
+  eventAddress: string | null;
+  publishedAt: string;
+  firstSessionAt: string | null;
+};
+
+export type CleanupEventPublicDetail = CleanupEventPublicSummary & {
+  publicInstructions: string;
+  meetingLatitude: number | null;
+  meetingLongitude: number | null;
+  meetingAddress: string | null;
+  sessions: Array<Omit<EventSession, "notes">>;
+};
+
+export type CleanupEventPublicPage = { items: CleanupEventPublicSummary[]; nextCursor: string | null };
+export type CleanupEventOwnedSummary = Omit<CleanupEventPublicSummary, "lifecycleStatus" | "publishedAt"> & {
+  lifecycleStatus: "DRAFT" | CleanupEventPublicStatus;
+  publishedAt: string | null;
+  updatedAt: string;
+};
+export type CleanupEventOwnedPage = { items: CleanupEventOwnedSummary[]; nextCursor: string | null };
+export type CleanupEventPublishReadiness = {
+  eventId: string;
+  ready: boolean;
+  checks: Array<{ code: string; ready: boolean; message: string }>;
+};
+export type CleanupEventPublishResult = { event: CleanupEventPublicDetail; incidentUpdated: boolean };

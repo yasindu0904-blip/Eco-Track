@@ -17,6 +17,7 @@ export function errorMiddleware(
       error: {
         code: error.code,
         message: error.message,
+        ...(error.details ? { details: error.details } : {}),
       },
     });
 

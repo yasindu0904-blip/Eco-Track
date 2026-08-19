@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { sriLankaMapLocationSchema } from "../maps/map.validation.js";
+import { sriLankaMapViewportQuerySchema } from "../maps/map.validation.js";
 
 export const uuidSchema = z.string().uuid();
 
@@ -157,6 +158,10 @@ export const eventParametersSchema = organizationParametersSchema
   .extend({ eventId: uuidSchema })
   .strict();
 
+export const publicEventParametersSchema = z
+  .object({ eventId: uuidSchema })
+  .strict();
+
 export const eventSessionParametersSchema = organizationParametersSchema
   .extend({ eventId: uuidSchema, sessionId: uuidSchema })
   .strict();
@@ -172,7 +177,18 @@ export const listDraftQuerySchema = z
   })
   .strict();
 
+export const listCleanupEventsQuerySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(50).default(20),
+    cursor: z.string().trim().min(1).max(500).optional(),
+  })
+  .strict();
+
+export const cleanupEventMapQuerySchema = sriLankaMapViewportQuerySchema;
+
 export type ValidatedCreateDraft = z.infer<typeof createDraftSchema>;
 export type ValidatedUpdateDraft = z.infer<typeof updateDraftSchema>;
 export type ValidatedCreateSession = z.infer<typeof createSessionSchema>;
 export type ValidatedDraftListQuery = z.infer<typeof listDraftQuerySchema>;
+export type ValidatedCleanupEventListQuery = z.infer<typeof listCleanupEventsQuerySchema>;
+export type ValidatedCleanupEventMapQuery = z.infer<typeof cleanupEventMapQuerySchema>;

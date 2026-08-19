@@ -5,7 +5,7 @@ import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import { BrandHeader, Button, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
-import { CleanupEventDraftScreen } from "../cleanupEvents";
+import { CleanupEventDraftScreen, OrganizationCleanupEventListScreen } from "../cleanupEvents";
 import { OrganizationIncidentDiscovery } from "./OrganizationIncidentDiscovery";
 
 type OrganizationWorkspaceScreenProps = {
@@ -29,7 +29,7 @@ export function OrganizationWorkspaceScreen({
   onViewApplications,
   onSignOut,
 }: OrganizationWorkspaceScreenProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "incidentDiscovery" | "eventDrafts">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "incidentDiscovery" | "eventDrafts" | "events">("overview");
   const [linkedIncidentId, setLinkedIncidentId] = useState<string>();
   const [mapInteracting, setMapInteracting] = useState(false);
   const membership =
@@ -104,6 +104,7 @@ export function OrganizationWorkspaceScreen({
         {activeTab === "eventDrafts" ? (
           <Text style={styles.breadcrumb}>/ Cleanup-event drafts</Text>
         ) : null}
+        {activeTab === "events" ? <Text style={styles.breadcrumb}>/ Organization events</Text> : null}
       </View>
 
       {activeTab === "eventDrafts" ? (
@@ -119,6 +120,8 @@ export function OrganizationWorkspaceScreen({
             setActiveTab("overview");
           }}
         />
+      ) : activeTab === "events" ? (
+        <OrganizationCleanupEventListScreen accessToken={accessToken} organizationId={membership.organization.id} />
       ) : activeTab === "overview" ? (
         <>
           <View style={sharedStyles.card}>
@@ -197,6 +200,16 @@ export function OrganizationWorkspaceScreen({
               <Text style={styles.toolArrow}>→</Text>
             </Pressable>
           ) : null}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open organization cleanup events"
+            onPress={() => setActiveTab("events")}
+            style={({ pressed }) => [styles.toolCard, pressed && styles.toolCardPressed]}
+          >
+            <View style={styles.toolIcon}><Text style={styles.toolIconText}>✓</Text></View>
+            <View style={styles.toolCopy}><Text style={styles.toolEyebrow}>ORGANIZATION EVENTS</Text><Text style={styles.toolTitle}>Lifecycle overview</Text><Text style={styles.toolDescription}>See private drafts and published cleanup events for this organization.</Text></View>
+            <Text style={styles.toolArrow}>→</Text>
+          </Pressable>
         </>
       ) : (
         <OrganizationIncidentDiscovery

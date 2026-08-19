@@ -23,6 +23,7 @@ import type {
   CleanupEventSessionInput,
   EventSession,
 } from "./cleanupEvent.types";
+import { CleanupEventPublishPanel } from "./CleanupEventPublishPanel";
 import "./cleanupEvent.css";
 
 type Props = {
@@ -373,6 +374,22 @@ export function CleanupEventDraftEditor({
               <div className="event-editor-coordinator-form"><select value={coordinatorMembershipId} onChange={(event) => setCoordinatorMembershipId(event.target.value)}><option value="">Select an active member</option>{availableCoordinators.map((member) => <option key={member.id} value={member.id}>{memberName(member)} · {member.role === "ORG_ADMIN" ? "Admin" : "Member"}</option>)}</select><button type="button" disabled={busy || !coordinatorMembershipId} onClick={() => void run(async () => { await assignCoordinator(accessToken, organizationId, selected.id, coordinatorMembershipId); await refreshDraft(selected.id); setCoordinatorMembershipId(""); setNotice({ tone: "success", message: "Coordinator assigned." }); }, "Unable to assign the coordinator.")}>Assign coordinator</button></div>
               <div className="event-editor-item-list">{selected.coordinators.length === 0 ? <p>No coordinators assigned.</p> : selected.coordinators.map((coordinator) => <article key={coordinator.id}><span><strong>{coordinator.member.fullName || coordinator.member.email}</strong><small>{coordinator.member.role === "ORG_ADMIN" ? "Organization admin" : "Organization member"}</small></span><button type="button" className="danger" onClick={() => void run(async () => { await removeCoordinator(accessToken, organizationId, selected.id, coordinator.membershipId); await refreshDraft(selected.id); }, "Unable to remove the coordinator.")}>Remove</button></article>)}</div>
             </section>
+
+            <CleanupEventPublishPanel
+              accessToken={accessToken}
+              organizationId={organizationId}
+              eventId={selected.id}
+              onPublished={(result) => {
+                setDrafts((current) => current.filter((draft) => draft.id !== selected.id));
+                setSelected(undefined);
+                setNotice({
+                  tone: "success",
+                  message: result.incidentUpdated
+                    ? "Event published and the linked incident was claimed."
+                    : "Direct cleanup event published.",
+                });
+              }}
+            />
           </div>
         </div>
       )}

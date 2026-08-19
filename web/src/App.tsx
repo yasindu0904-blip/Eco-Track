@@ -20,6 +20,7 @@ import { OrganizationApplicationPage } from "./features/organizations/applicatio
 import { OrganizationWorkspace } from "./features/organizations/workspace/OrganizationWorkspace";
 import { SuperAdminDashboard } from "./features/super-admin/SuperAdminDashboard";
 import { MyImpactPage } from "./features/rewards";
+import { PublicCleanupEventsPage } from "./features/cleanup-events";
 
 const previewSuperAdminProfile = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -51,6 +52,7 @@ type CitizenView =
   | "incident-create"
   | "incident-reports"
   | "incident-discovery"
+  | "cleanup-events"
   | "impact";
 
 function BrandHeader() {
@@ -282,6 +284,7 @@ function App() {
         onReportIncident={() => setCitizenView("incident-create")}
         onViewIncidentReports={() => setCitizenView("incident-reports")}
         onFindCleanupActivity={() => setCitizenView("incident-discovery")}
+        onBrowseCleanupEvents={() => undefined}
         onOpenImpact={() => undefined}
         onSignOut={() => undefined}
       />
@@ -380,6 +383,7 @@ function App() {
           onReportIncident={() => setCitizenView("incident-create")}
           onViewIncidentReports={() => setCitizenView("incident-reports")}
           onFindCleanupActivity={() => setCitizenView("incident-discovery")}
+          onBrowseCleanupEvents={() => setCitizenView("cleanup-events")}
           onOpenImpact={() => setCitizenView("impact")}
           onSignOut={() => {
             setCitizenView("dashboard");
@@ -420,6 +424,10 @@ function App() {
           onBack={() => setCitizenView("dashboard")}
         />
       );
+    }
+
+    if (citizenView === "cleanup-events") {
+      return <PublicCleanupEventsPage accessToken={accessToken} onBack={() => setCitizenView("dashboard")} />;
     }
 
     if (citizenView === "organization-workspace" && activeMembership) {

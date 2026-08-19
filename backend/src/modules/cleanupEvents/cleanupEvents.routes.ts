@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { Actions } from "../../authorization/actions.js";
-import { Subjects } from "../../authorization/subjects.js";
+import { createAuthorizationSubject, Subjects } from "../../authorization/subjects.js";
 import { abilityMiddleware } from "../../middleware/ability.middleware.js";
 import { createAuthenticationMiddleware } from "../../middleware/auth.middleware.js";
-import { authorize } from "../../middleware/authorize.middleware.js";
+import { authorize, authorizeResource } from "../../middleware/authorize.middleware.js";
+import { createEventAuthorizationMiddleware } from "../../middleware/eventAuthorization.middleware.js";
 import { requireCompletedProfile } from "../../middleware/requireCompletedProfile.middleware.js";
 import { createTenantMiddleware } from "../../middleware/tenant.middleware.js";
 import type { AuthenticationDependencies } from "../auth/auth.types.js";
@@ -19,12 +20,31 @@ import {
   updateSessionController,
   assignCoordinatorController,
   removeCoordinatorController,
+  getPublicEventController,
+  listOwnedEventsController,
+  listPublicEventMapController,
+  listPublicEventsController,
+  publishEventController,
+  publishReadinessController,
 } from "./controllers/cleanupEvent.controllers.js";
 
 export function createCleanupEventRouter(authenticationDependencies: AuthenticationDependencies, deps: CleanupEventDependencies) {
   const router = Router();
   const authenticate = createAuthenticationMiddleware(authenticationDependencies);
   const tenantRoute = [authenticate, requireCompletedProfile, createTenantMiddleware(deps.authorization), abilityMiddleware] as const;
+  const publicRoute = [authenticate, requireCompletedProfile, abilityMiddleware] as const;
+  const publishRoute = [
+    authenticate,
+    requireCompletedProfile,
+    createTenantMiddleware(deps.authorization),
+    createEventAuthorizationMiddleware(deps.authorization),
+    abilityMiddleware,
+    authorizeResource(Actions.Publish, (request) =>
+      createAuthorizationSubject(
+        Subjects.CleanupEvent,
+        request.eventAuthorization!.cleanupEvent,
+      )),
+  ] as const;
 
   router.post(
     "/organizations/:organizationId/events/drafts",
@@ -38,6 +58,13 @@ export function createCleanupEventRouter(authenticationDependencies: Authenticat
     ...tenantRoute,
     authorize(Actions.Read, Subjects.CleanupEvent),
     listOrganizationDraftsController(deps),
+  );
+
+  router.get(
+    "/organizations/:organizationId/events",
+    ...tenantRoute,
+    authorize(Actions.Read, Subjects.CleanupEvent),
+    listOwnedEventsController(deps),
   );
 
   router.get(
@@ -61,6 +88,18 @@ export function createCleanupEventRouter(authenticationDependencies: Authenticat
     discardDraftController(deps),
   );
 
+  router.get(
+    "/organizations/:organizationId/events/:eventId/publish-readiness",
+    ...publishRoute,
+    publishReadinessController(deps),
+  );
+
+  router.post(
+    "/organizations/:organizationId/events/:eventId/publish",
+    ...publishRoute,
+    publishEventController(deps),
+  );
+
   router.post(
     "/organizations/:organizationId/events/:eventId/sessions",
     ...tenantRoute,
@@ -73,6 +112,27 @@ export function createCleanupEventRouter(authenticationDependencies: Authenticat
     ...tenantRoute,
     authorize(Actions.Update, Subjects.EventSession),
     removeSessionController(deps),
+  );
+
+  router.get(
+    "/events/map",
+    ...publicRoute,
+    authorize(Actions.Read, Subjects.CleanupEvent),
+    listPublicEventMapController(deps),
+  );
+
+  router.get(
+    "/events",
+    ...publicRoute,
+    authorize(Actions.Read, Subjects.CleanupEvent),
+    listPublicEventsController(deps),
+  );
+
+  router.get(
+    "/events/:eventId",
+    ...publicRoute,
+    authorize(Actions.Read, Subjects.CleanupEvent),
+    getPublicEventController(deps),
   );
 
   router.patch(
