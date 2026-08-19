@@ -137,3 +137,25 @@ export type CleanupEventMapFeatureCollectionDto = {
   }>;
   nextCursor: string | null;
 };
+
+export type EventParticipationStatus = "JOINED" | "WITHDRAWN" | "REMOVED";
+
+export type EventParticipationDto = {
+  id: string;
+  status: EventParticipationStatus;
+  joinedAt: string;
+  withdrawnAt: string | null;
+  availableSessionIds: string[];
+  event: CleanupEventPublicDetailDto;
+};
+
+export type EventParticipationPageDto = {
+  items: EventParticipationDto[];
+  nextCursor: string | null;
+};
+
+export type JoinEventResultDto = {
+  participation: EventParticipationDto;
+  created: boolean;
+  rejoined: boolean;
+};

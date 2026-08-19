@@ -256,6 +256,9 @@ after(async () => {
   await prisma.cleanupEvent.deleteMany({
     where: { organizationId: { in: [organizationAId, organizationBId] } },
   });
+  await prisma.auditLog.deleteMany({
+    where: { organizationId: { in: [organizationAId, organizationBId] } },
+  });
   await prisma.organizationServiceArea.deleteMany({ where: { id: serviceAreaId } });
   await prisma.incident.deleteMany({ where: { id: { in: [visibleIncidentId, invisibleIncidentId, claimIncidentId] } } });
   await prisma.incidentCategory.deleteMany({ where: { id: categoryId } });
@@ -722,4 +725,135 @@ test("concurrent linked publication produces one winner and one stable 409", asy
     }),
     1,
   );
+});
+
+test("a citizen joins immediately, retries idempotently, updates availability, withdraws, and rejoins", async () => {
+  const eventId = await createDirectDraft("EVT-04 citizen participation event");
+  await makeDraftPublishable(
+    identities.adminA.token,
+    organizationAId,
+    eventId,
+    identities.memberA.membershipId,
+  );
+  const secondSession = await request(
+    identities.adminA.token,
+    `/organizations/${organizationAId}/events/${eventId}/sessions`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        sessionDate: "2099-09-02",
+        startTime: "09:00:00",
+        endTime: "12:00:00",
+      }),
+    },
+  );
+  assert.equal(secondSession.status, 201);
+  const secondSessionId = (await secondSession.json()).data.id as string;
+  const published = await request(
+    identities.adminA.token,
+    `/organizations/${organizationAId}/events/${eventId}/publish`,
+    { method: "POST" },
+  );
+  assert.equal(published.status, 200);
+  const firstSessionId = (await published.json()).data.event.sessions[0].id as string;
+
+  const [firstJoin, retryJoin] = await Promise.all([
+    request(identities.reporter.token, `/events/${eventId}/participation`, {
+      method: "POST",
+      body: JSON.stringify({ sessionIds: [firstSessionId] }),
+    }),
+    request(identities.reporter.token, `/events/${eventId}/participation`, {
+      method: "POST",
+      body: JSON.stringify({ sessionIds: [firstSessionId] }),
+    }),
+  ]);
+  assert.deepEqual([firstJoin.status, retryJoin.status].sort(), [200, 201]);
+  assert.equal(await prisma.eventParticipant.count({ where: { cleanupEventId: eventId, userId: identities.reporter.id } }), 1);
+  const participant = await prisma.eventParticipant.findUniqueOrThrow({
+    where: { cleanupEventId_userId: { cleanupEventId: eventId, userId: identities.reporter.id } },
+  });
+  assert.equal(await prisma.participantSessionAvailability.count({ where: { participantId: participant.id } }), 1);
+  assert.equal(await prisma.auditLog.count({ where: { action: "EVENT_PARTICIPANT_JOINED", entityId: participant.id } }), 1);
+  assert.equal(await prisma.notification.count({ where: { userId: identities.reporter.id, type: "EVENT_JOINED", data: { path: ["eventId"], equals: eventId } } }), 1);
+
+  const strangerRead = await request(identities.memberA.token, `/events/${eventId}/participation`);
+  assert.equal(strangerRead.status, 200);
+  assert.equal((await strangerRead.json()).data, null);
+
+  const availability = await request(
+    identities.reporter.token,
+    `/events/${eventId}/participation/availability`,
+    { method: "PUT", body: JSON.stringify({ sessionIds: [secondSessionId] }) },
+  );
+  assert.equal(availability.status, 200);
+  assert.deepEqual((await availability.json()).data.availableSessionIds, [secondSessionId]);
+
+  const mine = await request(identities.reporter.token, "/event-participations/me?scope=active&limit=20");
+  assert.equal(mine.status, 200);
+  const mineBody = await mine.json();
+  assert.ok(mineBody.data.items.some((item: { event: { id: string } }) => item.event.id === eventId));
+  assert.equal(JSON.stringify(mineBody).includes("phoneNumber"), false);
+  assert.equal(JSON.stringify(mineBody).includes("coordinators"), false);
+
+  const withdrawn = await request(
+    identities.reporter.token,
+    `/events/${eventId}/participation/withdraw`,
+    { method: "POST" },
+  );
+  assert.equal(withdrawn.status, 200);
+  assert.equal((await withdrawn.json()).data.status, "WITHDRAWN");
+  const withdrawalRetry = await request(
+    identities.reporter.token,
+    `/events/${eventId}/participation/withdraw`,
+    { method: "POST" },
+  );
+  assert.equal(withdrawalRetry.status, 200);
+  assert.equal(await prisma.auditLog.count({ where: { action: "EVENT_PARTICIPANT_WITHDRAWN", entityId: participant.id } }), 1);
+
+  const rejoined = await request(identities.reporter.token, `/events/${eventId}/participation`, {
+    method: "POST",
+    body: JSON.stringify({ sessionIds: [firstSessionId, secondSessionId] }),
+  });
+  assert.equal(rejoined.status, 201);
+  assert.equal((await rejoined.json()).data.rejoined, true);
+  assert.equal(await prisma.eventParticipant.count({ where: { cleanupEventId: eventId, userId: identities.reporter.id } }), 1);
+  assert.equal(await prisma.participantSessionAvailability.count({ where: { participantId: participant.id } }), 2);
+});
+
+test("participation rejects draft events, duplicate selections, and sessions from another event", async () => {
+  const draftId = await createDirectDraft("EVT-04 private draft");
+  await makeDraftPublishable(
+    identities.adminA.token,
+    organizationAId,
+    draftId,
+    identities.memberA.membershipId,
+  );
+  const draft = await request(identities.adminA.token, `/organizations/${organizationAId}/events/drafts/${draftId}`);
+  const foreignSessionId = (await draft.json()).data.sessions[0].id as string;
+  const draftJoin = await request(identities.reporter.token, `/events/${draftId}/participation`, {
+    method: "POST",
+    body: JSON.stringify({ sessionIds: [foreignSessionId] }),
+  });
+  assert.equal(draftJoin.status, 409);
+  assert.equal((await draftJoin.json()).error.code, "EVENT_NOT_JOINABLE");
+
+  const eventId = await createDirectDraft("EVT-04 session-bound event");
+  await makeDraftPublishable(identities.adminA.token, organizationAId, eventId, identities.memberA.membershipId);
+  const publish = await request(identities.adminA.token, `/organizations/${organizationAId}/events/${eventId}/publish`, { method: "POST" });
+  assert.equal(publish.status, 200);
+  const ownSessionId = (await publish.json()).data.event.sessions[0].id as string;
+
+  const duplicate = await request(identities.reporter.token, `/events/${eventId}/participation`, {
+    method: "POST",
+    body: JSON.stringify({ sessionIds: [ownSessionId, ownSessionId] }),
+  });
+  assert.equal(duplicate.status, 400);
+
+  const crossEvent = await request(identities.reporter.token, `/events/${eventId}/participation`, {
+    method: "POST",
+    body: JSON.stringify({ sessionIds: [foreignSessionId] }),
+  });
+  assert.equal(crossEvent.status, 409);
+  assert.equal((await crossEvent.json()).error.code, "SESSION_NOT_AVAILABLE");
+  assert.equal(await prisma.eventParticipant.count({ where: { cleanupEventId: eventId, userId: identities.reporter.id } }), 0);
 });

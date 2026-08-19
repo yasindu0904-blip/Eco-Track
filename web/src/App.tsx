@@ -20,7 +20,7 @@ import { OrganizationApplicationPage } from "./features/organizations/applicatio
 import { OrganizationWorkspace } from "./features/organizations/workspace/OrganizationWorkspace";
 import { SuperAdminDashboard } from "./features/super-admin/SuperAdminDashboard";
 import { MyImpactPage } from "./features/rewards";
-import { PublicCleanupEventsPage } from "./features/cleanup-events";
+import { MyJoinedCleanupEventsPage, PublicCleanupEventsPage } from "./features/cleanup-events";
 
 const previewSuperAdminProfile = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -53,6 +53,7 @@ type CitizenView =
   | "incident-reports"
   | "incident-discovery"
   | "cleanup-events"
+  | "joined-cleanup-events"
   | "impact";
 
 function BrandHeader() {
@@ -146,6 +147,7 @@ function App() {
     useState("");
   const [activeMemberships, setActiveMemberships] =
     useState<ActiveOrganizationMembership[]>([]);
+  const [selectedCleanupEventId, setSelectedCleanupEventId] = useState<string>();
   const membershipRequestVersion = useRef(0);
 
   const {
@@ -285,6 +287,7 @@ function App() {
         onViewIncidentReports={() => setCitizenView("incident-reports")}
         onFindCleanupActivity={() => setCitizenView("incident-discovery")}
         onBrowseCleanupEvents={() => undefined}
+        onViewJoinedCleanupEvents={() => undefined}
         onOpenImpact={() => undefined}
         onSignOut={() => undefined}
       />
@@ -384,6 +387,7 @@ function App() {
           onViewIncidentReports={() => setCitizenView("incident-reports")}
           onFindCleanupActivity={() => setCitizenView("incident-discovery")}
           onBrowseCleanupEvents={() => setCitizenView("cleanup-events")}
+          onViewJoinedCleanupEvents={() => setCitizenView("joined-cleanup-events")}
           onOpenImpact={() => setCitizenView("impact")}
           onSignOut={() => {
             setCitizenView("dashboard");
@@ -427,7 +431,11 @@ function App() {
     }
 
     if (citizenView === "cleanup-events") {
-      return <PublicCleanupEventsPage accessToken={accessToken} onBack={() => setCitizenView("dashboard")} />;
+      return <PublicCleanupEventsPage accessToken={accessToken} initialEventId={selectedCleanupEventId} onBack={() => { setSelectedCleanupEventId(undefined); setCitizenView("dashboard"); }} />;
+    }
+
+    if (citizenView === "joined-cleanup-events") {
+      return <MyJoinedCleanupEventsPage accessToken={accessToken} onBack={() => setCitizenView("dashboard")} onOpenEvent={(eventId) => { setSelectedCleanupEventId(eventId); setCitizenView("cleanup-events"); }} />;
     }
 
     if (citizenView === "organization-workspace" && activeMembership) {

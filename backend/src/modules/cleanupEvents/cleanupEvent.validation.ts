@@ -186,9 +186,34 @@ export const listCleanupEventsQuerySchema = z
 
 export const cleanupEventMapQuerySchema = sriLankaMapViewportQuerySchema;
 
+export const participationAvailabilitySchema = z
+  .object({
+    sessionIds: z.array(uuidSchema).min(1).max(100),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (new Set(value.sessionIds).size !== value.sessionIds.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["sessionIds"],
+        message: "Session IDs must be unique.",
+      });
+    }
+  });
+
+export const listMyParticipationsQuerySchema = z
+  .object({
+    scope: z.enum(["active", "history", "all"]).default("active"),
+    limit: z.coerce.number().int().min(1).max(50).default(20),
+    cursor: z.string().trim().min(1).max(500).optional(),
+  })
+  .strict();
+
 export type ValidatedCreateDraft = z.infer<typeof createDraftSchema>;
 export type ValidatedUpdateDraft = z.infer<typeof updateDraftSchema>;
 export type ValidatedCreateSession = z.infer<typeof createSessionSchema>;
 export type ValidatedDraftListQuery = z.infer<typeof listDraftQuerySchema>;
 export type ValidatedCleanupEventListQuery = z.infer<typeof listCleanupEventsQuerySchema>;
 export type ValidatedCleanupEventMapQuery = z.infer<typeof cleanupEventMapQuerySchema>;
+export type ValidatedParticipationAvailability = z.infer<typeof participationAvailabilitySchema>;
+export type ValidatedMyParticipationsQuery = z.infer<typeof listMyParticipationsQuerySchema>;

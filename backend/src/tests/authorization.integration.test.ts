@@ -300,6 +300,22 @@ test(
     );
     assert.equal(
       ability.can(
+        Actions.ReadOwn,
+        createAuthorizationSubject(Subjects.EventParticipant, { userId }),
+      ),
+      true,
+    );
+    assert.equal(
+      ability.can(
+        Actions.ReadOwn,
+        createAuthorizationSubject(Subjects.EventParticipant, {
+          userId: "10000000-0000-4000-8000-000000000099",
+        }),
+      ),
+      false,
+    );
+    assert.equal(
+      ability.can(
         Actions.ManageAvailability,
         Subjects.ParticipantAvailability,
       ),

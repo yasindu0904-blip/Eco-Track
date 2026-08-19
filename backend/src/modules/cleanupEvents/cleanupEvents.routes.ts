@@ -27,6 +27,13 @@ import {
   publishEventController,
   publishReadinessController,
 } from "./controllers/cleanupEvent.controllers.js";
+import {
+  getMyParticipationController,
+  joinEventController,
+  listMyParticipationsController,
+  updateAvailabilityController,
+  withdrawFromEventController,
+} from "./participation/participation.controllers.js";
 
 export function createCleanupEventRouter(authenticationDependencies: AuthenticationDependencies, deps: CleanupEventDependencies) {
   const router = Router();
@@ -133,6 +140,41 @@ export function createCleanupEventRouter(authenticationDependencies: Authenticat
     ...publicRoute,
     authorize(Actions.Read, Subjects.CleanupEvent),
     getPublicEventController(deps),
+  );
+
+  router.get(
+    "/event-participations/me",
+    ...publicRoute,
+    authorize(Actions.ReadOwn, Subjects.EventParticipant),
+    listMyParticipationsController(deps),
+  );
+
+  router.get(
+    "/events/:eventId/participation",
+    ...publicRoute,
+    authorize(Actions.ReadOwn, Subjects.EventParticipant),
+    getMyParticipationController(deps),
+  );
+
+  router.post(
+    "/events/:eventId/participation",
+    ...publicRoute,
+    authorize(Actions.Join, Subjects.CleanupEvent),
+    joinEventController(deps),
+  );
+
+  router.put(
+    "/events/:eventId/participation/availability",
+    ...publicRoute,
+    authorize(Actions.ManageAvailability, Subjects.ParticipantAvailability),
+    updateAvailabilityController(deps),
+  );
+
+  router.post(
+    "/events/:eventId/participation/withdraw",
+    ...publicRoute,
+    authorize(Actions.Withdraw, Subjects.EventParticipant),
+    withdrawFromEventController(deps),
   );
 
   router.patch(
