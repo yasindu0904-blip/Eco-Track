@@ -194,7 +194,7 @@ export function buildAbilityForRequest(
       },
     );
     can(
-      [Actions.Create, Actions.Read, Actions.Update],
+      [Actions.Create, Actions.Read, Actions.Update, Actions.Transition],
       Subjects.EventSession,
       {
         cleanupEvent: {

@@ -121,6 +121,36 @@ const detail = {
   ],
 };
 
+const completedDetail = {
+  ...detail,
+  status: "RESOLVED" as const,
+  resolvedAt: "2026-08-20T14:00:00.000Z",
+  statusHistory: [
+    ...detail.statusHistory,
+    {
+      id: "cancelled-history",
+      fromStatus: "CLEANUP_ORGANIZED" as const,
+      toStatus: "ACTIVE" as const,
+      reason: "Cleanup event cancelled: unsafe weather conditions.",
+      changedAt: "2026-08-20T11:00:00.000Z",
+    },
+    {
+      id: "replacement-history",
+      fromStatus: "ACTIVE" as const,
+      toStatus: "CLEANUP_ORGANIZED" as const,
+      reason: "A replacement cleanup event was published for this incident.",
+      changedAt: "2026-08-20T12:00:00.000Z",
+    },
+    {
+      id: "resolved-history",
+      fromStatus: "CLEANUP_ORGANIZED" as const,
+      toStatus: "RESOLVED" as const,
+      reason: "The linked cleanup event was completed with recorded attendance and evidence.",
+      changedAt: "2026-08-20T14:00:00.000Z",
+    },
+  ],
+};
+
 function textContent(renderer: TestRenderer.ReactTestRenderer): string {
   return renderer.root
     .findAll((node) => typeof node.children[0] === "string")
@@ -206,5 +236,27 @@ describe("mobile incident workflow scenarios", () => {
     );
     expect(textContent(renderer!)).not.toContain("privateNotes");
     expect(textContent(renderer!)).not.toContain("Organization private");
+  });
+
+  test("My Reports renders cancellation, replacement, and completed incident history", async () => {
+    vi.mocked(listMyIncidents).mockResolvedValueOnce([{ ...summary, status: "RESOLVED" }]);
+    vi.mocked(getMyIncident).mockResolvedValueOnce(completedDetail);
+    let renderer: TestRenderer.ReactTestRenderer;
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <MyReportsScreen accessToken="token" onBack={vi.fn()} onNewReport={vi.fn()} />,
+      );
+    });
+    const reportCard = renderer!.root.findAllByType("Pressable" as never).find((node) =>
+      node.findAllByType("Text" as never).some((text) => text.children.join("") === "Mobile canal report"),
+    );
+    await act(async () => { reportCard!.props.onPress(); });
+
+    const rendered = textContent(renderer!);
+    expect(rendered).toContain("Resolved");
+    expect(rendered).toContain("Cleanup event cancelled: unsafe weather conditions.");
+    expect(rendered).toContain("A replacement cleanup event was published for this incident.");
+    expect(rendered).toContain("The linked cleanup event was completed with recorded attendance and evidence.");
+    expect(rendered).not.toContain("privateNotes");
   });
 });

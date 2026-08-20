@@ -571,7 +571,7 @@ Prove that the completed spatial implementation remains bounded, indexed, tenant
 
 **Suggested branch:** `test/incident-workflow-regression`
 
-**Depends on:** INC-03, MAP-03, EVT-03, NOT-01, and REW-01
+**Depends on:** INC-03, MAP-03, EVT-03, EVT-05, EVT-06, NOT-01, and REW-01
 
 ### Goal
 
@@ -582,7 +582,7 @@ Verify the entire incident lane after event claiming, notifications, and rewards
 - Add regression scenarios for reporting, initial history/deadlines, own-report access, spatial discovery, organization visibility, independent review, false counts, VALID rewards, and linked-event status effects.
 - Verify one shared incident remains one record across overlapping organizations and every organization keeps only its own current review.
 - Verify FALSE never globally rejects an incident or prevents another covering organization from validating/acting.
-- Verify linked-event publication changes the incident to CLEANUP_ORGANIZED, cancellation returns it to the correct ACTIVE/UNADDRESSED state, and completion resolves it.
+- Verify linked-event publication changes the incident to CLEANUP_ORGANIZED, cancellation returns it to ACTIVE, EXPIRED, or ARCHIVED according to stored deadlines, and completion resolves it.
 - Verify idempotency for incident retry, review changes, reporter notifications, and verified-report contribution awards.
 - Test reporter, public, organization, and Super Admin projections for privacy and record-level authorization.
 
@@ -599,9 +599,9 @@ Verify the entire incident lane after event claiming, notifications, and rewards
 
 ### Tests and acceptance criteria
 
-- [ ] Full incident lifecycle regression passes.
+- [x] Full incident lifecycle regression passes.
 - [x] Overlap, boundary visibility, independent review, and false-count behavior remain correct.
-- [ ] Publish/cancel/complete produces correct incident state without duplicate history, rewards, or notifications.
+- [x] Publish/cancel/complete produces correct incident state without duplicate history, rewards, or notifications.
 - [x] Direct-ID attacks and private-field projection tests pass.
 - [ ] Web and Android smoke-test results using real APIs are documented.
 - [x] Changes remain in the incident/map lane unless the integration owner approves a shared-file change.

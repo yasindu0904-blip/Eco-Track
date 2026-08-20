@@ -1,7 +1,8 @@
 # EcoTrack INC-04 Incident Workflow Regression Handoff
 
-Date: 20 August 2026  
-Branch: `INC-04`  
+Date: 20 August 2026
+Continuation branch: `test/inc-04-regression-completion`
+Original provider branch: `origin/INC-04`
 Owner: Member 2 / incident and map lane
 
 ## Scope and dependency audit
@@ -9,7 +10,7 @@ Owner: Member 2 / incident and map lane
 INC-04 was checked against `EcoTrack_ClickUp_Core_Feature_Backlog.md` and the
 current source-of-truth documents before implementation.
 
-Available provider contracts on this branch:
+Available provider contracts on the completed continuation branch:
 
 - INC-01 reporting, evidence metadata, deadlines, own reports, and submission
   idempotency.
@@ -18,16 +19,16 @@ Available provider contracts on this branch:
 - INC-03 tenant-private organization review, reporter notifications, and the
   idempotent verified-report contribution.
 - EVT-03 linked-event publication and atomic incident claim.
+- EVT-04 join, availability, and withdrawal.
+- EVT-05 allocation, removal, and attendance.
+- EVT-06 notes, evidence, cancellation, completion, claim release, linked-incident resolution, notifications, and completion rewards.
 - NOT-01 notifications and REW-01 rewards.
 - MAP-03 spatial/privacy regression coverage.
 
-Unavailable provider contract:
-
-- EVT-06 owns event cancellation, completion, evidence, operational lifecycle,
-  claim release, and linked-incident resolution. No EVT-06 branch, route, use
-  case, or commit is present locally. INC-04 therefore does not implement those
-  event-owned operations. Cancellation/completion acceptance remains gated on
-  EVT-06 being merged.
+The original `origin/INC-04` commit predated EVT-05 and EVT-06. It was merged
+onto a fresh continuation branch from current `origin/main`, then extended
+against the real merged event contracts. No event-owned production behavior was
+duplicated inside the incident module.
 
 ## Backend real-API regression
 
@@ -55,7 +56,17 @@ The stitched INC-04 scenario verifies:
    one incident history, event history, and reporter EVENT_PUBLISHED
    notification.
 10. Retrying publication succeeds idempotently without duplicate side effects.
-11. Reporter, public, organization, and Super Admin projections remain within
+11. A joined volunteer receives one safe cancellation notification.
+12. Cancellation is idempotent, preserves event/incident history, releases the
+    active claim, and restores a recent incident to ACTIVE.
+13. A replacement linked event can then publish and claim the same incident.
+14. The volunteer joins, is allocated, receives confirmed attendance, and the
+    organization records AFTER evidence and completes every required transition.
+15. Completion resolves the incident atomically and creates exactly one event
+    completion history/audit/reward/notification set even when retried.
+16. A separate elapsed-deadline regression proves cancellation restores an
+    incident to EXPIRED rather than ACTIVE while it remains before archiveAfter.
+17. Reporter, public, organization, and Super Admin projections remain within
     their privacy boundaries; altered-tenant direct IDs are rejected.
 
 Provider suites continue to cover DRAFT-not-claiming behavior and simultaneous
@@ -66,8 +77,9 @@ stable 409 conflict.
 
 Automated web scenarios verify:
 
-- My Reports reloads CLEANUP_ORGANIZED and the complete reporter-visible
-  ACTIVE -> CLEANUP_ORGANIZED history.
+- My Reports reloads CLEANUP_ORGANIZED and RESOLVED states with the complete
+  reporter-visible ACTIVE -> CLEANUP_ORGANIZED -> ACTIVE ->
+  CLEANUP_ORGANIZED -> RESOLVED history.
 - Citizen discovery renders the same organized-status meaning and public false
   count.
 - Incident UI output contains no organization private-note fields.
@@ -87,41 +99,45 @@ Automated mobile scenarios verify:
 - Weak-network submission failure preserves the form and reuses the same
   `submissionId` on retry.
 - Manual pin confirmation and the retried payload preserve coordinates.
-- My Reports reloads CLEANUP_ORGANIZED and reporter-visible status history.
+- My Reports reloads CLEANUP_ORGANIZED and RESOLVED states, including the
+  cancellation, replacement-event, and final resolution history.
 - Nearby/location discovery, bounded viewport behavior, map/list selection,
   foreground refresh, and weak-network retry remain green.
 - Network, authorization, and conflict errors do not request sign-out; only a
   401 authentication failure does.
 - Citizen output contains no organization private-note fields.
 
-No Android SDK `adb` command is available in this environment, so a physical
-device/emulator GPS, image-picker/upload, and offline-network walkthrough is not
-claimed. That device-only smoke remains a manual handoff item.
+Android `adb` is installed, but no physical device or emulator was connected
+during final verification. A GPS, image-picker/upload, and offline-network
+walkthrough is therefore not claimed. That device-only smoke remains a manual
+handoff item.
 
 ## ClickUp acceptance status
 
 | INC-04 acceptance item | Status | Evidence |
 |---|---|---|
-| Full incident lifecycle regression passes | Blocked by EVT-06 | Report through linked publication passes; cancel/complete provider routes are absent. |
+| Full incident lifecycle regression passes | Pass | Real API route-through-database test covers report through cancellation, replacement, attendance/evidence, completion, and RESOLVED. |
 | Overlap, boundary visibility, independent review, and false-count behavior remain correct | Pass | Incident and spatial integration suites. |
-| Publish/cancel/complete produces correct state without duplicate history, rewards, or notifications | Partial | Publish and retry pass; cancel/complete require EVT-06. |
+| Publish/cancel/complete produces correct state without duplicate history, rewards, or notifications | Pass | Current EVT-03/05/06 routes are exercised with retries and exact database side-effect counts. |
 | Direct-ID attacks and private-field projection tests pass | Pass | Incident, MAP-03, web, and mobile regressions. |
 | Web and Android smoke-test results using real APIs are documented | Partial | Real API automated evidence is documented; interactive browser/device smoke could not be executed in this environment. |
-| Changes remain in the incident/map lane unless shared changes are approved | Pass | No event production, shared composition, schema, migration, manifest, or lockfile changes. |
+| Changes remain in the incident/map lane unless shared changes are approved | Pass | No event production, schema, migration, manifest, or lockfile changes. The integration owner approved one central CASL correction after the real regression proved ORG_ADMIN session transitions incorrectly returned 403. |
 
-## Required continuation after EVT-06 merges
+## Remaining manual acceptance
 
-1. Rebase/create the continuation from the integration owner's latest merged
-   branch containing EVT-06.
-2. Extend the stitched regression through event cancellation and completion.
-3. Verify cancellation returns a recent incident to ACTIVE or an elapsed
-   incident to EXPIRED/UNADDRESSED according to stored deadlines, releases the
-   claim, and permits a replacement publication.
-4. Verify completion atomically changes the linked incident to RESOLVED and
-   creates exactly one history/audit/reward/notification set.
-5. Run the signed-in web journey and Android GPS/manual-pin/evidence/weak-network
-   journey on a connected browser and device, then replace the two manual
-   limitations above with observed pass/fail evidence.
+All automatable INC-04 regression work is complete. Before checking the final
+manual acceptance box, the integration owner must run the signed-in web journey
+and Android GPS/manual-pin/evidence/weak-network journey on a connected browser
+and device. Record the observed pass/fail result here; do not infer it from unit
+or component tests.
+
+Manual checklist:
+
+1. Web: sign in as the reporter, submit an incident, and verify it in My Reports and public discovery.
+2. Web: switch to a covering organization, VALID-review it, publish a linked event, cancel it, publish a replacement, and complete that replacement after attendance/evidence.
+3. Web: return to the reporter and verify ACTIVE -> CLEANUP_ORGANIZED -> ACTIVE -> CLEANUP_ORGANIZED -> RESOLVED history and safe notifications.
+4. Android: repeat incident submission with GPS and manual pin, attach evidence, and verify a temporary network failure preserves the form/session for retry.
+5. Android: verify the same final incident history and that organization-private notes never appear.
 
 ## Verification commands
 
@@ -139,8 +155,9 @@ mobile: npm run typecheck
 ```
 
 Observed targeted result: all commands passed. Backend incident integration
-reported 9/9 passing tests, web targeted regression 10/10, and mobile targeted
-regression 11/11. Vite reported only its existing large-chunk advisory.
+reported 10/10 passing tests. The focused reporter-history scenarios reported
+3/3 on web and 3/3 on mobile. Vite reported only its existing large-chunk
+advisory.
 
 Executed final repository recheck:
 
@@ -159,11 +176,11 @@ root: git diff --check
 
 Final results:
 
-- Backend: 127/127 tests passed in the serialized full suite.
-- Web: 14/14 tests passed; build and lint passed.
-- Mobile: 22/22 tests passed; typecheck, both security checks, and all 21
+- Backend: 135/135 tests passed in the serialized full suite.
+- Web: 17/17 tests passed; build and lint passed.
+- Mobile: 23/23 tests passed; typecheck, both security checks, and all 21
   Expo Doctor checks passed.
-- Prisma schema is valid, all 16 migrations are applied, and the database/
+- Prisma schema is valid, all 17 migrations are applied, and the database/
   PostGIS repository check succeeded.
 - `git diff --check` reported no whitespace errors. Git only reported the
   repository's normal LF-to-CRLF working-copy advisory.

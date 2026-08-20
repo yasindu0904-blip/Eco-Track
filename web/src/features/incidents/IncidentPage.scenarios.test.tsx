@@ -66,6 +66,36 @@ const detail = {
   ],
 };
 
+const completedDetail = {
+  ...detail,
+  status: "RESOLVED" as const,
+  resolvedAt: "2026-08-20T14:00:00.000Z",
+  statusHistory: [
+    ...detail.statusHistory,
+    {
+      id: "history-cancelled",
+      fromStatus: "CLEANUP_ORGANIZED" as const,
+      toStatus: "ACTIVE" as const,
+      reason: "Cleanup event cancelled: unsafe weather conditions.",
+      changedAt: "2026-08-20T11:00:00.000Z",
+    },
+    {
+      id: "history-replacement",
+      fromStatus: "ACTIVE" as const,
+      toStatus: "CLEANUP_ORGANIZED" as const,
+      reason: "A replacement cleanup event was published for this incident.",
+      changedAt: "2026-08-20T12:00:00.000Z",
+    },
+    {
+      id: "history-resolved",
+      fromStatus: "CLEANUP_ORGANIZED" as const,
+      toStatus: "RESOLVED" as const,
+      reason: "The linked cleanup event was completed with recorded attendance and evidence.",
+      changedAt: "2026-08-20T14:00:00.000Z",
+    },
+  ],
+};
+
 const profile = {
   id: "user-1",
   email: "citizen@example.com",
@@ -125,5 +155,26 @@ describe("web incident workflow scenarios", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("weak network");
     expect(onSignOut).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
+  });
+
+  test("My Reports shows cancellation, replacement, and final resolution history", async () => {
+    vi.mocked(listMyIncidents).mockResolvedValueOnce([{ ...report, status: "RESOLVED" }]);
+    vi.mocked(getMyIncident).mockResolvedValueOnce(completedDetail);
+
+    render(
+      <IncidentPage
+        accessToken="token"
+        profile={profile}
+        initialView="reports"
+        onBackToDashboard={vi.fn()}
+      />,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /view report/i }));
+
+    expect((await screen.findAllByText("Resolved")).length).toBeGreaterThan(0);
+    expect(screen.getByText("Cleanup event cancelled: unsafe weather conditions.")).toBeTruthy();
+    expect(screen.getByText("A replacement cleanup event was published for this incident.")).toBeTruthy();
+    expect(screen.getByText("The linked cleanup event was completed with recorded attendance and evidence.")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("privateNotes");
   });
 });

@@ -581,6 +581,32 @@ test(
       ability.can(Actions.Publish, organizationBEvent),
       false,
     );
+
+    const organizationASession = createAuthorizationSubject(
+      Subjects.EventSession,
+      {
+        id: "50000000-0000-4000-8000-000000000001",
+        cleanupEventId: cleanupEventAId,
+        cleanupEvent: { organizationId: organizationAId },
+      },
+    );
+    const organizationBSession = createAuthorizationSubject(
+      Subjects.EventSession,
+      {
+        id: "50000000-0000-4000-8000-000000000002",
+        cleanupEventId: cleanupEventBId,
+        cleanupEvent: { organizationId: organizationBId },
+      },
+    );
+
+    assert.equal(
+      ability.can(Actions.Transition, organizationASession),
+      true,
+    );
+    assert.equal(
+      ability.can(Actions.Transition, organizationBSession),
+      false,
+    );
   },
 );
 

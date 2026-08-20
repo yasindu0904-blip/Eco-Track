@@ -12,6 +12,7 @@ import { AccountStatus, PlatformRole } from "../../generated/prisma/enums.js";
 import { errorMiddleware } from "../../middleware/error.middleware.js";
 import type { AuthenticationDependencies } from "../auth/auth.types.js";
 import { cleanupEventDependencies } from "../cleanupEvents/cleanupEvent.dependencies.js";
+import type { CleanupEventDependencies } from "../cleanupEvents/cleanupEvent.dependencies.js";
 import { createCleanupEventRouter } from "../cleanupEvents/cleanupEvents.routes.js";
 import type { IncidentDependencies } from "./incident.dependencies.js";
 import { createIncidentRouter } from "./incident.routes.js";
@@ -49,6 +50,7 @@ const organizationAWorkflowStatusId = randomUUID();
 const inactiveAdministrativeAreaId = randomUUID();
 const inactiveAdministrativeServiceAreaId = randomUUID();
 const uploadedPaths = new Set<string>();
+const eventUploadedPaths = new Set<string>();
 const spatialMetrics: SpatialQueryMetric[] = [];
 
 const PUBLIC_FORBIDDEN_FIELDS = new Set([
@@ -170,6 +172,18 @@ const dependencies: IncidentDependencies = {
       return { token: `token-${storagePath}`, signedUrl: `https://storage.test/${storagePath}` };
     },
     async objectExists(storagePath) { return uploadedPaths.has(storagePath); },
+    async createDownloadUrl(storagePath) { return `https://download.test/${storagePath}`; },
+  },
+};
+
+const cleanupDependencies: CleanupEventDependencies = {
+  ...cleanupEventDependencies,
+  eventEvidenceStorage: {
+    async createUploadIntent(storagePath) {
+      eventUploadedPaths.add(storagePath);
+      return { token: `event-token-${storagePath}`, signedUrl: `https://storage.test/${storagePath}` };
+    },
+    async objectExists(storagePath) { return eventUploadedPaths.has(storagePath); },
     async createDownloadUrl(storagePath) { return `https://download.test/${storagePath}`; },
   },
 };
@@ -379,7 +393,7 @@ before(async () => {
   app.use("/api/v1", createIncidentRouter(authenticationDependencies, dependencies));
   app.use(
     "/api/v1",
-    createCleanupEventRouter(authenticationDependencies, cleanupEventDependencies),
+    createCleanupEventRouter(authenticationDependencies, cleanupDependencies),
   );
   app.use(errorMiddleware);
   await new Promise<void>((resolve) => {
@@ -400,7 +414,14 @@ after(async () => {
   ];
   const contributionIds = (
     await prisma.contributionEvent.findMany({
-      where: { incident: { reporterUserId: { in: profileIds } } },
+      where: {
+        OR: [
+          { userId: { in: profileIds } },
+          { recordedByUserId: { in: profileIds } },
+          { incident: { reporterUserId: { in: profileIds } } },
+          { cleanupEvent: { organizationId: { in: organizationIds } } },
+        ],
+      },
       select: { id: true },
     })
   ).map(({ id }) => id);
@@ -1551,7 +1572,13 @@ test("full incident handoff keeps overlap reviews independent and publication id
   const publishPath = `/organizations/${organizationBId}/events/${eventId}/publish`;
   const published = await request(publishPath, organizationBToken, { method: "POST" });
   assert.equal(published.status, 200);
-  assert.equal((await published.json()).data.incidentUpdated, true);
+  const publishedBody = (await published.json()).data as {
+    incidentUpdated: boolean;
+    event: { sessions: Array<{ id: string }> };
+  };
+  assert.equal(publishedBody.incidentUpdated, true);
+  const firstSessionId = publishedBody.event.sessions[0]?.id;
+  assert.ok(firstSessionId);
   const publishReplay = await request(publishPath, organizationBToken, { method: "POST" });
   assert.equal(publishReplay.status, 200);
 
@@ -1584,16 +1611,401 @@ test("full incident handoff keeps overlap reviews independent and publication id
     1,
   );
 
+  // A joined volunteer receives the cancellation once. Cancellation releases
+  // the incident claim, allowing the same validating organization to publish
+  // a replacement event without changing its private review.
+  assert.equal(
+    (
+      await request(`/events/${eventId}/participation`, reporterToken, {
+        method: "POST",
+        body: JSON.stringify({ sessionIds: [firstSessionId] }),
+      })
+    ).status,
+    201,
+  );
+  const initialOperations = (await (
+    await request(
+      `/organizations/${organizationBId}/events/${eventId}/operations`,
+      organizationBToken,
+    )
+  ).json()).data as { event: { updatedAt: string } };
+  const cancellationBody = {
+    expectedUpdatedAt: initialOperations.event.updatedAt,
+    reason: "Unsafe weather conditions require this cleanup event to be replaced.",
+  };
+  const cancellation = await request(
+    `/organizations/${organizationBId}/events/${eventId}/cancel`,
+    organizationBToken,
+    { method: "POST", body: JSON.stringify(cancellationBody) },
+  );
+  assert.equal(cancellation.status, 200);
+  assert.equal((await cancellation.json()).data.incidentStatus, "ACTIVE");
+
+  const cancellationReplay = await request(
+    `/organizations/${organizationBId}/events/${eventId}/cancel`,
+    organizationBToken,
+    { method: "POST", body: JSON.stringify(cancellationBody) },
+  );
+  assert.equal(cancellationReplay.status, 200);
+  assert.equal((await cancellationReplay.json()).data.idempotentReplay, true);
+  assert.equal(
+    await prisma.incidentStatusHistory.count({
+      where: {
+        incidentId: created.id,
+        relatedCleanupEventId: eventId,
+        fromStatus: "CLEANUP_ORGANIZED",
+        toStatus: "ACTIVE",
+      },
+    }),
+    1,
+  );
+  assert.equal(
+    await prisma.eventStatusHistory.count({
+      where: { cleanupEventId: eventId, toStatus: { mappedLifecycleStatus: "CANCELLED" } },
+    }),
+    1,
+  );
+  assert.equal(
+    await prisma.notification.count({
+      where: {
+        userId: reporterId,
+        type: "EVENT_CANCELLED",
+        data: { path: ["eventId"], equals: eventId },
+      },
+    }),
+    1,
+  );
+  assert.equal(
+    await prisma.cleanupEvent.count({
+      where: {
+        incidentId: created.id,
+        lifecycleStatus: { in: ["PUBLISHED", "SCHEDULED", "IN_PROGRESS", "COMPLETION_SUBMITTED"] },
+      },
+    }),
+    0,
+  );
+
+  const replacementDraft = await request(
+    `/organizations/${organizationBId}/events/drafts`,
+    organizationBToken,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        incidentId: created.id,
+        title: "INC-04 replacement cleanup event",
+        description: "The replacement event completes the incident regression lifecycle.",
+        eventLatitude: 6.96,
+        eventLongitude: 79.92,
+      }),
+    },
+  );
+  assert.equal(replacementDraft.status, 201);
+  const replacementEventId = (await replacementDraft.json()).data.id as string;
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationBId}/events/drafts/${replacementEventId}`,
+        organizationBToken,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            publicInstructions: "Wear closed shoes and follow coordinator instructions.",
+            eventAddress: "INC-04 replacement meeting point",
+          }),
+        },
+      )
+    ).status,
+    200,
+  );
+  const replacementSessionResponse = await request(
+    `/organizations/${organizationBId}/events/${replacementEventId}/sessions`,
+    organizationBToken,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        sessionDate: "2099-10-02",
+        startTime: "09:00:00",
+        endTime: "12:00:00",
+        capacity: 25,
+      }),
+    },
+  );
+  assert.equal(replacementSessionResponse.status, 201);
+  const replacementSessionId = (await replacementSessionResponse.json()).data.id as string;
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationBId}/events/${replacementEventId}/coordinators`,
+        organizationBToken,
+        {
+          method: "POST",
+          body: JSON.stringify({ membershipId: organizationBMembershipId }),
+        },
+      )
+    ).status,
+    201,
+  );
+  const replacementPublishPath =
+    `/organizations/${organizationBId}/events/${replacementEventId}/publish`;
+  assert.equal(
+    (await request(replacementPublishPath, organizationBToken, { method: "POST" })).status,
+    200,
+  );
+  assert.equal(
+    (
+      await request(`/events/${replacementEventId}/participation`, reporterToken, {
+        method: "POST",
+        body: JSON.stringify({ sessionIds: [replacementSessionId] }),
+      })
+    ).status,
+    201,
+  );
+  const participant = await prisma.eventParticipant.findFirstOrThrow({
+    where: { cleanupEventId: replacementEventId, userId: reporterId },
+  });
+  const allocationResponse = await request(
+    `/organizations/${organizationBId}/events/${replacementEventId}/allocations`,
+    organizationBToken,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        participantId: participant.id,
+        sessionId: replacementSessionId,
+      }),
+    },
+  );
+  assert.equal(allocationResponse.status, 201);
+  const allocationId = (await allocationResponse.json()).data.id as string;
+
+  await prisma.eventSession.update({
+    where: { id: replacementSessionId },
+    data: {
+      sessionDate: new Date("2020-01-01T00:00:00.000Z"),
+      startTime: new Date("1970-01-01T09:00:00.000Z"),
+    },
+  });
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationBId}/events/${replacementEventId}/allocations/${allocationId}/attendance`,
+        organizationBToken,
+        { method: "PATCH", body: JSON.stringify({ status: "ATTENDED" }) },
+      )
+    ).status,
+    200,
+  );
+
+  const evidenceIntent = await request(
+    `/organizations/${organizationBId}/events/${replacementEventId}/evidence/upload-intents`,
+    organizationBToken,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        files: [{ originalFileName: "inc-04-after.jpg", contentType: "image/jpeg", sizeBytes: 2048 }],
+      }),
+    },
+  );
+  assert.equal(evidenceIntent.status, 201);
+  const evidenceStoragePath = (await evidenceIntent.json()).data[0].storagePath as string;
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationBId}/events/${replacementEventId}/evidence`,
+        organizationBToken,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            storagePath: evidenceStoragePath,
+            originalFileName: "inc-04-after.jpg",
+            contentType: "image/jpeg",
+            sizeBytes: 2048,
+            type: "AFTER",
+            sessionId: replacementSessionId,
+            caption: "The verified area after cleanup completion.",
+          }),
+        },
+      )
+    ).status,
+    201,
+  );
+
+  let replacementOperations = (await (
+    await request(
+      `/organizations/${organizationBId}/events/${replacementEventId}/operations`,
+      organizationBToken,
+    )
+  ).json()).data as {
+    event: { updatedAt: string };
+    sessions: Array<{ id: string; updatedAt: string }>;
+    availableTransitions: Array<{ id: string; lifecycleStatus: string }>;
+  };
+  const inProgressTarget = replacementOperations.availableTransitions.find(
+    ({ lifecycleStatus }) => lifecycleStatus === "IN_PROGRESS",
+  );
+  assert.ok(inProgressTarget);
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationBId}/events/${replacementEventId}/transitions`,
+        organizationBToken,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            targetWorkflowStatusId: inProgressTarget.id,
+            expectedUpdatedAt: replacementOperations.event.updatedAt,
+          }),
+        },
+      )
+    ).status,
+    200,
+  );
+  let replacementSession = replacementOperations.sessions.find(
+    ({ id }) => id === replacementSessionId,
+  );
+  assert.ok(replacementSession);
+  const startedSession = await request(
+    `/organizations/${organizationBId}/events/${replacementEventId}/sessions/${replacementSessionId}/status`,
+    organizationBToken,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: "IN_PROGRESS",
+        expectedUpdatedAt: replacementSession.updatedAt,
+      }),
+    },
+  );
+  assert.equal(startedSession.status, 200);
+  replacementSession = (await startedSession.json()).data as {
+    id: string;
+    updatedAt: string;
+  };
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationBId}/events/${replacementEventId}/sessions/${replacementSessionId}/status`,
+        organizationBToken,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            status: "COMPLETED",
+            expectedUpdatedAt: replacementSession.updatedAt,
+          }),
+        },
+      )
+    ).status,
+    200,
+  );
+
+  replacementOperations = (await (
+    await request(
+      `/organizations/${organizationBId}/events/${replacementEventId}/operations`,
+      organizationBToken,
+    )
+  ).json()).data;
+  const completionSubmittedTarget = replacementOperations.availableTransitions.find(
+    ({ lifecycleStatus }) => lifecycleStatus === "COMPLETION_SUBMITTED",
+  );
+  assert.ok(completionSubmittedTarget);
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationBId}/events/${replacementEventId}/transitions`,
+        organizationBToken,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            targetWorkflowStatusId: completionSubmittedTarget.id,
+            expectedUpdatedAt: replacementOperations.event.updatedAt,
+            notes: "The INC-04 cleanup work and evidence are ready for completion.",
+          }),
+        },
+      )
+    ).status,
+    200,
+  );
+  const readiness = await request(
+    `/organizations/${organizationBId}/events/${replacementEventId}/completion-readiness`,
+    organizationBToken,
+  );
+  assert.equal(readiness.status, 200);
+  assert.equal((await readiness.json()).data.ready, true);
+
+  replacementOperations = (await (
+    await request(
+      `/organizations/${organizationBId}/events/${replacementEventId}/operations`,
+      organizationBToken,
+    )
+  ).json()).data;
+  const completionBody = {
+    expectedUpdatedAt: replacementOperations.event.updatedAt,
+    notes: "INC-04 completion evidence reviewed.",
+  };
+  const completion = await request(
+    `/organizations/${organizationBId}/events/${replacementEventId}/complete`,
+    organizationBToken,
+    { method: "POST", body: JSON.stringify(completionBody) },
+  );
+  assert.equal(completion.status, 200);
+  const completionResult = (await completion.json()).data as {
+    lifecycleStatus: string;
+    incidentStatus: string;
+    rewardsAwarded: number;
+  };
+  assert.equal(completionResult.lifecycleStatus, "COMPLETED");
+  assert.equal(completionResult.incidentStatus, "RESOLVED");
+  assert.equal(completionResult.rewardsAwarded, 1);
+
+  const completionReplay = await request(
+    `/organizations/${organizationBId}/events/${replacementEventId}/complete`,
+    organizationBToken,
+    { method: "POST", body: JSON.stringify(completionBody) },
+  );
+  assert.equal(completionReplay.status, 200);
+  assert.equal((await completionReplay.json()).data.idempotentReplay, true);
+  assert.equal(
+    await prisma.incidentStatusHistory.count({
+      where: {
+        incidentId: created.id,
+        relatedCleanupEventId: replacementEventId,
+        fromStatus: "CLEANUP_ORGANIZED",
+        toStatus: "RESOLVED",
+      },
+    }),
+    1,
+  );
+  assert.equal(
+    await prisma.contributionEvent.count({
+      where: { cleanupEventId: replacementEventId, type: "EVENT_COMPLETED" },
+    }),
+    1,
+  );
+  assert.equal(
+    await prisma.auditLog.count({
+      where: { action: "CLEANUP_EVENT_COMPLETED", entityId: replacementEventId },
+    }),
+    1,
+  );
+  assert.equal(
+    await prisma.notification.count({
+      where: {
+        userId: reporterId,
+        type: "EVENT_COMPLETED",
+        data: { path: ["eventId"], equals: replacementEventId },
+      },
+    }),
+    1,
+  );
+
   const ownDetail = await request(`/incidents/me/${created.id}`, reporterToken);
   assert.equal(ownDetail.status, 200);
   const ownIncident = (await ownDetail.json()).data as {
     status: string;
     statusHistory: Array<{ toStatus: string }>;
   };
-  assert.equal(ownIncident.status, "CLEANUP_ORGANIZED");
+  assert.equal(ownIncident.status, "RESOLVED");
   assert.deepEqual(
     ownIncident.statusHistory.map(({ toStatus }) => toStatus),
-    ["ACTIVE", "CLEANUP_ORGANIZED"],
+    ["ACTIVE", "CLEANUP_ORGANIZED", "ACTIVE", "CLEANUP_ORGANIZED", "RESOLVED"],
   );
 
   for (const token of [reporterToken, superAdminToken]) {
@@ -1601,6 +2013,88 @@ test("full incident handoff keeps overlap reviews independent and publication id
     assert.equal(publicDetail.status, 200);
     assertProjectionExcludesPrivateFields((await publicDetail.json()).data);
   }
+});
+
+test("cancelling an elapsed linked event restores the incident from stored deadlines", async () => {
+  const now = new Date();
+  const elapsedIncident = await prisma.incident.create({
+    data: {
+      reporterUserId: reporterId,
+      submissionId: randomUUID(),
+      categoryId,
+      title: "INC-04 elapsed cancellation incident",
+      description: "An elapsed incident verifies deadline-aware claim release after cancellation.",
+      severity: "MEDIUM",
+      status: "CLEANUP_ORGANIZED",
+      latitude: 6.96,
+      longitude: 79.92,
+      highlightUntil: new Date(now.getTime() - 48 * 60 * 60 * 1000),
+      archiveAfter: new Date(now.getTime() + 48 * 60 * 60 * 1000),
+      reportedAt: new Date(now.getTime() - 72 * 60 * 60 * 1000),
+    },
+  });
+  await prisma.incidentReview.create({
+    data: {
+      incidentId: elapsedIncident.id,
+      organizationId: organizationBId,
+      status: "VALID",
+      reviewedByMembershipId: organizationBMembershipId,
+      reviewedAt: now,
+    },
+  });
+  const publishedStatus = await prisma.cleanupWorkflowStatus.findFirstOrThrow({
+    where: { organizationId: organizationBId, mappedLifecycleStatus: "PUBLISHED" },
+  });
+  const elapsedEvent = await prisma.cleanupEvent.create({
+    data: {
+      organizationId: organizationBId,
+      incidentId: elapsedIncident.id,
+      currentWorkflowStatusId: publishedStatus.id,
+      lifecycleStatus: "PUBLISHED",
+      createdByMembershipId: organizationBMembershipId,
+      title: "INC-04 elapsed linked event",
+      description: "This event is cancelled after the incident highlight deadline.",
+      publicInstructions: "Follow the event coordinator's safety instructions.",
+      eventLatitude: 6.96,
+      eventLongitude: 79.92,
+      publishedAt: now,
+    },
+  });
+  const operations = await request(
+    `/organizations/${organizationBId}/events/${elapsedEvent.id}/operations`,
+    organizationBToken,
+  );
+  assert.equal(operations.status, 200);
+  const expectedUpdatedAt = (await operations.json()).data.event.updatedAt as string;
+  const cancelled = await request(
+    `/organizations/${organizationBId}/events/${elapsedEvent.id}/cancel`,
+    organizationBToken,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        expectedUpdatedAt,
+        reason: "The original cleanup schedule can no longer proceed safely.",
+      }),
+    },
+  );
+  assert.equal(cancelled.status, 200);
+  assert.equal((await cancelled.json()).data.incidentStatus, "EXPIRED");
+  const stored = await prisma.incident.findUniqueOrThrow({
+    where: { id: elapsedIncident.id },
+  });
+  assert.equal(stored.status, "EXPIRED");
+  assert.equal(stored.archivedAt, null);
+  assert.equal(
+    await prisma.incidentStatusHistory.count({
+      where: {
+        incidentId: elapsedIncident.id,
+        relatedCleanupEventId: elapsedEvent.id,
+        fromStatus: "CLEANUP_ORGANIZED",
+        toStatus: "EXPIRED",
+      },
+    }),
+    1,
+  );
 });
 
 test("rejects invalid coordinates and inactive categories", async () => {
