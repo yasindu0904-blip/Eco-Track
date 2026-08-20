@@ -2,6 +2,7 @@ export { EcoMap } from "./components/EcoMap";
 export type { EcoMapProps } from "./components/EcoMap";
 export { LocationPicker } from "./components/LocationPicker";
 export type { LocationPickerProps } from "./components/LocationPicker";
+export { useRefreshOnForeground } from "./hooks/useRefreshOnForeground";
 export {
   COLOMBO_MAP_CENTER,
   MAP_REQUEST_LIMITS,

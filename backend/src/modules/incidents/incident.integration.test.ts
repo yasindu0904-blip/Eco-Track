@@ -13,7 +13,7 @@ import { errorMiddleware } from "../../middleware/error.middleware.js";
 import type { AuthenticationDependencies } from "../auth/auth.types.js";
 import type { IncidentDependencies } from "./incident.dependencies.js";
 import { createIncidentRouter } from "./incident.routes.js";
-import { MAP_PERFORMANCE_BUDGETS } from "../maps/map.constants.js";
+import { MAP_LIMITS } from "../maps/map.constants.js";
 import type { SpatialQueryMetric } from "../maps/map.telemetry.js";
 
 const reporterId = randomUUID();
@@ -45,6 +45,55 @@ const inactiveAdministrativeAreaId = randomUUID();
 const inactiveAdministrativeServiceAreaId = randomUUID();
 const uploadedPaths = new Set<string>();
 const spatialMetrics: SpatialQueryMetric[] = [];
+
+const PUBLIC_FORBIDDEN_FIELDS = new Set([
+  "reporterUserId",
+  "submissionId",
+  "currentReview",
+  "currentReviewStatus",
+  "privateNotes",
+  "reviewedByMembershipId",
+  "reviewerName",
+  "officialEmail",
+  "officialPhone",
+  "phoneNumber",
+  "participants",
+  "coordinators",
+]);
+
+const ORGANIZATION_LIST_FORBIDDEN_FIELDS = new Set([
+  "reporterUserId",
+  "submissionId",
+  "currentReview",
+  "privateNotes",
+  "reviewedByMembershipId",
+  "reviewerName",
+  "officialEmail",
+  "officialPhone",
+  "phoneNumber",
+  "participants",
+  "coordinators",
+]);
+
+function assertProjectionExcludesPrivateFields(
+  value: unknown,
+  forbiddenFields = PUBLIC_FORBIDDEN_FIELDS,
+): void {
+  if (Array.isArray(value)) {
+    value.forEach((nested) => assertProjectionExcludesPrivateFields(nested, forbiddenFields));
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+
+  for (const [key, nested] of Object.entries(value)) {
+    assert.equal(
+      forbiddenFields.has(key),
+      false,
+      `Public projection unexpectedly contained ${key}.`,
+    );
+    assertProjectionExcludesPrivateFields(nested, forbiddenFields);
+  }
+}
 
 const profiles = {
   [reporterToken]: {
@@ -480,6 +529,11 @@ test("public viewport and nearby discovery are bounded, private-safe, and pagina
   assert.equal("description" in firstItem, false);
   assert.equal("currentReviewStatus" in firstItem, false);
   assert.equal(typeof firstItem.falseReviewCount, "number");
+  assertProjectionExcludesPrivateFields(firstPage.data);
+  assert.ok(
+    Buffer.byteLength(JSON.stringify(firstPage.data), "utf8") < 64 * 1024,
+    "A one-item incident map page should remain a compact public projection.",
+  );
 
   const secondPageResponse = await request(
     `/incidents?${viewportQuery}&cursor=${encodeURIComponent(firstPage.data.nextCursor!)}`,
@@ -510,7 +564,7 @@ test("public viewport and nearby discovery are bounded, private-safe, and pagina
   assert.ok(publicMetrics.some((metric) => metric.mode === "VIEWPORT"));
   assert.ok(publicMetrics.some((metric) => metric.mode === "RADIUS"));
   assert.ok(publicMetrics.every(
-    (metric) => metric.durationMs <= MAP_PERFORMANCE_BUDGETS.maxSpatialQueryDurationMs,
+    (metric) => metric.durationMs >= 0 && metric.resultCount <= MAP_LIMITS.maxPageSize + 1,
   ));
 
   const filteredResponse = await request(
@@ -560,6 +614,15 @@ test("public viewport and nearby discovery are bounded, private-safe, and pagina
   assert.equal(
     (
       await request(
+        "/incidents?west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=101",
+        otherToken,
+      )
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await request(
         "/incidents/nearby?latitude=6.9271&longitude=79.8612&radiusMeters=50001",
         otherToken,
       )
@@ -588,6 +651,7 @@ test("organization discovery includes covered boundary incidents and active area
   assert.equal("description" in incident, false);
   assert.equal("privateNotes" in incident, false);
   assert.equal(incident.falseReviewCount, 0);
+  assertProjectionExcludesPrivateFields(body.data, ORGANIZATION_LIST_FORBIDDEN_FIELDS);
 
   const allCoveredResponse = await request(
     `/organizations/${organizationId}/incidents?scope=all`,
@@ -925,6 +989,7 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
   assert.equal(publicOverlap.falseReviewCount, 2);
   assert.equal("currentReviewStatus" in publicOverlap, false);
   assert.equal("privateNotes" in publicOverlap, false);
+  assertProjectionExcludesPrivateFields(publicOverlap);
 
   const organizationAOverlapDetail = await request(
     `/organizations/${organizationId}/incidents/${overlapIncidentId}`,

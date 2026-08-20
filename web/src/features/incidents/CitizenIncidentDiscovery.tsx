@@ -263,7 +263,7 @@ export function CitizenIncidentDiscovery({ accessToken, onOpenEvent }: Props) {
         setEventDetail(undefined);
         return selectedKind === "INCIDENT"
           ? getPublicIncident(accessToken, selectedId, controller.signal)
-          : getPublicCleanupEvent(accessToken, selectedId);
+          : getPublicCleanupEvent(accessToken, selectedId, controller.signal);
       })
       .then((loaded) => {
         if (!controller.signal.aborted && loaded) {

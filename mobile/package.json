@@ -5,12 +5,14 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start --dev-client",
+    "test": "vitest run",
     "start:map": "node scripts/startMapPreview.cjs",
     "start:go": "expo start",
     "android": "expo run:android --device",
     "typecheck": "tsc --noEmit",
     "doctor": "npx expo-doctor",
-    "security:check": "node scripts/verifyMetroImageSecurity.cjs"
+    "security:check": "node scripts/verifyMetroImageSecurity.cjs",
+    "security:map": "node scripts/verifyMapPrivacy.cjs"
   },
   "dependencies": {
     "@expo/log-box": "^57.0.3",
@@ -32,7 +34,10 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.18",
-    "typescript": "~6.0.3"
+    "@types/react-test-renderer": "^19.1.0",
+    "react-test-renderer": "^19.2.3",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "uuid": "11.1.1"

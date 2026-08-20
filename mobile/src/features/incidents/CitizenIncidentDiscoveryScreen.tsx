@@ -12,6 +12,7 @@ import {
   type MapMarkerFeature,
   type MapViewport,
   type MapViewportChangeHandler,
+  useRefreshOnForeground,
 } from "../map";
 import {
   getPublicIncident,
@@ -255,6 +256,11 @@ export function CitizenIncidentDiscoveryScreen({ accessToken, onBack, onReportIn
     [runSearch],
   );
 
+  const refreshAfterForeground = useCallback(() => {
+    if (search) void runSearch(search);
+  }, [runSearch, search]);
+  useRefreshOnForeground(refreshAfterForeground);
+
   useEffect(() => {
     detailController.current?.abort();
     if (!selectedId) {
@@ -270,7 +276,7 @@ export function CitizenIncidentDiscoveryScreen({ accessToken, onBack, onReportIn
         setDetailLoading(true);
         return selectedKind === "INCIDENT"
           ? getPublicIncident(accessToken, selectedId, controller.signal)
-          : getPublicCleanupEvent(accessToken, selectedId);
+          : getPublicCleanupEvent(accessToken, selectedId, controller.signal);
       })
       .then((loaded) => {
         if (!controller.signal.aborted && loaded) {

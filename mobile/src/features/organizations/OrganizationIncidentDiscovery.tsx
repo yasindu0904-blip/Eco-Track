@@ -14,6 +14,7 @@ import {
   type MapMarkerFeature,
   type MapViewport,
   type MapViewportChangeHandler,
+  useRefreshOnForeground,
 } from "../map";
 import {
   getOrganizationIncidentDetail,
@@ -317,6 +318,17 @@ export function OrganizationIncidentDiscovery({
     },
     [categoryId, loadDiscovery, status, timeRange],
   );
+
+  const refreshAfterForeground = useCallback(() => {
+    if (viewport) {
+      void loadDiscovery(
+        viewport,
+        { status, categoryId, timeRange },
+        { includeBoundaries: true },
+      );
+    }
+  }, [categoryId, loadDiscovery, status, timeRange, viewport]);
+  useRefreshOnForeground(refreshAfterForeground);
 
   const changeStatus = (nextStatus: (typeof statuses)[number]["value"]) => {
     setStatus(nextStatus);

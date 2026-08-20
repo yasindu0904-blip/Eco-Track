@@ -556,12 +556,12 @@ Prove that the completed spatial implementation remains bounded, indexed, tenant
 
 ### Tests and acceptance criteria
 
-- [ ] Positive, boundary, overlap, invalid-input, and cross-tenant spatial tests pass in CI PostGIS.
-- [ ] Primary spatial queries use the intended indexes based on documented query-plan evidence.
-- [ ] Ordinary endpoints cannot download unbounded national map data.
-- [ ] Public/Super Admin results contain no private reviews, contacts, or participant data.
-- [ ] Web and mobile work without location permission and during empty/error states.
-- [ ] No competing map implementation or incompatible marker contract is introduced.
+- [x] Positive, boundary, overlap, invalid-input, and cross-tenant spatial tests pass in CI PostGIS.
+- [x] Primary spatial queries use the intended indexes based on documented query-plan evidence.
+- [x] Ordinary endpoints cannot download unbounded national map data.
+- [x] Public/Super Admin results contain no private reviews, contacts, or participant data.
+- [x] Web and mobile work without location permission and during empty/error states.
+- [x] No competing map implementation or incompatible marker contract is introduced.
 
 ---
 

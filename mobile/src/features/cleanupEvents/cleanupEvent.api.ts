@@ -167,10 +167,10 @@ export async function listPublicCleanupEvents(token: string, cursor?: string) {
   return (await apiRequest<{ data: CleanupEventPublicPage }>(`/events?${query}`, { accessToken: token })).data;
 }
 
-export async function getPublicCleanupEvent(token: string, eventId: string) {
+export async function getPublicCleanupEvent(token: string, eventId: string, signal?: AbortSignal) {
   return (await apiRequest<{ data: CleanupEventPublicDetail }>(
     `/events/${encodeURIComponent(eventId)}`,
-    { accessToken: token },
+    { accessToken: token, signal },
   )).data;
 }
 

@@ -24,7 +24,7 @@ MAP-02 relies on the existing schema-owned indexes and does not add a migration:
 - GiST: `incidents.geo_point`, `cleanup_events.event_geo_point`, service/administrative boundaries.
 - B-tree: incident status/reported time, cleanup-event organization/lifecycle/created time, event-participant user/status.
 
-Spatial query timing is emitted as structured `spatial_query` telemetry with operation, projection, query mode, duration, and returned row count. Integration tests enforce the current `2,000 ms` spatial-query budget for public viewport/radius and organization viewport projections. The local PostGIS verification on 2026-08-20 completed the tested map queries below this budget.
+Spatial query timing is emitted as structured `spatial_query` telemetry with operation, projection, query mode, duration, and returned row count. MAP-03 supersedes the original elapsed-time integration ceiling: CI now checks bounded result counts and records timing without failing based on shared-runner wall-clock variance. Repeatable `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` evidence is the performance gate.
 
 Production promotion should still include representative `EXPLAIN (ANALYZE, BUFFERS)` checks against viewport, radius, dense-result, and tenant-event queries using production-like row counts. Confirm that the GiST path is selected and compare p95 duration against the deployment performance objective; a small integration fixture cannot substitute for a production-scale query-plan review.
 

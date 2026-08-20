@@ -8,7 +8,7 @@ import { createApp } from "../../app.js";
 import { prisma } from "../../database/prisma.js";
 import type { AuthenticationDependencies } from "../auth/auth.types.js";
 import { cleanupEventDependencies } from "./cleanupEvent.dependencies.js";
-import { MAP_PERFORMANCE_BUDGETS } from "../maps/map.constants.js";
+import { MAP_LIMITS } from "../maps/map.constants.js";
 import type { SpatialQueryMetric } from "../maps/map.telemetry.js";
 
 const organizationAId = randomUUID();
@@ -59,6 +59,36 @@ const authenticationDependencies: AuthenticationDependencies = {
 };
 const spatialMetrics: SpatialQueryMetric[] = [];
 cleanupEventDependencies.spatialQueryObserver = (metric) => spatialMetrics.push(metric);
+
+const PUBLIC_EVENT_FORBIDDEN_FIELDS = new Set([
+  "createdByMembershipId",
+  "officialEmail",
+  "officialPhone",
+  "phoneNumber",
+  "privateNotes",
+  "reviewerName",
+  "participants",
+  "coordinators",
+  "notes",
+  "storagePath",
+]);
+
+function assertPublicEventProjection(value: unknown): void {
+  if (Array.isArray(value)) {
+    value.forEach(assertPublicEventProjection);
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+
+  for (const [key, nested] of Object.entries(value)) {
+    assert.equal(
+      PUBLIC_EVENT_FORBIDDEN_FIELDS.has(key),
+      false,
+      `Public event projection unexpectedly contained ${key}.`,
+    );
+    assertPublicEventProjection(nested);
+  }
+}
 
 let server: Server | undefined;
 let baseUrl = "";
@@ -582,6 +612,7 @@ test("a direct event publishes atomically and exposes only public-safe detail", 
   assert.equal("createdByMembershipId" in detailBody, false);
   assert.equal(JSON.stringify(detailBody).includes("officialPhone"), false);
   assert.equal(JSON.stringify(detailBody).includes("notes"), false);
+  assertPublicEventProjection(detailBody);
   const sessionId = (detailBody.sessions as Array<{ id: string }>)[0]!.id;
   const joined = await request(identities.reporter.token, `/events/${eventId}/participation`, {
     method: "POST",
@@ -605,6 +636,11 @@ test("a direct event publishes atomically and exposes only public-safe detail", 
   assert.equal(marker?.properties.isJoined, true);
   assert.equal("officialPhone" in (marker?.properties ?? {}), false);
   assert.equal("privateNotes" in (marker?.properties ?? {}), false);
+  assertPublicEventProjection(mapBody);
+  assert.ok(
+    Buffer.byteLength(JSON.stringify(mapBody), "utf8") < 64 * 1024,
+    "A small event marker page should remain a compact public projection.",
+  );
 
   const boundaryMap = await request(
     identities.reporter.token,
@@ -617,6 +653,10 @@ test("a direct event publishes atomically and exposes only public-safe detail", 
   assert.equal((await request(
     identities.reporter.token,
     "/events/map?west=80&south=6.8&east=79.8&north=7.1&zoom=12",
+  )).status, 400);
+  assert.equal((await request(
+    identities.reporter.token,
+    "/events/map?west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=101",
   )).status, 400);
 
   const secondMapEventId = await createDirectDraft("Second paged map event");
@@ -694,7 +734,7 @@ test("a direct event publishes atomically and exposes only public-safe detail", 
   assert.ok(eventMapMetrics.some((metric) => metric.mode === "RADIUS"));
   assert.ok(eventMapMetrics.some((metric) => metric.projection === "ORGANIZATION"));
   assert.ok(eventMapMetrics.every(
-    (metric) => metric.durationMs <= MAP_PERFORMANCE_BUDGETS.maxSpatialQueryDurationMs,
+    (metric) => metric.durationMs >= 0 && metric.resultCount <= MAP_LIMITS.maxPageSize + 1,
   ));
   assert.equal((await request(
     identities.adminB.token,

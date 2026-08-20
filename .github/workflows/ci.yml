@@ -114,6 +114,9 @@ jobs:
       - name: Lint web application
         run: npm run lint
 
+      - name: Run web map regression tests
+        run: npm test
+
       - name: Build web application
         run: npm run build
 
@@ -144,6 +147,12 @@ jobs:
 
       - name: Verify Metro image-parser mitigation
         run: npm run security:check
+
+      - name: Verify map location privacy
+        run: npm run security:map
+
+      - name: Run mobile map regression tests
+        run: npm test
 
       - name: Type-check mobile application
         run: npm run typecheck
