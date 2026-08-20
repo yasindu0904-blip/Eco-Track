@@ -947,13 +947,13 @@ Prove the merged system works as one secure product across a clean database, bac
 
 ### Tests and acceptance criteria
 
-- [ ] CI is green.
-- [ ] Clean-database migration deployment succeeds.
-- [ ] Full workflow and cross-tenant suites pass.
-- [ ] Web and Android manual smoke tests pass.
-- [ ] Docker health checks pass.
-- [ ] No presentation-only/fake data remains in implemented feature paths.
-- [ ] API contracts, environment setup, verification evidence, and deliberate exclusions are documented.
+- [ ] CI is green. Local CI-equivalent commands pass; GitHub Actions must confirm after this branch is pushed.
+- [x] Clean-database migration deployment succeeds.
+- [x] Full workflow and cross-tenant suites pass.
+- [ ] Web and Android manual smoke tests pass. Automated client scenarios pass, but a signed-in browser and connected Android device must complete the recorded manual checklist.
+- [x] Docker health checks pass.
+- [x] No presentation-only/fake data remains in implemented feature paths.
+- [x] API contracts, environment setup, verification evidence, and deliberate exclusions are documented in `EcoTrack_INT-02_Core_Workflow_Verification.md`.
 
 ## Deliberate exclusions unless a separate ClickUp task is approved
 

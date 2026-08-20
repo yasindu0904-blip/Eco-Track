@@ -114,7 +114,7 @@ jobs:
       - name: Lint web application
         run: npm run lint
 
-      - name: Run web map regression tests
+      - name: Run all web tests
         run: npm test
 
       - name: Build web application
@@ -151,7 +151,7 @@ jobs:
       - name: Verify map location privacy
         run: npm run security:map
 
-      - name: Run mobile map regression tests
+      - name: Run all mobile tests
         run: npm test
 
       - name: Type-check mobile application
