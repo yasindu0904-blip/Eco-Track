@@ -13,6 +13,7 @@ import { membershipSelfServiceDependencies } from "./modules/memberships/selfSer
 import { incidentDependencies } from "./modules/incidents/incident.dependencies.js";
 import { organizationApplicationDependencies } from "./modules/organizations/application/application.dependencies.js";
 import { rewardDependencies } from "./modules/rewards/reward.dependencies.js";
+import { dashboardDependencies } from "./modules/dashboards/dashboard.dependencies.js";
 
 const app = createApp(
   authenticationDependencies,
@@ -27,6 +28,7 @@ const app = createApp(
     incidentDependencies,
     organizationApplicationDependencies,
     rewardDependencies,
+    dashboardDependencies,
   },
 );
 

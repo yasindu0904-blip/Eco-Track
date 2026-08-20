@@ -428,7 +428,7 @@ Table public.incidents [headerColor: #F28E2B] {
   indexes {
     (status, reported_at)
     category_id
-    reporter_user_id
+    (reporter_user_id, status, reported_at) [name: 'incidents_reporter_status_reported_idx']
     (reporter_user_id, submission_id) [unique]
   }
 
@@ -567,6 +567,7 @@ Table public.event_participants [headerColor: #E15759] {
   indexes {
     (cleanup_event_id, user_id) [unique]
     (cleanup_event_id, status, joined_at, id) [name: 'event_participants_event_status_joined_id_idx']
+    (user_id, status, joined_at) [name: 'event_participants_user_status_joined_idx']
   }
 
   Note: 'Created immediately when a citizen presses Join. There is no volunteer application or approval table.'

@@ -30,6 +30,8 @@ import type { IncidentDependencies } from "./modules/incidents/incident.dependen
 import type { OrganizationApplicationDependencies } from "./modules/organizations/application/application.dependencies.js";
 import type { RewardDependencies } from "./modules/rewards/reward.dependencies.js";
 import type { CleanupEventDependencies } from "./modules/cleanupEvents/cleanupEvent.dependencies.js";
+import type { DashboardDependencies } from "./modules/dashboards/dashboard.types.js";
+import { createDashboardRouter } from "./modules/dashboards/dashboard.routes.js";
 
 type CreateAppOptions = {
   webOrigin?: string;
@@ -42,6 +44,7 @@ type CreateAppOptions = {
   organizationApplicationDependencies?: OrganizationApplicationDependencies;
   rewardDependencies?: RewardDependencies;
   cleanupEventDependencies?: CleanupEventDependencies;
+  dashboardDependencies?: DashboardDependencies;
 };
 
 export function createApp(
@@ -84,6 +87,16 @@ export function createApp(
     "/api/v1",
     createProfileRouter(authenticationDependencies),
   );
+
+  if (options.dashboardDependencies) {
+    app.use(
+      "/api/v1",
+      createDashboardRouter(
+        authenticationDependencies,
+        options.dashboardDependencies,
+      ),
+    );
+  }
 
   if (options.notificationDependencies) {
     app.use(

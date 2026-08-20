@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
@@ -7,6 +7,8 @@ import { colors, spacing } from "../../components/theme";
 import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
 import { CleanupEventDraftScreen, OrganizationCleanupEventListScreen } from "../cleanupEvents";
 import { OrganizationIncidentDiscovery } from "./OrganizationIncidentDiscovery";
+import { getOrganizationSummary } from "../dashboards/dashboard.api";
+import { Metric, SummaryCards, total } from "../dashboards/SummaryCards";
 
 type OrganizationWorkspaceScreenProps = {
   profile: AuthenticatedUserProfile;
@@ -38,6 +40,8 @@ export function OrganizationWorkspaceScreen({
     memberships.find(
       (item) => item.organization.id === selectedOrganizationId,
     ) ?? memberships[0];
+  const organizationId = membership?.organization.id ?? "";
+  const loadSummary = useCallback(() => getOrganizationSummary(accessToken, organizationId), [accessToken, organizationId]);
 
   if (!membership) {
     return null;
@@ -136,6 +140,7 @@ export function OrganizationWorkspaceScreen({
         />
       ) : activeTab === "overview" ? (
         <>
+          <SummaryCards load={loadSummary} label="Organization summary">{(summary) => <><Metric label="Covered incidents" value={total(summary.coveringIncidentsByState)} /><Metric label="Upcoming sessions" value={summary.upcomingSessions} /><Metric label="Joined participants" value={summary.joinedParticipants} /><Metric label="Pending membership requests" value={summary.pendingMembershipRequests} /></>}</SummaryCards>
           <View style={sharedStyles.card}>
             <View style={sharedStyles.spacedRow}>
               <View style={styles.accessValue}>

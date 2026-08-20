@@ -526,7 +526,7 @@ model Incident {
   @@unique([reporterUserId, submissionId], map: "incidents_reporter_submission_key")
   @@index([status, reportedAt])
   @@index([categoryId])
-  @@index([reporterUserId])
+  @@index([reporterUserId, status, reportedAt], map: "incidents_reporter_status_reported_idx")
   @@map("incidents")
 }
 
@@ -698,7 +698,7 @@ model EventParticipant {
   @@unique([cleanupEventId, userId], map: "event_participants_event_user_key")
   @@unique([cleanupEventId, id], map: "event_participants_event_id_key")
   @@index([cleanupEventId, status, joinedAt(sort: Desc), id(sort: Desc)], map: "event_participants_event_status_joined_id_idx")
-  @@index([userId, status], map: "event_participants_user_status_idx")
+  @@index([userId, status, joinedAt], map: "event_participants_user_status_joined_idx")
   @@map("event_participants")
 }
 

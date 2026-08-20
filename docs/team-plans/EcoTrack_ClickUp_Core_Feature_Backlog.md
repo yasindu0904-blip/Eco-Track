@@ -292,12 +292,12 @@ Replace presentation-only dashboards with efficient, role-correct summaries deri
 
 ### Tests and acceptance criteria
 
-- [ ] Citizen counts contain only that user’s data.
-- [ ] Organization A dashboard contains no Organization B private values.
-- [ ] Super Admin receives aggregates without ordinary organization-operation privileges.
-- [ ] Queries remain paginated/aggregated and do not return large record collections.
-- [ ] Web/mobile dashboards navigate to real feature screens.
-- [ ] Full regression and CI pass.
+- [x] Citizen counts contain only that user’s data.
+- [x] Organization A dashboard contains no Organization B private values.
+- [x] Super Admin receives aggregates without ordinary organization-operation privileges.
+- [x] Queries remain paginated/aggregated and do not return large record collections.
+- [x] Web/mobile dashboards navigate to real feature screens.
+- [x] Full regression and CI pass.
 
 ---
 
