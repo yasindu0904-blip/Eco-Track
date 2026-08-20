@@ -14,6 +14,12 @@ import type { AuthenticationDependencies } from "../auth/auth.types.js";
 import { cleanupEventDependencies } from "../cleanupEvents/cleanupEvent.dependencies.js";
 import type { CleanupEventDependencies } from "../cleanupEvents/cleanupEvent.dependencies.js";
 import { createCleanupEventRouter } from "../cleanupEvents/cleanupEvents.routes.js";
+import { dashboardDependencies } from "../dashboards/dashboard.dependencies.js";
+import { createDashboardRouter } from "../dashboards/dashboard.routes.js";
+import { notificationDependencies } from "../notifications/notification.dependencies.js";
+import { createNotificationRouter } from "../notifications/notification.routes.js";
+import { rewardDependencies } from "../rewards/reward.dependencies.js";
+import { createRewardRouter } from "../rewards/reward.routes.js";
 import type { IncidentDependencies } from "./incident.dependencies.js";
 import { createIncidentRouter } from "./incident.routes.js";
 import { MAP_LIMITS } from "../maps/map.constants.js";
@@ -394,6 +400,18 @@ before(async () => {
   app.use(
     "/api/v1",
     createCleanupEventRouter(authenticationDependencies, cleanupDependencies),
+  );
+  app.use(
+    "/api/v1",
+    createNotificationRouter(authenticationDependencies, notificationDependencies),
+  );
+  app.use(
+    "/api/v1",
+    createRewardRouter(authenticationDependencies, rewardDependencies),
+  );
+  app.use(
+    "/api/v1",
+    createDashboardRouter(authenticationDependencies, dashboardDependencies),
   );
   app.use(errorMiddleware);
   await new Promise<void>((resolve) => {
@@ -1320,7 +1338,7 @@ test("organization review detail and mutation remain tenant-private and idempote
   }
 });
 
-test("full incident handoff keeps overlap reviews independent and publication idempotent", async () => {
+test("INT-02 full workflow preserves tenant isolation and updates notifications, rewards, and dashboards", async () => {
   const workflowSubmissionId = randomUUID();
   const createBody = {
     submissionId: workflowSubmissionId,
@@ -2013,6 +2031,72 @@ test("full incident handoff keeps overlap reviews independent and publication id
     assert.equal(publicDetail.status, 200);
     assertProjectionExcludesPrivateFields((await publicDetail.json()).data);
   }
+
+  const notificationsResponse = await request(
+    "/notifications?unreadOnly=true&limit=50",
+    reporterToken,
+  );
+  assert.equal(notificationsResponse.status, 200);
+  const notifications = (await notificationsResponse.json()).data.items as Array<{
+    type: string;
+    data: Record<string, string> | null;
+  }>;
+  assert.ok(notifications.some(({ type, data }) =>
+    type === "EVENT_CANCELLED" && data?.eventId === eventId));
+  assert.ok(notifications.some(({ type, data }) =>
+    type === "EVENT_COMPLETED" && data?.eventId === replacementEventId));
+  assertProjectionExcludesPrivateFields(notifications);
+
+  const rewardsResponse = await request("/rewards/me/contributions?limit=50", reporterToken);
+  assert.equal(rewardsResponse.status, 200);
+  const contributions = (await rewardsResponse.json()).data.items as Array<{
+    type: string;
+    incidentId: string | null;
+    cleanupEventId: string | null;
+  }>;
+  assert.ok(contributions.some(({ type, incidentId }) =>
+    type === "VERIFIED_INCIDENT_REPORT" && incidentId === created.id));
+  assert.ok(contributions.some(({ type, cleanupEventId }) =>
+    type === "EVENT_COMPLETED" && cleanupEventId === replacementEventId));
+
+  const citizenDashboardResponse = await request("/dashboards/citizen", reporterToken);
+  assert.equal(citizenDashboardResponse.status, 200);
+  const citizenDashboard = (await citizenDashboardResponse.json()).data as {
+    reportsByState: Record<string, number>;
+    unreadNotifications: number;
+    contributions: { count: number; points: number };
+  };
+  assert.ok((citizenDashboard.reportsByState.RESOLVED ?? 0) >= 1);
+  assert.ok(citizenDashboard.unreadNotifications >= notifications.length);
+  assert.ok(citizenDashboard.contributions.count >= 3);
+  assert.ok(citizenDashboard.contributions.points >= 60);
+
+  const organizationDashboardResponse = await request(
+    `/organizations/${organizationBId}/dashboard-summary`,
+    organizationBToken,
+  );
+  assert.equal(organizationDashboardResponse.status, 200);
+  const organizationDashboard = (await organizationDashboardResponse.json()).data as {
+    organizationId: string;
+    coveringIncidentsByState: Record<string, number>;
+    reviewsByState: Record<string, number>;
+    eventsByLifecycle: Record<string, number>;
+  };
+  assert.equal(organizationDashboard.organizationId, organizationBId);
+  assert.ok((organizationDashboard.coveringIncidentsByState.RESOLVED ?? 0) >= 1);
+  assert.ok((organizationDashboard.reviewsByState.VALID ?? 0) >= 1);
+  assert.ok((organizationDashboard.eventsByLifecycle.CANCELLED ?? 0) >= 1);
+  assert.ok((organizationDashboard.eventsByLifecycle.COMPLETED ?? 0) >= 1);
+
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationBId}/dashboard-summary`,
+        otherToken,
+      )
+    ).status,
+    403,
+  );
 });
 
 test("cancelling an elapsed linked event restores the incident from stored deadlines", async () => {
