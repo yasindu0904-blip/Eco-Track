@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { listPublicCleanupEventMap } from "./cleanup-events/cleanupEvent.api";
 import { CitizenIncidentDiscovery } from "./incidents/CitizenIncidentDiscovery";
-import { listIncidentCategories, listPublicIncidents } from "./incidents/incident.api";
+import { getPublicIncident, listIncidentCategories, listPublicIncidents } from "./incidents/incident.api";
 import type { MapMarkerFeature, MapViewport } from "./maps";
 import { OrganizationIncidentDiscovery } from "./organizations/workspace/OrganizationIncidentDiscovery";
 import {
@@ -192,6 +192,43 @@ describe("role-specific map scenarios", () => {
     expect(screen.getByTestId("selected-marker").textContent).toBe("event-filtered");
     expect(screen.queryByText("Plastic on the beach")).toBeNull();
     expect(screen.getAllByText("Beach cleanup").length).toBeGreaterThan(0);
+  });
+
+  test("citizen incident detail uses the shared organized status and public false count", async () => {
+    const incident = {
+      id: "incident-organized",
+      title: "Organized canal cleanup",
+      category: { id: "category-1", name: "Waste", description: null },
+      severity: "HIGH" as const,
+      status: "CLEANUP_ORGANIZED" as const,
+      latitude: 6.91,
+      longitude: 79.86,
+      addressText: "Community canal",
+      reportedAt: "2026-08-20T00:00:00.000Z",
+      falseReviewCount: 1,
+      isOwnReport: true,
+    };
+    vi.mocked(listPublicIncidents).mockResolvedValue({ items: [incident], nextCursor: null });
+    vi.mocked(getPublicIncident).mockResolvedValue({
+      ...incident,
+      description: "A cleanup event is now linked to this incident.",
+      highlightUntil: "2026-08-22T00:00:00.000Z",
+      archiveAfter: "2026-08-29T00:00:00.000Z",
+      resolvedAt: null,
+      archivedAt: null,
+      thumbnailUrl: null,
+      photos: [],
+      statusHistory: [],
+    });
+
+    render(<CitizenIncidentDiscovery accessToken="token" />);
+    fireEvent.click(screen.getByRole("button", { name: "Load viewport" }));
+
+    expect(await screen.findByText("A cleanup event is now linked to this incident.")).toBeTruthy();
+    expect(screen.getAllByText("Cleanup organized").length).toBeGreaterThan(0);
+    expect(screen.getByText("Public false count").parentElement?.textContent).toContain("1");
+    expect(document.body.textContent).not.toContain("privateNotes");
+    expect(document.body.textContent).not.toContain("Organization private");
   });
 
   test("organization map renders empty results without exposing review actions", async () => {

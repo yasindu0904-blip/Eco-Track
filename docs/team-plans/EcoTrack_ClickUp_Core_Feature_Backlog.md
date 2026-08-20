@@ -600,11 +600,11 @@ Verify the entire incident lane after event claiming, notifications, and rewards
 ### Tests and acceptance criteria
 
 - [ ] Full incident lifecycle regression passes.
-- [ ] Overlap, boundary visibility, independent review, and false-count behavior remain correct.
+- [x] Overlap, boundary visibility, independent review, and false-count behavior remain correct.
 - [ ] Publish/cancel/complete produces correct incident state without duplicate history, rewards, or notifications.
-- [ ] Direct-ID attacks and private-field projection tests pass.
+- [x] Direct-ID attacks and private-field projection tests pass.
 - [ ] Web and Android smoke-test results using real APIs are documented.
-- [ ] Changes remain in the incident/map lane unless the integration owner approves a shared-file change.
+- [x] Changes remain in the incident/map lane unless the integration owner approves a shared-file change.
 
 ---
 

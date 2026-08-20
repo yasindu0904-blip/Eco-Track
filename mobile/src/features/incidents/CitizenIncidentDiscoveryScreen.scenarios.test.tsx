@@ -269,6 +269,51 @@ describe("mobile citizen map scenarios", () => {
     expect(map(renderer!).props.selectedMarkerId).toBe("event-mobile");
   });
 
+  test("organized incidents retain the shared status and public false count", async () => {
+    const incident = {
+      id: "incident-organized-mobile",
+      title: "Organized mobile incident",
+      category: { id: "category-1", name: "Waste", description: null },
+      severity: "HIGH" as const,
+      status: "CLEANUP_ORGANIZED" as const,
+      latitude: 6.91,
+      longitude: 79.86,
+      addressText: "Community canal",
+      reportedAt: "2026-08-20T00:00:00.000Z",
+      falseReviewCount: 1,
+      isOwnReport: true,
+    };
+    vi.mocked(listPublicIncidents).mockResolvedValue({ items: [incident], nextCursor: null });
+    vi.mocked(getPublicIncident).mockResolvedValue({
+      ...incident,
+      description: "A cleanup event is now linked to this incident.",
+      highlightUntil: "2026-08-22T00:00:00.000Z",
+      archiveAfter: "2026-08-29T00:00:00.000Z",
+      resolvedAt: null,
+      archivedAt: null,
+      thumbnailUrl: null,
+      photos: [],
+      statusHistory: [],
+    });
+    let renderer: TestRenderer.ReactTestRenderer;
+
+    await act(async () => {
+      renderer = renderScreen();
+    });
+    await act(async () => {
+      await map(renderer!).props.onViewportChange(viewport, {
+        signal: new AbortController().signal,
+        requestId: 1,
+      });
+    });
+
+    expect(textContent(renderer!)).toContain("Organized");
+    expect(textContent(renderer!)).toContain("PUBLIC FALSE COUNT");
+    expect(textContent(renderer!)).toContain("1");
+    expect(textContent(renderer!)).not.toContain("privateNotes");
+    expect(textContent(renderer!)).not.toContain("Organization private");
+  });
+
   test("returning from background refreshes the last bounded viewport", async () => {
     let renderer: TestRenderer.ReactTestRenderer;
 

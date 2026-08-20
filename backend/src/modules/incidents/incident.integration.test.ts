@@ -11,6 +11,8 @@ import { prisma } from "../../database/prisma.js";
 import { AccountStatus, PlatformRole } from "../../generated/prisma/enums.js";
 import { errorMiddleware } from "../../middleware/error.middleware.js";
 import type { AuthenticationDependencies } from "../auth/auth.types.js";
+import { cleanupEventDependencies } from "../cleanupEvents/cleanupEvent.dependencies.js";
+import { createCleanupEventRouter } from "../cleanupEvents/cleanupEvents.routes.js";
 import type { IncidentDependencies } from "./incident.dependencies.js";
 import { createIncidentRouter } from "./incident.routes.js";
 import { MAP_LIMITS } from "../maps/map.constants.js";
@@ -24,12 +26,15 @@ const organizationMemberId = randomUUID();
 const organizationMemberAuthId = randomUUID();
 const organizationBAdminId = randomUUID();
 const organizationBAdminAuthId = randomUUID();
+const superAdminId = randomUUID();
+const superAdminAuthId = randomUUID();
 const categoryId = randomUUID();
 const alternateCategoryId = randomUUID();
 const reporterToken = `incident-reporter-${reporterId}`;
 const otherToken = `incident-other-${otherReporterId}`;
 const organizationMemberToken = `incident-member-${organizationMemberId}`;
 const organizationBToken = `incident-organization-b-${organizationBAdminId}`;
+const superAdminToken = `incident-super-admin-${superAdminId}`;
 const submissionId = randomUUID();
 const organizationId = randomUUID();
 const organizationMembershipId = randomUUID();
@@ -124,6 +129,13 @@ const profiles = {
     fullName: "Organization B Admin",
     phoneNumber: "+94770000004",
   },
+  [superAdminToken]: {
+    id: superAdminId,
+    authUserId: superAdminAuthId,
+    email: `incident-super-admin-${superAdminId}@example.com`,
+    fullName: "Incident Super Admin",
+    phoneNumber: "+94770000007",
+  },
 };
 
 const authenticationDependencies: AuthenticationDependencies = {
@@ -140,7 +152,9 @@ const authenticationDependencies: AuthenticationDependencies = {
       fullName: profile.fullName,
       phoneNumber: profile.phoneNumber,
       profileCompletedAt: new Date(),
-      platformRole: PlatformRole.USER,
+      platformRole: profile.id === superAdminId
+        ? PlatformRole.SUPER_ADMIN
+        : PlatformRole.USER,
       accountStatus: AccountStatus.ACTIVE,
     };
   },
@@ -211,6 +225,9 @@ before(async () => {
       fullName: profile.fullName,
       phoneNumber: profile.phoneNumber,
       profileCompletedAt: new Date(),
+      platformRole: profile.id === superAdminId
+        ? PlatformRole.SUPER_ADMIN
+        : PlatformRole.USER,
     })),
   });
   await prisma.platformSettings.upsert({
@@ -360,6 +377,10 @@ before(async () => {
   const app = express();
   app.use(express.json());
   app.use("/api/v1", createIncidentRouter(authenticationDependencies, dependencies));
+  app.use(
+    "/api/v1",
+    createCleanupEventRouter(authenticationDependencies, cleanupEventDependencies),
+  );
   app.use(errorMiddleware);
   await new Promise<void>((resolve) => {
     server = app.listen(0, "127.0.0.1", () => resolve());
@@ -375,6 +396,7 @@ after(async () => {
     otherReporterId,
     organizationMemberId,
     organizationBAdminId,
+    superAdminId,
   ];
   const contributionIds = (
     await prisma.contributionEvent.findMany({
@@ -450,11 +472,18 @@ test("creates evidence intent and one incident/history record", async () => {
     body: JSON.stringify(createBody),
   });
   assert.equal(response.status, 201);
-  const body = await response.json() as { data: { id: string; status: string; statusHistory: unknown[]; highlightUntil: string; archiveAfter: string } };
+  const body = await response.json() as { data: { id: string; status: string; statusHistory: unknown[]; reportedAt: string; highlightUntil: string; archiveAfter: string } };
   createdIncidentId = body.data.id;
   assert.equal(body.data.status, "ACTIVE");
   assert.equal(body.data.statusHistory.length, 1);
-  assert.ok(new Date(body.data.archiveAfter) > new Date(body.data.highlightUntil));
+  assert.equal(
+    new Date(body.data.highlightUntil).getTime() - new Date(body.data.reportedAt).getTime(),
+    48 * 60 * 60 * 1000,
+  );
+  assert.equal(
+    new Date(body.data.archiveAfter).getTime() - new Date(body.data.highlightUntil).getTime(),
+    7 * 24 * 60 * 60 * 1000,
+  );
 
   const replay = await request("/incidents", reporterToken, {
     method: "POST",
@@ -1267,6 +1296,310 @@ test("organization review detail and mutation remain tenant-private and idempote
   for (const notification of reporterNotifications) {
     assert.equal(notification.message.includes(privateNote), false);
     assert.equal(JSON.stringify(notification.data).includes(privateNote), false);
+  }
+});
+
+test("full incident handoff keeps overlap reviews independent and publication idempotent", async () => {
+  const workflowSubmissionId = randomUUID();
+  const createBody = {
+    submissionId: workflowSubmissionId,
+    categoryId,
+    title: "INC-04 overlapping cleanup workflow",
+    description: "A shared incident used to verify the complete report, review, and publish handoff.",
+    severity: "HIGH",
+    latitude: 6.96,
+    longitude: 79.92,
+    addressText: "Overlapping organization boundary",
+    evidence: [],
+  };
+
+  const createResponse = await request("/incidents", reporterToken, {
+    method: "POST",
+    body: JSON.stringify(createBody),
+  });
+  assert.equal(createResponse.status, 201);
+  const created = (await createResponse.json() as {
+    data: {
+      id: string;
+      status: string;
+      statusHistory: Array<{ toStatus: string }>;
+    };
+  }).data;
+  assert.equal(created.status, "ACTIVE");
+  assert.deepEqual(created.statusHistory.map(({ toStatus }) => toStatus), ["ACTIVE"]);
+
+  const createReplay = await request("/incidents", reporterToken, {
+    method: "POST",
+    body: JSON.stringify(createBody),
+  });
+  assert.equal(createReplay.status, 200);
+  assert.equal((await createReplay.json()).data.id, created.id);
+  assert.equal(
+    await prisma.incident.count({
+      where: { reporterUserId: reporterId, submissionId: workflowSubmissionId },
+    }),
+    1,
+  );
+  assert.equal(
+    await prisma.incidentStatusHistory.count({ where: { incidentId: created.id } }),
+    1,
+  );
+
+  for (const [organization, token] of [
+    [organizationId, otherToken],
+    [organizationBId, organizationBToken],
+  ] as const) {
+    const detailResponse = await request(
+      `/organizations/${organization}/incidents/${created.id}`,
+      token,
+    );
+    assert.equal(detailResponse.status, 200);
+    assert.equal((await detailResponse.json()).data.id, created.id);
+  }
+
+  const organizationAFalse = await request(
+    `/organizations/${organizationId}/incidents/${created.id}/review`,
+    otherToken,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: "FALSE",
+        reasonCode: "INSUFFICIENT_EVIDENCE",
+        privateNotes: "Organization A private INC-04 verification note.",
+      }),
+    },
+  );
+  assert.equal(organizationAFalse.status, 200);
+
+  const organizationBFalse = await request(
+    `/organizations/${organizationBId}/incidents/${created.id}/review`,
+    organizationBToken,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: "FALSE",
+        reasonCode: "LOCATION_INCORRECT",
+        privateNotes: "Organization B private INC-04 verification note.",
+      }),
+    },
+  );
+  assert.equal(organizationBFalse.status, 200);
+  const organizationBFalseReview = (await organizationBFalse.json()).data.review as {
+    id: string;
+  };
+
+  const discoveryPath =
+    `/incidents?west=79.8&south=6.85&east=80.05&north=7.1&zoom=12&limit=50`;
+  const falseDiscovery = await request(discoveryPath, reporterToken);
+  assert.equal(falseDiscovery.status, 200);
+  const falseSummary = (await falseDiscovery.json() as {
+    data: { items: Array<Record<string, unknown> & { id: string }> };
+  }).data.items.find(({ id }) => id === created.id);
+  assert.ok(falseSummary);
+  assert.equal(falseSummary.falseReviewCount, 2);
+  assert.equal(
+    (await prisma.incident.findUniqueOrThrow({ where: { id: created.id } })).status,
+    "ACTIVE",
+  );
+
+  const organizationBValidBody = {
+    status: "VALID",
+    privateNotes: "Organization B validated the report after a site inspection.",
+  };
+  const organizationBValid = await request(
+    `/organizations/${organizationBId}/incidents/${created.id}/review`,
+    organizationBToken,
+    { method: "PATCH", body: JSON.stringify(organizationBValidBody) },
+  );
+  assert.equal(organizationBValid.status, 200);
+  const validMutation = (await organizationBValid.json()).data as {
+    review: { id: string; status: string };
+    rewardAwarded: boolean;
+    idempotentReplay: boolean;
+  };
+  assert.equal(validMutation.review.id, organizationBFalseReview.id);
+  assert.equal(validMutation.review.status, "VALID");
+  assert.equal(validMutation.rewardAwarded, true);
+  assert.equal(validMutation.idempotentReplay, false);
+
+  const validReplay = await request(
+    `/organizations/${organizationBId}/incidents/${created.id}/review`,
+    organizationBToken,
+    { method: "PATCH", body: JSON.stringify(organizationBValidBody) },
+  );
+  assert.equal(validReplay.status, 200);
+  assert.equal((await validReplay.json()).data.idempotentReplay, true);
+  assert.equal(
+    await prisma.incidentReview.count({ where: { incidentId: created.id } }),
+    2,
+  );
+  assert.equal(
+    await prisma.contributionEvent.count({
+      where: { incidentId: created.id, type: "VERIFIED_INCIDENT_REPORT" },
+    }),
+    1,
+  );
+  assert.equal(
+    await prisma.notification.count({
+      where: {
+        userId: reporterId,
+        type: "INCIDENT_STATUS_CHANGED",
+        data: { path: ["incidentId"], equals: created.id },
+      },
+    }),
+    3,
+  );
+
+  const updatedDiscovery = await request(discoveryPath, reporterToken);
+  const updatedSummary = (await updatedDiscovery.json() as {
+    data: { items: Array<Record<string, unknown> & { id: string }> };
+  }).data.items.find(({ id }) => id === created.id);
+  assert.ok(updatedSummary);
+  assert.equal(updatedSummary.falseReviewCount, 1);
+
+  const organizationADetail = await request(
+    `/organizations/${organizationId}/incidents/${created.id}`,
+    otherToken,
+  );
+  const organizationBDetail = await request(
+    `/organizations/${organizationBId}/incidents/${created.id}`,
+    organizationBToken,
+  );
+  assert.equal(
+    (await organizationADetail.json()).data.currentReview.privateNotes,
+    "Organization A private INC-04 verification note.",
+  );
+  assert.equal(
+    (await organizationBDetail.json()).data.currentReview.privateNotes,
+    organizationBValidBody.privateNotes,
+  );
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationId}/incidents/${created.id}`,
+        organizationBToken,
+      )
+    ).status,
+    403,
+  );
+
+  const draftResponse = await request(
+    `/organizations/${organizationBId}/events/drafts`,
+    organizationBToken,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        incidentId: created.id,
+        title: "INC-04 linked cleanup event",
+        description: "A linked cleanup event created after an independent VALID review.",
+        eventLatitude: 6.96,
+        eventLongitude: 79.92,
+      }),
+    },
+  );
+  assert.equal(draftResponse.status, 201);
+  const eventId = (await draftResponse.json()).data.id as string;
+
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationBId}/events/drafts/${eventId}`,
+        organizationBToken,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            publicInstructions: "Wear closed shoes and bring drinking water.",
+            eventAddress: "INC-04 community meeting point",
+          }),
+        },
+      )
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationBId}/events/${eventId}/sessions`,
+        organizationBToken,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            sessionDate: "2099-10-01",
+            startTime: "09:00:00",
+            endTime: "12:00:00",
+            capacity: 25,
+          }),
+        },
+      )
+    ).status,
+    201,
+  );
+  assert.equal(
+    (
+      await request(
+        `/organizations/${organizationBId}/events/${eventId}/coordinators`,
+        organizationBToken,
+        {
+          method: "POST",
+          body: JSON.stringify({ membershipId: organizationBMembershipId }),
+        },
+      )
+    ).status,
+    201,
+  );
+
+  const publishPath = `/organizations/${organizationBId}/events/${eventId}/publish`;
+  const published = await request(publishPath, organizationBToken, { method: "POST" });
+  assert.equal(published.status, 200);
+  assert.equal((await published.json()).data.incidentUpdated, true);
+  const publishReplay = await request(publishPath, organizationBToken, { method: "POST" });
+  assert.equal(publishReplay.status, 200);
+
+  const storedIncident = await prisma.incident.findUniqueOrThrow({
+    where: { id: created.id },
+  });
+  assert.equal(storedIncident.status, "CLEANUP_ORGANIZED");
+  assert.equal(
+    await prisma.incidentStatusHistory.count({
+      where: {
+        incidentId: created.id,
+        relatedCleanupEventId: eventId,
+        toStatus: "CLEANUP_ORGANIZED",
+      },
+    }),
+    1,
+  );
+  assert.equal(
+    await prisma.eventStatusHistory.count({ where: { cleanupEventId: eventId } }),
+    1,
+  );
+  assert.equal(
+    await prisma.notification.count({
+      where: {
+        userId: reporterId,
+        type: "EVENT_PUBLISHED",
+        data: { path: ["eventId"], equals: eventId },
+      },
+    }),
+    1,
+  );
+
+  const ownDetail = await request(`/incidents/me/${created.id}`, reporterToken);
+  assert.equal(ownDetail.status, 200);
+  const ownIncident = (await ownDetail.json()).data as {
+    status: string;
+    statusHistory: Array<{ toStatus: string }>;
+  };
+  assert.equal(ownIncident.status, "CLEANUP_ORGANIZED");
+  assert.deepEqual(
+    ownIncident.statusHistory.map(({ toStatus }) => toStatus),
+    ["ACTIVE", "CLEANUP_ORGANIZED"],
+  );
+
+  for (const token of [reporterToken, superAdminToken]) {
+    const publicDetail = await request(`/incidents/${created.id}`, token);
+    assert.equal(publicDetail.status, 200);
+    assertProjectionExcludesPrivateFields((await publicDetail.json()).data);
   }
 });
 
