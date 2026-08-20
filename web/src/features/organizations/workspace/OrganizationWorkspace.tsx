@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { getOrganizationSummary } from "../../dashboards/dashboard.api";
+import { SummaryPanel } from "../../dashboards/SummaryPanel";
+import { total } from "../../dashboards/dashboard.utils";
 
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import type { ActiveOrganizationMembership } from "../../memberships/administration/membershipAdministration.types";
@@ -37,6 +40,8 @@ export function OrganizationWorkspace({
     memberships.find(
       (item) => item.organization.id === selectedOrganizationId,
     ) ?? memberships[0];
+  const organizationId = membership?.organization.id ?? "";
+  const loadSummary = useCallback(() => getOrganizationSummary(accessToken, organizationId), [accessToken, organizationId]);
 
   if (!membership) {
     return null;
@@ -154,6 +159,14 @@ export function OrganizationWorkspace({
           />
         ) : (
           <>
+            <SummaryPanel load={loadSummary} label="Organization summary">{(summary) => (
+              <section className="organization-workspace-access" aria-label="Organization metrics">
+                <div><small>Covered incidents</small><strong>{total(summary.coveringIncidentsByState)}</strong></div>
+                <div><small>Upcoming sessions</small><strong>{summary.upcomingSessions}</strong></div>
+                <div><small>Joined participants</small><strong>{summary.joinedParticipants}</strong></div>
+                <div><small>Membership requests</small><strong>{summary.pendingMembershipRequests}</strong></div>
+              </section>
+            )}</SummaryPanel>
             <section className="organization-workspace-access" aria-label="Organization access">
               <div>
                 <small>Membership</small>

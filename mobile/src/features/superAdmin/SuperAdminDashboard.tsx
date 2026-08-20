@@ -14,6 +14,8 @@ import {
   listPendingOrganizationApplications,
 } from "./organizationReview.api";
 import type { OrganizationReviewApplication } from "./organizationReview.types";
+import { getPlatformSummary } from "../dashboards/dashboard.api";
+import { Metric, SummaryCards, total } from "../dashboards/SummaryCards";
 
 type Props = {
   accessToken: string;
@@ -31,6 +33,7 @@ function readableError(error: unknown): string {
 }
 
 export function SuperAdminDashboard({ accessToken, profile, onOpenNotifications, onSignOut }: Props) {
+  const loadPlatformSummary = useCallback(() => getPlatformSummary(accessToken), [accessToken]);
   const [applications, setApplications] = useState<OrganizationReviewApplication[]>([]);
   const [selected, setSelected] = useState<OrganizationReviewApplication | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
@@ -149,6 +152,7 @@ export function SuperAdminDashboard({ accessToken, profile, onOpenNotifications,
   return (
     <Screen>
       <BrandHeader eyebrow="Protected platform area" title="Super Admin" compact />
+      <SummaryCards load={loadPlatformSummary} label="Platform summary">{(summary) => <><Metric label="Active users" value={`${summary.users.active} / ${summary.users.total}`} /><Metric label="Organizations" value={total(summary.organizationsByState)} /><Metric label="Incidents" value={total(summary.incidentsByState)} /><Metric label="Cleanup events" value={total(summary.eventsByLifecycle)} /></>}</SummaryCards>
       <NotificationButton
         accessToken={accessToken}
         onOpen={onOpenNotifications}

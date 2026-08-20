@@ -1,4 +1,7 @@
+import { useCallback } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { getCitizenSummary } from "../dashboards/dashboard.api";
+import { Metric, SummaryCards, total } from "../dashboards/SummaryCards";
 
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import { BrandHeader, Button, Notice, Screen, sharedStyles } from "../../components/ui";
@@ -42,6 +45,7 @@ export function CitizenDashboard({
   onSignOut,
 }: CitizenDashboardProps) {
   const displayName = profile.fullName?.trim() || "EcoTrack member";
+  const loadSummary = useCallback(() => getCitizenSummary(accessToken), [accessToken]);
 
   return (
     <Screen>
@@ -66,6 +70,7 @@ export function CitizenDashboard({
         accessToken={accessToken}
         onOpen={onOpenNotifications}
       />
+      <SummaryCards load={loadSummary} label="Citizen summary">{(summary) => <><Metric label="My reports" value={total(summary.reportsByState)} /><Metric label="Upcoming joined events" value={summary.upcomingEvents} /><Metric label="Unread notifications" value={summary.unreadNotifications} /><Metric label="Impact points" value={summary.contributions.points} /></>}</SummaryCards>
 
       {activeOrganization && onOpenOrganizationWorkspace ? (
         <View style={[sharedStyles.card, styles.organizationCard]}>

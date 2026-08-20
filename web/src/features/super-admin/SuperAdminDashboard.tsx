@@ -1,4 +1,8 @@
 import { useEffect, useState } from "react";
+import { useCallback } from "react";
+import { getPlatformSummary } from "../dashboards/dashboard.api";
+import { SummaryPanel } from "../dashboards/SummaryPanel";
+import { total } from "../dashboards/dashboard.utils";
 
 import type { AuthenticatedUserProfile } from "../auth/auth.types";
 import { NotificationButton } from "../notifications/NotificationInbox";
@@ -123,6 +127,7 @@ export function SuperAdminDashboard({
   const selectedApplication = applications.find(
     (application) => application.id === selectedApplicationId,
   ) ?? applications[0] ?? null;
+  const loadPlatformSummary = useCallback(() => getPlatformSummary(accessToken!), [accessToken]);
 
   useEffect(() => {
     if (!accessToken) {
@@ -308,6 +313,14 @@ export function SuperAdminDashboard({
       </aside>
 
       <main className="super-admin-main">
+        {accessToken && <SummaryPanel load={loadPlatformSummary} label="Platform summary">{(summary) => (
+          <section className="super-admin-metrics" aria-label="Platform aggregates">
+            <article><small>Active users</small><strong>{summary.users.active}</strong><p>{summary.users.total} total</p></article>
+            <article><small>Organizations</small><strong>{total(summary.organizationsByState)}</strong><p>{summary.pendingOrganizationApplications} pending</p></article>
+            <article><small>Incidents</small><strong>{total(summary.incidentsByState)}</strong></article>
+            <article><small>Cleanup events</small><strong>{total(summary.eventsByLifecycle)}</strong></article>
+          </section>
+        )}</SummaryPanel>}
         <header className="super-admin-header">
           <div>
             <span className="super-admin-eyebrow">Platform overview</span>

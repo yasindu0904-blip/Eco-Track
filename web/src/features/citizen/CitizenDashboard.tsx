@@ -1,4 +1,8 @@
+import { useCallback } from "react";
 import type { AuthenticatedUserProfile } from "../auth/auth.types";
+import { getCitizenSummary } from "../dashboards/dashboard.api";
+import { SummaryPanel } from "../dashboards/SummaryPanel";
+import { total } from "../dashboards/dashboard.utils";
 import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
 import { NotificationButton } from "../notifications/NotificationInbox";
 import "./citizenDashboard.css";
@@ -106,6 +110,7 @@ export function CitizenDashboard({
 }: CitizenDashboardProps) {
   const displayName = profile.fullName ?? "EcoTrack member";
   const initial = displayName.charAt(0).toUpperCase();
+  const loadSummary = useCallback(() => getCitizenSummary(accessToken!), [accessToken]);
 
   return (
     <div className="citizen-dashboard-shell">
@@ -214,6 +219,7 @@ export function CitizenDashboard({
           </div>
         </section>
 
+        {accessToken && <SummaryPanel load={loadSummary} label="Citizen summary">{(summary) => (
         <section className="citizen-dashboard-summary" aria-label="Account overview">
           <article>
             <span className="citizen-summary-icon citizen-summary-icon-green">
@@ -241,8 +247,8 @@ export function CitizenDashboard({
             </span>
             <div>
               <small>Environmental reports</small>
-              <strong>Available now</strong>
-              <p>Report an incident and follow its shared status.</p>
+              <strong>{total(summary.reportsByState)}</strong>
+              <p>{Object.entries(summary.reportsByState).map(([key, value]) => `${key}: ${value}`).join(" · ") || "No reports yet"}</p>
             </div>
           </article>
           <article>
@@ -251,11 +257,11 @@ export function CitizenDashboard({
             </span>
             <div>
               <small>Cleanup participation</small>
-              <strong>Coming next</strong>
-              <p>Public cleanup-event discovery will appear here.</p>
+              <strong>{summary.upcomingEvents} upcoming</strong>
+              <p>{summary.joinedEvents} joined · {summary.contributions.points} impact points · {summary.unreadNotifications} unread</p>
             </div>
           </article>
-        </section>
+        </section>)}</SummaryPanel>}
 
         <section className="citizen-dashboard-section">
           <div className="citizen-dashboard-section-heading">
