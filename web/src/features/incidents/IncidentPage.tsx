@@ -30,6 +30,7 @@ interface IncidentPageProps {
   accessToken: string;
   profile: AuthenticatedUserProfile;
   initialView?: "create" | "reports" | "discover";
+  initialIncidentId?: string;
   onBackToDashboard: () => void;
   onSignOut?: () => void;
   onOpenCleanupEvent?: (eventId: string) => void;
@@ -59,6 +60,7 @@ export function IncidentPage({
   accessToken,
   profile,
   initialView = "create",
+  initialIncidentId,
   onBackToDashboard,
   onSignOut,
   onOpenCleanupEvent,
@@ -90,6 +92,13 @@ export function IncidentPage({
     );
     return () => window.clearTimeout(timeout);
   }, [notification]);
+
+  useEffect(() => {
+    if (!initialIncidentId || initialView !== "reports") return;
+    void openReport(initialIncidentId);
+    // The destination ID is intentionally consumed once when this route mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialIncidentId, initialView]);
 
   useEffect(() => {
     let active = true;

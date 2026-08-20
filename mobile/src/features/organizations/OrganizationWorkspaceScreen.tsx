@@ -1,11 +1,12 @@
-import { useCallback, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { BackHandler, Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import { BrandHeader, Button, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
 import { CleanupEventDraftScreen, OrganizationCleanupEventListScreen } from "../cleanupEvents";
+import { MembershipAdministrationScreen } from "../memberships/administration/MembershipAdministrationScreen";
 import { OrganizationIncidentDiscovery } from "./OrganizationIncidentDiscovery";
 import { getOrganizationSummary } from "../dashboards/dashboard.api";
 import { Metric, SummaryCards, total } from "../dashboards/SummaryCards";
@@ -19,6 +20,9 @@ type OrganizationWorkspaceScreenProps = {
   onBack: () => void;
   onViewApplications: () => void;
   onSignOut: () => void;
+  initialTab?: "overview" | "incidentDiscovery" | "eventDrafts" | "events" | "members";
+  initialIncidentId?: string;
+  initialEventId?: string;
 };
 
 export function OrganizationWorkspaceScreen({
@@ -30,21 +34,45 @@ export function OrganizationWorkspaceScreen({
   onBack,
   onViewApplications,
   onSignOut,
+  initialTab = "overview",
+  initialIncidentId,
+  initialEventId,
 }: OrganizationWorkspaceScreenProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "incidentDiscovery" | "eventDrafts" | "events">("overview");
-  const [linkedIncidentId, setLinkedIncidentId] = useState<string>();
-  const [selectedOwnedEventId, setSelectedOwnedEventId] = useState<string>();
-  const [selectedDraftId, setSelectedDraftId] = useState<string>();
+  const [activeTab, setActiveTab] = useState<"overview" | "incidentDiscovery" | "eventDrafts" | "events" | "members">(initialTab);
+  const [linkedIncidentId, setLinkedIncidentId] = useState<string | undefined>(initialIncidentId);
+  const [selectedOwnedEventId, setSelectedOwnedEventId] = useState<string | undefined>(initialEventId);
+  const [selectedDraftId, setSelectedDraftId] = useState<string | undefined>(initialTab === "eventDrafts" ? initialEventId : undefined);
   const [mapInteracting, setMapInteracting] = useState(false);
   const membership =
     memberships.find(
       (item) => item.organization.id === selectedOrganizationId,
-    ) ?? memberships[0];
+    );
   const organizationId = membership?.organization.id ?? "";
   const loadSummary = useCallback(() => getOrganizationSummary(accessToken, organizationId), [accessToken, organizationId]);
 
+  useEffect(() => {
+    if (activeTab === "overview") return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      setMapInteracting(false);
+      setActiveTab("overview");
+      return true;
+    });
+    return () => subscription.remove();
+  }, [activeTab]);
+
   if (!membership) {
     return null;
+  }
+
+  if (activeTab === "members" && membership.role === "ORG_ADMIN") {
+    return (
+      <MembershipAdministrationScreen
+        accessToken={accessToken}
+        organizationId={membership.organization.id}
+        organizationName={membership.organization.name}
+        onBack={() => setActiveTab("overview")}
+      />
+    );
   }
 
   return (
@@ -113,6 +141,7 @@ export function OrganizationWorkspaceScreen({
           <Text style={styles.breadcrumb}>/ Cleanup-event drafts</Text>
         ) : null}
         {activeTab === "events" ? <Text style={styles.breadcrumb}>/ Organization events</Text> : null}
+        {activeTab === "members" ? <Text style={styles.breadcrumb}>/ Membership administration</Text> : null}
       </View>
 
       {activeTab === "eventDrafts" ? (
@@ -198,6 +227,18 @@ export function OrganizationWorkspaceScreen({
             </View>
             <Text style={styles.toolArrow}>→</Text>
           </Pressable>
+          {membership.role === "ORG_ADMIN" ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open membership administration"
+              onPress={() => setActiveTab("members")}
+              style={({ pressed }) => [styles.toolCard, pressed && styles.toolCardPressed]}
+            >
+              <View style={styles.toolIcon}><Text style={styles.toolIconText}>M</Text></View>
+              <View style={styles.toolCopy}><Text style={styles.toolEyebrow}>MEMBERSHIP ADMINISTRATION</Text><Text style={styles.toolTitle}>Members and requests</Text><Text style={styles.toolDescription}>Review requests and manage roles for this organization.</Text></View>
+              <Text style={styles.toolArrow}>→</Text>
+            </Pressable>
+          ) : null}
           {membership.role === "ORG_ADMIN" ? (
             <Pressable
               accessibilityRole="button"

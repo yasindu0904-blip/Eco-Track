@@ -6,6 +6,7 @@ import { total } from "../../dashboards/dashboard.utils";
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import type { ActiveOrganizationMembership } from "../../memberships/administration/membershipAdministration.types";
 import { CleanupEventDraftEditor, OrganizationCleanupEventList } from "../../cleanup-events";
+import { MembershipAdministrationPage } from "../../memberships/administration/MembershipAdministrationPage";
 
 import "./organizationWorkspace.css";
 import { OrganizationIncidentDiscovery } from "./OrganizationIncidentDiscovery";
@@ -19,6 +20,9 @@ interface OrganizationWorkspaceProps {
   onBackToDashboard: () => void;
   onViewApplications: () => void;
   onSignOut: () => void;
+  initialTab?: "overview" | "incident-discovery" | "event-drafts" | "events" | "members";
+  initialIncidentId?: string;
+  initialEventId?: string;
 }
 
 export function OrganizationWorkspace({
@@ -30,16 +34,21 @@ export function OrganizationWorkspace({
   onBackToDashboard,
   onViewApplications,
   onSignOut,
+  initialTab = "overview",
+  initialIncidentId,
+  initialEventId,
 }: OrganizationWorkspaceProps) {
   const [activeTab, setActiveTab] =
-    useState<"overview" | "incident-discovery" | "event-drafts" | "events">("overview");
-  const [linkedIncidentId, setLinkedIncidentId] = useState<string>();
-  const [selectedOwnedEventId, setSelectedOwnedEventId] = useState<string>();
-  const [selectedDraftId, setSelectedDraftId] = useState<string>();
+    useState<"overview" | "incident-discovery" | "event-drafts" | "events" | "members">(initialTab);
+  const [linkedIncidentId, setLinkedIncidentId] = useState<string | undefined>(initialIncidentId);
+  const [selectedOwnedEventId, setSelectedOwnedEventId] = useState<string | undefined>(initialEventId);
+  const [selectedDraftId, setSelectedDraftId] = useState<string | undefined>(
+    initialTab === "event-drafts" ? initialEventId : undefined,
+  );
   const membership =
     memberships.find(
       (item) => item.organization.id === selectedOrganizationId,
-    ) ?? memberships[0];
+    );
   const organizationId = membership?.organization.id ?? "";
   const loadSummary = useCallback(() => getOrganizationSummary(accessToken, organizationId), [accessToken, organizationId]);
 
@@ -113,9 +122,17 @@ export function OrganizationWorkspace({
             <span aria-current="page">/ Cleanup-event drafts</span>
           )}
           {activeTab === "events" && <span aria-current="page">/ Organization events</span>}
+          {activeTab === "members" && <span aria-current="page">/ Membership administration</span>}
         </nav>
 
-        {activeTab === "event-drafts" ? (
+        {activeTab === "members" && membership.role === "ORG_ADMIN" ? (
+          <MembershipAdministrationPage
+            accessToken={accessToken}
+            organizationId={membership.organization.id}
+            organizationName={membership.organization.name}
+            onBack={() => setActiveTab("overview")}
+          />
+        ) : activeTab === "event-drafts" ? (
           <CleanupEventDraftEditor
             key={`${membership.organization.id}-${linkedIncidentId ?? selectedDraftId ?? "direct"}`}
             accessToken={accessToken}
@@ -217,6 +234,13 @@ export function OrganizationWorkspace({
                   Open <b>→</b>
                 </span>
               </button>
+              {membership.role === "ORG_ADMIN" && (
+                <button type="button" className="organization-workspace-tool-card" onClick={() => setActiveTab("members")}>
+                  <span className="organization-workspace-tool-icon" aria-hidden="true">M</span>
+                  <span className="organization-workspace-tool-copy"><small>Membership administration</small><strong>Members and requests</strong><span>Review requests and manage roles for this organization.</span></span>
+                  <span className="organization-workspace-tool-action" aria-hidden="true">Open →</span>
+                </button>
+              )}
               {membership.role === "ORG_ADMIN" && (
                 <button
                   type="button"

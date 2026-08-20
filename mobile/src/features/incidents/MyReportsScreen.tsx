@@ -9,6 +9,7 @@ import type { IncidentDetail, IncidentStatus, IncidentSummary } from "./incident
 type Props = {
   accessToken: string;
   submittedIncident?: IncidentDetail | null;
+  initialIncidentId?: string;
   onBack: () => void;
   onNewReport: () => void;
 };
@@ -21,21 +22,27 @@ function date(value: string): string {
   return new Date(value).toLocaleString();
 }
 
-export function MyReportsScreen({ accessToken, submittedIncident, onBack, onNewReport }: Props) {
+export function MyReportsScreen({ accessToken, submittedIncident, initialIncidentId, onBack, onNewReport }: Props) {
   const [reports, setReports] = useState<IncidentSummary[]>([]);
   const [detail, setDetail] = useState<IncidentDetail | null>(submittedIncident ?? null);
   const [loading, setLoading] = useState(!submittedIncident);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (submittedIncident) return;
+    if (submittedIncident || initialIncidentId) return;
     let active = true;
     void listMyIncidents(accessToken)
       .then((items) => { if (active) setReports(items); })
       .catch((loadError: unknown) => { if (active) setError(loadError instanceof Error ? loadError.message : "Could not load reports."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [accessToken, submittedIncident]);
+  }, [accessToken, initialIncidentId, submittedIncident]);
+
+  useEffect(() => {
+    if (!submittedIncident && initialIncidentId) void open(initialIncidentId);
+    // Opening a destination ID is intentionally a one-time navigation action.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialIncidentId, submittedIncident]);
 
   async function open(id: string) {
     setLoading(true);

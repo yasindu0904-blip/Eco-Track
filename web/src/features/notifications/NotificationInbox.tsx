@@ -13,7 +13,7 @@ import "./notificationInbox.css";
 type NotificationInboxProps = {
   accessToken: string;
   onBack: () => void;
-  onOpenOrganizationApplications?: () => void;
+  onNavigateNotification?: (notification: NotificationItem) => boolean | void;
 };
 
 type NotificationButtonProps = {
@@ -75,7 +75,7 @@ export function NotificationButton({
 export function NotificationInbox({
   accessToken,
   onBack,
-  onOpenOrganizationApplications,
+  onNavigateNotification,
 }: NotificationInboxProps) {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -156,15 +156,11 @@ export function NotificationInbox({
       }
     }
 
-    if (
-      item.type === "ORGANIZATION_REVIEW_UPDATED" &&
-      onOpenOrganizationApplications
-    ) {
-      onOpenOrganizationApplications();
+    if (onNavigateNotification?.(openedItem) === true) {
       return;
     }
 
-    setNotice("This notification is saved. Its linked feature will open here when that screen is available.");
+    setNotice("This notification is saved, but it does not contain a safe destination available to this account.");
   }
 
   async function markAll(): Promise<void> {

@@ -9,11 +9,13 @@ import "./membershipAdministration.css";
 type Props = {
   accessToken: string;
   onBack: () => void;
+  onOpenWorkspace: (organizationId: string) => void;
 };
 
 export function OrganizationMembershipWorkspacesPage({
   accessToken,
   onBack,
+  onOpenWorkspace,
 }: Props) {
   const [memberships, setMemberships] = useState<ActiveOrganizationMembership[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -165,8 +167,15 @@ export function OrganizationMembershipWorkspacesPage({
                 </div>
               </div>
 
-              {membership.role === "ORG_ADMIN" ? (
-                <div className="ma-actions">
+              <div className="ma-actions">
+                <button
+                  className="ma-button ma-secondary"
+                  type="button"
+                  onClick={() => onOpenWorkspace(membership.organization.id)}
+                >
+                  Open organization workspace
+                </button>
+                {membership.role === "ORG_ADMIN" ? (
                   <button
                     className="ma-button ma-primary"
                     type="button"
@@ -174,13 +183,13 @@ export function OrganizationMembershipWorkspacesPage({
                   >
                     Manage members and requests
                   </button>
-                </div>
-              ) : (
+                ) : (
                 <p>
                   This membership does not grant membership-administration
-                  access. Member workspace tools will be connected separately.
+                  access. You can still open the member workspace.
                 </p>
-              )}
+                )}
+              </div>
             </article>
           ))}
 
