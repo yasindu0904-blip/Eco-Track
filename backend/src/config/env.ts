@@ -42,6 +42,12 @@ const environmentSchema = z.object({
     .min(1)
     .default("incident-evidence"),
 
+  EVENT_EVIDENCE_BUCKET: z
+    .string()
+    .trim()
+    .min(1)
+    .default("event-evidence"),
+
   SUPER_ADMIN_AUTH_USER_ID: z
     .string()
     .trim()

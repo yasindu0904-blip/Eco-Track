@@ -129,6 +129,7 @@ export function OrganizationWorkspace({
             accessToken={accessToken}
             organizationId={membership.organization.id}
             initialEventId={selectedOwnedEventId}
+            canCancel={membership.role === "ORG_ADMIN"}
           />
         ) : activeTab === "incident-discovery" ? (
           <OrganizationIncidentDiscovery

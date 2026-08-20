@@ -37,4 +37,7 @@ export const mobileEnv = {
   incidentEvidenceBucket:
     process.env.EXPO_PUBLIC_INCIDENT_EVIDENCE_BUCKET?.trim() ||
     "incident-evidence",
+  eventEvidenceBucket:
+    process.env.EXPO_PUBLIC_EVENT_EVIDENCE_BUCKET?.trim() ||
+    "event-evidence",
 };

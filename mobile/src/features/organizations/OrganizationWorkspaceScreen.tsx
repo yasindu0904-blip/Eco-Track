@@ -132,6 +132,7 @@ export function OrganizationWorkspaceScreen({
           accessToken={accessToken}
           organizationId={membership.organization.id}
           initialEventId={selectedOwnedEventId}
+          canCancel={membership.role === "ORG_ADMIN"}
         />
       ) : activeTab === "overview" ? (
         <>

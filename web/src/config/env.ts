@@ -51,4 +51,7 @@ export const webEnv = {
   incidentEvidenceBucket:
     import.meta.env.VITE_INCIDENT_EVIDENCE_BUCKET?.trim() ||
     "incident-evidence",
+  eventEvidenceBucket:
+    import.meta.env.VITE_EVENT_EVIDENCE_BUCKET?.trim() ||
+    "event-evidence",
 } as const;
