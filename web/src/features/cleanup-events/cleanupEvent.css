@@ -33,6 +33,18 @@
 .participation-tabs button.selected { background: #176c2c; color: #fff; }
 @media (max-width: 800px) { .public-events-layout { grid-template-columns: 1fr; } .public-events-shell { padding: 1rem; } }
 
+.event-participant-operations { display: grid; gap: 1rem; padding: 1.25rem; border: 1px solid #d4dfd4; border-radius: 1rem; background: #fff; }
+.event-participant-operations > header, .event-participant-person, .event-allocation-row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.event-participant-operations h3 { margin: .2rem 0; color: #102d21; }
+.event-participant-operations header span { color: #176c2c; font-size: .72rem; font-weight: 900; letter-spacing: .08em; }
+.event-participant-card { display: grid; gap: .8rem; padding: 1rem; border: 1px solid #dbe4dc; border-radius: .85rem; background: #f8fbf8; }
+.event-participant-person div, .event-allocation-row div { display: grid; gap: .2rem; }
+.event-participant-person small, .event-allocation-row small { color: #53665a; }
+.event-allocation-row { flex-wrap: wrap; padding-top: .75rem; border-top: 1px solid #dbe4dc; }
+.event-allocation-row select { min-width: 220px; padding: .65rem; border: 1px solid #bdccbf; border-radius: .55rem; background: #fff; }
+.event-participant-operations button.danger { justify-self: start; border-color: #a43d32; background: #fff; color: #8b2d25; }
+@media (max-width: 800px) { .event-participant-operations > header, .event-participant-person, .event-allocation-row { align-items: stretch; flex-direction: column; } }
+
 .event-editor-header,
 .event-editor-header-actions,
 .event-editor-actions,

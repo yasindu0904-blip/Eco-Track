@@ -49,6 +49,13 @@ export function toParticipationDto(record: ParticipationRecord): EventParticipat
     joinedAt: record.joinedAt.toISOString(),
     withdrawnAt: record.withdrawnAt?.toISOString() ?? null,
     availableSessionIds: record.availabilities.map(({ sessionId }) => sessionId),
+    allocations: record.allocations.map((allocation) => ({
+      id: allocation.id,
+      sessionId: allocation.sessionId,
+      status: allocation.status,
+      allocatedAt: allocation.allocatedAt.toISOString(),
+      attendanceMarkedAt: allocation.attendanceMarkedAt?.toISOString() ?? null,
+    })),
     event: toEvent(record.cleanupEvent),
   };
 }

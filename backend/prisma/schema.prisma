@@ -697,6 +697,7 @@ model EventParticipant {
 
   @@unique([cleanupEventId, userId], map: "event_participants_event_user_key")
   @@unique([cleanupEventId, id], map: "event_participants_event_id_key")
+  @@index([cleanupEventId, status, joinedAt(sort: Desc), id(sort: Desc)], map: "event_participants_event_status_joined_id_idx")
   @@index([userId, status], map: "event_participants_user_status_idx")
   @@map("event_participants")
 }
@@ -731,6 +732,7 @@ model SessionAllocation {
   contributionEvents ContributionEvent[]
 
   @@unique([participantId, sessionId], map: "session_allocations_participant_session_key")
+  @@index([sessionId, status], map: "session_allocations_session_status_idx")
   @@map("session_allocations")
 }
 

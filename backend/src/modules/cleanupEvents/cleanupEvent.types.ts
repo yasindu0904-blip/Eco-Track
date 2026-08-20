@@ -145,12 +145,21 @@ export type CleanupEventMapFeatureCollectionDto = {
 
 export type EventParticipationStatus = "JOINED" | "WITHDRAWN" | "REMOVED";
 
+export type PersonalSessionAllocationDto = {
+  id: string;
+  sessionId: string;
+  status: "PLANNED" | "ATTENDED" | "ABSENT" | "REMOVED";
+  allocatedAt: string;
+  attendanceMarkedAt: string | null;
+};
+
 export type EventParticipationDto = {
   id: string;
   status: EventParticipationStatus;
   joinedAt: string;
   withdrawnAt: string | null;
   availableSessionIds: string[];
+  allocations: PersonalSessionAllocationDto[];
   event: CleanupEventPublicDetailDto;
 };
 

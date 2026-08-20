@@ -5,6 +5,7 @@ import { Button, Notice, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import { getOwnedCleanupEvent, listOwnedCleanupEvents } from "./cleanupEvent.api";
 import type { CleanupEventOwnedSummary } from "./cleanupEvent.types";
+import { EventParticipantOperationsScreen } from "./EventParticipantOperationsScreen";
 
 type Props = { accessToken: string; organizationId: string; initialEventId?: string };
 
@@ -52,6 +53,7 @@ export function OrganizationCleanupEventListScreen({ accessToken, organizationId
       {nextCursor ? <Button label="Load more" variant="secondary" loading={busy} onPress={() => void load(nextCursor)} /> : null}
     </View>
     {selected ? <View style={sharedStyles.card}><Text style={styles.status}>{selected.lifecycleStatus.replaceAll("_", " ")}</Text><Text style={sharedStyles.sectionTitle}>{selected.title}</Text><Text style={styles.copy}>{selected.description}</Text><Text style={styles.copy}>{selected.eventAddress ?? `${selected.eventLatitude}, ${selected.eventLongitude}`}</Text></View> : null}
+    {selected && selected.lifecycleStatus !== "DRAFT" ? <EventParticipantOperationsScreen accessToken={accessToken} organizationId={organizationId} eventId={selected.id} /> : null}
   </View>;
 }
 const styles = StyleSheet.create({ container: { gap: spacing.md }, eyebrow: { color: colors.primary, fontSize: 11, fontWeight: "900", letterSpacing: 1 }, item: { gap: 3, padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }, selected: { backgroundColor: colors.primarySoft, borderColor: colors.primary }, title: { color: colors.text, fontWeight: "900", fontSize: 16 }, status: { color: colors.primary, fontWeight: "900", fontSize: 11 }, copy: { color: colors.textMuted, fontSize: 13 } });

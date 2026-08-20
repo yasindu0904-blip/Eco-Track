@@ -287,6 +287,9 @@ after(async () => {
       server!.close((error) => error ? reject(error) : resolve());
     });
   }
+  const identityIds = Object.values(identities).map((identity) => identity.id);
+  await prisma.userAchievement.deleteMany({ where: { userId: { in: identityIds } } });
+  await prisma.contributionEvent.deleteMany({ where: { userId: { in: identityIds } } });
   await prisma.cleanupEvent.deleteMany({
     where: { organizationId: { in: [organizationAId, organizationBId] } },
   });
@@ -1004,4 +1007,118 @@ test("participation rejects draft events, duplicate selections, and sessions fro
   assert.equal(crossEvent.status, 409);
   assert.equal((await crossEvent.json()).error.code, "SESSION_NOT_AVAILABLE");
   assert.equal(await prisma.eventParticipant.count({ where: { cleanupEventId: eventId, userId: identities.reporter.id } }), 0);
+});
+
+test("EVT-05 safely allocates volunteers, records attendance once, and preserves contact privacy", async () => {
+  const eventId = await createDirectDraft("EVT-05 participant operations event");
+  await makeDraftPublishable(identities.adminA.token, organizationAId, eventId, identities.memberA.membershipId);
+  const secondSessionResponse = await request(identities.adminA.token, `/organizations/${organizationAId}/events/${eventId}/sessions`, {
+    method: "POST",
+    body: JSON.stringify({ sessionDate: "2099-09-02", startTime: "09:00:00", endTime: "12:00:00", capacity: 1 }),
+  });
+  assert.equal(secondSessionResponse.status, 201);
+  const secondSessionId = (await secondSessionResponse.json()).data.id as string;
+  const published = await request(identities.adminA.token, `/organizations/${organizationAId}/events/${eventId}/publish`, { method: "POST" });
+  assert.equal(published.status, 200);
+  const sessionId = (await published.json()).data.event.sessions[0].id as string;
+  await prisma.eventSession.update({ where: { id: sessionId }, data: { capacity: 1 } });
+
+  const joined = await request(identities.reporter.token, `/events/${eventId}/participation`, {
+    method: "POST",
+    body: JSON.stringify({ sessionIds: [sessionId, secondSessionId] }),
+  });
+  assert.equal(joined.status, 201);
+  const participantId = (await joined.json()).data.participation.id as string;
+  const coordinatorJoin = await request(identities.memberA.token, `/events/${eventId}/participation`, {
+    method: "POST",
+    body: JSON.stringify({ sessionIds: [sessionId] }),
+  });
+  assert.equal(coordinatorJoin.status, 201);
+  const coordinatorParticipantId = (await coordinatorJoin.json()).data.participation.id as string;
+
+  const crossTenant = await request(identities.adminB.token, `/organizations/${organizationAId}/events/${eventId}/participants`);
+  assert.equal(crossTenant.status, 403);
+  const coordinatorList = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/participants`);
+  assert.equal(coordinatorList.status, 200);
+  const coordinatorBody = await coordinatorList.json();
+  assert.equal(coordinatorBody.data.participants[0].volunteer.phoneNumber, "+94770000001");
+  const coordinatedEvents = await request(identities.memberA.token, `/organizations/${organizationAId}/events?limit=25`);
+  assert.equal(coordinatedEvents.status, 200);
+  assert.equal((await coordinatedEvents.json()).data.items.some((item: { id: string }) => item.id === eventId), true);
+  const coordinatedEvent = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}`);
+  assert.equal(coordinatedEvent.status, 200);
+
+  const allocated = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/allocations`, {
+    method: "POST",
+    body: JSON.stringify({ participantId, sessionId }),
+  });
+  assert.equal(allocated.status, 201);
+  const allocationId = (await allocated.json()).data.id as string;
+  const allocationRetry = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/allocations`, {
+    method: "POST",
+    body: JSON.stringify({ participantId, sessionId }),
+  });
+  assert.equal(allocationRetry.status, 201);
+  assert.equal((await allocationRetry.json()).data.id, allocationId);
+  const reallocated = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/allocations/${allocationId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ sessionId: secondSessionId }),
+  });
+  assert.equal(reallocated.status, 200);
+  assert.equal((await reallocated.json()).data.sessionId, secondSessionId);
+  const movedBack = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/allocations/${allocationId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ sessionId }),
+  });
+  assert.equal(movedBack.status, 200);
+  const capacityRejected = await request(identities.adminA.token, `/organizations/${organizationAId}/events/${eventId}/allocations`, {
+    method: "POST",
+    body: JSON.stringify({ participantId: coordinatorParticipantId, sessionId }),
+  });
+  assert.equal(capacityRejected.status, 409);
+  assert.equal((await capacityRejected.json()).error.code, "SESSION_CAPACITY_REACHED");
+  const allocationRemoved = await request(identities.adminA.token, `/organizations/${organizationAId}/events/${eventId}/allocations/${allocationId}/remove`, { method: "POST" });
+  assert.equal(allocationRemoved.status, 200);
+  assert.equal((await allocationRemoved.json()).data.status, "REMOVED");
+  const allocationRestored = await request(identities.adminA.token, `/organizations/${organizationAId}/events/${eventId}/allocations`, {
+    method: "POST",
+    body: JSON.stringify({ participantId, sessionId }),
+  });
+  assert.equal(allocationRestored.status, 201);
+  assert.equal((await allocationRestored.json()).data.id, allocationId);
+
+  const selfView = await request(identities.reporter.token, `/events/${eventId}/participation`);
+  assert.equal(selfView.status, 200);
+  const selfBody = await selfView.json();
+  assert.equal(selfBody.data.allocations[0].id, allocationId);
+  assert.equal(JSON.stringify(selfBody).includes("phoneNumber"), false);
+
+  await prisma.eventSession.update({
+    where: { id: sessionId },
+    data: { sessionDate: new Date("2020-01-01T00:00:00.000Z"), startTime: new Date("1970-01-01T00:00:00.000Z") },
+  });
+  const attendance = await request(identities.adminA.token, `/organizations/${organizationAId}/events/${eventId}/allocations/${allocationId}/attendance`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "ATTENDED" }),
+  });
+  assert.equal(attendance.status, 200);
+  const attendanceRetry = await request(identities.adminA.token, `/organizations/${organizationAId}/events/${eventId}/allocations/${allocationId}/attendance`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "ATTENDED" }),
+  });
+  assert.equal(attendanceRetry.status, 200);
+  assert.equal(await prisma.contributionEvent.count({ where: { sessionAllocationId: allocationId } }), 1);
+
+  const removed = await request(identities.adminA.token, `/organizations/${organizationAId}/events/${eventId}/participants/${participantId}/remove`, {
+    method: "POST",
+    body: JSON.stringify({ reason: "Volunteer requested removal after attendance." }),
+  });
+  assert.equal(removed.status, 200);
+  assert.equal((await removed.json()).data.participant.status, "REMOVED");
+  assert.equal(await prisma.sessionAllocation.findUniqueOrThrow({ where: { id: allocationId } }).then(({ status }) => status), "ATTENDED");
+  assert.equal(await prisma.auditLog.count({ where: { action: "EVENT_PARTICIPANT_REMOVED", entityId: participantId } }), 1);
+
+  assert.equal((await prisma.eventCoordinator.deleteMany({ where: { cleanupEventId: eventId, membershipId: identities.memberA.membershipId } })).count, 1);
+  const ordinaryMemberList = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/participants`);
+  assert.equal(ordinaryMemberList.status, 403);
 });
