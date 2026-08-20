@@ -904,12 +904,12 @@ Connect independently developed routers and screens to the real applications wit
 
 ### Tests and acceptance criteria
 
-- [ ] Every approved router is mounted once at the documented path.
-- [ ] Global middleware/error order and authentication/profile gates remain intact.
-- [ ] Web and mobile can reach every completed feature through real navigation.
-- [ ] No hard-coded token, role, user, organization, or fake success data is added.
-- [ ] Shared-file conflicts preserve both contracts rather than accepting one whole file.
-- [ ] Backend, web, mobile, Docker, and CI checks pass after integration.
+- [x] Every approved router is mounted once at the documented path.
+- [x] Global middleware/error order and authentication/profile gates remain intact.
+- [x] Web and mobile can reach every completed feature through real navigation.
+- [x] No hard-coded token, role, user, organization, or fake success data is added.
+- [x] Shared-file conflicts preserve both contracts rather than accepting one whole file.
+- [ ] Backend, web, mobile, Docker, and CI checks pass after integration. Local checks and Docker pass; GitHub CI must confirm after this branch is pushed.
 
 ---
 

@@ -15,7 +15,7 @@ import type { NotificationItem } from "./notification.types";
 type InboxProps = {
   accessToken: string;
   onBack: () => void;
-  onOpenOrganizationApplications?: () => void;
+  onNavigateNotification?: (notification: NotificationItem) => boolean | void;
 };
 
 export function NotificationButton({
@@ -55,7 +55,7 @@ export function NotificationButton({
 export function NotificationInboxScreen({
   accessToken,
   onBack,
-  onOpenOrganizationApplications,
+  onNavigateNotification,
 }: InboxProps) {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -102,11 +102,8 @@ export function NotificationInboxScreen({
       }
     }
 
-    if (item.type === "ORGANIZATION_REVIEW_UPDATED" && onOpenOrganizationApplications) {
-      onOpenOrganizationApplications();
-    } else {
-      setNotice("This update is saved. Its linked screen will open when that feature is available.");
-    }
+    if (onNavigateNotification?.(item) === true) return;
+    setNotice("This update is saved, but it does not contain a safe destination available to this account.");
   };
 
   const markAll = async () => {

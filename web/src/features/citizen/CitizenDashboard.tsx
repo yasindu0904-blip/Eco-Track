@@ -4,7 +4,7 @@ import { getCitizenSummary } from "../dashboards/dashboard.api";
 import { SummaryPanel } from "../dashboards/SummaryPanel";
 import { total } from "../dashboards/dashboard.utils";
 import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
-import { NotificationButton } from "../notifications/NotificationInbox";
+import { NotificationButton } from "../notifications/NotificationButton";
 import "./citizenDashboard.css";
 
 interface CitizenDashboardProps {

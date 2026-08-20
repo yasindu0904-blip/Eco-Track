@@ -5,7 +5,7 @@ import { SummaryPanel } from "../dashboards/SummaryPanel";
 import { total } from "../dashboards/dashboard.utils";
 
 import type { AuthenticatedUserProfile } from "../auth/auth.types";
-import { NotificationButton } from "../notifications/NotificationInbox";
+import { NotificationButton } from "../notifications/NotificationButton";
 import {
   approveOrganizationApplication,
   declineOrganizationApplication,
