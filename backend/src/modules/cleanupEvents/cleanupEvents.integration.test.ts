@@ -8,6 +8,8 @@ import { createApp } from "../../app.js";
 import { prisma } from "../../database/prisma.js";
 import type { AuthenticationDependencies } from "../auth/auth.types.js";
 import { cleanupEventDependencies } from "./cleanupEvent.dependencies.js";
+import { MAP_PERFORMANCE_BUDGETS } from "../maps/map.constants.js";
+import type { SpatialQueryMetric } from "../maps/map.telemetry.js";
 
 const organizationAId = randomUUID();
 const organizationBId = randomUUID();
@@ -55,6 +57,8 @@ const authenticationDependencies: AuthenticationDependencies = {
     return profileFor(matched);
   },
 };
+const spatialMetrics: SpatialQueryMetric[] = [];
+cleanupEventDependencies.spatialQueryObserver = (metric) => spatialMetrics.push(metric);
 
 let server: Server | undefined;
 let baseUrl = "";
@@ -578,6 +582,12 @@ test("a direct event publishes atomically and exposes only public-safe detail", 
   assert.equal("createdByMembershipId" in detailBody, false);
   assert.equal(JSON.stringify(detailBody).includes("officialPhone"), false);
   assert.equal(JSON.stringify(detailBody).includes("notes"), false);
+  const sessionId = (detailBody.sessions as Array<{ id: string }>)[0]!.id;
+  const joined = await request(identities.reporter.token, `/events/${eventId}/participation`, {
+    method: "POST",
+    body: JSON.stringify({ sessionIds: [sessionId] }),
+  });
+  assert.equal(joined.status, 201);
 
   const listed = await request(identities.reporter.token, "/events?limit=50");
   assert.equal(listed.status, 200);
@@ -588,10 +598,108 @@ test("a direct event publishes atomically and exposes only public-safe detail", 
     "/events/map?west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=50",
   );
   assert.equal(map.status, 200);
-  assert.ok((await map.json()).data.features.some(
-    (feature: { properties: { id: string; kind: string } }) =>
-      feature.properties.id === eventId && feature.properties.kind === "CLEANUP_EVENT",
+  const mapBody = (await map.json()).data as { features: Array<{ properties: Record<string, unknown> & { id: string; kind: string } }> };
+  const marker = mapBody.features.find((feature) => feature.properties.id === eventId);
+  assert.equal(marker?.properties.kind, "CLEANUP_EVENT");
+  assert.equal(marker?.properties.organizationId, organizationAId);
+  assert.equal(marker?.properties.isJoined, true);
+  assert.equal("officialPhone" in (marker?.properties ?? {}), false);
+  assert.equal("privateNotes" in (marker?.properties ?? {}), false);
+
+  const boundaryMap = await request(
+    identities.reporter.token,
+    "/events/map?west=79.9&south=6.95&east=80&north=7.1&zoom=12&limit=50",
+  );
+  assert.equal(boundaryMap.status, 200);
+  assert.ok((await boundaryMap.json()).data.features.some(
+    (feature: { properties: { id: string } }) => feature.properties.id === eventId,
   ));
+  assert.equal((await request(
+    identities.reporter.token,
+    "/events/map?west=80&south=6.8&east=79.8&north=7.1&zoom=12",
+  )).status, 400);
+
+  const secondMapEventId = await createDirectDraft("Second paged map event");
+  await makeDraftPublishable(
+    identities.adminA.token,
+    organizationAId,
+    secondMapEventId,
+    identities.memberA.membershipId,
+  );
+  assert.equal((await request(
+    identities.adminA.token,
+    `/organizations/${organizationAId}/events/${secondMapEventId}/publish`,
+    { method: "POST" },
+  )).status, 200);
+  const firstMapPage = await request(
+    identities.reporter.token,
+    "/events/map?west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=1",
+  );
+  const firstMapPageData = (await firstMapPage.json()).data as {
+    features: Array<{ properties: { id: string } }>;
+    nextCursor: string | null;
+  };
+  assert.equal(firstMapPageData.features.length, 1);
+  assert.ok(firstMapPageData.nextCursor);
+  const secondMapPage = await request(
+    identities.reporter.token,
+    `/events/map?west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=1&cursor=${encodeURIComponent(firstMapPageData.nextCursor!)}`,
+  );
+  const secondMapPageData = (await secondMapPage.json()).data as {
+    features: Array<{ properties: { id: string } }>;
+  };
+  assert.notEqual(
+    secondMapPageData.features[0]?.properties.id,
+    firstMapPageData.features[0]?.properties.id,
+  );
+
+  const nearbyMap = await request(
+    identities.reporter.token,
+    "/events/nearby?latitude=6.9271&longitude=79.8612&radiusMeters=10000&limit=50",
+  );
+  assert.equal(nearbyMap.status, 200);
+  assert.ok((await nearbyMap.json()).data.features.some(
+    (feature: { properties: { id: string } }) => feature.properties.id === eventId,
+  ));
+  assert.equal((await request(
+    identities.reporter.token,
+    "/events/nearby?latitude=6.9271&longitude=79.8612&radiusMeters=50001",
+  )).status, 400);
+
+  const ownedMap = await request(
+    identities.adminA.token,
+    `/organizations/${organizationAId}/events/map?west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=50`,
+  );
+  assert.equal(ownedMap.status, 200);
+  const ownedMarker = (await ownedMap.json()).data.features.find(
+    (feature: { properties: { id: string } }) => feature.properties.id === eventId,
+  );
+  assert.equal(ownedMarker.properties.isOwned, true);
+  const ownedEvent = await request(
+    identities.adminA.token,
+    `/organizations/${organizationAId}/events/${eventId}`,
+  );
+  assert.equal(ownedEvent.status, 200);
+  assert.equal((await ownedEvent.json()).data.id, eventId);
+  assert.equal((await request(
+    identities.adminB.token,
+    `/organizations/${organizationAId}/events/${eventId}`,
+  )).status, 403);
+  assert.equal((await request(
+    identities.adminB.token,
+    `/organizations/${organizationBId}/events/${eventId}`,
+  )).status, 404);
+  const eventMapMetrics = spatialMetrics.filter((metric) => metric.operation.startsWith("cleanup_events."));
+  assert.ok(eventMapMetrics.some((metric) => metric.mode === "VIEWPORT" && metric.projection === "PUBLIC"));
+  assert.ok(eventMapMetrics.some((metric) => metric.mode === "RADIUS"));
+  assert.ok(eventMapMetrics.some((metric) => metric.projection === "ORGANIZATION"));
+  assert.ok(eventMapMetrics.every(
+    (metric) => metric.durationMs <= MAP_PERFORMANCE_BUDGETS.maxSpatialQueryDurationMs,
+  ));
+  assert.equal((await request(
+    identities.adminB.token,
+    `/organizations/${organizationAId}/events/map?west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=50`,
+  )).status, 403);
 });
 
 test("linked publication requires VALID review and updates incident, histories, audit, and notification", async () => {

@@ -87,6 +87,7 @@ export interface PublicIncidentSummaryDto {
   addressText: string | null;
   reportedAt: string;
   falseReviewCount: number;
+  isOwnReport: boolean;
 }
 
 export interface PublicIncidentListPageDto {

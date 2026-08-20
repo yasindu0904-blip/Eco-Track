@@ -13,6 +13,8 @@ import { errorMiddleware } from "../../middleware/error.middleware.js";
 import type { AuthenticationDependencies } from "../auth/auth.types.js";
 import type { IncidentDependencies } from "./incident.dependencies.js";
 import { createIncidentRouter } from "./incident.routes.js";
+import { MAP_PERFORMANCE_BUDGETS } from "../maps/map.constants.js";
+import type { SpatialQueryMetric } from "../maps/map.telemetry.js";
 
 const reporterId = randomUUID();
 const reporterAuthId = randomUUID();
@@ -42,6 +44,7 @@ const organizationAWorkflowStatusId = randomUUID();
 const inactiveAdministrativeAreaId = randomUUID();
 const inactiveAdministrativeServiceAreaId = randomUUID();
 const uploadedPaths = new Set<string>();
+const spatialMetrics: SpatialQueryMetric[] = [];
 
 const profiles = {
   [reporterToken]: {
@@ -97,6 +100,7 @@ const authenticationDependencies: AuthenticationDependencies = {
 const dependencies: IncidentDependencies = {
   prisma,
   authorization: authorizationDependencies,
+  spatialQueryObserver: (metric) => spatialMetrics.push(metric),
   storage: {
     async createUploadIntent(storagePath) {
       uploadedPaths.add(storagePath);
@@ -502,6 +506,12 @@ test("public viewport and nearby discovery are bounded, private-safe, and pagina
   };
   assert.ok(nearby.data.items.some((item) => item.id === createdIncidentId));
   assert.ok(nearby.data.items.some((item) => item.id === secondIncidentId));
+  const publicMetrics = spatialMetrics.filter((metric) => metric.operation === "incidents.public");
+  assert.ok(publicMetrics.some((metric) => metric.mode === "VIEWPORT"));
+  assert.ok(publicMetrics.some((metric) => metric.mode === "RADIUS"));
+  assert.ok(publicMetrics.every(
+    (metric) => metric.durationMs <= MAP_PERFORMANCE_BUDGETS.maxSpatialQueryDurationMs,
+  ));
 
   const filteredResponse = await request(
     `/incidents?west=79.8&south=6.8&east=80&north=7.1&zoom=12&status=RESOLVED&categoryId=${categoryId}`,
@@ -512,6 +522,26 @@ test("public viewport and nearby discovery are bounded, private-safe, and pagina
     data: { items: unknown[] };
   };
   assert.deepEqual(filtered.data.items, []);
+
+  await prisma.incident.update({
+    where: { id: secondIncidentId },
+    data: { status: "RESOLVED", resolvedAt: new Date() },
+  });
+  const activeDefault = await request(
+    `/incidents?west=79.8&south=6.8&east=80&north=7.1&zoom=12&categoryId=${categoryId}`,
+    otherToken,
+  );
+  const activeDefaultItems = (await activeDefault.json() as {
+    data: { items: Array<{ id: string }> };
+  }).data.items;
+  assert.equal(activeDefaultItems.some(({ id }) => id === secondIncidentId), false);
+  const explicitResolved = await request(
+    `/incidents?west=79.8&south=6.8&east=80&north=7.1&zoom=12&status=RESOLVED&categoryId=${categoryId}`,
+    otherToken,
+  );
+  assert.equal((await explicitResolved.json()).data.items.some(
+    (item: { id: string }) => item.id === secondIncidentId,
+  ), true);
 
   const outsideResponse = await request(
     "/incidents?west=80.5&south=7.5&east=80.6&north=7.6&zoom=12",

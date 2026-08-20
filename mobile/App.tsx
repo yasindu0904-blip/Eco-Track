@@ -234,6 +234,11 @@ export default function App() {
         <CitizenIncidentDiscoveryScreen
           accessToken={authentication.accessToken}
           onBack={() => setCitizenView("dashboard")}
+          onReportIncident={() => setCitizenView("reportIncident")}
+          onOpenEvent={(eventId) => {
+            setSelectedCleanupEventId(eventId);
+            setCitizenView("cleanupEvents");
+          }}
         />
       );
     } else if (citizenView === "cleanupEvents") {

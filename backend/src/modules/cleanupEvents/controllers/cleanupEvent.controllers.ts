@@ -8,10 +8,13 @@ import {
   createSession,
   discardDraft,
   getOrganizationDraft,
+  getOwnedCleanupEvent,
   getPublicCleanupEvent,
   getPublishReadiness,
   listOwnedCleanupEvents,
   listPublicCleanupEventMap,
+  listNearbyPublicCleanupEventMap,
+  listOrganizationCleanupEventMap,
   listPublicCleanupEvents,
   listOrganizationDrafts,
   removeCoordinator,
@@ -25,6 +28,7 @@ import {
   createDraftSchema,
   createSessionSchema,
   cleanupEventMapQuerySchema,
+  cleanupEventNearbyMapQuerySchema,
   draftIdParametersSchema,
   eventParametersSchema,
   eventSessionParametersSchema,
@@ -313,6 +317,24 @@ export function listPublicEventsController(dependencies: CleanupEventDependencie
   };
 }
 
+export function getOwnedEventController(dependencies: CleanupEventDependencies) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const validation = eventParametersSchema.safeParse(request.params);
+      if (!validation.success) throw validationError(validation);
+      response.status(200).json({
+        data: await getOwnedCleanupEvent(
+          dependencies,
+          request.tenant!.organization.id,
+          validation.data.eventId,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+
 export function getPublicEventController(dependencies: CleanupEventDependencies) {
   return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
     try {
@@ -333,10 +355,46 @@ export function listPublicEventMapController(dependencies: CleanupEventDependenc
       const validation = cleanupEventMapQuerySchema.safeParse(request.query);
       if (!validation.success) throw validationError(validation);
       response.status(200).json({
-        data: await listPublicCleanupEventMap(dependencies, validation.data),
+        data: await listPublicCleanupEventMap(
+          dependencies,
+          validation.data,
+          request.authentication.profile.id,
+        ),
       });
     } catch (error) {
       next(error);
     }
+  };
+}
+
+export function listNearbyPublicEventMapController(dependencies: CleanupEventDependencies) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const validation = cleanupEventNearbyMapQuerySchema.safeParse(request.query);
+      if (!validation.success) throw validationError(validation);
+      response.status(200).json({
+        data: await listNearbyPublicCleanupEventMap(
+          dependencies,
+          validation.data,
+          request.authentication.profile.id,
+        ),
+      });
+    } catch (error) { next(error); }
+  };
+}
+
+export function listOrganizationEventMapController(dependencies: CleanupEventDependencies) {
+  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+    try {
+      const validation = cleanupEventMapQuerySchema.safeParse(request.query);
+      if (!validation.success) throw validationError(validation);
+      response.status(200).json({
+        data: await listOrganizationCleanupEventMap(
+          dependencies,
+          request.tenant!.organization.id,
+          validation.data,
+        ),
+      });
+    } catch (error) { next(error); }
   };
 }

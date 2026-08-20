@@ -43,6 +43,7 @@ export interface IncidentSummary {
 export interface PublicIncidentSummary
   extends Omit<IncidentSummary, "thumbnailUrl"> {
   falseReviewCount: number;
+  isOwnReport: boolean;
 }
 
 export interface PublicIncidentPage {

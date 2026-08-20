@@ -6,6 +6,8 @@ import { Button, Notice, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import { listIncidentCategories } from "../incidents/incident.api";
 import type { IncidentCategory } from "../incidents/incident.types";
+import { listOrganizationCleanupEventMap } from "../cleanupEvents/cleanupEvent.api";
+import type { CleanupEventMapFeature } from "../cleanupEvents/cleanupEvent.types";
 import {
   EcoMap,
   type MapBoundaryFeatureCollection,
@@ -32,6 +34,7 @@ type Props = {
   canReview: boolean;
   onMapInteractionChange: (interacting: boolean) => void;
   onCreateDraftFromIncident?: (incidentId: string) => void;
+  onOpenEvent?: (eventId: string, lifecycleStatus: string) => void;
 };
 
 const statuses = [
@@ -95,19 +98,23 @@ export function OrganizationIncidentDiscovery({
   canReview,
   onMapInteractionChange,
   onCreateDraftFromIncident,
+  onOpenEvent,
 }: Props) {
   const [categories, setCategories] = useState<IncidentCategory[]>([]);
   const [boundaries, setBoundaries] =
     useState<MapBoundaryFeatureCollection>();
   const [incidents, setIncidents] = useState<OrganizationIncidentSummary[]>([]);
+  const [events, setEvents] = useState<CleanupEventMapFeature[]>([]);
   const [viewport, setViewport] = useState<MapViewport>();
   const [selectedId, setSelectedId] = useState<string>();
+  const [selectedKind, setSelectedKind] = useState<"INCIDENT" | "CLEANUP_EVENT">("INCIDENT");
   const [status, setStatus] =
     useState<(typeof statuses)[number]["value"]>("");
   const [categoryId, setCategoryId] = useState("");
   const [timeRange, setTimeRange] =
     useState<(typeof times)[number]["value"]>("");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [nextEventCursor, setNextEventCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string>();
@@ -122,6 +129,12 @@ export function OrganizationIncidentDiscovery({
   const activeRequest = useRef<AbortController | undefined>(undefined);
   const detailRequest = useRef<AbortController | undefined>(undefined);
   const selectedIdRef = useRef<string | undefined>(undefined);
+
+  const selectMarker = useCallback((id: string | undefined, kind: "INCIDENT" | "CLEANUP_EVENT" = "INCIDENT") => {
+    selectedIdRef.current = id;
+    setSelectedId(id);
+    setSelectedKind(kind);
+  }, []);
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
@@ -158,7 +171,7 @@ export function OrganizationIncidentDiscovery({
     setReasonCode(undefined);
     setPrivateNotes("");
 
-    if (!selectedId || !canReview) {
+    if (!selectedId || selectedKind !== "INCIDENT" || !canReview) {
       return;
     }
 
@@ -192,7 +205,7 @@ export function OrganizationIncidentDiscovery({
       });
 
     return () => controller.abort();
-  }, [accessToken, canReview, organizationId, selectedId]);
+  }, [accessToken, canReview, organizationId, selectedId, selectedKind]);
 
   const loadDiscovery = useCallback(
     async (
@@ -201,6 +214,7 @@ export function OrganizationIncidentDiscovery({
       options: {
         append?: boolean;
         cursor?: string;
+        eventCursor?: string;
         includeBoundaries?: boolean;
         externalSignal?: AbortSignal;
       } = {},
@@ -219,32 +233,50 @@ export function OrganizationIncidentDiscovery({
       }
       setError(undefined);
       try {
-        const page = await listOrganizationIncidents(
-          accessToken,
-          organizationId,
-          {
-            ...nextViewport,
-            limit: 100,
-            cursor: options.cursor,
-            status: filters.status || undefined,
-            categoryId: filters.categoryId || undefined,
-            reportedAfter: reportedAfterFor(filters.timeRange),
-          },
-          controller.signal,
-        );
+        const incidentRequest = options.append && !options.cursor
+          ? Promise.resolve({ items: [], nextCursor: null })
+          : listOrganizationIncidents(
+              accessToken,
+              organizationId,
+              {
+                ...nextViewport,
+                limit: 100,
+                cursor: options.cursor,
+                status: filters.status || undefined,
+                categoryId: filters.categoryId || undefined,
+                reportedAfter: reportedAfterFor(filters.timeRange),
+              },
+              controller.signal,
+            );
+        const eventRequest = options.append && !options.eventCursor
+          ? Promise.resolve({ type: "FeatureCollection" as const, features: [], nextCursor: null })
+          : listOrganizationCleanupEventMap(accessToken, organizationId, {
+              ...nextViewport, limit: 100, cursor: options.eventCursor,
+            }, controller.signal);
+        const [page, eventPage] = await Promise.all([incidentRequest, eventRequest]);
         if (controller.signal.aborted) return;
         setIncidents((current) =>
           options.append ? mergeUnique(current, page.items) : page.items,
         );
         setNextCursor(page.nextCursor);
-        setSelectedId((current) =>
-          options.append && current
-            ? current
-            :
-          page.items.some((incident) => incident.id === current)
-            ? current
-            : page.items[0]?.id,
-        );
+        setEvents((current) => options.append
+          ? [...new Map([...current, ...eventPage.features].map((item) => [item.properties.id, item])).values()]
+          : eventPage.features);
+        setNextEventCursor(eventPage.nextCursor);
+        if (!options.append || !selectedIdRef.current) {
+          const currentId = selectedIdRef.current;
+          if (currentId && page.items.some((incident) => incident.id === currentId)) {
+            selectMarker(currentId, "INCIDENT");
+          } else if (currentId && eventPage.features.some((event) => event.properties.id === currentId)) {
+            selectMarker(currentId, "CLEANUP_EVENT");
+          } else if (page.items[0]) {
+            selectMarker(page.items[0].id, "INCIDENT");
+          } else if (eventPage.features[0]) {
+            selectMarker(eventPage.features[0].properties.id, "CLEANUP_EVENT");
+          } else {
+            selectMarker(undefined);
+          }
+        }
 
         if (options.includeBoundaries) {
           const overlay = await listOrganizationServiceAreaBoundaries(
@@ -271,7 +303,7 @@ export function OrganizationIncidentDiscovery({
         }
       }
     },
-    [accessToken, organizationId],
+    [accessToken, organizationId, selectMarker],
   );
 
   const handleViewportChange = useCallback<MapViewportChangeHandler>(
@@ -302,7 +334,7 @@ export function OrganizationIncidentDiscovery({
   };
 
   const markers = useMemo<MapMarkerFeature[]>(
-    () => incidents.map((incident) => ({
+    () => [...incidents.map((incident) => ({
       type: "Feature",
       geometry: {
         type: "Point",
@@ -316,10 +348,11 @@ export function OrganizationIncidentDiscovery({
         category: incident.category.name,
         occurredAt: incident.reportedAt,
       },
-    })),
-    [incidents],
+    } satisfies MapMarkerFeature)), ...events],
+    [events, incidents],
   );
   const selected = incidents.find((incident) => incident.id === selectedId);
+  const selectedEvent = events.find((event) => event.properties.id === selectedId);
   const selectedDetail = detail?.id === selectedId ? detail : undefined;
 
   const submitReview = async () => {
@@ -404,10 +437,10 @@ export function OrganizationIncidentDiscovery({
           <Text style={styles.eyebrow}>COVERED INCIDENTS</Text>
           <Text style={styles.count}>
             {loading
-              ? "Loading incidents in this view"
-              : nextCursor
-                ? `Showing the first ${incidents.length} incidents in view`
-                : `${incidents.length} incidents in view`}
+              ? "Loading activity in this view"
+              : (nextCursor || nextEventCursor)
+                ? `Showing the first ${incidents.length + events.length} items in view`
+                : `${incidents.length} incidents · ${events.length} owned events`}
           </Text>
         </View>
         {loading ? <ActivityIndicator color={colors.primary} /> : null}
@@ -484,12 +517,12 @@ export function OrganizationIncidentDiscovery({
         showCurrentLocation={false}
         height={430}
         accessibleLabel="Organization incident discovery map"
-        onMarkerSelect={(marker) => setSelectedId(marker.properties.id)}
+        onMarkerSelect={(marker) => selectMarker(marker.properties.id, marker.properties.kind)}
         onViewportChange={handleViewportChange}
         onInteractionChange={onMapInteractionChange}
       />
 
-      {incidents.length === 0 && !loading ? (
+      {incidents.length + events.length === 0 && !loading ? (
         <View style={sharedStyles.card}>
           <Text style={sharedStyles.sectionTitle}>No covered incidents in this view</Text>
           <Text style={sharedStyles.sectionSubtitle}>
@@ -501,7 +534,7 @@ export function OrganizationIncidentDiscovery({
           <Pressable
             key={incident.id}
             accessibilityRole="button"
-            onPress={() => setSelectedId(incident.id)}
+            onPress={() => selectMarker(incident.id, "INCIDENT")}
             style={[
               sharedStyles.card,
               styles.incidentCard,
@@ -517,9 +550,19 @@ export function OrganizationIncidentDiscovery({
         ))
       )}
 
-      {nextCursor && viewport ? (
+      {events.map((event) => (
+        <Pressable key={`event-${event.properties.id}`} accessibilityRole="button"
+          onPress={() => selectMarker(event.properties.id, "CLEANUP_EVENT")}
+          style={[sharedStyles.card, styles.incidentCard, event.properties.id === selectedId && styles.incidentCardSelected]}>
+          <Text style={styles.category}>OWNED CLEANUP EVENT</Text>
+          <Text style={styles.incidentTitle}>{event.properties.title}</Text>
+          <Text style={styles.meta}>{readable(event.properties.status)}</Text>
+        </Pressable>
+      ))}
+
+      {(nextCursor || nextEventCursor) && viewport ? (
         <Button
-          label={loadingMore ? "Loading more..." : "Load more incidents"}
+          label={loadingMore ? "Loading more..." : "Load more activity"}
           loading={loadingMore}
           disabled={loadingMore}
           variant="secondary"
@@ -527,7 +570,7 @@ export function OrganizationIncidentDiscovery({
             void loadDiscovery(
               viewport,
               { status, categoryId, timeRange },
-              { append: true, cursor: nextCursor },
+              { append: true, cursor: nextCursor ?? undefined, eventCursor: nextEventCursor ?? undefined },
             )
           }
         />
@@ -646,6 +689,14 @@ export function OrganizationIncidentDiscovery({
               onPress={() => onCreateDraftFromIncident(selected.id)}
             />
           ) : null}
+        </View>
+      ) : null}
+      {selectedKind === "CLEANUP_EVENT" && selectedEvent ? (
+        <View style={[sharedStyles.card, styles.detail]}>
+          <Text style={styles.category}>OWNED CLEANUP EVENT</Text>
+          <Text style={sharedStyles.sectionTitle}>{selectedEvent.properties.title}</Text>
+          <View style={sharedStyles.spacedRow}><Text style={styles.detailLabel}>STATUS</Text><Text style={styles.detailValue}>{readable(selectedEvent.properties.status)}</Text></View>
+          {onOpenEvent ? <Button label="Open selected event" onPress={() => onOpenEvent(selectedEvent.properties.id, selectedEvent.properties.status)} /> : null}
         </View>
       ) : null}
     </View>

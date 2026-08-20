@@ -20,9 +20,12 @@ import {
   updateSessionController,
   assignCoordinatorController,
   removeCoordinatorController,
+  getOwnedEventController,
   getPublicEventController,
   listOwnedEventsController,
   listPublicEventMapController,
+  listNearbyPublicEventMapController,
+  listOrganizationEventMapController,
   listPublicEventsController,
   publishEventController,
   publishReadinessController,
@@ -72,6 +75,20 @@ export function createCleanupEventRouter(authenticationDependencies: Authenticat
     ...tenantRoute,
     authorize(Actions.Read, Subjects.CleanupEvent),
     listOwnedEventsController(deps),
+  );
+
+  router.get(
+    "/organizations/:organizationId/events/map",
+    ...tenantRoute,
+    authorize(Actions.Read, Subjects.CleanupEvent),
+    listOrganizationEventMapController(deps),
+  );
+
+  router.get(
+    "/organizations/:organizationId/events/:eventId",
+    ...tenantRoute,
+    authorize(Actions.Read, Subjects.CleanupEvent),
+    getOwnedEventController(deps),
   );
 
   router.get(
@@ -126,6 +143,13 @@ export function createCleanupEventRouter(authenticationDependencies: Authenticat
     ...publicRoute,
     authorize(Actions.Read, Subjects.CleanupEvent),
     listPublicEventMapController(deps),
+  );
+
+  router.get(
+    "/events/nearby",
+    ...publicRoute,
+    authorize(Actions.Read, Subjects.CleanupEvent),
+    listNearbyPublicEventMapController(deps),
   );
 
   router.get(

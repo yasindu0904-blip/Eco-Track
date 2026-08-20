@@ -29,6 +29,7 @@ type Props = {
   accessToken: string;
   organizationId: string;
   incidentId?: string;
+  initialDraftId?: string;
   onBack: () => void;
   onMapInteractionChange?: (interacting: boolean) => void;
 };
@@ -47,6 +48,7 @@ export function CleanupEventDraftScreen({
   accessToken,
   organizationId,
   incidentId,
+  initialDraftId,
   onBack,
   onMapInteractionChange,
 }: Props) {
@@ -105,6 +107,7 @@ export function CleanupEventDraftScreen({
     const timeout = setTimeout(() => {
       void Promise.all([
         listDrafts(accessToken, organizationId),
+        initialDraftId ? getDraft(accessToken, organizationId, initialDraftId) : Promise.resolve(undefined),
         (async () => {
           const loaded: OrganizationMember[] = [];
           let cursor: string | undefined;
@@ -116,10 +119,11 @@ export function CleanupEventDraftScreen({
           return loaded;
         })(),
       ])
-        .then(([draftPage, loadedMembers]) => {
+        .then(([draftPage, initialDraft, loadedMembers]) => {
           if (!active) return;
           setDrafts(draftPage.items);
           setMembers(loadedMembers);
+          if (initialDraft) openDraft(initialDraft);
         })
         .catch((reason: unknown) => {
           if (active) {
@@ -134,7 +138,7 @@ export function CleanupEventDraftScreen({
       active = false;
       clearTimeout(timeout);
     };
-  }, [accessToken, organizationId]);
+  }, [accessToken, initialDraftId, organizationId]);
 
   const availableMembers = useMemo(
     () => members.filter(

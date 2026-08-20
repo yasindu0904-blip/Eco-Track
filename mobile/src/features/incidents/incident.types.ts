@@ -8,6 +8,7 @@ export type IncidentSummary = {
 };
 export type PublicIncidentSummary = Omit<IncidentSummary, "thumbnailUrl"> & {
   falseReviewCount: number;
+  isOwnReport: boolean;
 };
 export type PublicIncidentPage = {
   items: PublicIncidentSummary[];

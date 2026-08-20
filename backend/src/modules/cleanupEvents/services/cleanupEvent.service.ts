@@ -5,6 +5,7 @@ import type {
   CleanupEventDraftPageDto,
   CleanupEventMapFeatureCollectionDto,
   CleanupEventOwnedPageDto,
+  CleanupEventOwnedSummaryDto,
   CleanupEventPublicDetailDto,
   CleanupEventPublicLifecycleStatus,
   CleanupEventPublicPageDto,
@@ -16,6 +17,7 @@ import type {
 import type {
   ValidatedCleanupEventListQuery,
   ValidatedCleanupEventMapQuery,
+  ValidatedCleanupEventNearbyMapQuery,
   ValidatedCreateDraft,
   ValidatedCreateSession,
   ValidatedDraftListQuery,
@@ -32,9 +34,12 @@ import {
   findDraftWorkflowStatusId,
   findOrganizationDraftById,
   findOrganizationDrafts,
+  findOwnedCleanupEventById,
   findPublicCleanupEventById,
   listOwnedCleanupEventRecords,
   listPublicCleanupEventMapRecords,
+  listNearbyPublicCleanupEventMapRecords,
+  listOrganizationCleanupEventMapRecords,
   listPublicCleanupEventRecords,
   isIncidentVisibleToOrganization,
   removeCoordinatorRecord,
@@ -46,7 +51,9 @@ import {
   type CleanupEventOwnedCursor,
   type CleanupEventPublicCursor,
   type CleanupEventPublicRecord,
+  type CleanupEventMapCursor,
 } from "../repositories/cleanupEvent.repository.js";
+import { observeSpatialQuery } from "../../maps/map.telemetry.js";
 import {
   getCleanupEventPublishReadiness,
   publishCleanupEvent,
@@ -568,6 +575,39 @@ export async function getPublicCleanupEvent(
   return toPublicDetail(record);
 }
 
+function toOwnedSummary(record: CleanupEventPublicRecord): CleanupEventOwnedSummaryDto {
+  return {
+    id: record.id,
+    organization: record.organization,
+    incidentId: record.incidentId,
+    title: record.title,
+    description: record.description,
+    lifecycleStatus: record.lifecycleStatus,
+    eventLatitude: Number(record.eventLatitude),
+    eventLongitude: Number(record.eventLongitude),
+    eventAddress: record.eventAddress,
+    publishedAt: record.publishedAt?.toISOString() ?? null,
+    firstSessionAt: firstSessionAt(record),
+    updatedAt: record.updatedAt.toISOString(),
+  };
+}
+
+export async function getOwnedCleanupEvent(
+  dependencies: CleanupEventDependencies,
+  organizationId: string,
+  eventId: string,
+): Promise<CleanupEventOwnedSummaryDto> {
+  const record = await findOwnedCleanupEventById(
+    dependencies.prisma,
+    organizationId,
+    eventId,
+  );
+  if (!record) {
+    throw new ApplicationError(404, "CLEANUP_EVENT_NOT_FOUND", "The organization cleanup event was not found.");
+  }
+  return toOwnedSummary(record);
+}
+
 export async function listOwnedCleanupEvents(
   dependencies: CleanupEventDependencies,
   organizationId: string,
@@ -585,20 +625,7 @@ export async function listOwnedCleanupEvents(
   const page = hasMore ? records.slice(0, query.limit) : records;
   const last = page.at(-1);
   return {
-    items: page.map((record) => ({
-      id: record.id,
-      organization: record.organization,
-      incidentId: record.incidentId,
-      title: record.title,
-      description: record.description,
-      lifecycleStatus: record.lifecycleStatus,
-      eventLatitude: Number(record.eventLatitude),
-      eventLongitude: Number(record.eventLongitude),
-      eventAddress: record.eventAddress,
-      publishedAt: record.publishedAt?.toISOString() ?? null,
-      firstSessionAt: firstSessionAt(record),
-      updatedAt: record.updatedAt.toISOString(),
-    })),
+    items: page.map(toOwnedSummary),
     nextCursor: hasMore && last
       ? encodeDatedCursor("updatedAt", last.updatedAt, last.id)
       : null,
@@ -608,10 +635,53 @@ export async function listOwnedCleanupEvents(
 export async function listPublicCleanupEventMap(
   dependencies: CleanupEventDependencies,
   query: ValidatedCleanupEventMapQuery,
+  userId: string,
 ): Promise<CleanupEventMapFeatureCollectionDto> {
-  const records = await listPublicCleanupEventMapRecords(dependencies.prisma, query);
-  const hasMore = records.length > query.limit;
-  const page = hasMore ? records.slice(0, query.limit) : records;
+  const decoded = query.cursor ? decodeDatedCursor(query.cursor, "publishedAt") : null;
+  const cursor = decoded
+    ? ({ sortAt: decoded.publishedAt, id: decoded.id } satisfies CleanupEventMapCursor)
+    : null;
+  const records = await observeSpatialQuery(dependencies.spatialQueryObserver, {
+    operation: "cleanup_events.public", projection: "PUBLIC", mode: "VIEWPORT",
+  }, () => listPublicCleanupEventMapRecords(dependencies.prisma, { ...query, cursor, userId }));
+  return toMapPage(records, query.limit, "publishedAt", false);
+}
+
+export async function listNearbyPublicCleanupEventMap(
+  dependencies: CleanupEventDependencies,
+  query: ValidatedCleanupEventNearbyMapQuery,
+  userId: string,
+): Promise<CleanupEventMapFeatureCollectionDto> {
+  const decoded = query.cursor ? decodeDatedCursor(query.cursor, "publishedAt") : null;
+  const cursor = decoded ? { sortAt: decoded.publishedAt, id: decoded.id } : null;
+  const records = await observeSpatialQuery(dependencies.spatialQueryObserver, {
+    operation: "cleanup_events.public", projection: "PUBLIC", mode: "RADIUS",
+  }, () => listNearbyPublicCleanupEventMapRecords(dependencies.prisma, { ...query, cursor, userId }));
+  return toMapPage(records, query.limit, "publishedAt", false);
+}
+
+export async function listOrganizationCleanupEventMap(
+  dependencies: CleanupEventDependencies,
+  organizationId: string,
+  query: ValidatedCleanupEventMapQuery,
+): Promise<CleanupEventMapFeatureCollectionDto> {
+  const decoded = query.cursor ? decodeDatedCursor(query.cursor, "updatedAt") : null;
+  const cursor = decoded ? { sortAt: decoded.updatedAt, id: decoded.id } : null;
+  const records = await observeSpatialQuery(dependencies.spatialQueryObserver, {
+    operation: "cleanup_events.organization", projection: "ORGANIZATION", mode: "VIEWPORT",
+  }, () => listOrganizationCleanupEventMapRecords(dependencies.prisma, { ...query, organizationId, cursor }));
+  return toMapPage(records, query.limit, "updatedAt", true);
+}
+
+function toMapPage(
+  records: Awaited<ReturnType<typeof listPublicCleanupEventMapRecords>>,
+  limit: number,
+  cursorField: "publishedAt" | "updatedAt",
+  isOwned: boolean,
+): CleanupEventMapFeatureCollectionDto {
+  const hasMore = records.length > limit;
+  const page = hasMore ? records.slice(0, limit) : records;
+  const last = page.at(-1);
   return {
     type: "FeatureCollection",
     features: page.map((record) => ({
@@ -625,9 +695,16 @@ export async function listPublicCleanupEventMap(
         kind: "CLEANUP_EVENT",
         title: record.title,
         status: record.lifecycleStatus,
-        occurredAt: record.publishedAt.toISOString(),
+        occurredAt: (record.publishedAt ?? record.updatedAt).toISOString(),
+        organizationId: record.organizationId,
+        organizationName: record.organizationName,
+        incidentId: record.incidentId,
+        isJoined: record.isJoined,
+        isOwned,
       },
     })),
-    nextCursor: hasMore && page.at(-1) ? page.at(-1)!.id : null,
+    nextCursor: hasMore && last
+      ? encodeDatedCursor(cursorField, cursorField === "publishedAt" ? last.publishedAt! : last.updatedAt, last.id)
+      : null,
   };
 }

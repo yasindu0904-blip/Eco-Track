@@ -3,7 +3,6 @@ import { Prisma, type PrismaClient } from "../../../generated/prisma/client.js";
 import type {
   ValidatedCreateDraft,
   ValidatedCreateSession,
-  ValidatedCleanupEventMapQuery,
   ValidatedUpdateDraft,
 } from "../cleanupEvent.validation.js";
 
@@ -529,6 +528,17 @@ export function findPublicCleanupEventById(
   });
 }
 
+export function findOwnedCleanupEventById(
+  prisma: PrismaClient | Prisma.TransactionClient,
+  organizationId: string,
+  eventId: string,
+): Promise<CleanupEventPublicRecord | null> {
+  return prisma.cleanupEvent.findFirst({
+    where: { id: eventId, organizationId },
+    select: publicEventSelect,
+  });
+}
+
 export function listPublicCleanupEventRecords(
   prisma: PrismaClient,
   command: { cursor: CleanupEventPublicCursor | null; limit: number },
@@ -591,16 +601,40 @@ export type CleanupEventMapRow = {
   lifecycleStatus: string;
   latitude: number;
   longitude: number;
-  publishedAt: Date;
+  publishedAt: Date | null;
+  updatedAt: Date;
+  organizationId: string;
+  organizationName: string;
+  incidentId: string | null;
+  isJoined: boolean;
 };
+
+export type CleanupEventMapCursor = { sortAt: Date; id: string };
+
+type PublicCleanupEventMapInput = {
+  limit: number;
+  cursor: CleanupEventMapCursor | null;
+  userId: string;
+};
+
+const publicMapStatuses = Prisma.sql`
+  'PUBLISHED'::"CleanupLifecycleStatus",
+  'SCHEDULED'::"CleanupLifecycleStatus",
+  'IN_PROGRESS'::"CleanupLifecycleStatus",
+  'COMPLETION_SUBMITTED'::"CleanupLifecycleStatus"
+`;
+
+function publicMapCursor(cursor: CleanupEventMapCursor | null) {
+  return cursor
+    ? Prisma.sql`AND (event."published_at", event."id") < (${cursor.sortAt}, ${cursor.id}::uuid)`
+    : Prisma.empty;
+}
 
 export function listPublicCleanupEventMapRecords(
   prisma: PrismaClient,
-  query: ValidatedCleanupEventMapQuery,
+  query: PublicCleanupEventMapInput & { west: number; south: number; east: number; north: number },
 ): Promise<CleanupEventMapRow[]> {
-  const cursor = query.cursor
-    ? Prisma.sql`AND event."id" < ${query.cursor}::uuid`
-    : Prisma.empty;
+  const cursor = publicMapCursor(query.cursor);
   return prisma.$queryRaw<CleanupEventMapRow[]>(Prisma.sql`
     SELECT
       event."id",
@@ -608,17 +642,22 @@ export function listPublicCleanupEventMapRecords(
       event."lifecycle_status"::text AS "lifecycleStatus",
       event."event_latitude"::double precision AS "latitude",
       event."event_longitude"::double precision AS "longitude",
-      event."published_at" AS "publishedAt"
+      event."published_at" AS "publishedAt",
+      event."updated_at" AS "updatedAt",
+      event."organization_id" AS "organizationId",
+      organization."name" AS "organizationName",
+      event."incident_id" AS "incidentId",
+      EXISTS (
+        SELECT 1 FROM "event_participants" participant
+        WHERE participant."cleanup_event_id" = event."id"
+          AND participant."user_id" = ${query.userId}::uuid
+          AND participant."status" = 'JOINED'::"ParticipantStatus"
+      ) AS "isJoined"
     FROM "cleanup_events" AS event
     JOIN "organizations" AS organization
       ON organization."id" = event."organization_id"
      AND organization."status" = 'ACTIVE'::"OrganizationStatus"
-    WHERE event."lifecycle_status" IN (
-      'PUBLISHED'::"CleanupLifecycleStatus",
-      'SCHEDULED'::"CleanupLifecycleStatus",
-      'IN_PROGRESS'::"CleanupLifecycleStatus",
-      'COMPLETION_SUBMITTED'::"CleanupLifecycleStatus"
-    )
+    WHERE event."lifecycle_status" IN (${publicMapStatuses})
       AND event."published_at" IS NOT NULL
       AND extensions.ST_Covers(
         extensions.ST_MakeEnvelope(
@@ -631,7 +670,73 @@ export function listPublicCleanupEventMapRecords(
         event."event_geo_point"
       )
       ${cursor}
-    ORDER BY event."id" DESC
+    ORDER BY event."published_at" DESC, event."id" DESC
+    LIMIT ${query.limit + 1}
+  `);
+}
+
+export function listNearbyPublicCleanupEventMapRecords(
+  prisma: PrismaClient,
+  query: PublicCleanupEventMapInput & { latitude: number; longitude: number; radiusMeters: number },
+): Promise<CleanupEventMapRow[]> {
+  const cursor = publicMapCursor(query.cursor);
+  return prisma.$queryRaw<CleanupEventMapRow[]>(Prisma.sql`
+    SELECT event."id", event."title",
+      event."lifecycle_status"::text AS "lifecycleStatus",
+      event."event_latitude"::double precision AS "latitude",
+      event."event_longitude"::double precision AS "longitude",
+      event."published_at" AS "publishedAt", event."updated_at" AS "updatedAt",
+      event."organization_id" AS "organizationId", organization."name" AS "organizationName",
+      event."incident_id" AS "incidentId",
+      EXISTS (
+        SELECT 1 FROM "event_participants" participant
+        WHERE participant."cleanup_event_id" = event."id"
+          AND participant."user_id" = ${query.userId}::uuid
+          AND participant."status" = 'JOINED'::"ParticipantStatus"
+      ) AS "isJoined"
+    FROM "cleanup_events" event
+    JOIN "organizations" organization ON organization."id" = event."organization_id"
+      AND organization."status" = 'ACTIVE'::"OrganizationStatus"
+    WHERE event."lifecycle_status" IN (${publicMapStatuses})
+      AND event."published_at" IS NOT NULL
+      AND extensions.ST_DWithin(
+        event."event_geo_point",
+        extensions.ST_SetSRID(extensions.ST_MakePoint(
+          ${query.longitude}::double precision, ${query.latitude}::double precision
+        ), 4326)::extensions.geography,
+        ${query.radiusMeters}::double precision
+      )
+      ${cursor}
+    ORDER BY event."published_at" DESC, event."id" DESC
+    LIMIT ${query.limit + 1}
+  `);
+}
+
+export function listOrganizationCleanupEventMapRecords(
+  prisma: PrismaClient,
+  query: { organizationId: string; limit: number; cursor: CleanupEventMapCursor | null; west: number; south: number; east: number; north: number },
+): Promise<CleanupEventMapRow[]> {
+  const cursor = query.cursor
+    ? Prisma.sql`AND (event."updated_at", event."id") < (${query.cursor.sortAt}, ${query.cursor.id}::uuid)`
+    : Prisma.empty;
+  return prisma.$queryRaw<CleanupEventMapRow[]>(Prisma.sql`
+    SELECT event."id", event."title",
+      event."lifecycle_status"::text AS "lifecycleStatus",
+      event."event_latitude"::double precision AS "latitude",
+      event."event_longitude"::double precision AS "longitude",
+      event."published_at" AS "publishedAt", event."updated_at" AS "updatedAt",
+      event."organization_id" AS "organizationId", organization."name" AS "organizationName",
+      event."incident_id" AS "incidentId", false AS "isJoined"
+    FROM "cleanup_events" event
+    JOIN "organizations" organization ON organization."id" = event."organization_id"
+    WHERE event."organization_id" = ${query.organizationId}::uuid
+      AND extensions.ST_Covers(
+        extensions.ST_MakeEnvelope(${query.west}::double precision, ${query.south}::double precision,
+          ${query.east}::double precision, ${query.north}::double precision, 4326)::extensions.geography,
+        event."event_geo_point"
+      )
+      ${cursor}
+    ORDER BY event."updated_at" DESC, event."id" DESC
     LIMIT ${query.limit + 1}
   `);
 }
