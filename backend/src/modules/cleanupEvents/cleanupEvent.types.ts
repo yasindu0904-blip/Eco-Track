@@ -133,6 +133,11 @@ export type CleanupEventMapFeatureCollectionDto = {
       title: string;
       status: string;
       occurredAt: string;
+      organizationId: string;
+      organizationName: string;
+      incidentId: string | null;
+      isJoined: boolean;
+      isOwned: boolean;
     };
   }>;
   nextCursor: string | null;

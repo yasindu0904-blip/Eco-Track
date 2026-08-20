@@ -447,6 +447,7 @@ export type PublicIncidentDiscoveryRow = {
   reportedAt: Date;
   cursorReportedAt: string;
   falseReviewCount: number;
+  isOwnReport: boolean;
 };
 
 type PublicIncidentDiscoveryInput = {
@@ -455,13 +456,17 @@ type PublicIncidentDiscoveryInput = {
   status?: PublicIncidentDiscoveryRow["status"];
   categoryId?: string;
   reportedAfter?: Date;
+  currentUserId: string;
 };
 
 function incidentDiscoveryFilters(input: PublicIncidentDiscoveryInput) {
   return {
     status: input.status
       ? Prisma.sql`AND incident."status" = ${input.status}::"IncidentStatus"`
-      : Prisma.sql`AND incident."status" <> 'ARCHIVED'::"IncidentStatus"`,
+      : Prisma.sql`AND incident."status" IN (
+          'ACTIVE'::"IncidentStatus",
+          'CLEANUP_ORGANIZED'::"IncidentStatus"
+        )`,
     category: input.categoryId
       ? Prisma.sql`AND incident."category_id" = ${input.categoryId}::uuid`
       : Prisma.empty,
@@ -501,6 +506,7 @@ export async function listPublicIncidentsByViewport(
       incident."longitude"::double precision AS "longitude",
       incident."address_text" AS "addressText",
       incident."reported_at" AS "reportedAt",
+      (incident."reporter_user_id" = ${input.currentUserId}::uuid) AS "isOwnReport",
       to_char(
         incident."reported_at" AT TIME ZONE 'UTC',
         'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
@@ -569,6 +575,7 @@ export async function listPublicIncidentsByRadius(
       incident."longitude"::double precision AS "longitude",
       incident."address_text" AS "addressText",
       incident."reported_at" AS "reportedAt",
+      (incident."reporter_user_id" = ${input.currentUserId}::uuid) AS "isOwnReport",
       to_char(
         incident."reported_at" AT TIME ZONE 'UTC',
         'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'

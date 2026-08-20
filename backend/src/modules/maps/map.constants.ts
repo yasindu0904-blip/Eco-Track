@@ -13,6 +13,11 @@ export const ORGANIZATION_BOUNDARY_DISPLAY_LIMITS = {
   maxFeatureLimit: 100,
 } as const;
 
+/** A regression ceiling for bounded map queries in integration environments. */
+export const MAP_PERFORMANCE_BUDGETS = {
+  maxSpatialQueryDurationMs: 2_000,
+} as const;
+
 export const SRI_LANKA_MAP_DEFAULTS = {
   latitude: 7.8731,
   longitude: 80.7718,

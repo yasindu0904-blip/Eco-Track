@@ -30,6 +30,7 @@ type Props = {
   accessToken: string;
   organizationId: string;
   incidentId?: string;
+  initialDraftId?: string;
   onBack?: () => void;
 };
 
@@ -49,6 +50,7 @@ export function CleanupEventDraftEditor({
   accessToken,
   organizationId,
   incidentId,
+  initialDraftId,
   onBack,
 }: Props) {
   const [drafts, setDrafts] = useState<CleanupEventDraft[]>([]);
@@ -121,6 +123,7 @@ export function CleanupEventDraftEditor({
       setNotice(undefined);
       void Promise.all([
       listDrafts(accessToken, organizationId),
+      initialDraftId ? getDraft(accessToken, organizationId, initialDraftId) : Promise.resolve(undefined),
       (async () => {
         const loaded: OrganizationMember[] = [];
         let cursor: string | undefined;
@@ -135,11 +138,12 @@ export function CleanupEventDraftEditor({
         return loaded;
       })(),
       ])
-        .then(([draftPage, loadedMembers]) => {
+        .then(([draftPage, initialDraft, loadedMembers]) => {
           if (!active) return;
           setDrafts(draftPage.items);
           setNextCursor(draftPage.nextCursor);
           setMembers(loadedMembers);
+          if (initialDraft) openDraft(initialDraft);
         })
         .catch((reason: unknown) => {
           if (active) {
@@ -157,7 +161,7 @@ export function CleanupEventDraftEditor({
       active = false;
       window.clearTimeout(timeout);
     };
-  }, [accessToken, organizationId]);
+  }, [accessToken, initialDraftId, organizationId]);
 
   const availableCoordinators = useMemo(
     () => members.filter(

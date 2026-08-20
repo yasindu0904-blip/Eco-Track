@@ -251,6 +251,7 @@ function App() {
                 : "create"
           }
           onBackToDashboard={() => setCitizenView("dashboard")}
+          onOpenCleanupEvent={(eventId) => { setSelectedCleanupEventId(eventId); setCitizenView("cleanup-events"); }}
         />
       );
     }
@@ -476,6 +477,7 @@ function App() {
                 : "create"
           }
           onBackToDashboard={() => setCitizenView("dashboard")}
+          onOpenCleanupEvent={(eventId) => { setSelectedCleanupEventId(eventId); setCitizenView("cleanup-events"); }}
           onSignOut={() => {
             setCitizenView("dashboard");
             signOut();

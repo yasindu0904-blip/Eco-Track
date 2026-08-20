@@ -31,6 +31,8 @@ export function OrganizationWorkspace({
   const [activeTab, setActiveTab] =
     useState<"overview" | "incident-discovery" | "event-drafts" | "events">("overview");
   const [linkedIncidentId, setLinkedIncidentId] = useState<string>();
+  const [selectedOwnedEventId, setSelectedOwnedEventId] = useState<string>();
+  const [selectedDraftId, setSelectedDraftId] = useState<string>();
   const membership =
     memberships.find(
       (item) => item.organization.id === selectedOrganizationId,
@@ -73,6 +75,8 @@ export function OrganizationWorkspace({
                 onChange={(event) => {
                   setActiveTab("overview");
                   setLinkedIncidentId(undefined);
+                  setSelectedOwnedEventId(undefined);
+                  setSelectedDraftId(undefined);
                   onSelectOrganization(event.target.value);
                 }}
               >
@@ -108,17 +112,24 @@ export function OrganizationWorkspace({
 
         {activeTab === "event-drafts" ? (
           <CleanupEventDraftEditor
-            key={`${membership.organization.id}-${linkedIncidentId ?? "direct"}`}
+            key={`${membership.organization.id}-${linkedIncidentId ?? selectedDraftId ?? "direct"}`}
             accessToken={accessToken}
             organizationId={membership.organization.id}
             incidentId={linkedIncidentId}
+            initialDraftId={selectedDraftId}
             onBack={() => {
               setLinkedIncidentId(undefined);
+              setSelectedDraftId(undefined);
               setActiveTab("overview");
             }}
           />
         ) : activeTab === "events" ? (
-          <OrganizationCleanupEventList accessToken={accessToken} organizationId={membership.organization.id} />
+          <OrganizationCleanupEventList
+            key={`${membership.organization.id}-${selectedOwnedEventId ?? "list"}`}
+            accessToken={accessToken}
+            organizationId={membership.organization.id}
+            initialEventId={selectedOwnedEventId}
+          />
         ) : activeTab === "incident-discovery" ? (
           <OrganizationIncidentDiscovery
             key={membership.organization.id}
@@ -129,6 +140,16 @@ export function OrganizationWorkspace({
               setLinkedIncidentId(incidentId);
               setActiveTab("event-drafts");
             } : undefined}
+            onOpenEvent={(eventId, lifecycleStatus) => {
+              setSelectedOwnedEventId(eventId);
+              if (lifecycleStatus === "DRAFT" && membership.role === "ORG_ADMIN") {
+                setSelectedDraftId(eventId);
+                setActiveTab("event-drafts");
+              } else {
+                setSelectedDraftId(undefined);
+                setActiveTab("events");
+              }
+            }}
           />
         ) : (
           <>

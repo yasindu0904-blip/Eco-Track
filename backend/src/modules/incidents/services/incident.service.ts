@@ -9,6 +9,7 @@ import {
   INCIDENT_SUBMISSION_RATE_LIMIT,
 } from "../incident.constants.js";
 import type { IncidentDependencies } from "../incident.dependencies.js";
+import { observeSpatialQuery } from "../../maps/map.telemetry.js";
 import type {
   EvidenceUploadIntentDto,
   IncidentDetailDto,
@@ -505,6 +506,7 @@ function toPublicIncidentSummary(
     addressText: row.addressText,
     reportedAt: row.reportedAt.toISOString(),
     falseReviewCount: row.falseReviewCount,
+    isOwnReport: row.isOwnReport,
   };
 }
 
@@ -526,14 +528,18 @@ function toPublicIncidentPage(
 export async function listPublicIncidentsByViewport(
   dependencies: IncidentDependencies,
   input: ValidatedPublicIncidentViewportDiscovery,
+  currentUserId: string,
 ): Promise<PublicIncidentListPageDto> {
-  const rows = await queryPublicIncidentsByViewport(dependencies.prisma, {
+  const rows = await observeSpatialQuery(dependencies.spatialQueryObserver, {
+    operation: "incidents.public", projection: "PUBLIC", mode: "VIEWPORT",
+  }, () => queryPublicIncidentsByViewport(dependencies.prisma, {
     ...input,
+    currentUserId,
     cursor: input.cursor ? decodeIncidentDiscoveryCursor(input.cursor) : null,
     reportedAfter: input.reportedAfter
       ? new Date(input.reportedAfter)
       : undefined,
-  });
+  }));
 
   return toPublicIncidentPage(rows, input.limit);
 }
@@ -541,14 +547,18 @@ export async function listPublicIncidentsByViewport(
 export async function listPublicIncidentsByRadius(
   dependencies: IncidentDependencies,
   input: ValidatedPublicIncidentRadiusDiscovery,
+  currentUserId: string,
 ): Promise<PublicIncidentListPageDto> {
-  const rows = await queryPublicIncidentsByRadius(dependencies.prisma, {
+  const rows = await observeSpatialQuery(dependencies.spatialQueryObserver, {
+    operation: "incidents.public", projection: "PUBLIC", mode: "RADIUS",
+  }, () => queryPublicIncidentsByRadius(dependencies.prisma, {
     ...input,
+    currentUserId,
     cursor: input.cursor ? decodeIncidentDiscoveryCursor(input.cursor) : null,
     reportedAfter: input.reportedAfter
       ? new Date(input.reportedAfter)
       : undefined,
-  });
+  }));
 
   return toPublicIncidentPage(rows, input.limit);
 }
@@ -558,9 +568,9 @@ export async function listOrganizationIncidents(
   organizationId: string,
   input: ValidatedOrganizationIncidentDiscovery,
 ): Promise<OrganizationIncidentListPageDto> {
-  const rows = await listCoveredOrganizationIncidents(
-    dependencies.prisma,
-    {
+  const rows = await observeSpatialQuery(dependencies.spatialQueryObserver, {
+    operation: "incidents.organization", projection: "ORGANIZATION", mode: "VIEWPORT",
+  }, () => listCoveredOrganizationIncidents(dependencies.prisma, {
       organizationId,
       ...input,
       cursor: input.cursor
@@ -569,8 +579,7 @@ export async function listOrganizationIncidents(
       reportedAfter: input.reportedAfter
         ? new Date(input.reportedAfter)
         : undefined,
-    },
-  );
+  }));
   const hasMore = rows.length > input.limit;
   const page = hasMore ? rows.slice(0, input.limit) : rows;
   const last = page.at(-1);
@@ -603,9 +612,11 @@ export function listOrganizationServiceAreaBoundaries(
   organizationId: string,
   query: ValidatedOrganizationServiceAreaBoundaryQuery,
 ) {
-  return listOrganizationServiceAreaBoundaryFeatures(
+  return observeSpatialQuery(dependencies.spatialQueryObserver, {
+    operation: "service_areas.organization", projection: "ORGANIZATION", mode: "BOUNDARY",
+  }, () => listOrganizationServiceAreaBoundaryFeatures(
     dependencies.prisma,
     organizationId,
     query,
-  );
+  ), (collection) => collection.features.length);
 }

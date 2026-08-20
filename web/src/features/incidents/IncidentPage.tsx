@@ -32,6 +32,7 @@ interface IncidentPageProps {
   initialView?: "create" | "reports" | "discover";
   onBackToDashboard: () => void;
   onSignOut?: () => void;
+  onOpenCleanupEvent?: (eventId: string) => void;
 }
 
 const severityOptions: Array<{ value: IncidentSeverity; label: string; help: string }> = [
@@ -60,6 +61,7 @@ export function IncidentPage({
   initialView = "create",
   onBackToDashboard,
   onSignOut,
+  onOpenCleanupEvent,
 }: IncidentPageProps) {
   const [view, setView] = useState<IncidentView>(initialView);
   const [categories, setCategories] = useState<IncidentCategory[]>([]);
@@ -307,7 +309,7 @@ export function IncidentPage({
         )}
 
         {view === "discover" && (
-          <CitizenIncidentDiscovery accessToken={accessToken} />
+          <CitizenIncidentDiscovery accessToken={accessToken} onOpenEvent={onOpenCleanupEvent} />
         )}
       </section>
     </main>

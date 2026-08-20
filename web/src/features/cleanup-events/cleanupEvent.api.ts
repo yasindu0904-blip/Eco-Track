@@ -5,6 +5,7 @@ import type {
   CleanupEventDraftPage,
   CleanupEventSessionInput,
   CleanupEventOwnedPage,
+  CleanupEventOwnedSummary,
   CleanupEventPublicDetail,
   CleanupEventPublicPage,
   CleanupEventPublishReadiness,
@@ -13,6 +14,7 @@ import type {
   EventParticipation,
   EventParticipationPage,
   JoinEventResult,
+  CleanupEventMapPage,
 } from "./cleanupEvent.types";
 
 const root = (organizationId: string) =>
@@ -166,6 +168,13 @@ export async function listOwnedCleanupEvents(token: string, organizationId: stri
   return (await apiRequest<{ data: CleanupEventOwnedPage }>(`${root(organizationId)}?${query}`, { accessToken: token })).data;
 }
 
+export async function getOwnedCleanupEvent(token: string, organizationId: string, eventId: string) {
+  return (await apiRequest<{ data: CleanupEventOwnedSummary }>(
+    `${root(organizationId)}/${encodeURIComponent(eventId)}`,
+    { accessToken: token },
+  )).data;
+}
+
 export async function listPublicCleanupEvents(token: string, cursor?: string) {
   const query = new URLSearchParams({ limit: "25" });
   if (cursor) query.set("cursor", cursor);
@@ -218,4 +227,21 @@ export async function listMyEventParticipations(
     `/event-participations/me?${query}`,
     { accessToken: token },
   )).data;
+}
+
+type EventMapViewport = { west: number; south: number; east: number; north: number; zoom: number; limit?: number; cursor?: string };
+type EventMapRadius = { latitude: number; longitude: number; radiusMeters: number; limit?: number; cursor?: string };
+function mapQuery(query: EventMapViewport | EventMapRadius) {
+  const parameters = new URLSearchParams();
+  Object.entries(query).forEach(([key, value]) => value !== undefined && parameters.set(key, String(value)));
+  return parameters;
+}
+export async function listPublicCleanupEventMap(token: string, query: EventMapViewport, signal?: AbortSignal) {
+  return (await apiRequest<{ data: CleanupEventMapPage }>(`/events/map?${mapQuery(query)}`, { accessToken: token, signal })).data;
+}
+export async function listNearbyCleanupEventMap(token: string, query: EventMapRadius, signal?: AbortSignal) {
+  return (await apiRequest<{ data: CleanupEventMapPage }>(`/events/nearby?${mapQuery(query)}`, { accessToken: token, signal })).data;
+}
+export async function listOrganizationCleanupEventMap(token: string, organizationId: string, query: EventMapViewport, signal?: AbortSignal) {
+  return (await apiRequest<{ data: CleanupEventMapPage }>(`${root(organizationId)}/map?${mapQuery(query)}`, { accessToken: token, signal })).data;
 }

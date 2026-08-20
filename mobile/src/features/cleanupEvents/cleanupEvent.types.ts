@@ -105,3 +105,13 @@ export type EventParticipation = {
 };
 export type EventParticipationPage = { items: EventParticipation[]; nextCursor: string | null };
 export type JoinEventResult = { participation: EventParticipation; created: boolean; rejoined: boolean };
+export type CleanupEventMapFeature = {
+  type: "Feature";
+  geometry: { type: "Point"; coordinates: [number, number] };
+  properties: {
+    id: string; kind: "CLEANUP_EVENT"; title: string; status: string; occurredAt: string;
+    organizationId: string; organizationName: string; incidentId: string | null;
+    isJoined: boolean; isOwned: boolean;
+  };
+};
+export type CleanupEventMapPage = { type: "FeatureCollection"; features: CleanupEventMapFeature[]; nextCursor: string | null };

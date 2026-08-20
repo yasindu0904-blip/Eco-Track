@@ -9,6 +9,7 @@ import {
 } from "./organizationReview.api";
 import type { OrganizationReviewApplication } from "./organizationReview.types";
 import "./superAdminDashboard.css";
+import { SuperAdminMapOverview } from "./SuperAdminMapOverview";
 
 interface SuperAdminDashboardProps {
   profile: AuthenticatedUserProfile;
@@ -564,6 +565,7 @@ export function SuperAdminDashboard({
             </section>
           </aside>
         </div>
+        {accessToken && <SuperAdminMapOverview accessToken={accessToken} />}
       </main>
     </div>
   );

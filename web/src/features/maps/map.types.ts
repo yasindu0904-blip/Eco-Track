@@ -28,6 +28,12 @@ export interface MapMarkerProperties {
   status: string;
   category?: string;
   occurredAt?: string;
+  organizationId?: string;
+  organizationName?: string;
+  incidentId?: string | null;
+  isJoined?: boolean;
+  isOwned?: boolean;
+  isOwnReport?: boolean;
 }
 
 export interface MapMarkerFeature {

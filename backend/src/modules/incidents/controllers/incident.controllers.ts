@@ -183,6 +183,7 @@ export function listPublicIncidentsController(
         data: await listPublicIncidentsByViewport(
           dependencies,
           validation.data,
+          request.authentication.profile.id,
         ),
       });
     } catch (error) {
@@ -204,6 +205,7 @@ export function listNearbyPublicIncidentsController(
         data: await listPublicIncidentsByRadius(
           dependencies,
           validation.data,
+          request.authentication.profile.id,
         ),
       });
     } catch (error) {

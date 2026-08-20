@@ -510,12 +510,12 @@ Finish one coherent map experience for citizen/volunteer, organization, and Supe
 
 ### Tests and acceptance criteria
 
-- [ ] Each role sees the correct marker types/actions.
-- [ ] Super Admin cannot assign incidents or operate events from the map.
-- [ ] Organization A receives no Organization B private event information.
-- [ ] Event/incident markers cluster and selected list/detail stay synchronized.
-- [ ] Map remains usable with no location permission and empty results.
-- [ ] Performance/security regression checks pass.
+- [x] Each role sees the correct marker types/actions.
+- [x] Super Admin cannot assign incidents or operate events from the map.
+- [x] Organization A receives no Organization B private event information.
+- [x] Event/incident markers cluster and selected list/detail stay synchronized.
+- [x] Map remains usable with no location permission and empty results.
+- [x] Performance/security regression checks pass.
 
 ---
 

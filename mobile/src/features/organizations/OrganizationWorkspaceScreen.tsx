@@ -31,6 +31,8 @@ export function OrganizationWorkspaceScreen({
 }: OrganizationWorkspaceScreenProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "incidentDiscovery" | "eventDrafts" | "events">("overview");
   const [linkedIncidentId, setLinkedIncidentId] = useState<string>();
+  const [selectedOwnedEventId, setSelectedOwnedEventId] = useState<string>();
+  const [selectedDraftId, setSelectedDraftId] = useState<string>();
   const [mapInteracting, setMapInteracting] = useState(false);
   const membership =
     memberships.find(
@@ -62,6 +64,8 @@ export function OrganizationWorkspaceScreen({
                 onPress={() => {
                   setMapInteracting(false);
                   setLinkedIncidentId(undefined);
+                  setSelectedOwnedEventId(undefined);
+                  setSelectedDraftId(undefined);
                   setActiveTab("overview");
                   onSelectOrganization(item.organization.id);
                 }}
@@ -109,19 +113,26 @@ export function OrganizationWorkspaceScreen({
 
       {activeTab === "eventDrafts" ? (
         <CleanupEventDraftScreen
-          key={`${membership.organization.id}-${linkedIncidentId ?? "direct"}`}
+          key={`${membership.organization.id}-${linkedIncidentId ?? selectedDraftId ?? "direct"}`}
           accessToken={accessToken}
           organizationId={membership.organization.id}
           incidentId={linkedIncidentId}
+          initialDraftId={selectedDraftId}
           onMapInteractionChange={setMapInteracting}
           onBack={() => {
             setMapInteracting(false);
             setLinkedIncidentId(undefined);
+            setSelectedDraftId(undefined);
             setActiveTab("overview");
           }}
         />
       ) : activeTab === "events" ? (
-        <OrganizationCleanupEventListScreen accessToken={accessToken} organizationId={membership.organization.id} />
+        <OrganizationCleanupEventListScreen
+          key={`${membership.organization.id}-${selectedOwnedEventId ?? "list"}`}
+          accessToken={accessToken}
+          organizationId={membership.organization.id}
+          initialEventId={selectedOwnedEventId}
+        />
       ) : activeTab === "overview" ? (
         <>
           <View style={sharedStyles.card}>
@@ -218,6 +229,17 @@ export function OrganizationWorkspaceScreen({
           organizationId={membership.organization.id}
           canReview={membership.role === "ORG_ADMIN"}
           onMapInteractionChange={setMapInteracting}
+          onOpenEvent={(eventId, lifecycleStatus) => {
+            setMapInteracting(false);
+            setSelectedOwnedEventId(eventId);
+            if (lifecycleStatus === "DRAFT" && membership.role === "ORG_ADMIN") {
+              setSelectedDraftId(eventId);
+              setActiveTab("eventDrafts");
+            } else {
+              setSelectedDraftId(undefined);
+              setActiveTab("events");
+            }
+          }}
           onCreateDraftFromIncident={membership.role === "ORG_ADMIN" ? (incidentId) => {
             setMapInteracting(false);
             setLinkedIncidentId(incidentId);
