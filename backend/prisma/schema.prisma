@@ -413,6 +413,7 @@ model OrganizationServiceArea {
   @@unique([organizationId, administrativeAreaId], map: "organization_service_areas_organization_id_administrative_area_")
   @@index([organizationId])
   @@index([organizationId, status])
+  @@index([organizationId, status, id], map: "organization_service_areas_organization_status_id_idx")
   @@index([administrativeAreaId])
   @@map("organization_service_areas")
 }
@@ -627,6 +628,7 @@ model CleanupEvent {
   @@unique([organizationId, id])
   @@index([incidentId])
   @@index([organizationId, lifecycleStatus, createdAt], map: "cleanup_events_organization_lifecycle_created_idx")
+  @@index([organizationId, updatedAt(sort: Desc), id(sort: Desc)], map: "cleanup_events_organization_updated_id_idx")
   @@map("cleanup_events")
 }
 

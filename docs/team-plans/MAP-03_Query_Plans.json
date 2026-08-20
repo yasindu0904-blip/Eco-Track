@@ -1,0 +1,961 @@
+{
+  "capturedAt": "2026-08-20T09:26:44.576Z",
+  "explainMode": "EXPLAIN (FORMAT JSON)",
+  "rowCounts": {
+    "incidents": 32,
+    "cleanupEvents": 41,
+    "organizationServiceAreas": 51,
+    "administrativeAreas": 13844
+  },
+  "indexes": [
+    {
+      "indexname": "administrative_areas_boundary_gist_idx",
+      "indexdef": "CREATE INDEX administrative_areas_boundary_gist_idx ON public.administrative_areas USING gist (boundary)"
+    },
+    {
+      "indexname": "administrative_areas_district_name_divisional_secretariat_name_",
+      "indexdef": "CREATE INDEX administrative_areas_district_name_divisional_secretariat_name_ ON public.administrative_areas USING btree (district_name, divisional_secretariat_name)"
+    },
+    {
+      "indexname": "administrative_areas_district_name_trgm_idx",
+      "indexdef": "CREATE INDEX administrative_areas_district_name_trgm_idx ON public.administrative_areas USING gin (district_name extensions.gin_trgm_ops)"
+    },
+    {
+      "indexname": "administrative_areas_ds_name_trgm_idx",
+      "indexdef": "CREATE INDEX administrative_areas_ds_name_trgm_idx ON public.administrative_areas USING gin (divisional_secretariat_name extensions.gin_trgm_ops)"
+    },
+    {
+      "indexname": "administrative_areas_is_active_level_idx",
+      "indexdef": "CREATE INDEX administrative_areas_is_active_level_idx ON public.administrative_areas USING btree (is_active, level)"
+    },
+    {
+      "indexname": "administrative_areas_level_official_code_key",
+      "indexdef": "CREATE UNIQUE INDEX administrative_areas_level_official_code_key ON public.administrative_areas USING btree (level, official_code)"
+    },
+    {
+      "indexname": "administrative_areas_name_en_idx",
+      "indexdef": "CREATE INDEX administrative_areas_name_en_idx ON public.administrative_areas USING btree (name_en)"
+    },
+    {
+      "indexname": "administrative_areas_name_en_trgm_idx",
+      "indexdef": "CREATE INDEX administrative_areas_name_en_trgm_idx ON public.administrative_areas USING gin (name_en extensions.gin_trgm_ops)"
+    },
+    {
+      "indexname": "administrative_areas_official_code_trgm_idx",
+      "indexdef": "CREATE INDEX administrative_areas_official_code_trgm_idx ON public.administrative_areas USING gin (official_code extensions.gin_trgm_ops)"
+    },
+    {
+      "indexname": "administrative_areas_pkey",
+      "indexdef": "CREATE UNIQUE INDEX administrative_areas_pkey ON public.administrative_areas USING btree (id)"
+    },
+    {
+      "indexname": "cleanup_events_event_geo_point_gist_idx",
+      "indexdef": "CREATE INDEX cleanup_events_event_geo_point_gist_idx ON public.cleanup_events USING gist (event_geo_point)"
+    },
+    {
+      "indexname": "cleanup_events_incident_id_idx",
+      "indexdef": "CREATE INDEX cleanup_events_incident_id_idx ON public.cleanup_events USING btree (incident_id)"
+    },
+    {
+      "indexname": "cleanup_events_meeting_geo_point_gist_idx",
+      "indexdef": "CREATE INDEX cleanup_events_meeting_geo_point_gist_idx ON public.cleanup_events USING gist (meeting_geo_point)"
+    },
+    {
+      "indexname": "cleanup_events_one_active_incident_claim_idx",
+      "indexdef": "CREATE UNIQUE INDEX cleanup_events_one_active_incident_claim_idx ON public.cleanup_events USING btree (incident_id) WHERE ((incident_id IS NOT NULL) AND (lifecycle_status = ANY (ARRAY['PUBLISHED'::\"CleanupLifecycleStatus\", 'SCHEDULED'::\"CleanupLifecycleStatus\", 'IN_PROGRESS'::\"CleanupLifecycleStatus\", 'COMPLETION_SUBMITTED'::\"CleanupLifecycleStatus\"])))"
+    },
+    {
+      "indexname": "cleanup_events_organization_id_id_key",
+      "indexdef": "CREATE UNIQUE INDEX cleanup_events_organization_id_id_key ON public.cleanup_events USING btree (organization_id, id)"
+    },
+    {
+      "indexname": "cleanup_events_organization_lifecycle_created_idx",
+      "indexdef": "CREATE INDEX cleanup_events_organization_lifecycle_created_idx ON public.cleanup_events USING btree (organization_id, lifecycle_status, created_at)"
+    },
+    {
+      "indexname": "cleanup_events_organization_updated_id_idx",
+      "indexdef": "CREATE INDEX cleanup_events_organization_updated_id_idx ON public.cleanup_events USING btree (organization_id, updated_at DESC, id DESC)"
+    },
+    {
+      "indexname": "cleanup_events_pkey",
+      "indexdef": "CREATE UNIQUE INDEX cleanup_events_pkey ON public.cleanup_events USING btree (id)"
+    },
+    {
+      "indexname": "cleanup_events_public_map_published_idx",
+      "indexdef": "CREATE INDEX cleanup_events_public_map_published_idx ON public.cleanup_events USING btree (published_at DESC, id DESC) WHERE ((published_at IS NOT NULL) AND (lifecycle_status = ANY (ARRAY['PUBLISHED'::\"CleanupLifecycleStatus\", 'SCHEDULED'::\"CleanupLifecycleStatus\", 'IN_PROGRESS'::\"CleanupLifecycleStatus\", 'COMPLETION_SUBMITTED'::\"CleanupLifecycleStatus\"])))"
+    },
+    {
+      "indexname": "incident_reviews_incident_id_organization_id_key",
+      "indexdef": "CREATE UNIQUE INDEX incident_reviews_incident_id_organization_id_key ON public.incident_reviews USING btree (incident_id, organization_id)"
+    },
+    {
+      "indexname": "incident_reviews_incident_id_status_idx",
+      "indexdef": "CREATE INDEX incident_reviews_incident_id_status_idx ON public.incident_reviews USING btree (incident_id, status)"
+    },
+    {
+      "indexname": "incident_reviews_organization_status_updated_idx",
+      "indexdef": "CREATE INDEX incident_reviews_organization_status_updated_idx ON public.incident_reviews USING btree (organization_id, status, updated_at)"
+    },
+    {
+      "indexname": "incident_reviews_pkey",
+      "indexdef": "CREATE UNIQUE INDEX incident_reviews_pkey ON public.incident_reviews USING btree (id)"
+    },
+    {
+      "indexname": "incidents_category_id_idx",
+      "indexdef": "CREATE INDEX incidents_category_id_idx ON public.incidents USING btree (category_id)"
+    },
+    {
+      "indexname": "incidents_geo_point_gist_idx",
+      "indexdef": "CREATE INDEX incidents_geo_point_gist_idx ON public.incidents USING gist (geo_point)"
+    },
+    {
+      "indexname": "incidents_pkey",
+      "indexdef": "CREATE UNIQUE INDEX incidents_pkey ON public.incidents USING btree (id)"
+    },
+    {
+      "indexname": "incidents_reporter_submission_key",
+      "indexdef": "CREATE UNIQUE INDEX incidents_reporter_submission_key ON public.incidents USING btree (reporter_user_id, submission_id)"
+    },
+    {
+      "indexname": "incidents_reporter_user_id_idx",
+      "indexdef": "CREATE INDEX incidents_reporter_user_id_idx ON public.incidents USING btree (reporter_user_id)"
+    },
+    {
+      "indexname": "incidents_status_reported_at_idx",
+      "indexdef": "CREATE INDEX incidents_status_reported_at_idx ON public.incidents USING btree (status, reported_at)"
+    },
+    {
+      "indexname": "organization_service_areas_administrative_area_id_idx",
+      "indexdef": "CREATE INDEX organization_service_areas_administrative_area_id_idx ON public.organization_service_areas USING btree (administrative_area_id)"
+    },
+    {
+      "indexname": "organization_service_areas_boundary_gist_idx",
+      "indexdef": "CREATE INDEX organization_service_areas_boundary_gist_idx ON public.organization_service_areas USING gist (boundary)"
+    },
+    {
+      "indexname": "organization_service_areas_organization_id_administrative_area_",
+      "indexdef": "CREATE UNIQUE INDEX organization_service_areas_organization_id_administrative_area_ ON public.organization_service_areas USING btree (organization_id, administrative_area_id)"
+    },
+    {
+      "indexname": "organization_service_areas_organization_id_idx",
+      "indexdef": "CREATE INDEX organization_service_areas_organization_id_idx ON public.organization_service_areas USING btree (organization_id)"
+    },
+    {
+      "indexname": "organization_service_areas_organization_id_status_idx",
+      "indexdef": "CREATE INDEX organization_service_areas_organization_id_status_idx ON public.organization_service_areas USING btree (organization_id, status)"
+    },
+    {
+      "indexname": "organization_service_areas_organization_status_id_idx",
+      "indexdef": "CREATE INDEX organization_service_areas_organization_status_id_idx ON public.organization_service_areas USING btree (organization_id, status, id)"
+    },
+    {
+      "indexname": "organization_service_areas_pkey",
+      "indexdef": "CREATE UNIQUE INDEX organization_service_areas_pkey ON public.organization_service_areas USING btree (id)"
+    }
+  ],
+  "planSummary": {
+    "incidentViewport": {
+      "nodeTypes": [
+        "Limit",
+        "Sort",
+        "Index Scan"
+      ],
+      "indexes": [
+        "incidents_geo_point_gist_idx"
+      ]
+    },
+    "incidentRadius": {
+      "nodeTypes": [
+        "Limit",
+        "Sort",
+        "Index Scan"
+      ],
+      "indexes": [
+        "incidents_geo_point_gist_idx"
+      ]
+    },
+    "organizationIncidentViewport": {
+      "nodeTypes": [
+        "Limit",
+        "Unique",
+        "Sort",
+        "Hash Join",
+        "Nested Loop",
+        "Seq Scan",
+        "Index Scan",
+        "Hash",
+        "Memoize"
+      ],
+      "indexes": [
+        "incidents_geo_point_gist_idx",
+        "administrative_areas_pkey"
+      ]
+    },
+    "publicEventViewport": {
+      "nodeTypes": [
+        "Limit",
+        "Sort",
+        "Hash Join",
+        "Index Scan",
+        "Hash",
+        "Seq Scan"
+      ],
+      "indexes": [
+        "cleanup_events_public_map_published_idx"
+      ]
+    },
+    "publicEventRadius": {
+      "nodeTypes": [
+        "Limit",
+        "Nested Loop",
+        "Index Scan"
+      ],
+      "indexes": [
+        "cleanup_events_public_map_published_idx",
+        "organizations_pkey"
+      ]
+    },
+    "organizationEventViewport": {
+      "nodeTypes": [
+        "Limit",
+        "Sort",
+        "Nested Loop",
+        "Seq Scan",
+        "Index Scan"
+      ],
+      "indexes": [
+        "cleanup_events_organization_updated_id_idx"
+      ]
+    },
+    "serviceAreaViewport": {
+      "nodeTypes": [
+        "Limit",
+        "Seq Scan",
+        "Nested Loop",
+        "Index Scan"
+      ],
+      "indexes": [
+        "organization_service_areas_organization_status_id_idx",
+        "administrative_areas_pkey"
+      ]
+    }
+  },
+  "indexEligibilitySummary": {},
+  "planChecks": {
+    "incidentViewport": {
+      "acceptedIndexes": [
+        "incidents_geo_point_gist_idx"
+      ],
+      "selectedAcceptedIndexes": [
+        "incidents_geo_point_gist_idx"
+      ],
+      "indexEligibilitySelectedIndexes": [],
+      "naturalIndexSelected": true,
+      "boundedFixtureScanAccepted": false,
+      "evidenceKind": "NATURAL_INDEX",
+      "satisfied": true
+    },
+    "incidentRadius": {
+      "acceptedIndexes": [
+        "incidents_geo_point_gist_idx"
+      ],
+      "selectedAcceptedIndexes": [
+        "incidents_geo_point_gist_idx"
+      ],
+      "indexEligibilitySelectedIndexes": [],
+      "naturalIndexSelected": true,
+      "boundedFixtureScanAccepted": false,
+      "evidenceKind": "NATURAL_INDEX",
+      "satisfied": true
+    },
+    "organizationIncidentViewport": {
+      "acceptedIndexes": [
+        "incidents_geo_point_gist_idx"
+      ],
+      "selectedAcceptedIndexes": [
+        "incidents_geo_point_gist_idx"
+      ],
+      "indexEligibilitySelectedIndexes": [],
+      "naturalIndexSelected": true,
+      "boundedFixtureScanAccepted": false,
+      "evidenceKind": "NATURAL_INDEX",
+      "satisfied": true
+    },
+    "publicEventViewport": {
+      "acceptedIndexes": [
+        "cleanup_events_event_geo_point_gist_idx",
+        "cleanup_events_public_map_published_idx"
+      ],
+      "selectedAcceptedIndexes": [
+        "cleanup_events_public_map_published_idx"
+      ],
+      "indexEligibilitySelectedIndexes": [],
+      "naturalIndexSelected": true,
+      "boundedFixtureScanAccepted": false,
+      "evidenceKind": "NATURAL_INDEX",
+      "satisfied": true
+    },
+    "publicEventRadius": {
+      "acceptedIndexes": [
+        "cleanup_events_event_geo_point_gist_idx",
+        "cleanup_events_public_map_published_idx"
+      ],
+      "selectedAcceptedIndexes": [
+        "cleanup_events_public_map_published_idx"
+      ],
+      "indexEligibilitySelectedIndexes": [],
+      "naturalIndexSelected": true,
+      "boundedFixtureScanAccepted": false,
+      "evidenceKind": "NATURAL_INDEX",
+      "satisfied": true
+    },
+    "organizationEventViewport": {
+      "acceptedIndexes": [
+        "cleanup_events_event_geo_point_gist_idx",
+        "cleanup_events_organization_updated_id_idx"
+      ],
+      "selectedAcceptedIndexes": [
+        "cleanup_events_organization_updated_id_idx"
+      ],
+      "indexEligibilitySelectedIndexes": [],
+      "naturalIndexSelected": true,
+      "boundedFixtureScanAccepted": false,
+      "evidenceKind": "NATURAL_INDEX",
+      "satisfied": true
+    },
+    "serviceAreaViewport": {
+      "acceptedIndexes": [
+        "organization_service_areas_boundary_gist_idx",
+        "organization_service_areas_organization_id_status_idx",
+        "organization_service_areas_organization_status_id_idx",
+        "administrative_areas_boundary_gist_idx"
+      ],
+      "selectedAcceptedIndexes": [
+        "organization_service_areas_organization_status_id_idx"
+      ],
+      "indexEligibilitySelectedIndexes": [],
+      "naturalIndexSelected": true,
+      "boundedFixtureScanAccepted": true,
+      "evidenceKind": "NATURAL_INDEX",
+      "satisfied": true
+    }
+  },
+  "queryHashes": {
+    "incidentViewport": "55c38394b7a84ed853abef7bd5d58a7e08e980fa2622edbc2ed8a0ac2b2246fd",
+    "incidentRadius": "edb536a32d678f53d545ba4bd9a2d543bead774303ae609e47fdedd9d94a2929",
+    "organizationIncidentViewport": "2c575d53263865962f3fef7266e85174cfe7ec0e6f552cfc051f792c0539ef70",
+    "publicEventViewport": "780e4e56a26768948b0ca3f7127043d77f6f0033ea5aaf73c85d484a97f1dcc8",
+    "publicEventRadius": "2aa1a25a16f5f8ccdc7893c6053903f4dcbc4a3106e6ba3029a4b575400bc0ea",
+    "organizationEventViewport": "c42e55654f9abab075c0e3651b2a9698e21efc63bd68f341bb9919ac85ccdf22",
+    "serviceAreaViewport": "1e43d32b2c0252df91e14fc33d56a4c5e5a9d7be1a5f2e77dc3378ca5fac9d74"
+  },
+  "sourceHashes": {
+    "incidentRepository": "bc426004a1596188b18c3049e4704e4187ecd18310230151793c044fc5e77e33",
+    "cleanupEventRepository": "f603365a7f53b6708aa53e45b1fb97e74f979fcc0e82bbd39cdda7d7f4fd286b",
+    "mapSpatialRepository": "91696b22efda501bd2baad023d421498a7b83f844da975e218ba107128410000",
+    "mapValidation": "c6a6991fead95abab0707157b1d9a3e62ebdfea2c62f7446f6f30996c50b2da9",
+    "mapConstants": "34152f4fdf314f3946c13f5c094b5cb8ac51650a472f6ddc1172ab97d08e14e2",
+    "prismaSchema": "c2caad3b3ebb5ea4f64c2cf7e9f507b44e087acc6d984c7425c643ccac48d467",
+    "eventIndexMigration": "97b165a7546980ce8abd7421716d3511928fb9256f0923ec8b84306bd1afc6fb",
+    "serviceAreaIndexMigration": "8f5ce78cd8eee5561548a915112cead9c904b2edf22841a2c6f8526d67bc65a8",
+    "planCapture": "5246f4f19f621cbfa1a136e8613b43ecd3676e60bbefbf9e017da425bfec7c42"
+  },
+  "plans": {
+    "incidentViewport": [
+      {
+        "Plan": {
+          "Node Type": "Limit",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 52.42,
+          "Total Cost": 52.43,
+          "Plan Rows": 5,
+          "Plan Width": 24,
+          "Plans": [
+            {
+              "Node Type": "Sort",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 52.42,
+              "Total Cost": 52.43,
+              "Plan Rows": 5,
+              "Plan Width": 24,
+              "Sort Key": [
+                "reported_at DESC",
+                "id DESC"
+              ],
+              "Plans": [
+                {
+                  "Node Type": "Index Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Scan Direction": "Forward",
+                  "Index Name": "incidents_geo_point_gist_idx",
+                  "Relation Name": "incidents",
+                  "Alias": "incident",
+                  "Startup Cost": 0.14,
+                  "Total Cost": 52.36,
+                  "Plan Rows": 5,
+                  "Plan Width": 24,
+                  "Index Cond": "((geo_point OPERATOR(extensions.&&) '0103000020E610000001000000050000003333333333F353403333333333331B403333333333F353406666666666661C4000000000000054406666666666661C4000000000000054403333333333331B403333333333F353403333333333331B40'::extensions.geography) AND (geo_point OPERATOR(extensions.&&) '0103000020E610000001000000050000003333333333F353403333333333331B403333333333F353406666666666661C4000000000000054406666666666661C4000000000000054403333333333331B403333333333F353403333333333331B40'::extensions.geography))",
+                  "Filter": "((status = ANY ('{ACTIVE,CLEANUP_ORGANIZED}'::\"IncidentStatus\"[])) AND extensions.st_intersects(geo_point, '0103000020E610000001000000050000003333333333F353403333333333331B403333333333F353406666666666661C4000000000000054406666666666661C4000000000000054403333333333331B403333333333F353403333333333331B40'::extensions.geography) AND extensions.st_covers('0103000020E610000001000000050000003333333333F353403333333333331B403333333333F353406666666666661C4000000000000054406666666666661C4000000000000054403333333333331B403333333333F353403333333333331B40'::extensions.geography, geo_point))"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "incidentRadius": [
+      {
+        "Plan": {
+          "Node Type": "Limit",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 27.49,
+          "Total Cost": 27.5,
+          "Plan Rows": 1,
+          "Plan Width": 24,
+          "Plans": [
+            {
+              "Node Type": "Sort",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 27.49,
+              "Total Cost": 27.5,
+              "Plan Rows": 1,
+              "Plan Width": 24,
+              "Sort Key": [
+                "reported_at DESC",
+                "id DESC"
+              ],
+              "Plans": [
+                {
+                  "Node Type": "Index Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Scan Direction": "Forward",
+                  "Index Name": "incidents_geo_point_gist_idx",
+                  "Relation Name": "incidents",
+                  "Alias": "incident",
+                  "Startup Cost": 0.26,
+                  "Total Cost": 27.48,
+                  "Plan Rows": 1,
+                  "Plan Width": 24,
+                  "Index Cond": "(geo_point OPERATOR(extensions.&&) extensions._st_expand('0101000020E61000002CD49AE61DF75340857CD0B359B51B40'::extensions.geography, '5000'::double precision))",
+                  "Filter": "((status = ANY ('{ACTIVE,CLEANUP_ORGANIZED}'::\"IncidentStatus\"[])) AND extensions.st_dwithin(geo_point, '0101000020E61000002CD49AE61DF75340857CD0B359B51B40'::extensions.geography, '5000'::double precision, true))"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "organizationIncidentViewport": [
+      {
+        "Plan": {
+          "Node Type": "Limit",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 106.93,
+          "Total Cost": 106.94,
+          "Plan Rows": 1,
+          "Plan Width": 16,
+          "Plans": [
+            {
+              "Node Type": "Unique",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 106.93,
+              "Total Cost": 106.94,
+              "Plan Rows": 1,
+              "Plan Width": 16,
+              "Plans": [
+                {
+                  "Node Type": "Sort",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Startup Cost": 106.93,
+                  "Total Cost": 106.94,
+                  "Plan Rows": 1,
+                  "Plan Width": 16,
+                  "Sort Key": [
+                    "incident.id"
+                  ],
+                  "Plans": [
+                    {
+                      "Node Type": "Hash Join",
+                      "Parent Relationship": "Outer",
+                      "Parallel Aware": false,
+                      "Async Capable": false,
+                      "Join Type": "Semi",
+                      "Startup Cost": 53.32,
+                      "Total Cost": 106.92,
+                      "Plan Rows": 1,
+                      "Plan Width": 16,
+                      "Inner Unique": false,
+                      "Hash Cond": "(organizations.id = service_area.organization_id)",
+                      "Join Filter": "extensions.st_covers(COALESCE(service_area.boundary, administrative_area.boundary), incident.geo_point)",
+                      "Plans": [
+                        {
+                          "Node Type": "Nested Loop",
+                          "Parent Relationship": "Outer",
+                          "Parallel Aware": false,
+                          "Async Capable": false,
+                          "Join Type": "Inner",
+                          "Startup Cost": 0.14,
+                          "Total Cost": 53.71,
+                          "Plan Rows": 14,
+                          "Plan Width": 64,
+                          "Inner Unique": false,
+                          "Plans": [
+                            {
+                              "Node Type": "Limit",
+                              "Parent Relationship": "Outer",
+                              "Parallel Aware": false,
+                              "Async Capable": false,
+                              "Startup Cost": 0,
+                              "Total Cost": 0.1,
+                              "Plan Rows": 1,
+                              "Plan Width": 16,
+                              "Plans": [
+                                {
+                                  "Node Type": "Seq Scan",
+                                  "Parent Relationship": "Outer",
+                                  "Parallel Aware": false,
+                                  "Async Capable": false,
+                                  "Relation Name": "organizations",
+                                  "Alias": "organizations",
+                                  "Startup Cost": 0,
+                                  "Total Cost": 4.71,
+                                  "Plan Rows": 49,
+                                  "Plan Width": 16,
+                                  "Filter": "(status = 'ACTIVE'::\"OrganizationStatus\")"
+                                }
+                              ]
+                            },
+                            {
+                              "Node Type": "Index Scan",
+                              "Parent Relationship": "Inner",
+                              "Parallel Aware": false,
+                              "Async Capable": false,
+                              "Scan Direction": "Forward",
+                              "Index Name": "incidents_geo_point_gist_idx",
+                              "Relation Name": "incidents",
+                              "Alias": "incident",
+                              "Startup Cost": 0.14,
+                              "Total Cost": 53.47,
+                              "Plan Rows": 14,
+                              "Plan Width": 48,
+                              "Index Cond": "(geo_point OPERATOR(extensions.&&) '0103000020E610000001000000050000003333333333F353403333333333331B403333333333F353406666666666661C4000000000000054406666666666661C4000000000000054403333333333331B403333333333F353403333333333331B40'::extensions.geography)",
+                              "Filter": "extensions.st_covers('0103000020E610000001000000050000003333333333F353403333333333331B403333333333F353406666666666661C4000000000000054406666666666661C4000000000000054403333333333331B403333333333F353403333333333331B40'::extensions.geography, geo_point)"
+                            }
+                          ]
+                        },
+                        {
+                          "Node Type": "Hash",
+                          "Parent Relationship": "Inner",
+                          "Parallel Aware": false,
+                          "Async Capable": false,
+                          "Startup Cost": 52.61,
+                          "Total Cost": 52.61,
+                          "Plan Rows": 46,
+                          "Plan Width": 8165,
+                          "Plans": [
+                            {
+                              "Node Type": "Nested Loop",
+                              "Parent Relationship": "Outer",
+                              "Parallel Aware": false,
+                              "Async Capable": false,
+                              "Join Type": "Left",
+                              "Startup Cost": 0.3,
+                              "Total Cost": 52.61,
+                              "Plan Rows": 46,
+                              "Plan Width": 8165,
+                              "Inner Unique": true,
+                              "Plans": [
+                                {
+                                  "Node Type": "Seq Scan",
+                                  "Parent Relationship": "Outer",
+                                  "Parallel Aware": false,
+                                  "Async Capable": false,
+                                  "Relation Name": "organization_service_areas",
+                                  "Alias": "service_area",
+                                  "Startup Cost": 0,
+                                  "Total Cost": 2.7,
+                                  "Plan Rows": 46,
+                                  "Plan Width": 167,
+                                  "Filter": "(status = 'ACTIVE'::\"ServiceAreaStatus\")"
+                                },
+                                {
+                                  "Node Type": "Memoize",
+                                  "Parent Relationship": "Inner",
+                                  "Parallel Aware": false,
+                                  "Async Capable": false,
+                                  "Startup Cost": 0.3,
+                                  "Total Cost": 2.27,
+                                  "Plan Rows": 1,
+                                  "Plan Width": 8030,
+                                  "Cache Key": "service_area.administrative_area_id",
+                                  "Cache Mode": "logical",
+                                  "Plans": [
+                                    {
+                                      "Node Type": "Index Scan",
+                                      "Parent Relationship": "Outer",
+                                      "Parallel Aware": false,
+                                      "Async Capable": false,
+                                      "Scan Direction": "Forward",
+                                      "Index Name": "administrative_areas_pkey",
+                                      "Relation Name": "administrative_areas",
+                                      "Alias": "administrative_area",
+                                      "Startup Cost": 0.29,
+                                      "Total Cost": 2.26,
+                                      "Plan Rows": 1,
+                                      "Plan Width": 8030,
+                                      "Index Cond": "(id = service_area.administrative_area_id)",
+                                      "Filter": "is_active"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "publicEventViewport": [
+      {
+        "Plan": {
+          "Node Type": "Limit",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 159.06,
+          "Total Cost": 159.08,
+          "Plan Rows": 5,
+          "Plan Width": 24,
+          "Plans": [
+            {
+              "Node Type": "Sort",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 159.06,
+              "Total Cost": 159.08,
+              "Plan Rows": 5,
+              "Plan Width": 24,
+              "Sort Key": [
+                "event.published_at DESC",
+                "event.id DESC"
+              ],
+              "Plans": [
+                {
+                  "Node Type": "Hash Join",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Join Type": "Inner",
+                  "Startup Cost": 5.46,
+                  "Total Cost": 159,
+                  "Plan Rows": 5,
+                  "Plan Width": 24,
+                  "Inner Unique": true,
+                  "Hash Cond": "(event.organization_id = organization.id)",
+                  "Plans": [
+                    {
+                      "Node Type": "Index Scan",
+                      "Parent Relationship": "Outer",
+                      "Parallel Aware": false,
+                      "Async Capable": false,
+                      "Scan Direction": "Forward",
+                      "Index Name": "cleanup_events_public_map_published_idx",
+                      "Relation Name": "cleanup_events",
+                      "Alias": "event",
+                      "Startup Cost": 0.14,
+                      "Total Cost": 153.66,
+                      "Plan Rows": 6,
+                      "Plan Width": 40,
+                      "Filter": "extensions.st_covers('0103000020E610000001000000050000003333333333F353403333333333331B403333333333F353406666666666661C4000000000000054406666666666661C4000000000000054403333333333331B403333333333F353403333333333331B40'::extensions.geography, event_geo_point)"
+                    },
+                    {
+                      "Node Type": "Hash",
+                      "Parent Relationship": "Inner",
+                      "Parallel Aware": false,
+                      "Async Capable": false,
+                      "Startup Cost": 4.71,
+                      "Total Cost": 4.71,
+                      "Plan Rows": 49,
+                      "Plan Width": 16,
+                      "Plans": [
+                        {
+                          "Node Type": "Seq Scan",
+                          "Parent Relationship": "Outer",
+                          "Parallel Aware": false,
+                          "Async Capable": false,
+                          "Relation Name": "organizations",
+                          "Alias": "organization",
+                          "Startup Cost": 0,
+                          "Total Cost": 4.71,
+                          "Plan Rows": 49,
+                          "Plan Width": 16,
+                          "Filter": "(status = 'ACTIVE'::\"OrganizationStatus\")"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "publicEventRadius": [
+      {
+        "Plan": {
+          "Node Type": "Limit",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 0.28,
+          "Total Cost": 156.11,
+          "Plan Rows": 1,
+          "Plan Width": 24,
+          "Plans": [
+            {
+              "Node Type": "Nested Loop",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Join Type": "Inner",
+              "Startup Cost": 0.28,
+              "Total Cost": 156.11,
+              "Plan Rows": 1,
+              "Plan Width": 24,
+              "Inner Unique": true,
+              "Plans": [
+                {
+                  "Node Type": "Index Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Scan Direction": "Forward",
+                  "Index Name": "cleanup_events_public_map_published_idx",
+                  "Relation Name": "cleanup_events",
+                  "Alias": "event",
+                  "Startup Cost": 0.14,
+                  "Total Cost": 153.66,
+                  "Plan Rows": 1,
+                  "Plan Width": 40,
+                  "Filter": "extensions.st_dwithin(event_geo_point, '0101000020E61000002CD49AE61DF75340857CD0B359B51B40'::extensions.geography, '5000'::double precision, true)"
+                },
+                {
+                  "Node Type": "Index Scan",
+                  "Parent Relationship": "Inner",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Scan Direction": "Forward",
+                  "Index Name": "organizations_pkey",
+                  "Relation Name": "organizations",
+                  "Alias": "organization",
+                  "Startup Cost": 0.14,
+                  "Total Cost": 2.36,
+                  "Plan Rows": 1,
+                  "Plan Width": 16,
+                  "Index Cond": "(id = event.organization_id)",
+                  "Filter": "(status = 'ACTIVE'::\"OrganizationStatus\")"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "organizationEventViewport": [
+      {
+        "Plan": {
+          "Node Type": "Limit",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 129.51,
+          "Total Cost": 129.52,
+          "Plan Rows": 5,
+          "Plan Width": 24,
+          "Plans": [
+            {
+              "Node Type": "Sort",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 129.51,
+              "Total Cost": 129.52,
+              "Plan Rows": 5,
+              "Plan Width": 24,
+              "Sort Key": [
+                "event.updated_at DESC",
+                "event.id DESC"
+              ],
+              "Plans": [
+                {
+                  "Node Type": "Nested Loop",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Join Type": "Inner",
+                  "Startup Cost": 0.14,
+                  "Total Cost": 129.45,
+                  "Plan Rows": 5,
+                  "Plan Width": 24,
+                  "Inner Unique": false,
+                  "Plans": [
+                    {
+                      "Node Type": "Limit",
+                      "Parent Relationship": "Outer",
+                      "Parallel Aware": false,
+                      "Async Capable": false,
+                      "Startup Cost": 0,
+                      "Total Cost": 0.1,
+                      "Plan Rows": 1,
+                      "Plan Width": 16,
+                      "Plans": [
+                        {
+                          "Node Type": "Seq Scan",
+                          "Parent Relationship": "Outer",
+                          "Parallel Aware": false,
+                          "Async Capable": false,
+                          "Relation Name": "organizations",
+                          "Alias": "organizations",
+                          "Startup Cost": 0,
+                          "Total Cost": 4.71,
+                          "Plan Rows": 49,
+                          "Plan Width": 16,
+                          "Filter": "(status = 'ACTIVE'::\"OrganizationStatus\")"
+                        }
+                      ]
+                    },
+                    {
+                      "Node Type": "Index Scan",
+                      "Parent Relationship": "Inner",
+                      "Parallel Aware": false,
+                      "Async Capable": false,
+                      "Scan Direction": "Forward",
+                      "Index Name": "cleanup_events_organization_updated_id_idx",
+                      "Relation Name": "cleanup_events",
+                      "Alias": "event",
+                      "Startup Cost": 0.14,
+                      "Total Cost": 129.31,
+                      "Plan Rows": 5,
+                      "Plan Width": 40,
+                      "Index Cond": "(organization_id = organizations.id)",
+                      "Filter": "extensions.st_covers('0103000020E610000001000000050000003333333333F353403333333333331B403333333333F353406666666666661C4000000000000054406666666666661C4000000000000054403333333333331B403333333333F353403333333333331B40'::extensions.geography, event_geo_point)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "serviceAreaViewport": [
+      {
+        "Plan": {
+          "Node Type": "Limit",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 0.52,
+          "Total Cost": 29.97,
+          "Plan Rows": 1,
+          "Plan Width": 16,
+          "Plans": [
+            {
+              "Node Type": "Limit",
+              "Parent Relationship": "InitPlan",
+              "Subplan Name": "InitPlan 1",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 0,
+              "Total Cost": 0.1,
+              "Plan Rows": 1,
+              "Plan Width": 16,
+              "Plans": [
+                {
+                  "Node Type": "Seq Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Relation Name": "organizations",
+                  "Alias": "organizations",
+                  "Startup Cost": 0,
+                  "Total Cost": 4.71,
+                  "Plan Rows": 49,
+                  "Plan Width": 16,
+                  "Filter": "(status = 'ACTIVE'::\"OrganizationStatus\")"
+                }
+              ]
+            },
+            {
+              "Node Type": "Nested Loop",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Join Type": "Left",
+              "Startup Cost": 0.43,
+              "Total Cost": 29.88,
+              "Plan Rows": 1,
+              "Plan Width": 16,
+              "Inner Unique": true,
+              "Filter": "((COALESCE(service_area.boundary, administrative_area.boundary) IS NOT NULL) AND extensions.st_intersects((COALESCE(service_area.boundary, administrative_area.boundary))::extensions.geometry, '0103000020E610000001000000050000003333333333F353403333333333331B403333333333F353406666666666661C4000000000000054406666666666661C4000000000000054403333333333331B403333333333F353403333333333331B40'::extensions.geometry))",
+              "Plans": [
+                {
+                  "Node Type": "Index Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Scan Direction": "Forward",
+                  "Index Name": "organization_service_areas_organization_status_id_idx",
+                  "Relation Name": "organization_service_areas",
+                  "Alias": "service_area",
+                  "Startup Cost": 0.14,
+                  "Total Cost": 2.36,
+                  "Plan Rows": 1,
+                  "Plan Width": 167,
+                  "Index Cond": "((organization_id = (InitPlan 1).col1) AND (status = 'ACTIVE'::\"ServiceAreaStatus\"))"
+                },
+                {
+                  "Node Type": "Index Scan",
+                  "Parent Relationship": "Inner",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Scan Direction": "Forward",
+                  "Index Name": "administrative_areas_pkey",
+                  "Relation Name": "administrative_areas",
+                  "Alias": "administrative_area",
+                  "Startup Cost": 0.29,
+                  "Total Cost": 2.5,
+                  "Plan Rows": 1,
+                  "Plan Width": 8030,
+                  "Index Cond": "(id = service_area.administrative_area_id)",
+                  "Filter": "is_active"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "indexEligibilityPlans": {}
+}

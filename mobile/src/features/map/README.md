@@ -31,6 +31,9 @@ The normal `npm start` command continues to load the regular EcoTrack app.
 
 Location is requested only when the user presses **My location**. The feature
 does not call a location watcher and does not request background permission.
+Citizen and organization discovery refresh the last bounded query once when
+the app returns to the foreground. This refresh is throttled and does not read
+location again.
 
 ## Native setup
 

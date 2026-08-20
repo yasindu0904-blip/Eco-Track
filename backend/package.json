@@ -6,7 +6,8 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "test": "tsx --test \"src/**/*.test.ts\"",
+    "test": "tsx --test --test-concurrency=1 \"src/**/*.test.ts\"",
+    "test:spatial": "tsx --test --test-concurrency=1 src/modules/maps/map.validation.test.ts src/modules/maps/mapPlanEvidence.test.ts src/modules/maps/repositories/mapSpatial.integration.test.ts src/modules/incidents/incident.integration.test.ts src/modules/cleanupEvents/cleanupEvent.validation.test.ts src/modules/cleanupEvents/cleanupEvents.integration.test.ts",
     "test:organization": "tsx --test src/modules/organizations/application/application.integration.test.ts",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
@@ -16,6 +17,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
     "import:gn-divisions": "tsx src/scripts/importGnDivisions.ts",
+    "db:explain:maps": "tsx src/scripts/explainSpatialQueries.ts",
     "prisma:studio": "prisma studio",
     "db:check": "tsx src/scripts/checkDatabase.ts"
   },
