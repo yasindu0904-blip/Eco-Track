@@ -1,4 +1,6 @@
 import { apiRequest } from "../../api/apiClient";
+import { mobileEnv } from "../../config/env";
+import { supabase } from "../../config/supabase";
 import type {
   CleanupEventDraft,
   CleanupEventDraftInput,
@@ -17,6 +19,13 @@ import type {
   EventParticipantOperationsPage,
   ParticipantOperationAllocation,
   EventParticipantOperation,
+  EventOperations,
+  ParticipantEventUpdates,
+  EventOperationNote,
+  EventOperationEvidence,
+  EventEvidenceUploadIntent,
+  EventCompletionReadiness,
+  EventLifecycleMutation,
 } from "./cleanupEvent.types";
 
 const root = (organizationId: string) =>
@@ -232,4 +241,36 @@ export async function markEventAttendance(token: string, organizationId: string,
 }
 export async function removeEventParticipant(token: string, organizationId: string, eventId: string, participantId: string, reason: string | undefined) {
   return (await apiRequest<{ data: { participant: EventParticipantOperation; removedAllocationCount: number } }>(`${root(organizationId)}/${encodeURIComponent(eventId)}/participants/${encodeURIComponent(participantId)}/remove`, { accessToken: token, method: "POST", ...json({ reason }) })).data;
+}
+
+export async function getEventOperations(token: string, organizationId: string, eventId: string) {
+  return (await apiRequest<{ data: EventOperations }>(`${root(organizationId)}/${encodeURIComponent(eventId)}/operations`, { accessToken: token })).data;
+}
+export async function getParticipantEventUpdates(token: string, eventId: string) {
+  return (await apiRequest<{ data: ParticipantEventUpdates }>(`/events/${encodeURIComponent(eventId)}/participant-updates`, { accessToken: token })).data;
+}
+export async function addEventNote(token: string, organizationId: string, eventId: string, visibility: "PARTICIPANTS" | "INTERNAL", noteText: string) {
+  return (await apiRequest<{ data: EventOperationNote }>(`${root(organizationId)}/${encodeURIComponent(eventId)}/notes`, { accessToken: token, method: "POST", ...json({ visibility, noteText }) })).data;
+}
+export async function uploadEventEvidence(token: string, organizationId: string, eventId: string, file: { data: ArrayBuffer; originalFileName: string; contentType: string; sizeBytes: number }, input: { type: "BEFORE" | "PROGRESS" | "AFTER"; sessionId?: string | null; caption?: string | null }) {
+  const intent = (await apiRequest<{ data: EventEvidenceUploadIntent[] }>(`${root(organizationId)}/${encodeURIComponent(eventId)}/evidence/upload-intents`, { accessToken: token, method: "POST", ...json({ files: [{ originalFileName: file.originalFileName, contentType: file.contentType, sizeBytes: file.sizeBytes }] }) })).data[0];
+  if (!intent) throw new Error("The evidence upload could not be prepared.");
+  const { error } = await supabase.storage.from(mobileEnv.eventEvidenceBucket).uploadToSignedUrl(intent.storagePath, intent.token, file.data, { contentType: intent.contentType });
+  if (error) throw new Error(`Could not upload ${file.originalFileName}: ${error.message}`);
+  return (await apiRequest<{ data: EventOperationEvidence }>(`${root(organizationId)}/${encodeURIComponent(eventId)}/evidence`, { accessToken: token, method: "POST", ...json({ ...input, storagePath: intent.storagePath, originalFileName: intent.originalFileName, contentType: intent.contentType, sizeBytes: intent.sizeBytes }) })).data;
+}
+export async function transitionEventStatus(token: string, organizationId: string, eventId: string, targetWorkflowStatusId: string, expectedUpdatedAt: string) {
+  return (await apiRequest<{ data: EventLifecycleMutation }>(`${root(organizationId)}/${encodeURIComponent(eventId)}/transitions`, { accessToken: token, method: "POST", ...json({ targetWorkflowStatusId, expectedUpdatedAt }) })).data;
+}
+export async function transitionEventSessionStatus(token: string, organizationId: string, eventId: string, sessionId: string, status: "IN_PROGRESS" | "COMPLETED" | "CANCELLED", expectedUpdatedAt: string) {
+  return (await apiRequest<{ data: EventOperations["sessions"][number] }>(`${root(organizationId)}/${encodeURIComponent(eventId)}/sessions/${encodeURIComponent(sessionId)}/status`, { accessToken: token, method: "PATCH", ...json({ status, expectedUpdatedAt }) })).data;
+}
+export async function getEventCompletionReadiness(token: string, organizationId: string, eventId: string) {
+  return (await apiRequest<{ data: EventCompletionReadiness }>(`${root(organizationId)}/${encodeURIComponent(eventId)}/completion-readiness`, { accessToken: token })).data;
+}
+export async function cancelCleanupEvent(token: string, organizationId: string, eventId: string, expectedUpdatedAt: string, reason: string) {
+  return (await apiRequest<{ data: EventLifecycleMutation }>(`${root(organizationId)}/${encodeURIComponent(eventId)}/cancel`, { accessToken: token, method: "POST", ...json({ expectedUpdatedAt, reason }) })).data;
+}
+export async function completeCleanupEvent(token: string, organizationId: string, eventId: string, expectedUpdatedAt: string) {
+  return (await apiRequest<{ data: EventLifecycleMutation }>(`${root(organizationId)}/${encodeURIComponent(eventId)}/complete`, { accessToken: token, method: "POST", ...json({ expectedUpdatedAt }) })).data;
 }

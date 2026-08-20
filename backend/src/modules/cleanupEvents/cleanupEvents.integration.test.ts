@@ -18,6 +18,9 @@ const categoryId = randomUUID();
 const visibleIncidentId = randomUUID();
 const invisibleIncidentId = randomUUID();
 const claimIncidentId = randomUUID();
+const lifecycleIncidentId = randomUUID();
+const cancellationIncidentId = randomUUID();
+const uploadedEventEvidencePaths = new Set<string>();
 
 const identities = {
   adminA: { token: "evt02-admin-a", id: randomUUID(), authUserId: randomUUID(), membershipId: randomUUID() },
@@ -59,6 +62,18 @@ const authenticationDependencies: AuthenticationDependencies = {
 };
 const spatialMetrics: SpatialQueryMetric[] = [];
 cleanupEventDependencies.spatialQueryObserver = (metric) => spatialMetrics.push(metric);
+cleanupEventDependencies.eventEvidenceStorage = {
+  async createUploadIntent(storagePath) {
+    uploadedEventEvidencePaths.add(storagePath);
+    return { token: `token-${storagePath}`, signedUrl: `https://storage.test/upload/${storagePath}` };
+  },
+  async objectExists(storagePath) {
+    return uploadedEventEvidencePaths.has(storagePath);
+  },
+  async createDownloadUrl(storagePath) {
+    return `https://storage.test/download/${storagePath}`;
+  },
+};
 
 const PUBLIC_EVENT_FORBIDDEN_FIELDS = new Set([
   "createdByMembershipId",
@@ -255,7 +270,51 @@ before(async () => {
         highlightUntil: new Date(now + 86_400_000),
         archiveAfter: new Date(now + 604_800_000),
       },
+      {
+        id: lifecycleIncidentId,
+        reporterUserId: identities.reporter.id,
+        submissionId: randomUUID(),
+        categoryId,
+        title: "EVT-06 lifecycle incident",
+        description: "A shared incident used to verify cancellation and completion.",
+        severity: "HIGH",
+        latitude: 6.96,
+        longitude: 79.92,
+        highlightUntil: new Date(now + 86_400_000),
+        archiveAfter: new Date(now + 604_800_000),
+      },
+      {
+        id: cancellationIncidentId,
+        reporterUserId: identities.reporter.id,
+        submissionId: randomUUID(),
+        categoryId,
+        title: "EVT-06 cancellation incident",
+        description: "A shared incident used to verify atomic claim release.",
+        severity: "MEDIUM",
+        latitude: 6.96,
+        longitude: 79.92,
+        highlightUntil: new Date(now + 86_400_000),
+        archiveAfter: new Date(now + 604_800_000),
+      },
     ],
+  });
+  await prisma.incidentReview.create({
+    data: {
+      incidentId: lifecycleIncidentId,
+      organizationId: organizationAId,
+      status: "VALID",
+      reviewedByMembershipId: identities.adminA.membershipId,
+      reviewedAt: new Date(),
+    },
+  });
+  await prisma.incidentReview.create({
+    data: {
+      incidentId: cancellationIncidentId,
+      organizationId: organizationAId,
+      status: "VALID",
+      reviewedByMembershipId: identities.adminA.membershipId,
+      reviewedAt: new Date(),
+    },
   });
   await prisma.$executeRaw`
     INSERT INTO "organization_service_areas" (
@@ -297,7 +356,7 @@ after(async () => {
     where: { organizationId: { in: [organizationAId, organizationBId] } },
   });
   await prisma.organizationServiceArea.deleteMany({ where: { id: serviceAreaId } });
-  await prisma.incident.deleteMany({ where: { id: { in: [visibleIncidentId, invisibleIncidentId, claimIncidentId] } } });
+  await prisma.incident.deleteMany({ where: { id: { in: [visibleIncidentId, invisibleIncidentId, claimIncidentId, lifecycleIncidentId, cancellationIncidentId] } } });
   await prisma.incidentCategory.deleteMany({ where: { id: categoryId } });
   await prisma.cleanupWorkflowStatus.deleteMany({
     where: { organizationId: { in: [organizationAId, organizationBId] } },
@@ -1121,4 +1180,172 @@ test("EVT-05 safely allocates volunteers, records attendance once, and preserves
   assert.equal((await prisma.eventCoordinator.deleteMany({ where: { cleanupEventId: eventId, membershipId: identities.memberA.membershipId } })).count, 1);
   const ordinaryMemberList = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/participants`);
   assert.equal(ordinaryMemberList.status, 403);
+});
+
+test("EVT-06 protects notes/evidence and atomically completes an event with its linked incident", async () => {
+  const eventId = await createDirectDraft("EVT-06 complete lifecycle event");
+  await request(identities.adminA.token, `/organizations/${organizationAId}/events/drafts/${eventId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ incidentId: lifecycleIncidentId }),
+  }).then((response) => assert.equal(response.status, 200));
+  await makeDraftPublishable(identities.adminA.token, organizationAId, eventId, identities.memberA.membershipId);
+  const published = await request(identities.adminA.token, `/organizations/${organizationAId}/events/${eventId}/publish`, { method: "POST" });
+  assert.equal(published.status, 200);
+  const sessionId = (await published.json()).data.event.sessions[0].id as string;
+
+  const joined = await request(identities.reporter.token, `/events/${eventId}/participation`, {
+    method: "POST",
+    body: JSON.stringify({ sessionIds: [sessionId] }),
+  });
+  assert.equal(joined.status, 201);
+  const participantId = (await joined.json()).data.participation.id as string;
+
+  const crossTenant = await request(identities.adminB.token, `/organizations/${organizationAId}/events/${eventId}/operations`);
+  assert.equal(crossTenant.status, 403);
+  const participantNote = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/notes`, {
+    method: "POST",
+    body: JSON.stringify({ visibility: "PARTICIPANTS", noteText: "Meet at the west entrance before the session." }),
+  });
+  assert.equal(participantNote.status, 201);
+  const internalNote = await request(identities.adminA.token, `/organizations/${organizationAId}/events/${eventId}/notes`, {
+    method: "POST",
+    body: JSON.stringify({ visibility: "INTERNAL", noteText: "Waste collection vehicle is confirmed." }),
+  });
+  assert.equal(internalNote.status, 201);
+  const updates = await request(identities.reporter.token, `/events/${eventId}/participant-updates`);
+  assert.equal(updates.status, 200);
+  const updatesBody = await updates.json();
+  assert.equal(updatesBody.data.notes.length, 1);
+  assert.equal(updatesBody.data.notes[0].visibility, "PARTICIPANTS");
+  assert.equal(JSON.stringify(updatesBody).includes("Waste collection vehicle"), false);
+
+  const intentResponse = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/evidence/upload-intents`, {
+    method: "POST",
+    body: JSON.stringify({ files: [{ originalFileName: "after.jpg", contentType: "image/jpeg", sizeBytes: 1_024 }] }),
+  });
+  assert.equal(intentResponse.status, 201);
+  const intent = (await intentResponse.json()).data[0] as { storagePath: string };
+  const evidence = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/evidence`, {
+    method: "POST",
+    body: JSON.stringify({
+      storagePath: intent.storagePath,
+      originalFileName: "after.jpg",
+      contentType: "image/jpeg",
+      sizeBytes: 1_024,
+      type: "AFTER",
+      sessionId,
+      caption: "Cleanup completed",
+    }),
+  });
+  assert.equal(evidence.status, 201);
+  assert.match((await evidence.json()).data.url, /storage\.test\/download/);
+
+  const invalidSessionEvidence = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/evidence`, {
+    method: "POST",
+    body: JSON.stringify({
+      storagePath: intent.storagePath,
+      originalFileName: "after.jpg",
+      contentType: "image/jpeg",
+      sizeBytes: 1_024,
+      type: "AFTER",
+      sessionId: randomUUID(),
+    }),
+  });
+  assert.equal(invalidSessionEvidence.status, 422);
+
+  const allocated = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/allocations`, {
+    method: "POST",
+    body: JSON.stringify({ participantId, sessionId }),
+  });
+  assert.equal(allocated.status, 201);
+  const allocationId = (await allocated.json()).data.id as string;
+  await prisma.eventSession.update({
+    where: { id: sessionId },
+    data: { sessionDate: new Date("2020-01-01T00:00:00.000Z"), startTime: new Date("1970-01-01T00:00:00.000Z") },
+  });
+  const attendance = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/allocations/${allocationId}/attendance`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "ATTENDED" }),
+  });
+  assert.equal(attendance.status, 200);
+
+  let operations = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/operations`).then((response) => response.json());
+  const inProgressTarget = operations.data.availableTransitions.find((item: { lifecycleStatus: string }) => item.lifecycleStatus === "IN_PROGRESS");
+  const eventInProgress = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/transitions`, {
+    method: "POST",
+    body: JSON.stringify({ targetWorkflowStatusId: inProgressTarget.id, expectedUpdatedAt: operations.data.event.updatedAt }),
+  });
+  assert.equal(eventInProgress.status, 200);
+
+  operations = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/operations`).then((response) => response.json());
+  let session = operations.data.sessions.find((item: { id: string }) => item.id === sessionId);
+  const sessionStarted = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/sessions/${sessionId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "IN_PROGRESS", expectedUpdatedAt: session.updatedAt }),
+  });
+  assert.equal(sessionStarted.status, 200);
+  session = (await sessionStarted.json()).data;
+  const sessionCompleted = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/sessions/${sessionId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "COMPLETED", expectedUpdatedAt: session.updatedAt }),
+  });
+  assert.equal(sessionCompleted.status, 200);
+
+  operations = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/operations`).then((response) => response.json());
+  const submittedTarget = operations.data.availableTransitions.find((item: { lifecycleStatus: string }) => item.lifecycleStatus === "COMPLETION_SUBMITTED");
+  const submitted = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/transitions`, {
+    method: "POST",
+    body: JSON.stringify({ targetWorkflowStatusId: submittedTarget.id, expectedUpdatedAt: operations.data.event.updatedAt, notes: "All field work is finished." }),
+  });
+  assert.equal(submitted.status, 200);
+
+  const readinessResponse = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/completion-readiness`);
+  assert.equal(readinessResponse.status, 200);
+  assert.equal((await readinessResponse.json()).data.ready, true);
+  operations = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/operations`).then((response) => response.json());
+  const completed = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/complete`, {
+    method: "POST",
+    body: JSON.stringify({ expectedUpdatedAt: operations.data.event.updatedAt, notes: "Completion evidence reviewed." }),
+  });
+  assert.equal(completed.status, 200);
+  const completedBody = await completed.json();
+  assert.equal(completedBody.data.lifecycleStatus, "COMPLETED");
+  assert.equal(completedBody.data.incidentStatus, "RESOLVED");
+  assert.equal(completedBody.data.rewardsAwarded, 1);
+  assert.equal((await prisma.incident.findUniqueOrThrow({ where: { id: lifecycleIncidentId } })).status, "RESOLVED");
+  assert.equal(await prisma.contributionEvent.count({ where: { cleanupEventId: eventId, type: "EVENT_COMPLETED" } }), 1);
+  assert.equal(await prisma.auditLog.count({ where: { action: "CLEANUP_EVENT_COMPLETED", entityId: eventId } }), 1);
+
+  const completionRetry = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/complete`, {
+    method: "POST",
+    body: JSON.stringify({ expectedUpdatedAt: operations.data.event.updatedAt }),
+  });
+  assert.equal(completionRetry.status, 200);
+  assert.equal((await completionRetry.json()).data.idempotentReplay, true);
+  assert.equal(await prisma.contributionEvent.count({ where: { cleanupEventId: eventId, type: "EVENT_COMPLETED" } }), 1);
+});
+
+test("EVT-06 cancellation preserves history and releases a linked incident claim", async () => {
+  const eventId = await createDirectDraft("EVT-06 cancellation event");
+  await request(identities.adminA.token, `/organizations/${organizationAId}/events/drafts/${eventId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ incidentId: cancellationIncidentId }),
+  }).then((response) => assert.equal(response.status, 200));
+  await makeDraftPublishable(identities.adminA.token, organizationAId, eventId, identities.memberA.membershipId);
+  assert.equal((await request(identities.adminA.token, `/organizations/${organizationAId}/events/${eventId}/publish`, { method: "POST" })).status, 200);
+  const operations = await request(identities.adminA.token, `/organizations/${organizationAId}/events/${eventId}/operations`).then((response) => response.json());
+  const coordinatorCannotCancel = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({ expectedUpdatedAt: operations.data.event.updatedAt, reason: "Unsafe weather conditions at the cleanup location." }),
+  });
+  assert.equal(coordinatorCannotCancel.status, 403);
+  const cancelled = await request(identities.adminA.token, `/organizations/${organizationAId}/events/${eventId}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({ expectedUpdatedAt: operations.data.event.updatedAt, reason: "Unsafe weather conditions at the cleanup location." }),
+  });
+  assert.equal(cancelled.status, 200);
+  assert.equal((await cancelled.json()).data.incidentStatus, "ACTIVE");
+  assert.equal((await prisma.incident.findUniqueOrThrow({ where: { id: cancellationIncidentId } })).status, "ACTIVE");
+  assert.equal(await prisma.eventStatusHistory.count({ where: { cleanupEventId: eventId, toStatus: { mappedLifecycleStatus: "CANCELLED" } } }), 1);
+  assert.equal(await prisma.cleanupEvent.count({ where: { incidentId: cancellationIncidentId, lifecycleStatus: { in: ["PUBLISHED", "SCHEDULED", "IN_PROGRESS", "COMPLETION_SUBMITTED"] } } }), 0);
 });

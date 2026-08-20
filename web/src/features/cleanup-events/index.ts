@@ -5,4 +5,6 @@ export * from "./PublicCleanupEventsPage";
 export * from "./EventParticipationPanel";
 export * from "./MyJoinedCleanupEventsPage";
 export * from "./EventParticipantOperations";
+export * from "./EventOperationsWorkspace";
+export { ParticipantEventUpdates as ParticipantEventUpdatesPanel } from "./ParticipantEventUpdates";
 export * from "./cleanupEvent.types";

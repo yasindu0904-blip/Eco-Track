@@ -3,10 +3,11 @@ import { describeApiFailure } from "../../api/apiError";
 import { getOwnedCleanupEvent, listOwnedCleanupEvents } from "./cleanupEvent.api";
 import type { CleanupEventOwnedSummary } from "./cleanupEvent.types";
 import { EventParticipantOperations } from "./EventParticipantOperations";
+import { EventOperationsWorkspace } from "./EventOperationsWorkspace";
 
-type Props = { accessToken: string; organizationId: string; initialEventId?: string };
+type Props = { accessToken: string; organizationId: string; initialEventId?: string; canCancel?: boolean };
 
-export function OrganizationCleanupEventList({ accessToken, organizationId, initialEventId }: Props) {
+export function OrganizationCleanupEventList({ accessToken, organizationId, initialEventId, canCancel = false }: Props) {
   const [items, setItems] = useState<CleanupEventOwnedSummary[]>([]);
   const [selectedId, setSelectedId] = useState(initialEventId);
   const [selectedRecord, setSelectedRecord] = useState<CleanupEventOwnedSummary>();
@@ -62,5 +63,6 @@ export function OrganizationCleanupEventList({ accessToken, organizationId, init
       <p>{selected.eventAddress ?? `${selected.eventLatitude}, ${selected.eventLongitude}`}</p>
     </section>}
     {selected && selected.lifecycleStatus !== "DRAFT" && <EventParticipantOperations accessToken={accessToken} organizationId={organizationId} eventId={selected.id} />}
+    {selected && selected.lifecycleStatus !== "DRAFT" && <EventOperationsWorkspace accessToken={accessToken} organizationId={organizationId} eventId={selected.id} canCancel={canCancel} onChanged={() => void load()} />}
   </section>;
 }

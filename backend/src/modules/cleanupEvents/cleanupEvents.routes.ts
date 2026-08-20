@@ -46,6 +46,18 @@ import {
   removeAllocationController,
   removeParticipantController,
 } from "./participantOperations/participantOperations.controllers.js";
+import {
+  addEventNoteController,
+  cancelEventController,
+  completeEventController,
+  createEventEvidenceUploadIntentsController,
+  getCompletionReadinessController,
+  getEventOperationsController,
+  getParticipantEventUpdatesController,
+  registerEventEvidenceController,
+  transitionEventController,
+  transitionSessionController,
+} from "./eventOperations/eventOperations.controllers.js";
 
 export function createCleanupEventRouter(authenticationDependencies: AuthenticationDependencies, deps: CleanupEventDependencies) {
   const router = Router();
@@ -85,6 +97,89 @@ export function createCleanupEventRouter(authenticationDependencies: Authenticat
         cleanupEvent: { organizationId: request.eventAuthorization!.cleanupEvent.organizationId },
       },
     });
+  const eventResource = (request: Request) =>
+    createAuthorizationSubject(Subjects.CleanupEvent, request.eventAuthorization!.cleanupEvent);
+  const sessionResource = (request: Request) =>
+    createAuthorizationSubject(Subjects.EventSession, {
+      id: request.params.sessionId ?? "event-session",
+      cleanupEventId: request.eventAuthorization!.cleanupEvent.id,
+      cleanupEvent: { organizationId: request.eventAuthorization!.cleanupEvent.organizationId },
+    });
+  const noteResource = (request: Request) =>
+    createAuthorizationSubject(Subjects.EventNote, {
+      id: "event-note",
+      cleanupEventId: request.eventAuthorization!.cleanupEvent.id,
+      cleanupEvent: { organizationId: request.eventAuthorization!.cleanupEvent.organizationId },
+    });
+  const evidenceResource = (request: Request) =>
+    createAuthorizationSubject(Subjects.EventEvidence, {
+      id: "event-evidence",
+      cleanupEventId: request.eventAuthorization!.cleanupEvent.id,
+      cleanupEvent: { organizationId: request.eventAuthorization!.cleanupEvent.organizationId },
+    });
+
+  router.get(
+    "/organizations/:organizationId/events/:eventId/operations",
+    ...eventOperationsRoute,
+    authorizeResource(Actions.Read, eventResource),
+    getEventOperationsController(deps),
+  );
+
+  router.post(
+    "/organizations/:organizationId/events/:eventId/notes",
+    ...eventOperationsRoute,
+    authorizeResource(Actions.AddNote, noteResource),
+    addEventNoteController(deps),
+  );
+
+  router.post(
+    "/organizations/:organizationId/events/:eventId/evidence/upload-intents",
+    ...eventOperationsRoute,
+    authorizeResource(Actions.UploadEvidence, evidenceResource),
+    createEventEvidenceUploadIntentsController(deps),
+  );
+
+  router.post(
+    "/organizations/:organizationId/events/:eventId/evidence",
+    ...eventOperationsRoute,
+    authorizeResource(Actions.UploadEvidence, evidenceResource),
+    registerEventEvidenceController(deps),
+  );
+
+  router.patch(
+    "/organizations/:organizationId/events/:eventId/sessions/:sessionId/status",
+    ...eventOperationsRoute,
+    authorizeResource(Actions.Transition, sessionResource),
+    transitionSessionController(deps),
+  );
+
+  router.post(
+    "/organizations/:organizationId/events/:eventId/transitions",
+    ...eventOperationsRoute,
+    authorizeResource(Actions.Transition, eventResource),
+    transitionEventController(deps),
+  );
+
+  router.get(
+    "/organizations/:organizationId/events/:eventId/completion-readiness",
+    ...eventOperationsRoute,
+    authorizeResource(Actions.Complete, eventResource),
+    getCompletionReadinessController(deps),
+  );
+
+  router.post(
+    "/organizations/:organizationId/events/:eventId/cancel",
+    ...eventOperationsRoute,
+    authorizeResource(Actions.Cancel, eventResource),
+    cancelEventController(deps),
+  );
+
+  router.post(
+    "/organizations/:organizationId/events/:eventId/complete",
+    ...eventOperationsRoute,
+    authorizeResource(Actions.Complete, eventResource),
+    completeEventController(deps),
+  );
 
   router.post(
     "/organizations/:organizationId/events/drafts",
@@ -236,6 +331,13 @@ export function createCleanupEventRouter(authenticationDependencies: Authenticat
     ...publicRoute,
     authorize(Actions.Read, Subjects.CleanupEvent),
     getPublicEventController(deps),
+  );
+
+  router.get(
+    "/events/:eventId/participant-updates",
+    ...publicRoute,
+    authorize(Actions.Read, Subjects.CleanupEvent),
+    getParticipantEventUpdatesController(deps),
   );
 
   router.get(
