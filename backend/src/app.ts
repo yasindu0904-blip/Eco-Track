@@ -88,7 +88,15 @@ export function createApp(
     createProfileRouter(authenticationDependencies),
   );
 
-  if (options.dashboardDependencies) app.use("/api/v1", createDashboardRouter(authenticationDependencies, options.dashboardDependencies));
+  if (options.dashboardDependencies) {
+    app.use(
+      "/api/v1",
+      createDashboardRouter(
+        authenticationDependencies,
+        options.dashboardDependencies,
+      ),
+    );
+  }
 
   if (options.notificationDependencies) {
     app.use(
