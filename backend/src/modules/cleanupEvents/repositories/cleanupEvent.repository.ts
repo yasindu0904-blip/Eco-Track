@@ -568,15 +568,19 @@ export function listPublicCleanupEventRecords(
 
 export function listOwnedCleanupEventRecords(
   prisma: PrismaClient,
-  command: {
-    organizationId: string;
-    cursor: CleanupEventOwnedCursor | null;
+    command: {
+      organizationId: string;
+      coordinatorMembershipId?: string;
+      cursor: CleanupEventOwnedCursor | null;
     limit: number;
   },
 ): Promise<CleanupEventPublicRecord[]> {
   return prisma.cleanupEvent.findMany({
-    where: {
-      organizationId: command.organizationId,
+      where: {
+        organizationId: command.organizationId,
+        ...(command.coordinatorMembershipId ? {
+          coordinators: { some: { membershipId: command.coordinatorMembershipId } },
+        } : {}),
       ...(command.cursor
         ? {
             OR: [

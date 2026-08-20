@@ -15,6 +15,9 @@ import type {
   EventParticipationPage,
   JoinEventResult,
   CleanupEventMapPage,
+  EventParticipantOperationsPage,
+  ParticipantOperationAllocation,
+  EventParticipantOperation,
 } from "./cleanupEvent.types";
 
 const root = (organizationId: string) =>
@@ -244,4 +247,25 @@ export async function listNearbyCleanupEventMap(token: string, query: EventMapRa
 }
 export async function listOrganizationCleanupEventMap(token: string, organizationId: string, query: EventMapViewport, signal?: AbortSignal) {
   return (await apiRequest<{ data: CleanupEventMapPage }>(`${root(organizationId)}/map?${mapQuery(query)}`, { accessToken: token, signal })).data;
+}
+
+export async function listEventParticipants(token: string, organizationId: string, eventId: string, status = "JOINED", cursor?: string) {
+  const query = new URLSearchParams({ status, limit: "50" });
+  if (cursor) query.set("cursor", cursor);
+  return (await apiRequest<{ data: EventParticipantOperationsPage }>(`${root(organizationId)}/${encodeURIComponent(eventId)}/participants?${query}`, { accessToken: token })).data;
+}
+export async function allocateEventParticipant(token: string, organizationId: string, eventId: string, participantId: string, sessionId: string) {
+  return (await apiRequest<{ data: ParticipantOperationAllocation }>(`${root(organizationId)}/${encodeURIComponent(eventId)}/allocations`, { accessToken: token, method: "POST", ...json({ participantId, sessionId }) })).data;
+}
+export async function reallocateEventParticipant(token: string, organizationId: string, eventId: string, allocationId: string, sessionId: string) {
+  return (await apiRequest<{ data: ParticipantOperationAllocation }>(`${root(organizationId)}/${encodeURIComponent(eventId)}/allocations/${encodeURIComponent(allocationId)}`, { accessToken: token, method: "PATCH", ...json({ sessionId }) })).data;
+}
+export async function removeEventAllocation(token: string, organizationId: string, eventId: string, allocationId: string) {
+  return (await apiRequest<{ data: ParticipantOperationAllocation }>(`${root(organizationId)}/${encodeURIComponent(eventId)}/allocations/${encodeURIComponent(allocationId)}/remove`, { accessToken: token, method: "POST" })).data;
+}
+export async function markEventAttendance(token: string, organizationId: string, eventId: string, allocationId: string, status: "ATTENDED" | "ABSENT") {
+  return (await apiRequest<{ data: ParticipantOperationAllocation }>(`${root(organizationId)}/${encodeURIComponent(eventId)}/allocations/${encodeURIComponent(allocationId)}/attendance`, { accessToken: token, method: "PATCH", ...json({ status }) })).data;
+}
+export async function removeEventParticipant(token: string, organizationId: string, eventId: string, participantId: string, reason: string) {
+  return (await apiRequest<{ data: { participant: EventParticipantOperation; removedAllocationCount: number } }>(`${root(organizationId)}/${encodeURIComponent(eventId)}/participants/${encodeURIComponent(participantId)}/remove`, { accessToken: token, method: "POST", ...json({ reason }) })).data;
 }

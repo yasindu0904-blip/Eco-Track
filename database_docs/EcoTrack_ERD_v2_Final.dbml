@@ -566,6 +566,7 @@ Table public.event_participants [headerColor: #E15759] {
 
   indexes {
     (cleanup_event_id, user_id) [unique]
+    (cleanup_event_id, status, joined_at, id) [name: 'event_participants_event_status_joined_id_idx']
   }
 
   Note: 'Created immediately when a citizen presses Join. There is no volunteer application or approval table.'
@@ -596,6 +597,7 @@ Table public.session_allocations [headerColor: #E15759] {
 
   indexes {
     (participant_id, session_id) [unique]
+    (session_id, status) [name: 'session_allocations_session_status_idx']
   }
 
   Note: 'Stores the organization\'s actual scheduling decision and later attendance. This is separate from volunteer-selected availability. participant_id and session_id must belong to the same cleanup event, and allocator/attendance memberships must belong to the event-owning organization.'

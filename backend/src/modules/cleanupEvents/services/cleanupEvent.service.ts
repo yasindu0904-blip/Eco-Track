@@ -611,14 +611,16 @@ export async function getOwnedCleanupEvent(
 export async function listOwnedCleanupEvents(
   dependencies: CleanupEventDependencies,
   organizationId: string,
+  membership: { id: string; role: "ORG_MEMBER" | "ORG_ADMIN" },
   query: ValidatedCleanupEventListQuery,
 ): Promise<CleanupEventOwnedPageDto> {
   const cursor = query.cursor
     ? decodeDatedCursor(query.cursor, "updatedAt") as CleanupEventOwnedCursor
     : null;
-  const records = await listOwnedCleanupEventRecords(dependencies.prisma, {
-    organizationId,
-    cursor,
+    const records = await listOwnedCleanupEventRecords(dependencies.prisma, {
+      organizationId,
+      ...(membership.role === "ORG_MEMBER" ? { coordinatorMembershipId: membership.id } : {}),
+      cursor,
     limit: query.limit,
   });
   const hasMore = records.length > query.limit;

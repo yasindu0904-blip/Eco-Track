@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type { Request } from "express";
 import { Actions } from "../../authorization/actions.js";
 import { createAuthorizationSubject, Subjects } from "../../authorization/subjects.js";
 import { abilityMiddleware } from "../../middleware/ability.middleware.js";
@@ -37,6 +38,14 @@ import {
   updateAvailabilityController,
   withdrawFromEventController,
 } from "./participation/participation.controllers.js";
+import {
+  allocateParticipantController,
+  listEventParticipantsController,
+  reallocateParticipantController,
+  recordAttendanceController,
+  removeAllocationController,
+  removeParticipantController,
+} from "./participantOperations/participantOperations.controllers.js";
 
 export function createCleanupEventRouter(authenticationDependencies: AuthenticationDependencies, deps: CleanupEventDependencies) {
   const router = Router();
@@ -55,12 +64,75 @@ export function createCleanupEventRouter(authenticationDependencies: Authenticat
         request.eventAuthorization!.cleanupEvent,
       )),
   ] as const;
+  const eventOperationsRoute = [
+    authenticate,
+    requireCompletedProfile,
+    createTenantMiddleware(deps.authorization),
+    createEventAuthorizationMiddleware(deps.authorization),
+    abilityMiddleware,
+  ] as const;
+  const participantResource = (request: Request) =>
+    createAuthorizationSubject(Subjects.EventParticipant, {
+      id: request.params.participantId ?? "participant-list",
+      cleanupEventId: request.eventAuthorization!.cleanupEvent.id,
+      cleanupEvent: { organizationId: request.eventAuthorization!.cleanupEvent.organizationId },
+    });
+  const allocationResource = (request: Request) =>
+    createAuthorizationSubject(Subjects.SessionAllocation, {
+      id: request.params.allocationId ?? "new-allocation",
+      participant: {
+        cleanupEventId: request.eventAuthorization!.cleanupEvent.id,
+        cleanupEvent: { organizationId: request.eventAuthorization!.cleanupEvent.organizationId },
+      },
+    });
 
   router.post(
     "/organizations/:organizationId/events/drafts",
     ...tenantRoute,
     authorize(Actions.Create, Subjects.CleanupEvent),
     createDraftController(deps),
+  );
+
+  router.get(
+    "/organizations/:organizationId/events/:eventId/participants",
+    ...eventOperationsRoute,
+    authorizeResource(Actions.Read, participantResource),
+    listEventParticipantsController(deps),
+  );
+
+  router.post(
+    "/organizations/:organizationId/events/:eventId/allocations",
+    ...eventOperationsRoute,
+    authorizeResource(Actions.Allocate, allocationResource),
+    allocateParticipantController(deps),
+  );
+
+  router.patch(
+    "/organizations/:organizationId/events/:eventId/allocations/:allocationId",
+    ...eventOperationsRoute,
+    authorizeResource(Actions.Allocate, allocationResource),
+    reallocateParticipantController(deps),
+  );
+
+  router.post(
+    "/organizations/:organizationId/events/:eventId/allocations/:allocationId/remove",
+    ...eventOperationsRoute,
+    authorizeResource(Actions.Allocate, allocationResource),
+    removeAllocationController(deps),
+  );
+
+  router.patch(
+    "/organizations/:organizationId/events/:eventId/allocations/:allocationId/attendance",
+    ...eventOperationsRoute,
+    authorizeResource(Actions.RecordAttendance, allocationResource),
+    recordAttendanceController(deps),
+  );
+
+  router.post(
+    "/organizations/:organizationId/events/:eventId/participants/:participantId/remove",
+    ...eventOperationsRoute,
+    authorizeResource(Actions.RemoveParticipant, participantResource),
+    removeParticipantController(deps),
   );
 
   router.get(
@@ -73,7 +145,6 @@ export function createCleanupEventRouter(authenticationDependencies: Authenticat
   router.get(
     "/organizations/:organizationId/events",
     ...tenantRoute,
-    authorize(Actions.Read, Subjects.CleanupEvent),
     listOwnedEventsController(deps),
   );
 
@@ -86,8 +157,9 @@ export function createCleanupEventRouter(authenticationDependencies: Authenticat
 
   router.get(
     "/organizations/:organizationId/events/:eventId",
-    ...tenantRoute,
-    authorize(Actions.Read, Subjects.CleanupEvent),
+    ...eventOperationsRoute,
+    authorizeResource(Actions.Read, (request) =>
+      createAuthorizationSubject(Subjects.CleanupEvent, request.eventAuthorization!.cleanupEvent)),
     getOwnedEventController(deps),
   );
 

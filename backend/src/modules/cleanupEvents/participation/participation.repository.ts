@@ -37,6 +37,16 @@ const participantEventSelect = {
 
 export const participationInclude = {
   availabilities: { orderBy: { markedAt: "asc" as const }, select: { sessionId: true } },
+  allocations: {
+    orderBy: { allocatedAt: "asc" as const },
+    select: {
+      id: true,
+      sessionId: true,
+      status: true,
+      allocatedAt: true,
+      attendanceMarkedAt: true,
+    },
+  },
   cleanupEvent: { select: participantEventSelect },
 } satisfies Prisma.EventParticipantInclude;
 

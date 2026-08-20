@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { describeApiFailure } from "../../api/apiError";
 import { getOwnedCleanupEvent, listOwnedCleanupEvents } from "./cleanupEvent.api";
 import type { CleanupEventOwnedSummary } from "./cleanupEvent.types";
+import { EventParticipantOperations } from "./EventParticipantOperations";
 
 type Props = { accessToken: string; organizationId: string; initialEventId?: string };
 
@@ -60,5 +61,6 @@ export function OrganizationCleanupEventList({ accessToken, organizationId, init
       <p><strong>{selected.incidentId ? `Linked incident ${selected.incidentId}` : "Direct cleanup event"}</strong></p>
       <p>{selected.eventAddress ?? `${selected.eventLatitude}, ${selected.eventLongitude}`}</p>
     </section>}
+    {selected && selected.lifecycleStatus !== "DRAFT" && <EventParticipantOperations accessToken={accessToken} organizationId={organizationId} eventId={selected.id} />}
   </section>;
 }

@@ -293,10 +293,14 @@ export function listOwnedEventsController(dependencies: CleanupEventDependencies
       const validation = listCleanupEventsQuerySchema.safeParse(request.query);
       if (!validation.success) throw validationError(validation);
       response.status(200).json({
-        data: await listOwnedCleanupEvents(
-          dependencies,
-          request.tenant!.organization.id,
-          validation.data,
+          data: await listOwnedCleanupEvents(
+            dependencies,
+            request.tenant!.organization.id,
+            {
+              id: request.tenant!.membership.id,
+              role: request.tenant!.membership.role,
+            },
+            validation.data,
         ),
       });
     } catch (error) {

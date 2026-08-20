@@ -108,7 +108,32 @@ export type EventParticipation = {
   joinedAt: string;
   withdrawnAt: string | null;
   availableSessionIds: string[];
+  allocations: Array<{
+    id: string;
+    sessionId: string;
+    status: "PLANNED" | "ATTENDED" | "ABSENT" | "REMOVED";
+    allocatedAt: string;
+    attendanceMarkedAt: string | null;
+  }>;
   event: CleanupEventPublicDetail;
+};
+
+export type ParticipantOperationAllocation = {
+  id: string; participantId: string; sessionId: string;
+  status: "PLANNED" | "ATTENDED" | "ABSENT" | "REMOVED";
+  allocatedAt: string; attendanceMarkedAt: string | null; notes: string | null;
+};
+export type EventParticipantOperation = {
+  id: string; status: "JOINED" | "WITHDRAWN" | "REMOVED"; joinedAt: string; removedAt: string | null;
+  volunteer: { id: string; fullName: string | null; phoneNumber: string | null };
+  availableSessionIds: string[];
+  allocations: ParticipantOperationAllocation[];
+};
+export type EventParticipantOperationsPage = {
+  event: { id: string; title: string; lifecycleStatus: string };
+  sessions: Array<{ id: string; sessionDate: string; startTime: string; endTime: string; status: "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"; capacity: number | null; allocatedCount: number }>;
+  participants: EventParticipantOperation[];
+  nextCursor: string | null;
 };
 
 export type EventParticipationPage = {
