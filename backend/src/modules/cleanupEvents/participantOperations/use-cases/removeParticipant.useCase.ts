@@ -1,7 +1,11 @@
 import { ApplicationError } from "../../../../errors/applicationError.js";
 import type { CleanupEventDependencies } from "../../cleanupEvent.dependencies.js";
 import { findParticipantOperationRecord, findParticipantOperationsEvent } from "../participantOperations.repository.js";
-import { notifyParticipantOperation, requireOperationalLifecycle, toParticipantOperationDto } from "../participantOperations.support.js";
+import {
+  notifyParticipantOperation,
+  requireParticipantFinalizationLifecycle,
+  toParticipantOperationDto,
+} from "../participantOperations.support.js";
 import type { ParticipantRemovalResultDto } from "../participantOperations.types.js";
 import type { ValidatedRemoveParticipant } from "../participantOperations.validation.js";
 
@@ -19,7 +23,7 @@ export async function removeParticipant(
     await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`event-participant-remove:${input.participantId}`}))`;
     const event = await findParticipantOperationsEvent(transaction, input.organizationId, input.eventId);
     if (!event) throw new ApplicationError(404, "CLEANUP_EVENT_NOT_FOUND", "The organization cleanup event was not found.");
-    requireOperationalLifecycle(event.lifecycleStatus);
+    requireParticipantFinalizationLifecycle(event.lifecycleStatus);
     const participant = await findParticipantOperationRecord(transaction, input.organizationId, input.eventId, input.participantId);
     if (!participant) throw new ApplicationError(404, "EVENT_PARTICIPANT_NOT_FOUND", "The event participant was not found.");
     if (participant.status === "REMOVED") return { participant: toParticipantOperationDto(participant), removedAllocationCount: 0 };

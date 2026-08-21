@@ -76,6 +76,31 @@ describe("EventParticipantOperationsScreen", () => {
     expect(renderer!.root.findAllByType("Notice" as never).some((node) => node.props.message === "Attendance opens when this session starts.")).toBe(true);
   });
 
+  test("offers attendance when a session was explicitly completed", async () => {
+    const completedSession = { ...futureSession, status: "COMPLETED" as const };
+    vi.mocked(listEventParticipants).mockResolvedValue({
+      event: { id: "event-1", title: "Canal cleanup", lifecycleStatus: "COMPLETION_SUBMITTED" },
+      sessions: [completedSession],
+      participants: [{
+        id: "participant-1",
+        status: "JOINED",
+        joinedAt: "2026-08-21T08:00:00.000Z",
+        removedAt: null,
+        volunteer: { id: "user-1", fullName: "Volunteer One", phoneNumber: "+94770000001" },
+        availableSessionIds: [completedSession.id],
+        allocations: [{ id: "allocation-1", participantId: "participant-1", sessionId: completedSession.id, status: "PLANNED", allocatedAt: "2026-08-21T09:00:00.000Z", attendanceMarkedAt: null, notes: null }],
+      }],
+      nextCursor: null,
+    });
+
+    let renderer: TestRenderer.ReactTestRenderer;
+    await act(async () => {
+      renderer = TestRenderer.create(<EventParticipantOperationsScreen accessToken="token" organizationId="organization-1" eventId="event-1" />);
+    });
+
+    expect(renderer!.root.findAllByType("Button" as never).some((node) => node.props.label === "Mark attended")).toBe(true);
+  });
+
   test("allocates through the event allocation endpoint", async () => {
     vi.mocked(listEventParticipants).mockResolvedValue({
       event: { id: "event-1", title: "Canal cleanup", lifecycleStatus: "PUBLISHED" },

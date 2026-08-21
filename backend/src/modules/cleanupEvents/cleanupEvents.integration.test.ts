@@ -1199,6 +1199,12 @@ test("EVT-06 protects notes/evidence and atomically completes an event with its 
   });
   assert.equal(joined.status, 201);
   const participantId = (await joined.json()).data.participation.id as string;
+  const coordinatorJoined = await request(identities.memberA.token, `/events/${eventId}/participation`, {
+    method: "POST",
+    body: JSON.stringify({ sessionIds: [sessionId] }),
+  });
+  assert.equal(coordinatorJoined.status, 201);
+  const coordinatorParticipantId = (await coordinatorJoined.json()).data.participation.id as string;
 
   const crossTenant = await request(identities.adminB.token, `/organizations/${organizationAId}/events/${eventId}/operations`);
   assert.equal(crossTenant.status, 403);
@@ -1259,15 +1265,12 @@ test("EVT-06 protects notes/evidence and atomically completes an event with its 
   });
   assert.equal(allocated.status, 201);
   const allocationId = (await allocated.json()).data.id as string;
-  await prisma.eventSession.update({
-    where: { id: sessionId },
-    data: { sessionDate: new Date("2020-01-01T00:00:00.000Z"), startTime: new Date("1970-01-01T00:00:00.000Z") },
+  const coordinatorAllocated = await request(identities.adminA.token, `/organizations/${organizationAId}/events/${eventId}/allocations`, {
+    method: "POST",
+    body: JSON.stringify({ participantId: coordinatorParticipantId, sessionId }),
   });
-  const attendance = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/allocations/${allocationId}/attendance`, {
-    method: "PATCH",
-    body: JSON.stringify({ status: "ATTENDED" }),
-  });
-  assert.equal(attendance.status, 200);
+  assert.equal(coordinatorAllocated.status, 201);
+  const coordinatorAllocationId = (await coordinatorAllocated.json()).data.id as string;
 
   let operations = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/operations`).then((response) => response.json());
   const inProgressTarget = operations.data.availableTransitions.find((item: { lifecycleStatus: string }) => item.lifecycleStatus === "IN_PROGRESS");
@@ -1298,6 +1301,33 @@ test("EVT-06 protects notes/evidence and atomically completes an event with its 
     body: JSON.stringify({ targetWorkflowStatusId: submittedTarget.id, expectedUpdatedAt: operations.data.event.updatedAt, notes: "All field work is finished." }),
   });
   assert.equal(submitted.status, 200);
+
+  // Completion review must still allow finalizing existing PLANNED records.
+  // The explicit COMPLETED session status counts as started even though this
+  // test event uses a future calendar date.
+  const attendance = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/allocations/${allocationId}/attendance`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "ATTENDED" }),
+  });
+  assert.equal(attendance.status, 200);
+  const removedDuringFinalization = await request(
+    identities.adminA.token,
+    `/organizations/${organizationAId}/events/${eventId}/allocations/${coordinatorAllocationId}/remove`,
+    { method: "POST" },
+  );
+  assert.equal(removedDuringFinalization.status, 200);
+  assert.equal((await removedDuringFinalization.json()).data.status, "REMOVED");
+
+  const newAllocationAfterSubmission = await request(
+    identities.adminA.token,
+    `/organizations/${organizationAId}/events/${eventId}/allocations`,
+    {
+      method: "POST",
+      body: JSON.stringify({ participantId: coordinatorParticipantId, sessionId }),
+    },
+  );
+  assert.equal(newAllocationAfterSubmission.status, 409);
+  assert.equal((await newAllocationAfterSubmission.json()).error.code, "EVENT_PARTICIPANT_OPERATIONS_CLOSED");
 
   const readinessResponse = await request(identities.memberA.token, `/organizations/${organizationAId}/events/${eventId}/completion-readiness`);
   assert.equal(readinessResponse.status, 200);

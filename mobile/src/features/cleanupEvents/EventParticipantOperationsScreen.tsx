@@ -10,6 +10,14 @@ function hasSessionStarted(session: { sessionDate: string; startTime: string }):
   return new Date(`${session.sessionDate}T${session.startTime}+05:30`).getTime() <= Date.now();
 }
 
+function isAttendanceOpen(session: { sessionDate: string; startTime: string; status: string }): boolean {
+  return session.status !== "CANCELLED" && (
+    session.status === "IN_PROGRESS" ||
+    session.status === "COMPLETED" ||
+    hasSessionStarted(session)
+  );
+}
+
 export function EventParticipantOperationsScreen({ accessToken, organizationId, eventId }: { accessToken: string; organizationId: string; eventId: string }) {
   const [page, setPage] = useState<EventParticipantOperationsPage>();
   const [busy, setBusy] = useState(false);
@@ -38,7 +46,7 @@ export function EventParticipantOperationsScreen({ accessToken, organizationId, 
       const unallocated = allocatable.filter((session) => !active.some(({ sessionId }) => sessionId === session.id));
       return <View style={styles.card} key={participant.id}>
         <Text style={styles.title}>{participant.volunteer.fullName ?? "EcoTrack volunteer"}</Text><Text style={styles.copy}>{participant.volunteer.phoneNumber ?? "No phone number provided"}</Text><Text style={styles.copy}>Available sessions: {available.length}</Text>
-        {active.map((allocation) => { const session = page.sessions.find(({ id }) => id === allocation.sessionId); const attendanceOpen = Boolean(session && session.status !== "CANCELLED" && hasSessionStarted(session)); const reallocationTargets = allocatable.filter(({ capacity, allocatedCount, id }) => id !== allocation.sessionId && (capacity === null || allocatedCount < capacity)); return <View style={styles.allocation} key={allocation.id}>
+        {active.map((allocation) => { const session = page.sessions.find(({ id }) => id === allocation.sessionId); const attendanceOpen = Boolean(session && isAttendanceOpen(session)); const reallocationTargets = allocatable.filter(({ capacity, allocatedCount, id }) => id !== allocation.sessionId && (capacity === null || allocatedCount < capacity)); return <View style={styles.allocation} key={allocation.id}>
           <Text style={styles.title}>{session?.sessionDate} · {session?.startTime.slice(0, 5)}</Text><Text style={styles.status}>{allocation.status}</Text>
           {allocation.status === "PLANNED" ? <>{reallocationTargets.length > 0 ? <><Text style={styles.label}>Move to another available future session</Text>{reallocationTargets.map((target) => <Button key={target.id} disabled={busy} variant="secondary" label={`${target.sessionDate} ${target.startTime.slice(0, 5)}`} onPress={() => void run(() => reallocateEventParticipant(accessToken, organizationId, eventId, allocation.id, target.id))} />)}</> : null}{attendanceOpen ? <><Button disabled={busy} label="Mark attended" onPress={() => void run(() => markEventAttendance(accessToken, organizationId, eventId, allocation.id, "ATTENDED"))} /><Button disabled={busy} variant="secondary" label="Mark absent" onPress={() => void run(() => markEventAttendance(accessToken, organizationId, eventId, allocation.id, "ABSENT"))} /></> : <Notice message="Attendance opens when this session starts." />}<Button disabled={busy} variant="danger" label="Remove allocation" onPress={() => Alert.alert("Remove allocation?", "The volunteer remains joined to the event.", [{ text: "Cancel", style: "cancel" }, { text: "Remove", style: "destructive", onPress: () => void run(() => removeEventAllocation(accessToken, organizationId, eventId, allocation.id)) }])} /></> : null}
         </View>; })}
