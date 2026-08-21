@@ -21,6 +21,7 @@
 .public-event-session { display: grid; gap: .2rem; padding: .8rem 0; border-top: 1px solid #dbe4dc; }
 .event-participation { display: grid; gap: 1rem; margin-top: 1rem; padding: 1.1rem; border: 1px solid #b9d4bf; border-radius: 1rem; background: #f4faf5; }
 .event-participation h3, .event-participation p { margin: .25rem 0; }
+.event-participation-heading, .participation-assignment { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .event-participation-eyebrow { color: #176c2c; font-size: .72rem; font-weight: 900; letter-spacing: .08em; }
 .event-action-button,
 .event-participation .event-editor-actions button {
@@ -57,10 +58,15 @@
 .participation-session-options input { width: 18px; height: 18px; margin-top: .15rem; }
 .participation-session-options span { display: grid; gap: .2rem; }
 .participation-session-options small { color: #53665a; }
+.participation-assignments { display: grid; gap: .65rem; padding: 1rem; border: 1px solid #b9d4bf; border-radius: .8rem; background: #fff; }
+.participation-assignments h4 { margin: .2rem 0 0; color: #102d21; }
+.participation-assignment { padding-top: .65rem; border-top: 1px solid #dbe4dc; }
+.participation-assignment div { display: grid; gap: .2rem; }
+.participation-assignment small { color: #53665a; }
 .participation-tabs { display: flex; gap: .6rem; margin: 1rem 0; }
 .participation-tabs button { padding: .65rem 1rem; border: 1px solid #176c2c; border-radius: .65rem; background: #fff; color: #176c2c; font-weight: 800; cursor: pointer; }
 .participation-tabs button.selected { background: #176c2c; color: #fff; }
-@media (max-width: 800px) { .public-events-layout { grid-template-columns: 1fr; } .public-events-shell { padding: 1rem; } }
+@media (max-width: 800px) { .public-events-layout { grid-template-columns: 1fr; } .public-events-shell { padding: 1rem; } .event-participation-heading, .participation-assignment { align-items: stretch; flex-direction: column; } }
 
 .event-participant-operations { display: grid; gap: 1rem; padding: 1.25rem; border: 1px solid #d4dfd4; border-radius: 1rem; background: #fff; }
 .event-participant-operations > header, .event-participant-person, .event-allocation-row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }

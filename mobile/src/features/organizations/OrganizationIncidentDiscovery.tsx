@@ -388,6 +388,14 @@ export function OrganizationIncidentDiscovery({
 
   const submitReview = async () => {
     if (!canReview || !selectedId || selectedDetail?.id !== selectedId) return;
+    if (
+      reviewStatus === "VIEWED" &&
+      selectedDetail.currentReview &&
+      selectedDetail.currentReview.status !== "VIEWED"
+    ) {
+      setReviewError("A completed VALID or FALSE decision cannot be changed back to VIEWED. Choose VALID or FALSE.");
+      return;
+    }
     if (reviewStatus === "FALSE" && !reasonCode) {
       setReviewError("Choose a reason before marking this incident false.");
       return;
@@ -671,8 +679,19 @@ export function OrganizationIncidentDiscovery({
                   <Pressable
                     key={statusOption}
                     accessibilityRole="button"
-                    accessibilityState={{ selected: reviewStatus === statusOption }}
-                    disabled={reviewSubmitting}
+                    accessibilityState={{
+                      selected: reviewStatus === statusOption,
+                      disabled: reviewSubmitting || Boolean(
+                        statusOption === "VIEWED" &&
+                        selectedDetail.currentReview &&
+                        selectedDetail.currentReview.status !== "VIEWED",
+                      ),
+                    }}
+                    disabled={reviewSubmitting || Boolean(
+                      statusOption === "VIEWED" &&
+                      selectedDetail.currentReview &&
+                      selectedDetail.currentReview.status !== "VIEWED",
+                    )}
                     onPress={() => {
                       setReviewStatus(statusOption);
                       if (statusOption !== "FALSE") setReasonCode(undefined);

@@ -379,6 +379,14 @@ export function OrganizationIncidentDiscovery({
 
   const submitReview = async () => {
     if (!canReview || !selectedId || selectedDetail?.id !== selectedId) return;
+    if (
+      reviewStatus === "VIEWED" &&
+      selectedDetail.currentReview &&
+      selectedDetail.currentReview.status !== "VIEWED"
+    ) {
+      setReviewError("A completed VALID or FALSE decision cannot be changed back to VIEWED. Choose VALID or FALSE.");
+      return;
+    }
     if (reviewStatus === "FALSE" && !reasonCode) {
       setReviewError("Choose a reason before marking this incident false.");
       return;
@@ -652,7 +660,15 @@ export function OrganizationIncidentDiscovery({
                     if (next !== "FALSE") setReasonCode(undefined);
                   }}
                 >
-                  <option value="VIEWED">Viewed</option>
+                  <option
+                    value="VIEWED"
+                    disabled={Boolean(
+                      selectedDetail.currentReview &&
+                      selectedDetail.currentReview.status !== "VIEWED",
+                    )}
+                  >
+                    Viewed{selectedDetail.currentReview && selectedDetail.currentReview.status !== "VIEWED" ? " (initial state only)" : ""}
+                  </option>
                   <option value="VALID">Valid</option>
                   <option value="FALSE">False</option>
                 </select>
