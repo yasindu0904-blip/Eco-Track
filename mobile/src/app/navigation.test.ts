@@ -44,6 +44,19 @@ describe("INT-01 mobile navigation", () => {
     });
   });
 
+  it("returns cleanup-event details to the activity screen that opened them", () => {
+    expect(parentDestination({
+      screen: "cleanupEvents",
+      eventId: "event-1",
+      returnTo: "findCleanupActivity",
+    })).toEqual({ screen: "findCleanupActivity" });
+    expect(parentDestination({
+      screen: "cleanupEvents",
+      eventId: "event-1",
+      returnTo: "joinedCleanupEvents",
+    })).toEqual({ screen: "joinedCleanupEvents" });
+  });
+
   it("opens joined-event and reward notifications in real screens", () => {
     expect(resolveMobileNotificationDestination(
       notification("SESSION_ALLOCATED", { eventId: "event-1" }),

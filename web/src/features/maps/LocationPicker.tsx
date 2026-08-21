@@ -4,14 +4,17 @@ import {
   COLOMBO_MAP_CENTER,
   isWithinSriLankaBounds,
 } from "./map.constants";
-import type { MapLocation } from "./map.types";
+import type { MapLocation, MapMarkerFeature } from "./map.types";
 import { EcoMap } from "./EcoMap";
 
 export interface LocationPickerProps {
   value?: MapLocation | null;
   initialValue?: MapLocation;
   disabled?: boolean;
+  confirmed?: boolean;
   confirmLabel?: string;
+  referenceMarker?: MapMarkerFeature;
+  focusReferenceLabel?: string;
   onChange?: (location: MapLocation) => void;
   onConfirm: (location: MapLocation) => void;
 }
@@ -20,7 +23,10 @@ export function LocationPicker({
   value,
   initialValue = COLOMBO_MAP_CENTER,
   disabled = false,
+  confirmed = false,
   confirmLabel = "Confirm this location",
+  referenceMarker,
+  focusReferenceLabel = "Focus reference location",
   onChange,
   onConfirm,
 }: LocationPickerProps) {
@@ -29,7 +35,24 @@ export function LocationPicker({
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
   );
+  const [focusRequest, setFocusRequest] = useState<{
+    referenceId: string;
+    location: MapLocation;
+  } | null>(null);
+  const [selectedReferenceId, setSelectedReferenceId] = useState<string | null>(
+    null,
+  );
   const selectedLocation = value ?? internalLocation;
+  const referenceLocation = referenceMarker
+    ? {
+        latitude: referenceMarker.geometry.coordinates[1],
+        longitude: referenceMarker.geometry.coordinates[0],
+      }
+    : null;
+  const activeFocusLocation =
+    referenceMarker && focusRequest?.referenceId === referenceMarker.properties.id
+      ? focusRequest.location
+      : null;
 
   const selectLocation = (location: MapLocation) => {
     if (disabled) {
@@ -44,6 +67,7 @@ export function LocationPicker({
     }
 
     setInternalLocation(location);
+    setSelectedReferenceId(referenceMarker?.properties.id ?? null);
     setValidationMessage(null);
     onChange?.(location);
   };
@@ -60,82 +84,56 @@ export function LocationPicker({
     onConfirm(selectedLocation);
   };
 
-  const applyCoordinates = (form: HTMLFormElement) => {
-    const formData = new FormData(form);
-    const latitude = Number(formData.get("latitude"));
-    const longitude = Number(formData.get("longitude"));
-    const location = { latitude, longitude };
-
-    if (
-      !Number.isFinite(latitude) ||
-      !Number.isFinite(longitude) ||
-      !isWithinSriLankaBounds(location)
-    ) {
-      setValidationMessage(
-        "Enter coordinates inside the supported Sri Lanka map area.",
-      );
-      return;
-    }
-
-    selectLocation(location);
-  };
-
   return (
     <section className="eco-location-picker">
       <EcoMap
-        initialCenter={selectedLocation}
+        markers={referenceMarker ? [referenceMarker] : []}
+        initialCenter={referenceLocation ?? selectedLocation}
         initialZoom={14}
-        selectedLocation={selectedLocation}
+        focusLocation={activeFocusLocation}
+        selectedMarkerId={referenceMarker?.properties.id}
+        selectedLocation={
+          referenceMarker && selectedReferenceId !== referenceMarker.properties.id
+            ? null
+            : selectedLocation
+        }
         selectionEnabled={!disabled}
-        selectionMode="center"
+        selectionMode={referenceMarker ? "point" : "center"}
         height={420}
         accessibleLabel="Choose and confirm an EcoTrack location"
+        showListFallback={false}
+        showCurrentLocation={!referenceMarker}
         onLocationSelect={selectLocation}
       />
 
       <div className="eco-location-picker-controls">
-        <div>
-          <span className="eco-location-picker-label">Selected coordinates</span>
+        <div className={confirmed ? "eco-location-picker-status is-confirmed" : "eco-location-picker-status"}>
+          <span className="eco-location-picker-label">
+            {confirmed ? "Location confirmed" : "Location selection"}
+          </span>
           <strong>
-            {selectedLocation.latitude.toFixed(6)}, {selectedLocation.longitude.toFixed(6)}
+            {confirmed ? "Ready to save" : "Choose a point on the map"}
           </strong>
-          <small>API order: latitude, longitude</small>
+          <small>
+            {confirmed
+              ? "Use the form's save button to keep this location."
+              : "Tap the map, then confirm the event location."}
+          </small>
         </div>
 
-        <form
-          className="eco-coordinate-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            applyCoordinates(event.currentTarget);
-          }}
-        >
-          <label>
-            Latitude
-            <input
-              key={`latitude-${selectedLocation.latitude}`}
-              name="latitude"
-              type="number"
-              min="-90"
-              max="90"
-              step="any"
-              defaultValue={selectedLocation.latitude}
-              disabled={disabled}
-            />
-          </label>
-          <label>
-            Longitude
-            <input
-              key={`longitude-${selectedLocation.longitude}`}
-              name="longitude"
-              type="number"
-              min="-180"
-              max="180"
-              step="any"
-              defaultValue={selectedLocation.longitude}
-              disabled={disabled}
-            />
-          </label>
-        </form>
+        {referenceMarker && referenceLocation && (
+          <button
+            type="button"
+            className="eco-location-focus-reference"
+            disabled={disabled}
+            onClick={() => setFocusRequest({
+              referenceId: referenceMarker.properties.id,
+              location: { ...referenceLocation },
+            })}
+          >
+            {focusReferenceLabel}
+          </button>
+        )}
 
         {validationMessage && (
           <p className="eco-location-picker-error" role="alert">
@@ -149,7 +147,7 @@ export function LocationPicker({
           disabled={disabled}
           onClick={confirmLocation}
         >
-          {confirmLabel}
+          {confirmed ? "Location confirmed" : confirmLabel}
         </button>
       </div>
     </section>

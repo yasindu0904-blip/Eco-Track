@@ -5,7 +5,7 @@ import { CitizenDashboard } from "../features/citizen/CitizenDashboard";
 import { CitizenSidebar } from "../features/citizen/CitizenSidebar";
 import { listMyActiveOrganizationMemberships } from "../features/memberships/administration/membershipAdministration.api";
 import type { ActiveOrganizationMembership } from "../features/memberships/administration/membershipAdministration.types";
-import { isUserDestination, useBrowserNavigation, type UserDestination } from "./navigation";
+import { cleanupEventReturnDestination, isUserDestination, useBrowserNavigation, type UserDestination } from "./navigation";
 import { resolveUserNotificationDestination } from "./notificationDestination";
 import { RouteBoundary } from "./RouteBoundary";
 import "../styles/memberApp.css";
@@ -227,6 +227,7 @@ export function AuthenticatedUserApp({
         onOpenCleanupEvent={(eventId) => navigate({
           screen: "cleanup-events",
           eventId,
+          returnTo: "incident-discovery",
         })}
         onSignOut={() => void signOut()}
       />
@@ -236,7 +237,7 @@ export function AuthenticatedUserApp({
       <PublicCleanupEventsPage
         accessToken={accessToken}
         initialEventId={destination.eventId}
-        onBack={() => navigate(personalDashboard)}
+        onBack={() => navigate(cleanupEventReturnDestination(destination))}
       />
     );
   } else if (destination.screen === "joined-cleanup-events") {
@@ -247,6 +248,7 @@ export function AuthenticatedUserApp({
         onOpenEvent={(eventId) => navigate({
           screen: "cleanup-events",
           eventId,
+          returnTo: "joined-cleanup-events",
         })}
       />
     );
@@ -282,7 +284,6 @@ export function AuthenticatedUserApp({
         onReportIncident={() => navigate({ screen: "incident-create" })}
         onViewIncidentReports={() => navigate({ screen: "incident-reports" })}
         onFindCleanupActivity={() => navigate({ screen: "incident-discovery" })}
-        onBrowseCleanupEvents={() => navigate({ screen: "cleanup-events" })}
         onViewJoinedCleanupEvents={() => navigate({
           screen: "joined-cleanup-events",
         })}
@@ -316,7 +317,6 @@ export function AuthenticatedUserApp({
         onReportIncident={() => navigate({ screen: "incident-create" })}
         onViewIncidentReports={() => navigate({ screen: "incident-reports" })}
         onFindCleanupActivity={() => navigate({ screen: "incident-discovery" })}
-        onBrowseCleanupEvents={() => navigate({ screen: "cleanup-events" })}
         onViewJoinedCleanupEvents={() => navigate({
           screen: "joined-cleanup-events",
         })}

@@ -3,16 +3,15 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import * as Location from "expo-location";
 import {
+  getPublicCleanupEvent,
+  listNearbyCleanupEventMap,
+} from "../cleanupEvents/cleanupEvent.api";
+import {
   getPublicIncident,
   listIncidentCategories,
   listNearbyPublicIncidents,
   listPublicIncidents,
 } from "./incident.api";
-import {
-  getPublicCleanupEvent,
-  listNearbyCleanupEventMap,
-  listPublicCleanupEventMap,
-} from "../cleanupEvents/cleanupEvent.api";
 import { CitizenIncidentDiscoveryScreen } from "./CitizenIncidentDiscoveryScreen";
 
 const testState = vi.hoisted(() => ({
@@ -55,15 +54,12 @@ vi.mock("../../components/ui", async () => {
         subtitle ? React.createElement("Text", null, subtitle) : null,
       ),
     Screen: ({ children }: { children: React.ReactNode }) => React.createElement("View", null, children),
-    sharedStyles: {
-      card: {}, divider: {}, sectionSubtitle: {}, sectionTitle: {}, spacedRow: {},
-    },
+    sharedStyles: { card: {}, divider: {}, sectionSubtitle: {}, sectionTitle: {}, spacedRow: {} },
   };
 });
 
 vi.mock("../../components/theme", () => ({
   colors: { primary: "green", primarySoft: "lightgreen", surface: "white", text: "black", textMuted: "gray", border: "gray" },
-  spacing: { xs: 4, sm: 8, md: 16 },
 }));
 
 vi.mock("../../api/apiError", () => ({
@@ -76,6 +72,7 @@ vi.mock("../map", async () => {
   const React = await import("react");
   return {
     EcoMap: (props: Record<string, unknown>) => React.createElement("EcoMap", props),
+    COLOMBO_MAP_CENTER: { latitude: 6.9271, longitude: 79.8612 },
     SRI_LANKA_MAP_BOUNDS: { west: 79.5, south: 5.8, east: 82, north: 10 },
     useRefreshOnForeground: (refresh: () => void) => {
       testState.foregroundRefresh = refresh;
@@ -93,26 +90,33 @@ vi.mock("./incident.api", () => ({
 vi.mock("../cleanupEvents/cleanupEvent.api", () => ({
   getPublicCleanupEvent: vi.fn(),
   listNearbyCleanupEventMap: vi.fn(),
-  listPublicCleanupEventMap: vi.fn(),
 }));
 
-const viewport = {
-  west: 79.8,
-  south: 6.8,
-  east: 80,
-  north: 7,
-  zoom: 12,
-};
-const emptyIncidentPage = { items: [], nextCursor: null };
 const emptyEventPage = { type: "FeatureCollection" as const, features: [], nextCursor: null };
+const event = {
+  type: "Feature" as const,
+  geometry: { type: "Point" as const, coordinates: [79.8601, 6.9101] as [number, number] },
+  properties: {
+    id: "event-mobile",
+    kind: "CLEANUP_EVENT" as const,
+    title: "Mobile cleanup",
+    status: "PUBLISHED",
+    occurredAt: "2026-08-21T00:00:00.000Z",
+    organizationId: "organization-1",
+    organizationName: "Coast Team",
+    incidentId: "incident-mobile",
+    isJoined: false,
+    isOwned: false,
+  },
+};
 
-function renderScreen(): TestRenderer.ReactTestRenderer {
+function renderScreen(onOpenEvent = vi.fn()): TestRenderer.ReactTestRenderer {
   return TestRenderer.create(
     <CitizenIncidentDiscoveryScreen
       accessToken="token"
       onBack={vi.fn()}
       onReportIncident={vi.fn()}
-      onOpenEvent={vi.fn()}
+      onOpenEvent={onOpenEvent}
     />,
   );
 }
@@ -134,41 +138,42 @@ function map(renderer: TestRenderer.ReactTestRenderer) {
 beforeEach(() => {
   vi.clearAllMocks();
   testState.foregroundRefresh = undefined;
-  vi.mocked(listIncidentCategories).mockResolvedValue([]);
-  vi.mocked(getPublicIncident).mockResolvedValue(undefined as never);
   vi.mocked(getPublicCleanupEvent).mockResolvedValue(undefined as never);
-  vi.mocked(listPublicIncidents).mockResolvedValue(emptyIncidentPage);
-  vi.mocked(listNearbyPublicIncidents).mockResolvedValue(emptyIncidentPage);
-  vi.mocked(listPublicCleanupEventMap).mockResolvedValue(emptyEventPage);
   vi.mocked(listNearbyCleanupEventMap).mockResolvedValue(emptyEventPage);
 });
 
-describe("mobile citizen map scenarios", () => {
-  test("weak-network failure remains retryable and resolves to an empty state", async () => {
-    vi.mocked(listPublicIncidents)
-      .mockRejectedValueOnce(new Error("weak network"))
-      .mockResolvedValue(emptyIncidentPage);
+describe("mobile citizen cleanup-event discovery", () => {
+  test("does not request cleanup events before foreground location permission succeeds", async () => {
+    vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue({
+      granted: false,
+      canAskAgain: false,
+      expires: "never",
+      status: Location.PermissionStatus.DENIED,
+    });
     let renderer: TestRenderer.ReactTestRenderer;
 
     await act(async () => {
       renderer = renderScreen();
     });
+
+    expect(listNearbyCleanupEventMap).not.toHaveBeenCalled();
+    expect(map(renderer!).props.selectedLocation).toBeUndefined();
+    expect(textContent(renderer!)).toContain("Use your location to begin");
+
     await act(async () => {
-      await map(renderer!).props.onViewportChange(viewport, {
-        signal: new AbortController().signal,
-        requestId: 1,
-      });
+      await button(renderer!, "Use my location").props.onPress();
     });
 
-    expect(textContent(renderer!)).toContain("weak network");
-    await act(async () => {
-      await button(renderer!, "Refresh results").props.onPress();
-    });
-    expect(textContent(renderer!)).toContain("No incidents found");
-    expect(listPublicIncidents).toHaveBeenCalledTimes(2);
+    expect(textContent(renderer!)).toContain(
+      "Foreground location permission is required for a nearby search.",
+    );
+    expect(listNearbyCleanupEventMap).not.toHaveBeenCalled();
   });
 
-  test("granted foreground location performs one bounded nearby search", async () => {
+  test("weak-network failure remains retryable without requesting incidents", async () => {
+    vi.mocked(listNearbyCleanupEventMap)
+      .mockRejectedValueOnce(new Error("weak network"))
+      .mockResolvedValue(emptyEventPage);
     vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue({
       granted: true,
       canAskAgain: true,
@@ -193,112 +198,178 @@ describe("mobile citizen map scenarios", () => {
       renderer = renderScreen();
     });
     await act(async () => {
-      await button(renderer!, "Find activity near me").props.onPress();
+      await button(renderer!, "Use my location").props.onPress();
     });
 
-    expect(listNearbyPublicIncidents).toHaveBeenCalledWith(
-      "token",
-      expect.objectContaining({ latitude: 6.9271, longitude: 79.8612, radiusMeters: 5_000, limit: 50 }),
-      expect.any(AbortSignal),
-    );
-    expect(listNearbyCleanupEventMap).toHaveBeenCalledWith(
-      "token",
-      expect.objectContaining({ latitude: 6.9271, longitude: 79.8612, radiusMeters: 5_000, limit: 50 }),
-      expect.any(AbortSignal),
-    );
-    expect(textContent(renderer!)).toContain("No incidents found");
+    expect(textContent(renderer!)).toContain("weak network");
+    await act(async () => {
+      await button(renderer!, "Refresh events").props.onPress();
+    });
+    expect(textContent(renderer!)).toContain("No published cleanup events found");
+    expect(listPublicIncidents).not.toHaveBeenCalled();
+    expect(listIncidentCategories).not.toHaveBeenCalled();
   });
 
-  test("marker selection and activity filters keep the map and list synchronized", async () => {
-    const incident = {
-      id: "incident-mobile",
-      title: "Mobile incident",
-      category: { id: "category-1", name: "Waste", description: null },
-      severity: "HIGH" as const,
-      status: "ACTIVE" as const,
-      latitude: 6.91,
-      longitude: 79.86,
-      addressText: null,
-      reportedAt: "2026-08-20T00:00:00.000Z",
-      falseReviewCount: 0,
-      isOwnReport: false,
-    };
-    const event = {
-      type: "Feature" as const,
-      geometry: { type: "Point" as const, coordinates: [79.8601, 6.9101] as [number, number] },
-      properties: {
-        id: "event-mobile",
-        kind: "CLEANUP_EVENT" as const,
-        title: "Mobile cleanup",
-        status: "PUBLISHED",
-        occurredAt: "2026-08-21T00:00:00.000Z",
-        organizationId: "organization-1",
-        organizationName: "Coast Team",
-        incidentId: "incident-mobile",
-        isJoined: false,
-        isOwned: false,
+  test("foreground location defaults to two kilometres and paginates only on request", async () => {
+    vi.mocked(listNearbyCleanupEventMap)
+      .mockResolvedValueOnce({ ...emptyEventPage, nextCursor: "event-page-2" })
+      .mockResolvedValueOnce(emptyEventPage);
+    vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue({
+      granted: true,
+      canAskAgain: true,
+      expires: "never",
+      status: Location.PermissionStatus.GRANTED,
+    });
+    vi.mocked(Location.getCurrentPositionAsync).mockResolvedValue({
+      coords: {
+        latitude: 6.9271,
+        longitude: 79.8612,
+        altitude: null,
+        accuracy: 10,
+        altitudeAccuracy: null,
+        heading: null,
+        speed: null,
       },
-    };
-    vi.mocked(listPublicIncidents).mockResolvedValue({ items: [incident], nextCursor: null });
-    vi.mocked(listPublicCleanupEventMap).mockResolvedValue({
+      timestamp: 1,
+    });
+    let renderer: TestRenderer.ReactTestRenderer;
+
+    await act(async () => {
+      renderer = renderScreen();
+    });
+    await act(async () => {
+      await button(renderer!, "Use my location").props.onPress();
+    });
+
+    expect(listNearbyCleanupEventMap).toHaveBeenCalledTimes(1);
+    expect(listNearbyCleanupEventMap).toHaveBeenCalledWith(
+      "token",
+      expect.objectContaining({ latitude: 6.9271, longitude: 79.8612, radiusMeters: 2_000, limit: 50 }),
+      expect.any(AbortSignal),
+    );
+    await act(async () => {
+      await button(renderer!, "Load more events").props.onPress();
+    });
+    expect(listNearbyCleanupEventMap).toHaveBeenLastCalledWith(
+      "token",
+      expect.objectContaining({ cursor: "event-page-2" }),
+      expect.any(AbortSignal),
+    );
+    expect(listNearbyCleanupEventMap).toHaveBeenCalledTimes(2);
+    expect(listNearbyPublicIncidents).not.toHaveBeenCalled();
+    expect(map(renderer!).props.searchRadiusMeters).toBe(2_000);
+    expect(map(renderer!).props.onViewportChange).toBeUndefined();
+
+    await act(async () => {
+      button(renderer!, "Search within 5 km").props.onPress();
+      await Promise.resolve();
+    });
+    expect(listNearbyCleanupEventMap).toHaveBeenLastCalledWith(
+      "token",
+      expect.objectContaining({ radiusMeters: 5_000, cursor: undefined }),
+      expect.any(AbortSignal),
+    );
+    expect(map(renderer!).props.searchRadiusMeters).toBe(5_000);
+  });
+
+  test("event marker selection loads details and opens the join flow", async () => {
+    vi.mocked(listNearbyCleanupEventMap).mockResolvedValue({
       type: "FeatureCollection",
       features: [event],
       nextCursor: null,
     });
+    vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue({
+      granted: true,
+      canAskAgain: true,
+      expires: "never",
+      status: Location.PermissionStatus.GRANTED,
+    });
+    vi.mocked(Location.getCurrentPositionAsync).mockResolvedValue({
+      coords: {
+        latitude: 6.9271,
+        longitude: 79.8612,
+        altitude: null,
+        accuracy: 10,
+        altitudeAccuracy: null,
+        heading: null,
+        speed: null,
+      },
+      timestamp: 1,
+    });
+    vi.mocked(getPublicCleanupEvent).mockResolvedValue({
+      id: "event-mobile",
+      organization: { id: "organization-1", name: "Coast Team" },
+      incidentId: "incident-mobile",
+      title: "Mobile cleanup",
+      description: "Remove litter from the cleanup area.",
+      publicInstructions: "Wear closed shoes.",
+      lifecycleStatus: "PUBLISHED",
+      eventLatitude: 6.9101,
+      eventLongitude: 79.8601,
+      eventAddress: "Cleanup area",
+      meetingLatitude: 6.9101,
+      meetingLongitude: 79.8601,
+      meetingAddress: "Community entrance",
+      publishedAt: "2026-08-21T00:00:00.000Z",
+      firstSessionAt: "2026-08-23T08:00:00.000Z",
+      sessions: [{
+        id: "session-mobile",
+        sessionDate: "2026-08-23",
+        startTime: "08:00:00",
+        endTime: "10:00:00",
+        capacity: 20,
+        locationLatitude: 6.9101,
+        locationLongitude: 79.8601,
+        locationAddress: "Community entrance",
+      }],
+    });
+    const onOpenEvent = vi.fn();
     let renderer: TestRenderer.ReactTestRenderer;
 
     await act(async () => {
-      renderer = renderScreen();
+      renderer = renderScreen(onOpenEvent);
     });
     await act(async () => {
-      await map(renderer!).props.onViewportChange(viewport, {
-        signal: new AbortController().signal,
-        requestId: 1,
-      });
+      await button(renderer!, "Use my location").props.onPress();
     });
-    expect(map(renderer!).props.selectedMarkerId).toBe("incident-mobile");
-    expect(map(renderer!).props.markers).toHaveLength(2);
 
+    expect(map(renderer!).props.markers).toEqual([event]);
+    expect(map(renderer!).props.selectedMarkerId).toBeUndefined();
+    expect(listPublicIncidents).not.toHaveBeenCalled();
     await act(async () => {
       map(renderer!).props.onMarkerSelect(event);
+      await Promise.resolve();
+      await Promise.resolve();
     });
-    expect(map(renderer!).props.selectedMarkerId).toBe("event-mobile");
 
-    const eventChip = renderer!.root.findAllByType("Pressable" as never).find((node) =>
-      node.findAllByType("Text" as never).some((text) => text.children.join("") === "Events"),
-    );
+    expect(getPublicCleanupEvent).toHaveBeenCalledWith("token", "event-mobile", expect.any(AbortSignal));
+    expect(textContent(renderer!)).toContain("Remove litter from the cleanup area.");
+    expect(map(renderer!).props.markerActionLabel(event)).toBe("Join event: Mobile cleanup");
     await act(async () => {
-      eventChip!.props.onPress();
+      button(renderer!, "Join event").props.onPress();
     });
-    expect(map(renderer!).props.markers).toEqual([event]);
-    expect(map(renderer!).props.selectedMarkerId).toBe("event-mobile");
+    expect(onOpenEvent).toHaveBeenCalledWith("event-mobile");
+    expect(getPublicIncident).not.toHaveBeenCalled();
   });
 
-  test("organized incidents retain the shared status and public false count", async () => {
-    const incident = {
-      id: "incident-organized-mobile",
-      title: "Organized mobile incident",
-      category: { id: "category-1", name: "Waste", description: null },
-      severity: "HIGH" as const,
-      status: "CLEANUP_ORGANIZED" as const,
-      latitude: 6.91,
-      longitude: 79.86,
-      addressText: "Community canal",
-      reportedAt: "2026-08-20T00:00:00.000Z",
-      falseReviewCount: 1,
-      isOwnReport: true,
-    };
-    vi.mocked(listPublicIncidents).mockResolvedValue({ items: [incident], nextCursor: null });
-    vi.mocked(getPublicIncident).mockResolvedValue({
-      ...incident,
-      description: "A cleanup event is now linked to this incident.",
-      highlightUntil: "2026-08-22T00:00:00.000Z",
-      archiveAfter: "2026-08-29T00:00:00.000Z",
-      resolvedAt: null,
-      archivedAt: null,
-      thumbnailUrl: null,
-      photos: [],
-      statusHistory: [],
+  test("returning from background refreshes only cleanup events", async () => {
+    vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue({
+      granted: true,
+      canAskAgain: true,
+      expires: "never",
+      status: Location.PermissionStatus.GRANTED,
+    });
+    vi.mocked(Location.getCurrentPositionAsync).mockResolvedValue({
+      coords: {
+        latitude: 6.9271,
+        longitude: 79.8612,
+        altitude: null,
+        accuracy: 10,
+        altitudeAccuracy: null,
+        heading: null,
+        speed: null,
+      },
+      timestamp: 1,
     });
     let renderer: TestRenderer.ReactTestRenderer;
 
@@ -306,40 +377,15 @@ describe("mobile citizen map scenarios", () => {
       renderer = renderScreen();
     });
     await act(async () => {
-      await map(renderer!).props.onViewportChange(viewport, {
-        signal: new AbortController().signal,
-        requestId: 1,
-      });
+      await button(renderer!, "Use my location").props.onPress();
     });
-
-    expect(textContent(renderer!)).toContain("Organized");
-    expect(textContent(renderer!)).toContain("PUBLIC FALSE COUNT");
-    expect(textContent(renderer!)).toContain("1");
-    expect(textContent(renderer!)).not.toContain("privateNotes");
-    expect(textContent(renderer!)).not.toContain("Organization private");
-  });
-
-  test("returning from background refreshes the last bounded viewport", async () => {
-    let renderer: TestRenderer.ReactTestRenderer;
-
-    await act(async () => {
-      renderer = renderScreen();
-    });
-    await act(async () => {
-      await map(renderer!).props.onViewportChange(viewport, {
-        signal: new AbortController().signal,
-        requestId: 1,
-      });
-    });
-    expect(listPublicIncidents).toHaveBeenCalledTimes(1);
+    expect(listNearbyCleanupEventMap).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       testState.foregroundRefresh?.();
       await Promise.resolve();
     });
-    expect(listPublicIncidents).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(listPublicIncidents).mock.calls[1]?.[1]).toEqual(
-      expect.objectContaining(viewport),
-    );
+    expect(listNearbyCleanupEventMap).toHaveBeenCalledTimes(2);
+    expect(listPublicIncidents).not.toHaveBeenCalled();
   });
 });

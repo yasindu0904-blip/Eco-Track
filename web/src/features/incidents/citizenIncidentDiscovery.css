@@ -6,25 +6,21 @@
 .citizen-discovery-intro p { color: var(--incident-muted); font-size: 17px; line-height: 1.6; }
 .citizen-discovery-actions { display: grid; gap: 10px; min-width: 220px; }
 .citizen-discovery button { cursor: pointer; font: inherit; }
-.citizen-discovery-actions button,.citizen-discovery-filters > button,.citizen-discovery-error button,.citizen-discovery-more { min-height: 44px; padding: 10px 16px; border: 1px solid var(--incident-green); border-radius: 10px; background: var(--incident-green); color: #fff; font-weight: 800; }
+.citizen-discovery-actions button,.citizen-discovery-error button { min-height: 44px; padding: 10px 16px; border: 1px solid var(--incident-green); border-radius: 10px; background: var(--incident-green); color: #fff; font-weight: 800; }
 .citizen-discovery-actions button.secondary { border-color: var(--incident-line); background: #fff; color: var(--incident-green); }
 .citizen-discovery button:disabled { cursor: not-allowed; opacity: .55; }
-.citizen-discovery-filters { display: grid; grid-template-columns: repeat(3, minmax(160px, 1fr)) auto; align-items: end; gap: 14px; padding: 18px; border: 1px solid var(--incident-line); border-radius: 16px; background: #fff; }
-.citizen-discovery-filters label { display: grid; gap: 7px; color: var(--incident-muted); font-size: 12px; font-weight: 800; }
-.citizen-discovery-filters select { min-height: 44px; padding: 0 12px; border: 1px solid var(--incident-line); border-radius: 10px; background: #fff; color: var(--incident-ink); font: inherit; }
+.citizen-discovery-search-controls { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--incident-line); border-radius: 14px; background: #fff; }
+.citizen-discovery-search-controls label { color: var(--incident-ink); font-size: 13px; font-weight: 850; }
+.citizen-discovery-search-controls select { min-height: 42px; padding: 0 36px 0 12px; border: 1px solid var(--incident-line); border-radius: 10px; background: #fff; color: var(--incident-ink); font: inherit; font-weight: 750; }
+.citizen-discovery-search-controls span { margin-left: auto; color: var(--incident-muted); font-size: 13px; }
 .citizen-discovery-error { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 16px; border: 1px solid #efb5b5; border-radius: 12px; background: #fff0f0; color: #8a2626; }
 .citizen-discovery-error button { min-height: 36px; padding: 6px 13px; background: #8a2626; border-color: #8a2626; }
-.citizen-discovery-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, .75fr); gap: 20px; align-items: stretch; }
-.citizen-discovery-list { max-height: 560px; overflow: auto; border: 1px solid var(--incident-line); border-radius: 16px; background: #fff; }
-.citizen-discovery-list-heading { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; gap: 12px; padding: 16px; border-bottom: 1px solid var(--incident-line); background: #fff; }
-.citizen-discovery-list-heading span { color: var(--incident-muted); font-size: 13px; }
-.citizen-discovery-list > button:not(.citizen-discovery-more) { display: grid; width: 100%; gap: 5px; padding: 15px 16px; border: 0; border-bottom: 1px solid var(--incident-line); background: #fff; color: var(--incident-ink); text-align: left; }
-.citizen-discovery-list > button.selected { background: var(--incident-mint); box-shadow: inset 4px 0 var(--incident-green); }
-.citizen-discovery-list > button span { color: var(--incident-green-2); font-size: 11px; font-weight: 900; text-transform: uppercase; }
-.citizen-discovery-list > button small { color: var(--incident-muted); }
-.citizen-discovery-more { width: calc(100% - 24px); margin: 12px; }
+.citizen-discovery-loading { display: flex; align-items: center; gap: 10px; margin: 0; padding: 11px 14px; color: var(--incident-green); border: 1px solid #c9ddca; border-radius: 9px; background: var(--incident-mint); font-size: .82rem; font-weight: 750; }
+.citizen-discovery-loading span { width: 16px; height: 16px; flex: 0 0 auto; border: 2px solid rgba(23,76,51,.24); border-top-color: var(--incident-green); border-radius: 50%; animation: citizen-discovery-spin 750ms linear infinite; }
+@keyframes citizen-discovery-spin { to { transform: rotate(360deg); } }
 .citizen-discovery-empty { padding: 28px 18px; text-align: center; }
 .citizen-discovery-empty p { color: var(--incident-muted); }
+.citizen-discovery-more { justify-self: center; min-height: 44px; padding: 10px 20px; border: 1px solid var(--incident-green); border-radius: 10px; background: #fff; color: var(--incident-green); font-weight: 850; }
 .citizen-discovery-detail { display: grid; grid-template-columns: minmax(220px, .7fr) minmax(0, 1.3fr); gap: 24px; padding: 24px; border: 1px solid var(--incident-line); border-radius: 16px; background: #fff; }
 .citizen-discovery-detail span { color: var(--incident-green-2); font-size: 12px; font-weight: 900; }
 .citizen-discovery-detail h2 { margin: 7px 0; font-size: 28px; }
@@ -33,5 +29,5 @@
 .citizen-discovery-detail-body dl div { min-width: 140px; padding: 12px; border-radius: 10px; background: var(--incident-mint); }
 .citizen-discovery-detail-body dt { color: var(--incident-muted); font-size: 11px; font-weight: 800; text-transform: uppercase; }
 .citizen-discovery-detail-body dd { margin: 4px 0 0; font-weight: 900; }
-@media (max-width: 860px) { .citizen-discovery-intro { display: grid; } .citizen-discovery-actions { width: 100%; } .citizen-discovery-filters { grid-template-columns: 1fr 1fr; } .citizen-discovery-layout,.citizen-discovery-detail { grid-template-columns: 1fr; } .citizen-discovery-list { max-height: 420px; } }
-@media (max-width: 560px) { .citizen-discovery-filters { grid-template-columns: 1fr; } }
+.citizen-discovery-detail-action { min-height: 44px; margin-top: 14px; padding: 10px 18px; border: 1px solid var(--incident-green); border-radius: 10px; background: var(--incident-green); color: #fff; font-weight: 800; }
+@media (max-width: 860px) { .citizen-discovery-intro { display: grid; } .citizen-discovery-actions { width: 100%; } .citizen-discovery-search-controls { align-items: stretch; flex-direction: column; } .citizen-discovery-search-controls span { margin-left: 0; } .citizen-discovery-detail { grid-template-columns: 1fr; } }

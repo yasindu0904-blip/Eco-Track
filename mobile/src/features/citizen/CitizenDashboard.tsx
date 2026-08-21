@@ -29,7 +29,6 @@ type CitizenDashboardProps = {
   onReportIncident: () => void;
   onViewReports: () => void;
   onFindCleanupActivity: () => void;
-  onBrowseCleanupEvents: () => void;
   onViewJoinedCleanupEvents: () => void;
   onOpenImpact: () => void;
   onSignOut: () => void;
@@ -47,7 +46,6 @@ export function CitizenDashboard({
   onReportIncident,
   onViewReports,
   onFindCleanupActivity,
-  onBrowseCleanupEvents,
   onViewJoinedCleanupEvents,
   onOpenImpact,
   onSignOut,
@@ -108,17 +106,11 @@ export function CitizenDashboard({
           onPress={onReportIncident}
         />
         <ActionRow
-          title="Explore the community map"
-          description="Find incidents and cleanup activity around you."
+          title="Find cleanup activity"
+          description="Use your location to find published cleanup events nearby."
           symbol="⌖"
           tone="warm"
           onPress={onFindCleanupActivity}
-        />
-        <ActionRow
-          title="Browse cleanup events"
-          description="Review schedules and join as a volunteer."
-          symbol="＋"
-          onPress={onBrowseCleanupEvents}
         />
       </View>
 

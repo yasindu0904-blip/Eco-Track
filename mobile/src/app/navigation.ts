@@ -19,7 +19,11 @@ export type MobileDestination =
       eventId?: string;
     }
   | { screen: "findCleanupActivity" }
-  | { screen: "cleanupEvents"; eventId?: string }
+  | {
+      screen: "cleanupEvents";
+      eventId?: string;
+      returnTo?: "findCleanupActivity" | "joinedCleanupEvents";
+    }
   | { screen: "joinedCleanupEvents"; eventId?: string }
   | { screen: "reportIncident" }
   | { screen: "myReports"; incidentId?: string }
@@ -37,6 +41,9 @@ export function parentDestination(
       organizationId: destination.organizationId,
       tab: "overview",
     };
+  }
+  if (destination.screen === "cleanupEvents" && destination.returnTo) {
+    return { screen: destination.returnTo };
   }
 
   return mobileDashboard;

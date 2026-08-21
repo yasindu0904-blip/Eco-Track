@@ -285,6 +285,7 @@ export function IncidentPage({
                 <LocationPicker
                   value={location}
                   disabled={isSubmitting}
+                  confirmed={locationConfirmed}
                   confirmLabel={locationConfirmed ? "✓ Location confirmed" : "Confirm incident location"}
                   onChange={(next) => { setLocation(next); setLocationConfirmed(false); }}
                   onConfirm={(next) => { setLocation(next); setLocationConfirmed(true); }}

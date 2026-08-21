@@ -6,7 +6,14 @@ import { Button, Field, Notice, PageHeader, sharedStyles } from "../../component
 import { colors, spacing } from "../../components/theme";
 import { listOrganizationMembers } from "../memberships/administration/membershipAdministration.api";
 import type { OrganizationMember } from "../memberships/administration/membershipAdministration.types";
-import { COLOMBO_MAP_CENTER, LocationPicker, type MapLocation } from "../map";
+import {
+  COLOMBO_MAP_CENTER,
+  LocationPicker,
+  type MapLocation,
+  type MapMarkerFeature,
+} from "../map";
+import { getOrganizationIncidentDetail } from "../organizations/organizationIncidentDiscovery.api";
+import type { OrganizationIncidentDetail } from "../organizations/organizationIncidentDiscovery.types";
 import {
   assignCoordinator,
   createDraft,
@@ -44,6 +51,23 @@ function displayName(member: OrganizationMember): string {
   return member.user.fullName?.trim() || member.user.email;
 }
 
+function incidentMarker(incident: OrganizationIncidentDetail): MapMarkerFeature {
+  return {
+    type: "Feature",
+    geometry: {
+      type: "Point",
+      coordinates: [incident.longitude, incident.latitude],
+    },
+    properties: {
+      id: incident.id,
+      kind: "INCIDENT",
+      title: incident.title,
+      status: incident.status,
+      category: incident.category.name,
+    },
+  };
+}
+
 export function CleanupEventDraftScreen({
   accessToken,
   organizationId,
@@ -55,6 +79,13 @@ export function CleanupEventDraftScreen({
   const [mode, setMode] = useState<"list" | "create" | "edit">(
     incidentId ? "create" : "list",
   );
+  const [createIncidentId, setCreateIncidentId] = useState<string | null>(
+    incidentId ?? null,
+  );
+  const [loadedLinkedIncident, setLinkedIncident] = useState<OrganizationIncidentDetail>();
+  const [linkedIncidentLoading, setLinkedIncidentLoading] = useState(false);
+  const [linkedIncidentError, setLinkedIncidentError] = useState<string>();
+  const [linkedIncidentReload, setLinkedIncidentReload] = useState(0);
   const [drafts, setDrafts] = useState<CleanupEventDraft[]>([]);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [selected, setSelected] = useState<CleanupEventDraft>();
@@ -78,6 +109,18 @@ export function CleanupEventDraftScreen({
   const [sessionAddress, setSessionAddress] = useState("");
   const [sessionNotes, setSessionNotes] = useState("");
   const [sessionAtEvent, setSessionAtEvent] = useState(true);
+
+  const activeIncidentId = mode === "create"
+    ? createIncidentId
+    : selected?.incidentId ?? null;
+  const linkedIncident =
+    activeIncidentId && loadedLinkedIncident?.id === activeIncidentId
+      ? loadedLinkedIncident
+      : undefined;
+  const linkedIncidentReady = !activeIncidentId || Boolean(linkedIncident);
+  const linkedMarker = linkedIncident
+    ? incidentMarker(linkedIncident)
+    : undefined;
 
   function openDraft(draft: CleanupEventDraft): void {
     setSelected(draft);
@@ -140,6 +183,55 @@ export function CleanupEventDraftScreen({
     };
   }, [accessToken, initialDraftId, organizationId]);
 
+  useEffect(() => {
+    if (!activeIncidentId) {
+      setLinkedIncident(undefined);
+      setLinkedIncidentError(undefined);
+      setLinkedIncidentLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setLinkedIncident(undefined);
+    setLinkedIncidentError(undefined);
+    setLinkedIncidentLoading(true);
+    void getOrganizationIncidentDetail(
+      accessToken,
+      organizationId,
+      activeIncidentId,
+      controller.signal,
+    )
+      .then(setLinkedIncident)
+      .catch((reason: unknown) => {
+        if (controller.signal.aborted) return;
+        setLinkedIncidentError(
+          describeApiFailure(
+            reason,
+            "Unable to load the linked incident location.",
+          ).message,
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLinkedIncidentLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [accessToken, activeIncidentId, linkedIncidentReload, organizationId]);
+
+  useEffect(() => {
+    if (
+      mode === "create" &&
+      createIncidentId &&
+      linkedIncident?.id === createIncidentId
+    ) {
+      setLocation({
+        latitude: linkedIncident.latitude,
+        longitude: linkedIncident.longitude,
+      });
+      setLocationConfirmed(false);
+    }
+  }, [createIncidentId, linkedIncident, mode]);
+
   const availableMembers = useMemo(
     () => members.filter(
       (member) => !selected?.coordinators.some(
@@ -161,7 +253,8 @@ export function CleanupEventDraftScreen({
     }
   }
 
-  function resetDraftForm(): void {
+  function resetDraftForm(nextIncidentId: string | null): void {
+    setCreateIncidentId(nextIncidentId);
     setTitle("");
     setDescription("");
     setInstructions("");
@@ -176,7 +269,7 @@ export function CleanupEventDraftScreen({
     void run(async () => {
       if (mode === "create") {
         const created = await createDraft(accessToken, organizationId, {
-          incidentId: incidentId ?? null,
+          incidentId: createIncidentId,
           title: title.trim(),
           description: description.trim(),
           publicInstructions: instructions.trim() || null,
@@ -189,6 +282,7 @@ export function CleanupEventDraftScreen({
         });
         setDrafts((current) => [created, ...current]);
         openDraft(created);
+        setCreateIncidentId(null);
         setNotice({ tone: "success", message: "Private cleanup-event draft saved." });
       } else if (selected) {
         const updated = await updateDraft(accessToken, organizationId, selected.id, {
@@ -255,7 +349,7 @@ export function CleanupEventDraftScreen({
           backLabel="Overview"
         />
         {notice ? <Notice tone={notice.tone} message={notice.message} /> : null}
-        <Button label="New direct draft" onPress={() => { resetDraftForm(); setMode("create"); }} />
+        <Button label="New direct draft" onPress={() => { resetDraftForm(null); setMode("create"); }} />
         {drafts.length === 0 ? <Text style={styles.empty}>No private drafts yet.</Text> : drafts.map((draft) => (
           <Pressable key={draft.id} onPress={() => openDraft(draft)} style={sharedStyles.card}>
             <Text style={styles.title}>{draft.title}</Text>
@@ -275,7 +369,30 @@ export function CleanupEventDraftScreen({
         onBack={() => setMode("list")}
         backLabel="Drafts"
       />
-      {incidentId && mode === "create" ? <Notice message={`Linked incident: ${incidentId}`} /> : null}
+      {activeIncidentId && linkedIncidentLoading ? (
+        <Notice message="Loading linked incident…" />
+      ) : null}
+      {activeIncidentId && linkedIncidentError ? (
+        <View style={styles.linkedIncidentError}>
+          <Notice tone="error" message={linkedIncidentError} />
+          <Button
+            compact
+            label="Retry linked incident"
+            variant="secondary"
+            onPress={() => setLinkedIncidentReload((value) => value + 1)}
+          />
+        </View>
+      ) : null}
+      {linkedIncidentReady && linkedIncident ? (
+        <View style={styles.linkedIncident}>
+          <Text style={styles.linkedIncidentEyebrow}>LINKED INCIDENT</Text>
+          <Text style={styles.linkedIncidentTitle}>{linkedIncident.title}</Text>
+          <Text style={styles.muted}>
+            {linkedIncident.category.name} · {linkedIncident.status}
+            {linkedIncident.addressText ? ` · ${linkedIncident.addressText}` : ""}
+          </Text>
+        </View>
+      ) : null}
       {notice ? <Notice tone={notice.tone} message={notice.message} /> : null}
 
       <View style={sharedStyles.card}>
@@ -286,7 +403,11 @@ export function CleanupEventDraftScreen({
         <Field label="Meeting address" value={meetingAddress} onChangeText={setMeetingAddress} />
         <LocationPicker
           value={location}
-          disabled={busy}
+          disabled={busy || Boolean(activeIncidentId && !linkedIncidentReady)}
+          confirmed={locationConfirmed}
+          confirmLabel="Confirm event location"
+          referenceMarker={linkedMarker}
+          focusReferenceLabel="Focus incident"
           onMapInteractionChange={onMapInteractionChange}
           onChange={(value) => { setLocation(value); setLocationConfirmed(false); }}
           onConfirm={(value) => { setLocation(value); setLocationConfirmed(true); }}
@@ -298,7 +419,7 @@ export function CleanupEventDraftScreen({
         <Button
           label={busy ? "Saving…" : mode === "create" ? "Save private draft" : "Save changes"}
           loading={busy}
-          disabled={!locationConfirmed || title.trim().length < 3 || description.trim().length < 10}
+          disabled={!locationConfirmed || title.trim().length < 3 || description.trim().length < 10 || Boolean(activeIncidentId && !linkedIncidentReady)}
           onPress={saveDraftDetails}
         />
       </View>
@@ -368,4 +489,20 @@ const styles = StyleSheet.create({
   item: { flexDirection: "row", alignItems: "center", gap: spacing.xs, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   itemTitle: { color: colors.text, fontSize: 14, fontWeight: "800" },
   label: { color: colors.textMuted, fontSize: 11, fontWeight: "900", letterSpacing: 1 },
+  linkedIncident: {
+    gap: 5,
+    padding: spacing.md,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+    borderRadius: 10,
+    backgroundColor: colors.primarySoft,
+  },
+  linkedIncidentError: { gap: spacing.sm },
+  linkedIncidentEyebrow: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  linkedIncidentTitle: { color: colors.text, fontSize: 16, fontWeight: "900" },
 });

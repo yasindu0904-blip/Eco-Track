@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ActiveOrganizationMembership } from "../features/memberships/administration/membershipAdministration.types";
 import type { NotificationItem } from "../features/notifications/notification.types";
-import { isSuperAdminDestination, isUserDestination } from "./navigation";
+import { cleanupEventReturnDestination, isSuperAdminDestination, isUserDestination } from "./navigation";
 import { resolveUserNotificationDestination } from "./notificationDestination";
 
 const membership = {
@@ -57,6 +57,32 @@ describe("INT-01 navigation contracts", () => {
       notification("EVENT_UPDATED", { eventId: "event-1" }),
       [membership],
     )).toEqual({ screen: "cleanup-events", eventId: "event-1" });
+  });
+
+  it("returns cleanup-event details to the screen that opened them", () => {
+    expect(isUserDestination({
+      screen: "cleanup-events",
+      eventId: "event-1",
+      returnTo: "incident-discovery",
+    })).toBe(true);
+    expect(isUserDestination({
+      screen: "cleanup-events",
+      returnTo: "organization-workspace",
+    })).toBe(false);
+    expect(cleanupEventReturnDestination({
+      screen: "cleanup-events",
+      eventId: "event-1",
+      returnTo: "incident-discovery",
+    })).toEqual({ screen: "incident-discovery" });
+    expect(cleanupEventReturnDestination({
+      screen: "cleanup-events",
+      eventId: "event-1",
+      returnTo: "joined-cleanup-events",
+    })).toEqual({ screen: "joined-cleanup-events" });
+    expect(cleanupEventReturnDestination({
+      screen: "cleanup-events",
+      eventId: "event-1",
+    })).toEqual({ screen: "dashboard" });
   });
 
   it("refuses tenant notification navigation without a matching active membership", () => {
