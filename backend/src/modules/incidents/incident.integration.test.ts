@@ -744,6 +744,22 @@ test("organization discovery includes covered boundary incidents and active area
   assert.equal(boundaryBody.data.features[0]?.properties.id, serviceAreaId);
   assert.equal(boundaryBody.data.truncated, true);
 
+  const allBoundaries = await request(
+    `/organizations/${organizationId}/service-area-boundaries?scope=all`,
+    otherToken,
+  );
+  assert.equal(allBoundaries.status, 200);
+  const allBoundaryBody = await allBoundaries.json() as {
+    data: { features: Array<{ properties: { id: string } }>; truncated: boolean };
+  };
+  assert.ok(allBoundaryBody.data.features.some(
+    (feature) => feature.properties.id === serviceAreaId,
+  ));
+  assert.ok(allBoundaryBody.data.features.some(
+    (feature) => feature.properties.id === overlappingServiceAreaId,
+  ));
+  assert.equal(allBoundaryBody.data.truncated, false);
+
   const outsideBoundaries = await request(
     `/organizations/${organizationId}/service-area-boundaries?west=80.5&south=7.5&east=80.6&north=7.6&zoom=12`,
     otherToken,

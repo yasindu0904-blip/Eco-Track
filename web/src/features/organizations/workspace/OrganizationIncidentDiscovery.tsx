@@ -98,6 +98,8 @@ export function OrganizationIncidentDiscovery({
   const [categories, setCategories] = useState<IncidentCategory[]>([]);
   const [boundaries, setBoundaries] =
     useState<MapBoundaryFeatureCollection>();
+  const [boundariesLoading, setBoundariesLoading] = useState(true);
+  const [boundaryError, setBoundaryError] = useState<string>();
   const [incidents, setIncidents] = useState<OrganizationIncidentSummary[]>([]);
   const [events, setEvents] = useState<CleanupEventMapFeature[]>([]);
   const [viewport, setViewport] = useState<MapViewport>();
@@ -153,6 +155,36 @@ export function OrganizationIncidentDiscovery({
       active = false;
     };
   }, [accessToken]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void Promise.resolve().then(async () => {
+      if (controller.signal.aborted) return;
+      setBoundaries(undefined);
+      setBoundariesLoading(true);
+      setBoundaryError(undefined);
+      try {
+        const overlay = await listOrganizationServiceAreaBoundaries(
+          accessToken,
+          organizationId,
+          controller.signal,
+        );
+        if (!controller.signal.aborted) setBoundaries(overlay);
+      } catch (requestError: unknown) {
+        if (!controller.signal.aborted) {
+          setBoundaryError(
+            describeApiFailure(
+              requestError,
+              "Unable to load all organization service areas.",
+            ).message,
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) setBoundariesLoading(false);
+      }
+    });
+    return () => controller.abort();
+  }, [accessToken, organizationId]);
 
   useEffect(() => () => activeRequest.current?.abort(), []);
 
@@ -215,7 +247,6 @@ export function OrganizationIncidentDiscovery({
         append?: boolean;
         cursor?: string;
         eventCursor?: string;
-        includeBoundaries?: boolean;
         externalSignal?: AbortSignal;
       } = {},
     ) => {
@@ -277,16 +308,6 @@ export function OrganizationIncidentDiscovery({
             selectMarker(undefined);
           }
         }
-
-        if (options.includeBoundaries) {
-          const overlay = await listOrganizationServiceAreaBoundaries(
-            accessToken,
-            organizationId,
-            { ...nextViewport, limit: 100 },
-            controller.signal,
-          );
-          if (!controller.signal.aborted) setBoundaries(overlay);
-        }
       } catch (requestError) {
         if (controller.signal.aborted) return;
         setError(
@@ -312,7 +333,7 @@ export function OrganizationIncidentDiscovery({
       return loadDiscovery(
         nextViewport,
         { status, categoryId, timeRange },
-        { includeBoundaries: true, externalSignal: context.signal },
+        { externalSignal: context.signal },
       );
     },
     [categoryId, loadDiscovery, status, timeRange],
@@ -438,11 +459,16 @@ export function OrganizationIncidentDiscovery({
           <span>Covered incidents</span>
           <strong>
             {loading
-              ? "Loading activity in this view"
+              ? "Loading incidents and events in this map view…"
               : (nextCursor || nextEventCursor)
                 ? `Showing the first ${incidents.length + events.length} items in view`
-                : `${incidents.length} incidents and ${events.length} owned events in view`}
+                : `${incidents.length} incidents and ${events.length} owned events loaded in this map view`}
           </strong>
+          <small>
+            {boundariesLoading
+              ? "Loading all organization service areas…"
+              : `${boundaries?.features.length ?? 0} organization service areas loaded`}
+          </small>
         </div>
         <label>
           Status
@@ -493,9 +519,16 @@ export function OrganizationIncidentDiscovery({
       </div>
 
       {error && <p className="organization-review-error" role="alert">{error}</p>}
+      {boundaryError && <p className="organization-review-error" role="alert">{boundaryError}</p>}
       {boundaries?.truncated && (
         <p className="organization-review-error" role="status">
-          The service-area overlay reached its 100-feature display limit. Zoom in to view the remaining boundaries.
+          The organization has more than 500 service areas, so this overlay is incomplete.
+        </p>
+      )}
+      {loading && (
+        <p className="organization-review-loading" role="status" aria-live="polite">
+          <span aria-hidden="true" />
+          Loading incidents and cleanup events for the current map view. Visible results may change.
         </p>
       )}
 
@@ -661,6 +694,7 @@ export function OrganizationIncidentDiscovery({
            ) : null}
           {onCreateDraftFromIncident && (
             <button
+              className="organization-review-action"
               type="button"
               onClick={() => onCreateDraftFromIncident(selected.id)}
             >
@@ -675,7 +709,7 @@ export function OrganizationIncidentDiscovery({
             <p>{selectedEvent.properties.organizationName}</p></div>
           <dl><div><dt>Status</dt><dd>{readable(selectedEvent.properties.status)}</dd></div>
             <div><dt>Linked incident</dt><dd>{selectedEvent.properties.incidentId ?? "None"}</dd></div></dl>
-          {onOpenEvent && <button type="button" onClick={() => onOpenEvent(selectedEvent.properties.id, selectedEvent.properties.status)}>Open selected event</button>}
+          {onOpenEvent && <button className="organization-review-action" type="button" onClick={() => onOpenEvent(selectedEvent.properties.id, selectedEvent.properties.status)}>Open selected event</button>}
         </article>
       )}
     </section>

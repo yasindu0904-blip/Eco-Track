@@ -35,7 +35,7 @@ class RouteErrorBoundary extends Component<
             <div className="auth-card-content auth-state" role="alert">
               <h2>This EcoTrack screen could not open</h2>
               <p>Your session is safe. Reload the application and try again.</p>
-              <button type="button" onClick={() => window.location.reload()}>
+              <button className="button button-primary" type="button" onClick={() => window.location.reload()}>
                 Reload EcoTrack
               </button>
             </div>

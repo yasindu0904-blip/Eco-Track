@@ -21,6 +21,34 @@
 .event-participation { display: grid; gap: 1rem; margin-top: 1rem; padding: 1.1rem; border: 1px solid #b9d4bf; border-radius: 1rem; background: #f4faf5; }
 .event-participation h3, .event-participation p { margin: .25rem 0; }
 .event-participation-eyebrow { color: #176c2c; font-size: .72rem; font-weight: 900; letter-spacing: .08em; }
+.event-action-button,
+.event-participation .event-editor-actions button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border: 1px solid #176b45;
+  border-radius: 10px;
+  background: #176b45;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+.event-action-button:hover:not(:disabled),
+.event-participation .event-editor-actions button:hover:not(:disabled) {
+  border-color: #0f5434;
+  background: #0f5434;
+  transform: translateY(-1px);
+}
+.event-action-button:disabled,
+.event-participation .event-editor-actions button:disabled { cursor: not-allowed; opacity: .55; }
+.event-action-button.secondary { border-color: #8eaa95; background: #fff; color: #176b45; }
+.event-action-button.secondary:hover:not(:disabled) { border-color: #176b45; background: #edf7ef; }
+.event-participation .event-editor-actions button.danger { border-color: #a33128; background: #fff4f2; color: #a33128; }
+.event-participation .event-editor-actions button.danger:hover:not(:disabled) { border-color: #87271f; background: #fce6e2; }
 .participation-status { justify-self: start; padding: .3rem .6rem; border-radius: 999px; background: #e5f3e8; color: #176c2c; font-size: .75rem; font-weight: 900; }
 .participation-status.withdrawn, .participation-status.removed { background: #f6e9e5; color: #933629; }
 .participation-session-options { display: grid; gap: .6rem; }

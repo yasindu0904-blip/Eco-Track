@@ -216,7 +216,7 @@ export function NotificationInbox({
         <section className="notification-empty">
           <strong>{unreadOnly ? "No unread notifications" : "Your inbox is clear"}</strong>
           <p>New EcoTrack updates will appear here.</p>
-          {error && <button type="button" onClick={retryLoad}>Try again</button>}
+          {error && <button className="notification-retry" type="button" onClick={retryLoad}>Try again</button>}
         </section>
       ) : (
         <section className="notification-list" aria-live="polite">

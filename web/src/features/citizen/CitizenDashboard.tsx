@@ -1,16 +1,17 @@
 import { useCallback } from "react";
+import { BorderGlow } from "../../components/BorderGlow";
+import { WebThreads } from "../../components/WebThreads";
 import type { AuthenticatedUserProfile } from "../auth/auth.types";
 import { getCitizenSummary } from "../dashboards/dashboard.api";
 import { SummaryPanel } from "../dashboards/SummaryPanel";
 import { total } from "../dashboards/dashboard.utils";
 import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
-import { NotificationButton } from "../notifications/NotificationButton";
+import { CitizenIcon } from "./CitizenSidebar";
 import "./citizenDashboard.css";
 
 interface CitizenDashboardProps {
   profile: AuthenticatedUserProfile;
   accessToken?: string;
-  onOpenNotifications?: () => void;
   onManageMembership: () => void;
   onOpenOrganizationWorkspaces: () => void;
   activeOrganization?: ActiveOrganizationMembership;
@@ -23,77 +24,11 @@ interface CitizenDashboardProps {
   onBrowseCleanupEvents: () => void;
   onViewJoinedCleanupEvents: () => void;
   onOpenImpact: () => void;
-  onSignOut: () => void;
-}
-
-type CitizenIconName =
-  | "home"
-  | "organization"
-  | "report"
-  | "volunteer"
-  | "arrow"
-  | "shield";
-
-interface CitizenIconProps {
-  name: CitizenIconName;
-}
-
-function CitizenIcon({ name }: CitizenIconProps) {
-  if (name === "organization") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 21V7l8-4 8 4v14" />
-        <path d="M8 10h2M14 10h2M8 14h2M14 14h2M10 21v-3h4v3" />
-      </svg>
-    );
-  }
-
-  if (name === "report") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" />
-        <path d="M12 7v6M12 17h.01" />
-      </svg>
-    );
-  }
-
-  if (name === "volunteer") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10Z" />
-      </svg>
-    );
-  }
-
-  if (name === "arrow") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M5 12h14M14 7l5 5-5 5" />
-      </svg>
-    );
-  }
-
-  if (name === "shield") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 3 4.5 6v5c0 4.8 3 8.3 7.5 10 4.5-1.7 7.5-5.2 7.5-10V6L12 3Z" />
-        <path d="m8.5 12 2.2 2.2 4.8-5" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m3 11 9-8 9 8" />
-      <path d="M5 10v11h14V10M9 21v-7h6v7" />
-    </svg>
-  );
 }
 
 export function CitizenDashboard({
   profile,
   accessToken,
-  onOpenNotifications,
   onManageMembership,
   onOpenOrganizationWorkspaces,
   activeOrganization,
@@ -106,109 +41,69 @@ export function CitizenDashboard({
   onBrowseCleanupEvents,
   onViewJoinedCleanupEvents,
   onOpenImpact,
-  onSignOut,
 }: CitizenDashboardProps) {
   const displayName = profile.fullName ?? "EcoTrack member";
-  const initial = displayName.charAt(0).toUpperCase();
   const loadSummary = useCallback(() => getCitizenSummary(accessToken!), [accessToken]);
 
   return (
-    <div className="citizen-dashboard-shell">
-      <header className="citizen-dashboard-header">
-        <div className="citizen-dashboard-brand">
-          <span className="citizen-dashboard-brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 64 64">
-              <path className="citizen-brand-stem" d="M32 48V24" />
-              <path
-                className="citizen-brand-leaf"
-                d="M31 27C18 28 11 20 10 10c12-1 21 4 23 15"
-              />
-              <path
-                className="citizen-brand-leaf citizen-brand-leaf-right"
-                d="M33 30c12 0 20-7 21-17-11-2-20 3-23 14"
-              />
-              <path
-                className="citizen-brand-soil"
-                d="M18 53c2-9 7-14 14-14s12 5 14 14H18Z"
-              />
-            </svg>
-          </span>
-          <span>
-            <strong>EcoTrack</strong>
-            <small>Citizen &amp; volunteer</small>
-          </span>
-        </div>
-
-        <nav className="citizen-dashboard-nav" aria-label="Citizen navigation">
-          <button className="citizen-dashboard-nav-active" type="button">
-            <CitizenIcon name="home" />
-            Dashboard
-          </button>
-          {activeOrganization && onOpenOrganizationWorkspace && (
-            <button type="button" onClick={onOpenOrganizationWorkspace}>
-              <CitizenIcon name="organization" />
-              Organization workspace
-            </button>
-          )}
-          <button type="button" onClick={onViewOrganizationApplications}>
-            <CitizenIcon name="organization" />
-            My organization requests
-          </button>
-          <button type="button" onClick={onManageMembership}>
-            <CitizenIcon name="organization" />
-            Join an organization
-          </button>
-          <button type="button" onClick={onOpenOrganizationWorkspaces}>
-            <CitizenIcon name="shield" />
-            Organization workspaces
-          </button>
-          <button type="button" onClick={onViewIncidentReports}>
-            <CitizenIcon name="report" />
-            My Reports
-          </button>
-          <button type="button" onClick={onFindCleanupActivity}>
-            <CitizenIcon name="volunteer" />
-            Find cleanup activity
-          </button>
-          <button type="button" onClick={onOpenImpact}>
-            <CitizenIcon name="volunteer" />
-            My Impact
-          </button>
-          {onOpenNotifications && (
-            <NotificationButton
-              accessToken={accessToken}
-              onOpen={onOpenNotifications}
-            />
-          )}
-        </nav>
-
-        <div className="citizen-dashboard-user">
-          <span className="citizen-dashboard-avatar" aria-hidden="true">
-            {initial}
-          </span>
-          <span>
-            <strong>{displayName}</strong>
-            <small>{profile.email}</small>
-          </span>
-          <button type="button" onClick={onSignOut}>
-            Sign out
-          </button>
-        </div>
-      </header>
-
-      <main className="citizen-dashboard-main">
+    <main className="citizen-dashboard-main">
+      <BorderGlow
+        className="citizen-dashboard-hero-glow"
+        edgeSensitivity={38}
+        glowColor="103 42 45"
+        backgroundColor="#edf7e6"
+        borderRadius={25}
+        glowRadius={34}
+        glowIntensity={0.46}
+        coneSpread={20}
+        fillOpacity={0.2}
+        animated
+        colors={["#4f8c4f", "#d1a53d", "#77a95d"]}
+      >
         <section className="citizen-dashboard-hero">
-          <div>
-            <span className="citizen-dashboard-eyebrow">Community workspace</span>
+          <span className="citizen-dashboard-hero-orb" aria-hidden="true" />
+          <WebThreads
+            className="citizen-dashboard-web-threads"
+            color1="#2f783d"
+            color2="#8a9f3f"
+            color3="#e2b94d"
+            speed={0.13}
+            threadCount={5}
+            frequency={3.4}
+            spread={0.1}
+            taper={0.55}
+            position={0.5}
+            slope={0.66}
+            fanMode="left"
+            glow={0.017}
+            falloff={0.72}
+            thickness={0.9}
+            brightness={0.68}
+            opacity={0.34}
+            mirror={false}
+            shimmer
+            grain={false}
+            mouseInteraction={false}
+          />
+          <div className="citizen-dashboard-hero-copy">
+            <div className="citizen-dashboard-hero-kicker">
+              <span className="citizen-dashboard-eyebrow">Community workspace</span>
+              <span className="citizen-dashboard-live-status">EcoTrack live</span>
+            </div>
             <h1>Welcome back, {displayName}</h1>
             <p>
               Report local environmental concerns, volunteer for community
               action, and bring a real environmental organization to EcoTrack.
             </p>
+            <div className="citizen-dashboard-trust-row" aria-label="Account capabilities">
+              <span>Verified profile</span>
+              <span>Community reporting</span>
+              <span>Volunteer access</span>
+            </div>
           </div>
 
           <div className="citizen-dashboard-role-card">
-            <span>
+            <span className="citizen-dashboard-role-icon">
               <CitizenIcon name="shield" />
             </span>
             <div>
@@ -216,12 +111,23 @@ export function CitizenDashboard({
               <strong>Citizen &amp; Volunteer</strong>
               <p>One account provides both community capabilities.</p>
             </div>
+            <div className="citizen-dashboard-role-details">
+              <span>
+                <small>Account</small>
+                <strong>Active</strong>
+              </span>
+              <span>
+                <small>Workspace</small>
+                <strong>{activeOrganization ? "Connected" : "Personal"}</strong>
+              </span>
+            </div>
           </div>
         </section>
+      </BorderGlow>
 
         {accessToken && <SummaryPanel load={loadSummary} label="Citizen summary">{(summary) => (
         <section className="citizen-dashboard-summary" aria-label="Account overview">
-          <article>
+          <article className="citizen-summary-card citizen-summary-card-organization">
             <span className="citizen-summary-icon citizen-summary-icon-green">
               <CitizenIcon name="organization" />
             </span>
@@ -241,7 +147,7 @@ export function CitizenDashboard({
               </p>
             </div>
           </article>
-          <article>
+          <article className="citizen-summary-card citizen-summary-card-reports">
             <span className="citizen-summary-icon citizen-summary-icon-amber">
               <CitizenIcon name="report" />
             </span>
@@ -251,7 +157,7 @@ export function CitizenDashboard({
               <p>{Object.entries(summary.reportsByState).map(([key, value]) => `${key}: ${value}`).join(" · ") || "No reports yet"}</p>
             </div>
           </article>
-          <article>
+          <article className="citizen-summary-card citizen-summary-card-impact">
             <span className="citizen-summary-icon citizen-summary-icon-blue">
               <CitizenIcon name="volunteer" />
             </span>
@@ -273,7 +179,7 @@ export function CitizenDashboard({
           </div>
 
           <div className="citizen-dashboard-actions">
-            <article className="citizen-action-card citizen-action-card-featured">
+            <article className="citizen-action-card citizen-action-card-featured citizen-action-card-workspace">
               <span className="citizen-action-icon">
                 <CitizenIcon name="shield" />
               </span>
@@ -294,7 +200,7 @@ export function CitizenDashboard({
               </button>
             </article>
 
-            <article className="citizen-action-card citizen-action-card-featured">
+            <article className="citizen-action-card citizen-action-card-organization">
               <span className="citizen-action-icon">
                 <CitizenIcon name="organization" />
               </span>
@@ -314,7 +220,7 @@ export function CitizenDashboard({
               </button>
             </article>
 
-            <article className="citizen-action-card citizen-action-card-featured">
+            <article className="citizen-action-card citizen-action-card-request">
               <span className="citizen-action-icon">
                 <CitizenIcon name="organization" />
               </span>
@@ -352,7 +258,7 @@ export function CitizenDashboard({
               </div>
             </article>
 
-            <article className="citizen-action-card">
+            <article className="citizen-action-card citizen-action-card-incident">
               <span className="citizen-action-icon">
                 <CitizenIcon name="report" />
               </span>
@@ -373,7 +279,7 @@ export function CitizenDashboard({
               </div>
             </article>
 
-            <article className="citizen-action-card">
+            <article className="citizen-action-card citizen-action-card-impact">
               <span className="citizen-action-icon">
                 <CitizenIcon name="volunteer" />
               </span>
@@ -393,7 +299,7 @@ export function CitizenDashboard({
               </button>
             </article>
 
-            <article className="citizen-action-card">
+            <article className="citizen-action-card citizen-action-card-discovery">
               <span className="citizen-action-icon">
                 <CitizenIcon name="volunteer" />
               </span>
@@ -413,7 +319,7 @@ export function CitizenDashboard({
               </button>
             </article>
 
-            <article className="citizen-action-card">
+            <article className="citizen-action-card citizen-action-card-events">
               <span className="citizen-action-icon"><CitizenIcon name="volunteer" /></span>
               <span className="citizen-action-badge">Available</span>
               <h3>Browse cleanup events</h3>
@@ -443,7 +349,6 @@ export function CitizenDashboard({
           </div>
           <span className="citizen-dashboard-active-status">Active account</span>
         </section>
-      </main>
-    </div>
+    </main>
   );
 }

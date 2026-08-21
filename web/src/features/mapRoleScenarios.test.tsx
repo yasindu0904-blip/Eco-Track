@@ -283,9 +283,13 @@ describe("role-specific map scenarios", () => {
         canReview={false}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Load viewport" }));
 
     await waitFor(() => expect(screen.getByTestId("boundary-ids").textContent).toBe("area-a,area-b"));
+    expect(listOrganizationServiceAreaBoundaries).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Load viewport" }));
+
+    await waitFor(() => expect(screen.getByTestId("marker-ids").textContent).toBe("overlap-incident"));
+    expect(listOrganizationServiceAreaBoundaries).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("marker-ids").textContent).toBe("overlap-incident");
     expect(screen.getAllByText("Incident in both service areas")).toHaveLength(2);
   });
