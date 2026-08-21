@@ -12,6 +12,7 @@ import type {
   CleanupEventPublicPage,
   CleanupEventPublishReadiness,
   CleanupEventPublishResult,
+  EventSession,
   EventParticipation,
   EventParticipationPage,
   JoinEventResult,
@@ -96,16 +97,18 @@ export async function saveSession(
   input: CleanupEventSessionInput,
   sessionId?: string,
 ) {
-  return apiRequest(
-    sessionId
-      ? `${root(organizationId)}/${encodeURIComponent(eventId)}/sessions/${encodeURIComponent(sessionId)}`
-      : `${root(organizationId)}/${encodeURIComponent(eventId)}/sessions`,
-    {
-      accessToken: token,
-      method: sessionId ? "PATCH" : "POST",
-      ...json(input),
-    },
-  );
+  return (
+    await apiRequest<{ data: EventSession }>(
+      sessionId
+        ? `${root(organizationId)}/${encodeURIComponent(eventId)}/sessions/${encodeURIComponent(sessionId)}`
+        : `${root(organizationId)}/${encodeURIComponent(eventId)}/sessions`,
+      {
+        accessToken: token,
+        method: sessionId ? "PATCH" : "POST",
+        ...json(input),
+      },
+    )
+  ).data;
 }
 
 export async function removeSession(

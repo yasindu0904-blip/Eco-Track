@@ -4,7 +4,7 @@ import { describeApiFailure } from "../../api/apiError";
 import { getMyEventParticipation, joinCleanupEvent, updateEventAvailability, withdrawFromCleanupEvent } from "./cleanupEvent.api";
 import type { CleanupEventPublicDetail, EventParticipation } from "./cleanupEvent.types";
 
-type Props = { accessToken: string; event: CleanupEventPublicDetail; onChanged?: (value: EventParticipation) => void };
+type Props = { accessToken: string; event: CleanupEventPublicDetail; onChanged?: (value: EventParticipation | null) => void };
 
 export function EventParticipationPanel({ accessToken, event, onChanged }: Props) {
   const [participation, setParticipation] = useState<EventParticipation | null>(null);
@@ -20,11 +20,12 @@ export function EventParticipationPanel({ accessToken, event, onChanged }: Props
         if (!active) return;
         setParticipation(value);
         setSelected(value?.availableSessionIds ?? []);
+        onChanged?.(value);
       })
       .catch((reason) => active && setError(describeApiFailure(reason, "Unable to load your participation.").message))
       .finally(() => active && setBusy(false)), 0);
     return () => { active = false; window.clearTimeout(timeout); };
-  }, [accessToken, event.id]);
+  }, [accessToken, event.id, onChanged]);
 
   function toggle(sessionId: string): void {
     setSelected((current) => current.includes(sessionId) ? current.filter((id) => id !== sessionId) : [...current, sessionId]);

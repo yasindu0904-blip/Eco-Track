@@ -5,7 +5,7 @@ import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { CleanupEventDraftEditor } from "./CleanupEventDraftEditor";
-import { createDraft, listDrafts } from "./cleanupEvent.api";
+import { addSession, createDraft, getDraft, listDrafts } from "./cleanupEvent.api";
 import { listOrganizationMembers } from "../memberships/administration/membershipAdministration.api";
 import { getOrganizationIncidentDetail } from "../organizations/workspace/organizationIncidentDiscovery.api";
 
@@ -158,5 +158,50 @@ describe("CleanupEventDraftEditor linked incident flow", () => {
       eventLatitude: 6.81,
       eventLongitude: 79.92,
     });
+  });
+
+  test("adds multiple sessions by preparing the next unique time at the event location", async () => {
+    const firstSession = {
+      id: "session-1",
+      sessionDate: "2026-08-22",
+      startTime: "09:00:00",
+      endTime: "11:00:00",
+      capacity: 25,
+      locationLatitude: 6.81,
+      locationLongitude: 79.92,
+      locationAddress: null,
+      notes: null,
+    };
+    vi.mocked(getDraft)
+      .mockResolvedValueOnce(createdDirectDraft)
+      .mockResolvedValueOnce({ ...createdDirectDraft, sessions: [firstSession] });
+    vi.mocked(addSession).mockResolvedValue(firstSession);
+
+    render(
+      <CleanupEventDraftEditor
+        accessToken="token"
+        organizationId="organization-1"
+        initialDraftId="draft-1"
+      />,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Edit draft" })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-08-22" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add session" }));
+
+    await waitFor(() => expect(addSession).toHaveBeenCalledOnce());
+    expect(vi.mocked(addSession).mock.calls[0]?.[3]).toMatchObject({
+      sessionDate: "2026-08-22",
+      startTime: "09:00:00",
+      endTime: "11:00:00",
+      locationLatitude: 6.81,
+      locationLongitude: 79.92,
+      locationAddress: null,
+    });
+    await waitFor(() => {
+      expect((screen.getByLabelText("Starts") as HTMLInputElement).value).toBe("11:00");
+      expect((screen.getByLabelText("Ends") as HTMLInputElement).value).toBe("13:00");
+    });
+    expect(screen.queryByLabelText("Session address")).toBeNull();
   });
 });

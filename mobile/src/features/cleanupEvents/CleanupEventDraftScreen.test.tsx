@@ -2,7 +2,7 @@ import TestRenderer, { act } from "react-test-renderer";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { CleanupEventDraftScreen } from "./CleanupEventDraftScreen";
-import { createDraft, listDrafts } from "./cleanupEvent.api";
+import { createDraft, getDraft, listDrafts, saveSession } from "./cleanupEvent.api";
 import { listOrganizationMembers } from "../memberships/administration/membershipAdministration.api";
 import { getOrganizationIncidentDetail } from "../organizations/organizationIncidentDiscovery.api";
 
@@ -135,8 +135,7 @@ describe("CleanupEventDraftScreen linked incident flow", () => {
       );
     });
     await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 10));
     });
 
     let picker = renderer!.root.findByType("LocationPicker" as never);
@@ -172,5 +171,56 @@ describe("CleanupEventDraftScreen linked incident flow", () => {
       eventLatitude: 6.81,
       eventLongitude: 79.92,
     });
+  });
+
+  test("prepares a new time after adding a session at the event location", async () => {
+    const savedSession = {
+      id: "session-1",
+      sessionDate: "2026-08-22",
+      startTime: "09:00:00",
+      endTime: "11:00:00",
+      capacity: 25,
+      locationLatitude: 6.81,
+      locationLongitude: 79.92,
+      locationAddress: null,
+      notes: null,
+    };
+    vi.mocked(getDraft)
+      .mockResolvedValueOnce(createdDirectDraft)
+      .mockResolvedValueOnce({ ...createdDirectDraft, sessions: [savedSession] });
+    vi.mocked(saveSession).mockResolvedValue(savedSession);
+
+    let renderer: TestRenderer.ReactTestRenderer;
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <CleanupEventDraftScreen
+          accessToken="token"
+          organizationId="organization-1"
+          initialDraftId="draft-1"
+          onBack={vi.fn()}
+        />,
+      );
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+
+    await act(async () => {
+      renderer!.root.findByProps({ label: "Add session" }).props.onPress();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(saveSession).toHaveBeenCalledOnce();
+    expect(vi.mocked(saveSession).mock.calls[0]?.[3]).toMatchObject({
+      startTime: "09:00:00",
+      endTime: "11:00:00",
+      locationLatitude: 6.81,
+      locationLongitude: 79.92,
+      locationAddress: null,
+    });
+    expect(renderer!.root.findByProps({ placeholder: "09:00" }).props.value).toBe("11:00");
+    expect(renderer!.root.findByProps({ placeholder: "11:00" }).props.value).toBe("13:00");
+    expect(renderer!.root.findAllByProps({ placeholder: "Session address" })).toHaveLength(0);
   });
 });

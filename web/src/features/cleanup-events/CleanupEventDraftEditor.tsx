@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { describeApiFailure } from "../../api/apiError";
 import {
@@ -59,6 +59,29 @@ function memberName(member: OrganizationMember): string {
   return member.user.fullName?.trim() || member.user.email;
 }
 
+function nextSessionSlot(sessionDate: string, startTime: string, endTime: string): {
+  sessionDate: string;
+  startTime: string;
+  endTime: string;
+} {
+  const toMinutes = (value: string) => {
+    const [hours = 0, minutes = 0] = value.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+  const formatTime = (value: number) => `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
+  const start = toMinutes(startTime);
+  const end = toMinutes(endTime);
+  const duration = Math.max(end - start, 60);
+
+  if (end + duration < 24 * 60) {
+    return { sessionDate, startTime: formatTime(end), endTime: formatTime(end + duration) };
+  }
+
+  const followingDate = new Date(`${sessionDate}T00:00:00.000Z`);
+  followingDate.setUTCDate(followingDate.getUTCDate() + 1);
+  return { sessionDate: followingDate.toISOString().slice(0, 10), startTime: "09:00", endTime: "11:00" };
+}
+
 function incidentMarker(incident: OrganizationIncidentDetail): MapMarkerFeature {
   return {
     type: "Feature",
@@ -96,6 +119,7 @@ export function CleanupEventDraftEditor({
   const [linkedIncidentReload, setLinkedIncidentReload] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const mutationInFlight = useRef(false);
   const [notice, setNotice] = useState<Notice>();
 
   const [createLocation, setCreateLocation] = useState<MapLocation>(COLOMBO_MAP_CENTER);
@@ -116,9 +140,7 @@ export function CleanupEventDraftEditor({
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("11:00");
   const [capacity, setCapacity] = useState("25");
-  const [sessionAddress, setSessionAddress] = useState("");
   const [sessionNotes, setSessionNotes] = useState("");
-  const [sessionAtEvent, setSessionAtEvent] = useState(true);
   const [coordinatorMembershipId, setCoordinatorMembershipId] = useState("");
 
   const activeIncidentId = showCreate
@@ -297,6 +319,8 @@ export function CleanupEventDraftEditor({
   );
 
   async function run(action: () => Promise<void>, fallback: string): Promise<void> {
+    if (mutationInFlight.current) return;
+    mutationInFlight.current = true;
     setBusy(true);
     setNotice(undefined);
     try {
@@ -304,6 +328,7 @@ export function CleanupEventDraftEditor({
     } catch (reason) {
       setNotice({ tone: "error", message: describeApiFailure(reason, fallback).message });
     } finally {
+      mutationInFlight.current = false;
       setBusy(false);
     }
   }
@@ -362,9 +387,9 @@ export function CleanupEventDraftEditor({
       startTime: `${startTime}:00`,
       endTime: `${endTime}:00`,
       capacity: capacity ? Number(capacity) : null,
-      locationLatitude: sessionAtEvent ? selected!.eventLatitude : null,
-      locationLongitude: sessionAtEvent ? selected!.eventLongitude : null,
-      locationAddress: sessionAddress || null,
+      locationLatitude: selected!.eventLatitude,
+      locationLongitude: selected!.eventLongitude,
+      locationAddress: null,
       notes: sessionNotes || null,
     };
   }
@@ -375,9 +400,16 @@ export function CleanupEventDraftEditor({
     setStartTime("09:00");
     setEndTime("11:00");
     setCapacity("25");
-    setSessionAddress("");
     setSessionNotes("");
-    setSessionAtEvent(true);
+  }
+
+  function prepareNextSession(date: string, starts: string, ends: string): void {
+    const next = nextSessionSlot(date, starts, ends);
+    setEditingSessionId(undefined);
+    setSessionDate(next.sessionDate);
+    setStartTime(next.startTime);
+    setEndTime(next.endTime);
+    setSessionNotes("");
   }
 
   function editSession(session: EventSession): void {
@@ -386,14 +418,29 @@ export function CleanupEventDraftEditor({
     setStartTime(session.startTime.slice(0, 5));
     setEndTime(session.endTime.slice(0, 5));
     setCapacity(session.capacity?.toString() ?? "");
-    setSessionAddress(session.locationAddress ?? "");
     setSessionNotes(session.notes ?? "");
-    setSessionAtEvent(session.locationLatitude !== null);
   }
 
   function saveSession(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     if (!selected) return;
+    if (startTime >= endTime) {
+      setNotice({ tone: "error", message: "The session end time must be later than its start time." });
+      return;
+    }
+    const duplicate = selected.sessions.some((session) =>
+      session.id !== editingSessionId &&
+      session.sessionDate === sessionDate &&
+      session.startTime.slice(0, 5) === startTime,
+    );
+    if (duplicate) {
+      setNotice({ tone: "error", message: "This event already has a session at that date and start time. Choose another time." });
+      return;
+    }
+    const wasEditing = Boolean(editingSessionId);
+    const savedDate = sessionDate;
+    const savedStart = startTime;
+    const savedEnd = endTime;
     void run(async () => {
       if (editingSessionId) {
         await updateSession(
@@ -407,8 +454,9 @@ export function CleanupEventDraftEditor({
         await addSession(accessToken, organizationId, selected.id, sessionInput());
       }
       await refreshDraft(selected.id);
-      resetSession();
-      setNotice({ tone: "success", message: "Draft session saved." });
+      if (wasEditing) resetSession();
+      else prepareNextSession(savedDate, savedStart, savedEnd);
+      setNotice({ tone: "success", message: wasEditing ? "Draft session updated." : "Session added. The next available time is ready below." });
     }, "Unable to save the draft session.");
   }
 
@@ -536,12 +584,10 @@ export function CleanupEventDraftEditor({
                 <label>Starts<input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required /></label>
                 <label>Ends<input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} required /></label>
                 <label>Capacity<input type="number" min="1" max="100000" value={capacity} onChange={(event) => setCapacity(event.target.value)} /></label>
-                <label>Session address<input value={sessionAddress} maxLength={500} onChange={(event) => setSessionAddress(event.target.value)} /></label>
                 <label className="wide">Notes<textarea value={sessionNotes} maxLength={2000} onChange={(event) => setSessionNotes(event.target.value)} /></label>
-                <label className="event-editor-check wide"><input type="checkbox" checked={sessionAtEvent} onChange={(event) => setSessionAtEvent(event.target.checked)} />Use the event coordinates for this session</label>
-                <div className="event-editor-actions wide"><button disabled={busy}>{editingSessionId ? "Update session" : "Add session"}</button>{editingSessionId && <button className="secondary" type="button" onClick={resetSession}>Cancel edit</button>}</div>
+                <div className="event-editor-actions wide"><button disabled={busy}>{editingSessionId ? "Update session" : "Add session"}</button>{editingSessionId && <button className="secondary" type="button" disabled={busy} onClick={resetSession}>Cancel edit</button>}</div>
               </form>
-              <div className="event-editor-item-list">{selected.sessions.length === 0 ? <p>No sessions added.</p> : selected.sessions.map((session) => <article key={session.id}><span><strong>{session.sessionDate}</strong><small>{session.startTime.slice(0, 5)}–{session.endTime.slice(0, 5)} · {session.capacity ?? "Open"} capacity</small></span><span className="event-editor-row-actions"><button type="button" onClick={() => editSession(session)}>Edit</button><button type="button" className="danger" onClick={() => void run(async () => { await removeSession(accessToken, organizationId, selected.id, session.id); await refreshDraft(selected.id); }, "Unable to remove the session.")}>Remove</button></span></article>)}</div>
+              <div className="event-editor-item-list">{selected.sessions.length === 0 ? <p>No sessions added.</p> : selected.sessions.map((session) => <article key={session.id}><span><strong>{session.sessionDate}</strong><small>{session.startTime.slice(0, 5)}–{session.endTime.slice(0, 5)} · {session.capacity ?? "Open"} capacity</small></span><span className="event-editor-row-actions"><button type="button" disabled={busy} onClick={() => editSession(session)}>Edit</button><button type="button" className="danger" disabled={busy} onClick={() => { if (window.confirm("Remove this session from the draft?")) void run(async () => { await removeSession(accessToken, organizationId, selected.id, session.id); await refreshDraft(selected.id); setNotice({ tone: "success", message: "Session removed." }); }, "Unable to remove the session."); }}>Remove</button></span></article>)}</div>
             </section>
 
             <section className="event-editor-panel">

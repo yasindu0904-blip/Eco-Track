@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 
 import { getPublicCleanupEvent, listPublicCleanupEvents } from "./cleanupEvent.api";
+import type { EventParticipation } from "./cleanupEvent.types";
 import { PublicCleanupEventsPage } from "./PublicCleanupEventsPage";
 
 vi.mock("./cleanupEvent.api", () => ({
@@ -12,7 +13,10 @@ vi.mock("./cleanupEvent.api", () => ({
 }));
 
 vi.mock("./EventParticipationPanel", () => ({
-  EventParticipationPanel: () => <div>Participation options</div>,
+  EventParticipationPanel: ({ onChanged }: { onChanged?: (value: EventParticipation | null) => void }) => <div>
+    <span>Participation options</span>
+    <button type="button" onClick={() => onChanged?.({ status: "JOINED" } as EventParticipation)}>Mock joined</button>
+  </div>,
 }));
 
 vi.mock("./ParticipantEventUpdates", () => ({
@@ -57,6 +61,10 @@ test("a map-selected event opens in a focused detail view and returns through it
   expect(screen.queryByText("Upcoming and active events")).toBeNull();
   expect(screen.queryByText("No published events yet")).toBeNull();
   expect(listPublicCleanupEvents).not.toHaveBeenCalled();
+  expect(screen.queryByText("Participant updates")).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: "Mock joined" }));
+  expect(await screen.findByText("Participant updates")).toBeTruthy();
 
   fireEvent.click(screen.getByRole("button", { name: "Back" }));
   expect(onBack).toHaveBeenCalledTimes(1);

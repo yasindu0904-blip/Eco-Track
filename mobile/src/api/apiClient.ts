@@ -44,6 +44,7 @@ export async function apiRequest<T>(
   try {
     response = await fetch(`${mobileEnv.apiBaseUrl}${path}`, {
       ...requestOptions,
+      cache: requestOptions.cache ?? "no-store",
       headers,
     });
   } catch {
@@ -52,6 +53,10 @@ export async function apiRequest<T>(
       "NETWORK_REQUEST_FAILED",
       "EcoTrack could not reach the API. Check the phone network and API address.",
     );
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   const body = (await response.json().catch(() => null)) as

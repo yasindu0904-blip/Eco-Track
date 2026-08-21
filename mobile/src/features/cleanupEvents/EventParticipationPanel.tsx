@@ -7,7 +7,13 @@ import { colors, spacing } from "../../components/theme";
 import { getMyEventParticipation, joinCleanupEvent, updateEventAvailability, withdrawFromCleanupEvent } from "./cleanupEvent.api";
 import type { CleanupEventPublicDetail, EventParticipation } from "./cleanupEvent.types";
 
-export function EventParticipationPanel({ accessToken, event }: { accessToken: string; event: CleanupEventPublicDetail }) {
+type Props = {
+  accessToken: string;
+  event: CleanupEventPublicDetail;
+  onChanged?: (value: EventParticipation | null) => void;
+};
+
+export function EventParticipationPanel({ accessToken, event, onChanged }: Props) {
   const [participation, setParticipation] = useState<EventParticipation | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(true);
@@ -17,23 +23,23 @@ export function EventParticipationPanel({ accessToken, event }: { accessToken: s
     let active = true;
     void getMyEventParticipation(accessToken, event.id).then((value) => {
       if (!active) return;
-      setParticipation(value); setSelected(value?.availableSessionIds ?? []);
+      setParticipation(value); setSelected(value?.availableSessionIds ?? []); onChanged?.(value);
     }).catch((reason) => active && setError(describeApiFailure(reason, "Unable to load your participation.").message)).finally(() => active && setBusy(false));
     return () => { active = false; };
-  }, [accessToken, event.id]);
+  }, [accessToken, event.id, onChanged]);
   function toggle(id: string): void { setSelected((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]); }
   async function save(): Promise<void> {
     if (selected.length === 0) { setError("Select at least one future session."); return; }
     setBusy(true); setError(undefined); setMessage(undefined);
     try {
       const value = participation?.status === "JOINED" ? await updateEventAvailability(accessToken, event.id, selected) : (await joinCleanupEvent(accessToken, event.id, selected)).participation;
-      setParticipation(value); setSelected(value.availableSessionIds); setMessage(participation?.status === "JOINED" ? "Your availability was updated." : "You joined this cleanup event.");
+      setParticipation(value); setSelected(value.availableSessionIds); setMessage(participation?.status === "JOINED" ? "Your availability was updated." : "You joined this cleanup event."); onChanged?.(value);
     } catch (reason) { setError(describeApiFailure(reason, "Unable to save your participation.").message); }
     finally { setBusy(false); }
   }
   async function withdraw(): Promise<void> {
     setBusy(true); setError(undefined); setMessage(undefined);
-    try { const value = await withdrawFromCleanupEvent(accessToken, event.id); setParticipation(value); setMessage("You have withdrawn from this event."); }
+    try { const value = await withdrawFromCleanupEvent(accessToken, event.id); setParticipation(value); setMessage("You have withdrawn from this event."); onChanged?.(value); }
     catch (reason) { setError(describeApiFailure(reason, "Unable to withdraw from this event.").message); }
     finally { setBusy(false); }
   }
