@@ -151,19 +151,6 @@ export function LocationPicker({
           </View>
         </View>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.applyButton,
-            pressed && styles.buttonPressed,
-            disabled && styles.buttonDisabled,
-          ]}
-          accessibilityRole="button"
-          disabled={disabled}
-          onPress={applyCoordinates}
-        >
-          <Text style={styles.applyButtonText}>Apply coordinates</Text>
-        </Pressable>
-
         {validationMessage && (
           <Text
             style={styles.error}
@@ -242,18 +229,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.surface,
     fontSize: 14,
-  },
-  applyButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 46,
-    borderRadius: 11,
-    backgroundColor: colors.primarySoft,
-  },
-  applyButtonText: {
-    color: colors.primaryDark,
-    fontSize: 14,
-    fontWeight: "800",
   },
   confirmButton: {
     alignItems: "center",

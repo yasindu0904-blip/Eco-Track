@@ -135,9 +135,6 @@ export function LocationPicker({
               disabled={disabled}
             />
           </label>
-          <button type="submit" disabled={disabled}>
-            Apply coordinates
-          </button>
         </form>
 
         {validationMessage && (

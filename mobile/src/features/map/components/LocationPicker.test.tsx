@@ -30,10 +30,10 @@ describe("manual mobile map location fallback", () => {
       longitude.props.onChangeText("80.123456");
     });
     await act(async () => {
-      renderer!.root.findAll((node) => node.props.accessibilityRole === "button")[0]?.props.onPress();
+      longitude.props.onSubmitEditing();
     });
     await act(async () => {
-      renderer!.root.findAll((node) => node.props.accessibilityRole === "button")[1]?.props.onPress();
+      renderer!.root.findByProps({ accessibilityRole: "button" }).props.onPress();
     });
 
     expect(onConfirm).toHaveBeenCalledWith({ latitude: 7.123456, longitude: 80.123456 });
@@ -51,7 +51,7 @@ describe("manual mobile map location fallback", () => {
       renderer!.root.findByProps({ accessibilityLabel: "Longitude" }).props.onChangeText("0");
     });
     await act(async () => {
-      renderer!.root.findAll((node) => node.props.accessibilityRole === "button")[0]?.props.onPress();
+      renderer!.root.findByProps({ accessibilityLabel: "Longitude" }).props.onSubmitEditing();
     });
 
     expect(
