@@ -23,6 +23,13 @@ const environmentSchema = z.object({
     .string()
     .min(1, "DATABASE_URL is required"),
 
+  DATABASE_POOL_MAX: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(20)
+    .default(5),
+
   SUPABASE_URL: z
     .string()
     .url("SUPABASE_URL must be a valid URL"),

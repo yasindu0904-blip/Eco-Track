@@ -84,6 +84,34 @@ export function requireOperationalLifecycle(status: string): void {
   }
 }
 
+/**
+ * Completion submission closes scheduling changes, but existing participant
+ * records must remain finalizable. Otherwise a PLANNED allocation would block
+ * completion forever because it could be neither attended nor removed.
+ */
+export function requireParticipantFinalizationLifecycle(status: string): void {
+  if (!["PUBLISHED", "SCHEDULED", "IN_PROGRESS", "COMPLETION_SUBMITTED"].includes(status)) {
+    throw new ApplicationError(
+      409,
+      "EVENT_PARTICIPANT_FINALIZATION_CLOSED",
+      "Participant attendance and removals are closed for this cleanup event.",
+    );
+  }
+}
+
+export function isAttendanceOpen(
+  session: { status: string; sessionDate: Date; startTime: Date },
+  now = new Date(),
+): boolean {
+  if (session.status === "CANCELLED") return false;
+
+  return (
+    session.status === "IN_PROGRESS" ||
+    session.status === "COMPLETED" ||
+    hasSessionStarted(session.sessionDate, session.startTime, now)
+  );
+}
+
 export function requireAvailableTargetSession(
   participant: { status: string; availabilities: Array<{ sessionId: string }> },
   session: { id: string; status: string; sessionDate: Date; startTime: Date },

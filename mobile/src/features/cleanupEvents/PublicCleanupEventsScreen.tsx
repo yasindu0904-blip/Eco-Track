@@ -5,7 +5,7 @@ import { describeApiFailure } from "../../api/apiError";
 import { Button, Notice, PageHeader, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import { getPublicCleanupEvent, listPublicCleanupEvents } from "./cleanupEvent.api";
-import type { CleanupEventPublicDetail, CleanupEventPublicSummary } from "./cleanupEvent.types";
+import type { CleanupEventPublicDetail, CleanupEventPublicSummary, EventParticipation } from "./cleanupEvent.types";
 import { EventParticipationPanel } from "./EventParticipationPanel";
 import { ParticipantEventUpdatesPanel } from "./ParticipantEventUpdatesPanel";
 
@@ -17,10 +17,17 @@ export function PublicCleanupEventsScreen({ accessToken, initialEventId, onBack 
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string>();
+  const [participationContext, setParticipationContext] = useState<{
+    eventId: string;
+    participation: EventParticipation | null;
+  }>();
   const load = useCallback(async (cursor?: string) => {
     setBusy(true); setError(undefined);
     try {
-      if (initialEventId && !cursor) setSelected(await getPublicCleanupEvent(accessToken, initialEventId));
+      if (initialEventId && !cursor) {
+        setSelected(await getPublicCleanupEvent(accessToken, initialEventId));
+        return;
+      }
       const page = await listPublicCleanupEvents(accessToken, cursor);
       setItems((current) => cursor ? [...current, ...page.items] : page.items);
       setNextCursor(page.nextCursor);
@@ -35,14 +42,17 @@ export function PublicCleanupEventsScreen({ accessToken, initialEventId, onBack 
     catch (reason) { setError(describeApiFailure(reason, "Unable to load event details.").message); }
     finally { setBusy(false); }
   }
+  const handleParticipationChanged = useCallback((participation: EventParticipation | null) => {
+    if (selected) setParticipationContext({ eventId: selected.id, participation });
+  }, [selected]);
 
   return <Screen>
     <PageHeader
       eyebrow="Community cleanups"
       title={selected ? selected.title : "Published events"}
       subtitle={selected ? selected.organization.name : "Verified schedules, instructions, and volunteer availability."}
-      onBack={selected ? () => setSelected(undefined) : onBack}
-      backLabel={selected ? "Events" : "Dashboard"}
+      onBack={selected && !initialEventId ? () => setSelected(undefined) : onBack}
+      backLabel={selected && !initialEventId ? "Events" : "Back"}
       action={selected ? <Text style={styles.status}>{selected.lifecycleStatus.replaceAll("_", " ")}</Text> : undefined}
     />
     {error ? <Notice tone="error" message={error} /> : null}
@@ -54,8 +64,10 @@ export function PublicCleanupEventsScreen({ accessToken, initialEventId, onBack 
         <Text style={styles.heading}>SESSIONS</Text>
         {selected.sessions.map((session) => <View key={session.id} style={styles.session}><Text style={styles.organization}>{session.sessionDate} · {session.startTime.slice(0, 5)}–{session.endTime.slice(0, 5)}</Text><Text style={styles.copy}>{session.locationAddress || "Event location"} · {session.capacity ?? "Open"} capacity</Text></View>)}
       </View>
-      <EventParticipationPanel accessToken={accessToken} event={selected} />
-      <ParticipantEventUpdatesPanel accessToken={accessToken} eventId={selected.id} />
+      <EventParticipationPanel accessToken={accessToken} event={selected} onChanged={handleParticipationChanged} />
+      {participationContext?.eventId === selected.id && participationContext.participation?.status === "JOINED"
+        ? <ParticipantEventUpdatesPanel accessToken={accessToken} eventId={selected.id} />
+        : null}
     </> : <View style={sharedStyles.card}>
       <Text style={sharedStyles.sectionTitle}>Upcoming and active events</Text>
       {busy && items.length === 0 ? <Text style={styles.copy}>Loading events...</Text> : items.length === 0 ? <Text style={styles.copy}>No published events yet.</Text> : items.map((item) => <Pressable key={item.id} onPress={() => void open(item.id)} style={styles.item}><View style={styles.flex}><Text style={styles.itemTitle}>{item.title}</Text><Text style={styles.copy}>{item.organization.name}</Text><Text style={styles.meta}>{item.lifecycleStatus.replaceAll("_", " ")}</Text></View><Text style={styles.arrow}>→</Text></Pressable>)}

@@ -76,7 +76,6 @@ type CitizenSidebarProps = {
   onReportIncident: () => void;
   onViewIncidentReports: () => void;
   onFindCleanupActivity: () => void;
-  onBrowseCleanupEvents: () => void;
   onViewJoinedCleanupEvents: () => void;
   onOpenImpact: () => void;
   onSignOut: () => void;
@@ -96,7 +95,6 @@ export function CitizenSidebar({
   onReportIncident,
   onViewIncidentReports,
   onFindCleanupActivity,
-  onBrowseCleanupEvents,
   onViewJoinedCleanupEvents,
   onOpenImpact,
   onSignOut,
@@ -155,9 +153,6 @@ export function CitizenSidebar({
         </button>
         <button type="button" onClick={onFindCleanupActivity} {...navigationState(active("incident-discovery"))}>
           <CitizenIcon name="volunteer" /> Find cleanup activity
-        </button>
-        <button type="button" onClick={onBrowseCleanupEvents} {...navigationState(active("cleanup-events"))}>
-          <CitizenIcon name="volunteer" /> Browse cleanup events
         </button>
         <button type="button" onClick={onViewJoinedCleanupEvents} {...navigationState(active("joined-cleanup-events"))}>
           <CitizenIcon name="volunteer" /> My joined events

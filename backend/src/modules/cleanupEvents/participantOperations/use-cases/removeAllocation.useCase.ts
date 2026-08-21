@@ -1,7 +1,11 @@
 import { ApplicationError } from "../../../../errors/applicationError.js";
 import type { CleanupEventDependencies } from "../../cleanupEvent.dependencies.js";
 import { findAllocationOperationRecord, findParticipantOperationsEvent } from "../participantOperations.repository.js";
-import { notifyParticipantOperation, requireOperationalLifecycle, toAllocationDto } from "../participantOperations.support.js";
+import {
+  notifyParticipantOperation,
+  requireParticipantFinalizationLifecycle,
+  toAllocationDto,
+} from "../participantOperations.support.js";
 import type { ParticipantOperationAllocationDto } from "../participantOperations.types.js";
 
 export async function removeAllocation(
@@ -17,7 +21,7 @@ export async function removeAllocation(
   return dependencies.prisma.$transaction(async (transaction) => {
     const event = await findParticipantOperationsEvent(transaction, input.organizationId, input.eventId);
     if (!event) throw new ApplicationError(404, "CLEANUP_EVENT_NOT_FOUND", "The organization cleanup event was not found.");
-    requireOperationalLifecycle(event.lifecycleStatus);
+    requireParticipantFinalizationLifecycle(event.lifecycleStatus);
     const allocation = await findAllocationOperationRecord(transaction, input.organizationId, input.eventId, input.allocationId);
     if (!allocation) throw new ApplicationError(404, "SESSION_ALLOCATION_NOT_FOUND", "The session allocation was not found.");
     if (allocation.status === "REMOVED") return toAllocationDto(allocation);

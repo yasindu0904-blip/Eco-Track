@@ -24,7 +24,11 @@ export type UserDestination =
   | { screen: "incident-create" }
   | { screen: "incident-reports"; incidentId?: string }
   | { screen: "incident-discovery" }
-  | { screen: "cleanup-events"; eventId?: string }
+  | {
+      screen: "cleanup-events";
+      eventId?: string;
+      returnTo?: "incident-discovery" | "joined-cleanup-events";
+    }
   | { screen: "joined-cleanup-events"; eventId?: string }
   | { screen: "impact" };
 
@@ -53,6 +57,19 @@ export function isUserDestination(value: unknown): value is UserDestination {
       candidate.organizationId.length > 0;
   }
 
+  if (candidate.screen === "cleanup-events") {
+    const cleanupCandidate = candidate as Partial<Extract<
+      UserDestination,
+      { screen: "cleanup-events" }
+    >>;
+    return (
+      (cleanupCandidate.eventId === undefined || typeof cleanupCandidate.eventId === "string") &&
+      (cleanupCandidate.returnTo === undefined ||
+        cleanupCandidate.returnTo === "incident-discovery" ||
+        cleanupCandidate.returnTo === "joined-cleanup-events")
+    );
+  }
+
   return [
     "dashboard",
     "notifications",
@@ -63,10 +80,17 @@ export function isUserDestination(value: unknown): value is UserDestination {
     "incident-create",
     "incident-reports",
     "incident-discovery",
-    "cleanup-events",
     "joined-cleanup-events",
     "impact",
   ].includes(candidate.screen ?? "");
+}
+
+export function cleanupEventReturnDestination(
+  destination: Extract<UserDestination, { screen: "cleanup-events" }>,
+): UserDestination {
+  return destination.returnTo
+    ? { screen: destination.returnTo }
+    : { screen: "dashboard" };
 }
 
 export function useBrowserNavigation<T>(

@@ -60,6 +60,7 @@ export async function apiRequest<T>(
       `${webEnv.apiBaseUrl}${path}`,
       {
         ...requestOptions,
+        cache: requestOptions.cache ?? "no-store",
         headers,
       },
     );
@@ -69,6 +70,10 @@ export async function apiRequest<T>(
       "NETWORK_REQUEST_FAILED",
       "EcoTrack could not reach the API. Check your network and API address.",
     );
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   const responseBody = (await response

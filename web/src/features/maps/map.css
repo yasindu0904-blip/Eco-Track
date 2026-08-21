@@ -29,6 +29,25 @@
   background: #ffffff;
 }
 
+.eco-map-marker-action {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #174c33;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.eco-map-marker-action:hover,
+.eco-map-marker-action:focus-visible {
+  background: #0f3925;
+}
+
 .eco-map-location-control {
   position: absolute;
   z-index: 800;
@@ -264,16 +283,25 @@
 
 .eco-location-picker-controls {
   display: grid;
-  grid-template-columns: minmax(190px, 0.8fr) minmax(360px, 1.5fr) auto;
+  grid-template-columns: minmax(190px, 1fr) auto auto;
   gap: 18px;
   align-items: end;
   padding: 20px;
   border-top: 1px solid #dfe8e2;
 }
 
-.eco-location-picker-controls > div:first-child {
+.eco-location-picker-status {
   display: grid;
   gap: 4px;
+}
+
+.eco-location-picker-status.is-confirmed {
+  padding-left: 12px;
+  border-left: 3px solid #2d8354;
+}
+
+.eco-location-picker-status.is-confirmed .eco-location-picker-label {
+  color: #28714a;
 }
 
 .eco-location-picker-label {
@@ -293,56 +321,32 @@
   color: #6a796f;
 }
 
-.eco-coordinate-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 10px;
-  align-items: end;
-}
-
-.eco-coordinate-form label {
-  display: grid;
-  gap: 6px;
-  color: #52645a;
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.eco-coordinate-form input {
-  min-width: 0;
-  height: 42px;
-  padding: 0 10px;
-  border: 1px solid #cad8ce;
-  border-radius: 10px;
-  color: #18382a;
-  background: #ffffff;
-}
-
-.eco-coordinate-form button,
+.eco-location-focus-reference,
 .eco-location-confirm {
   min-height: 42px;
   padding: 0 16px;
-  border: 0;
   border-radius: 10px;
   font-weight: 800;
 }
 
-.eco-coordinate-form button {
+.eco-location-focus-reference {
+  border: 1px solid #8eb59b;
   color: #174c33;
-  background: #e7f1e9;
+  background: #ffffff;
 }
 
 .eco-location-confirm {
+  border: 0;
   color: #ffffff;
   background: #174c33;
 }
 
-.eco-coordinate-form button:hover,
+.eco-location-focus-reference:hover,
 .eco-location-confirm:hover {
   filter: brightness(0.96);
 }
 
-.eco-coordinate-form button:disabled,
+.eco-location-focus-reference:disabled,
 .eco-location-confirm:disabled {
   cursor: not-allowed;
   opacity: 0.55;
@@ -497,11 +501,4 @@
     top: 10px;
   }
 
-  .eco-coordinate-form {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .eco-coordinate-form button {
-    grid-column: 1 / -1;
-  }
 }

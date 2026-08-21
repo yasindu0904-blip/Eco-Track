@@ -116,13 +116,16 @@ export function AuthenticatedUserApp({ accessToken, profile, onProfileUpdated, o
   }
 
   if (destination.screen === "findCleanupActivity") {
-    return <CitizenIncidentDiscoveryScreen accessToken={accessToken} onBack={() => navigate(mobileDashboard)} onReportIncident={() => navigate({ screen: "reportIncident" })} onOpenEvent={(eventId) => navigate({ screen: "cleanupEvents", eventId })} />;
+    return <CitizenIncidentDiscoveryScreen accessToken={accessToken} onBack={() => navigate(mobileDashboard)} onReportIncident={() => navigate({ screen: "reportIncident" })} onOpenEvent={(eventId) => navigate({ screen: "cleanupEvents", eventId, returnTo: "findCleanupActivity" })} />;
   }
   if (destination.screen === "cleanupEvents") {
-    return <PublicCleanupEventsScreen accessToken={accessToken} initialEventId={destination.eventId} onBack={() => navigate(mobileDashboard)} />;
+    const returnDestination = destination.returnTo
+      ? { screen: destination.returnTo } as MobileDestination
+      : mobileDashboard;
+    return <PublicCleanupEventsScreen accessToken={accessToken} initialEventId={destination.eventId} onBack={() => navigate(returnDestination)} />;
   }
   if (destination.screen === "joinedCleanupEvents") {
-    return <MyJoinedCleanupEventsScreen accessToken={accessToken} onBack={() => navigate(mobileDashboard)} onOpenEvent={(eventId) => navigate({ screen: "cleanupEvents", eventId })} />;
+    return <MyJoinedCleanupEventsScreen accessToken={accessToken} onBack={() => navigate(mobileDashboard)} onOpenEvent={(eventId) => navigate({ screen: "cleanupEvents", eventId, returnTo: "joinedCleanupEvents" })} />;
   }
   if (destination.screen === "reportIncident") {
     return <IncidentReportScreen accessToken={accessToken} onBack={() => navigate(mobileDashboard)} onSubmitted={(incident) => {
@@ -144,5 +147,5 @@ export function AuthenticatedUserApp({ accessToken, profile, onProfileUpdated, o
   }
 
   const primaryMembership = activeMemberships[0];
-  return <CitizenDashboard accessToken={accessToken} profile={profile} onOpenNotifications={() => navigate({ screen: "notifications" })} onManageMembership={() => navigate({ screen: "membership" })} activeOrganization={primaryMembership} onOpenOrganizationWorkspace={primaryMembership ? () => navigate({ screen: "organizationWorkspace", organizationId: primaryMembership.organization.id, tab: "overview" }) : undefined} onCreateOrganizationApplication={() => navigate({ screen: "createOrganization" })} onViewApplications={() => navigate({ screen: "organizationApplications" })} onReportIncident={() => navigate({ screen: "reportIncident" })} onViewReports={() => navigate({ screen: "myReports" })} onFindCleanupActivity={() => navigate({ screen: "findCleanupActivity" })} onBrowseCleanupEvents={() => navigate({ screen: "cleanupEvents" })} onViewJoinedCleanupEvents={() => navigate({ screen: "joinedCleanupEvents" })} onOpenImpact={() => navigate({ screen: "impact" })} onSignOut={() => void signOut()} />;
+  return <CitizenDashboard accessToken={accessToken} profile={profile} onOpenNotifications={() => navigate({ screen: "notifications" })} onManageMembership={() => navigate({ screen: "membership" })} activeOrganization={primaryMembership} onOpenOrganizationWorkspace={primaryMembership ? () => navigate({ screen: "organizationWorkspace", organizationId: primaryMembership.organization.id, tab: "overview" }) : undefined} onCreateOrganizationApplication={() => navigate({ screen: "createOrganization" })} onViewApplications={() => navigate({ screen: "organizationApplications" })} onReportIncident={() => navigate({ screen: "reportIncident" })} onViewReports={() => navigate({ screen: "myReports" })} onFindCleanupActivity={() => navigate({ screen: "findCleanupActivity" })} onViewJoinedCleanupEvents={() => navigate({ screen: "joinedCleanupEvents" })} onOpenImpact={() => navigate({ screen: "impact" })} onSignOut={() => void signOut()} />;
 }

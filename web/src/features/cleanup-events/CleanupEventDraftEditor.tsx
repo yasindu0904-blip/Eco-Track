@@ -1,11 +1,18 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { describeApiFailure } from "../../api/apiError";
 import {
   listOrganizationMembers,
 } from "../memberships/administration/membershipAdministration.api";
 import type { OrganizationMember } from "../memberships/administration/membershipAdministration.types";
-import { COLOMBO_MAP_CENTER, LocationPicker, type MapLocation } from "../maps";
+import {
+  COLOMBO_MAP_CENTER,
+  LocationPicker,
+  type MapLocation,
+  type MapMarkerFeature,
+} from "../maps";
+import { getOrganizationIncidentDetail } from "../organizations/workspace/organizationIncidentDiscovery.api";
+import type { OrganizationIncidentDetail } from "../organizations/workspace/organizationIncidentDiscovery.types";
 import {
   addSession,
   assignCoordinator,
@@ -35,6 +42,12 @@ type Props = {
 };
 
 type Notice = { tone: "success" | "error"; message: string };
+type LinkedIncidentLoadState = {
+  incidentId: string;
+  status: "loading" | "ready" | "error";
+  incident?: OrganizationIncidentDetail;
+  error?: string;
+};
 
 function tomorrow(): string {
   const value = new Date();
@@ -44,6 +57,46 @@ function tomorrow(): string {
 
 function memberName(member: OrganizationMember): string {
   return member.user.fullName?.trim() || member.user.email;
+}
+
+function nextSessionSlot(sessionDate: string, startTime: string, endTime: string): {
+  sessionDate: string;
+  startTime: string;
+  endTime: string;
+} {
+  const toMinutes = (value: string) => {
+    const [hours = 0, minutes = 0] = value.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+  const formatTime = (value: number) => `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
+  const start = toMinutes(startTime);
+  const end = toMinutes(endTime);
+  const duration = Math.max(end - start, 60);
+
+  if (end + duration < 24 * 60) {
+    return { sessionDate, startTime: formatTime(end), endTime: formatTime(end + duration) };
+  }
+
+  const followingDate = new Date(`${sessionDate}T00:00:00.000Z`);
+  followingDate.setUTCDate(followingDate.getUTCDate() + 1);
+  return { sessionDate: followingDate.toISOString().slice(0, 10), startTime: "09:00", endTime: "11:00" };
+}
+
+function incidentMarker(incident: OrganizationIncidentDetail): MapMarkerFeature {
+  return {
+    type: "Feature",
+    geometry: {
+      type: "Point",
+      coordinates: [incident.longitude, incident.latitude],
+    },
+    properties: {
+      id: incident.id,
+      kind: "INCIDENT",
+      title: incident.title,
+      status: incident.status,
+      category: incident.category.name,
+    },
+  };
 }
 
 export function CleanupEventDraftEditor({
@@ -58,8 +111,15 @@ export function CleanupEventDraftEditor({
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [selected, setSelected] = useState<CleanupEventDraft>();
   const [showCreate, setShowCreate] = useState(Boolean(incidentId));
+  const [createIncidentId, setCreateIncidentId] = useState<string | null>(
+    incidentId ?? null,
+  );
+  const [linkedIncidentState, setLinkedIncidentState] =
+    useState<LinkedIncidentLoadState>();
+  const [linkedIncidentReload, setLinkedIncidentReload] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const mutationInFlight = useRef(false);
   const [notice, setNotice] = useState<Notice>();
 
   const [createLocation, setCreateLocation] = useState<MapLocation>(COLOMBO_MAP_CENTER);
@@ -80,10 +140,42 @@ export function CleanupEventDraftEditor({
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("11:00");
   const [capacity, setCapacity] = useState("25");
-  const [sessionAddress, setSessionAddress] = useState("");
   const [sessionNotes, setSessionNotes] = useState("");
-  const [sessionAtEvent, setSessionAtEvent] = useState(true);
   const [coordinatorMembershipId, setCoordinatorMembershipId] = useState("");
+
+  const activeIncidentId = showCreate
+    ? createIncidentId
+    : selected?.incidentId ?? null;
+  const linkedIncident =
+    activeIncidentId &&
+    linkedIncidentState?.incidentId === activeIncidentId &&
+    linkedIncidentState.status === "ready"
+      ? linkedIncidentState.incident
+      : undefined;
+  const linkedIncidentLoading = Boolean(
+    activeIncidentId &&
+      (linkedIncidentState?.incidentId !== activeIncidentId ||
+        linkedIncidentState.status === "loading"),
+  );
+  const linkedIncidentError =
+    activeIncidentId &&
+    linkedIncidentState?.incidentId === activeIncidentId &&
+    linkedIncidentState.status === "error"
+      ? linkedIncidentState.error
+      : undefined;
+  const linkedIncidentReady = !activeIncidentId || Boolean(linkedIncident);
+  const linkedMarker = linkedIncident
+    ? incidentMarker(linkedIncident)
+    : undefined;
+
+  function resetCreateForm(nextIncidentId: string | null): void {
+    setCreateIncidentId(nextIncidentId);
+    setCreateLocation(COLOMBO_MAP_CENTER);
+    setCreateLocationConfirmed(false);
+    setCreateMeetingAtEvent(false);
+    setSelected(undefined);
+    setShowCreate(true);
+  }
 
   function openDraft(draft: CleanupEventDraft): void {
     setSelected(draft);
@@ -163,6 +255,60 @@ export function CleanupEventDraftEditor({
     };
   }, [accessToken, initialDraftId, organizationId]);
 
+  useEffect(() => {
+    if (!activeIncidentId) return;
+
+    const controller = new AbortController();
+    void Promise.resolve().then(async () => {
+      if (controller.signal.aborted) return;
+      setLinkedIncidentState({
+        incidentId: activeIncidentId,
+        status: "loading",
+      });
+
+      try {
+        const loadedIncident = await getOrganizationIncidentDetail(
+          accessToken,
+          organizationId,
+          activeIncidentId,
+          controller.signal,
+        );
+        if (controller.signal.aborted) return;
+        setLinkedIncidentState({
+          incidentId: activeIncidentId,
+          status: "ready",
+          incident: loadedIncident,
+        });
+        if (showCreate && createIncidentId === activeIncidentId) {
+          setCreateLocation({
+            latitude: loadedIncident.latitude,
+            longitude: loadedIncident.longitude,
+          });
+          setCreateLocationConfirmed(false);
+        }
+      } catch (reason) {
+        if (controller.signal.aborted) return;
+        setLinkedIncidentState({
+          incidentId: activeIncidentId,
+          status: "error",
+          error: describeApiFailure(
+            reason,
+            "Unable to load the linked incident location.",
+          ).message,
+        });
+      }
+    });
+
+    return () => controller.abort();
+  }, [
+    accessToken,
+    activeIncidentId,
+    createIncidentId,
+    linkedIncidentReload,
+    organizationId,
+    showCreate,
+  ]);
+
   const availableCoordinators = useMemo(
     () => members.filter(
       (member) => !selected?.coordinators.some(
@@ -173,6 +319,8 @@ export function CleanupEventDraftEditor({
   );
 
   async function run(action: () => Promise<void>, fallback: string): Promise<void> {
+    if (mutationInFlight.current) return;
+    mutationInFlight.current = true;
     setBusy(true);
     setNotice(undefined);
     try {
@@ -180,6 +328,7 @@ export function CleanupEventDraftEditor({
     } catch (reason) {
       setNotice({ tone: "error", message: describeApiFailure(reason, fallback).message });
     } finally {
+      mutationInFlight.current = false;
       setBusy(false);
     }
   }
@@ -190,7 +339,7 @@ export function CleanupEventDraftEditor({
     const data = new FormData(form);
     void run(async () => {
       const created = await createDraft(accessToken, organizationId, {
-        incidentId: incidentId ?? null,
+        incidentId: createIncidentId,
         title: String(data.get("title")),
         description: String(data.get("description")),
         publicInstructions: String(data.get("instructions") || "") || null,
@@ -204,6 +353,7 @@ export function CleanupEventDraftEditor({
       setDrafts((current) => [created, ...current]);
       openDraft(created);
       setShowCreate(false);
+      setCreateIncidentId(null);
       setCreateLocationConfirmed(false);
       form.reset();
       setNotice({ tone: "success", message: "Private cleanup-event draft saved." });
@@ -237,9 +387,9 @@ export function CleanupEventDraftEditor({
       startTime: `${startTime}:00`,
       endTime: `${endTime}:00`,
       capacity: capacity ? Number(capacity) : null,
-      locationLatitude: sessionAtEvent ? selected!.eventLatitude : null,
-      locationLongitude: sessionAtEvent ? selected!.eventLongitude : null,
-      locationAddress: sessionAddress || null,
+      locationLatitude: selected!.eventLatitude,
+      locationLongitude: selected!.eventLongitude,
+      locationAddress: null,
       notes: sessionNotes || null,
     };
   }
@@ -250,9 +400,16 @@ export function CleanupEventDraftEditor({
     setStartTime("09:00");
     setEndTime("11:00");
     setCapacity("25");
-    setSessionAddress("");
     setSessionNotes("");
-    setSessionAtEvent(true);
+  }
+
+  function prepareNextSession(date: string, starts: string, ends: string): void {
+    const next = nextSessionSlot(date, starts, ends);
+    setEditingSessionId(undefined);
+    setSessionDate(next.sessionDate);
+    setStartTime(next.startTime);
+    setEndTime(next.endTime);
+    setSessionNotes("");
   }
 
   function editSession(session: EventSession): void {
@@ -261,14 +418,29 @@ export function CleanupEventDraftEditor({
     setStartTime(session.startTime.slice(0, 5));
     setEndTime(session.endTime.slice(0, 5));
     setCapacity(session.capacity?.toString() ?? "");
-    setSessionAddress(session.locationAddress ?? "");
     setSessionNotes(session.notes ?? "");
-    setSessionAtEvent(session.locationLatitude !== null);
   }
 
   function saveSession(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     if (!selected) return;
+    if (startTime >= endTime) {
+      setNotice({ tone: "error", message: "The session end time must be later than its start time." });
+      return;
+    }
+    const duplicate = selected.sessions.some((session) =>
+      session.id !== editingSessionId &&
+      session.sessionDate === sessionDate &&
+      session.startTime.slice(0, 5) === startTime,
+    );
+    if (duplicate) {
+      setNotice({ tone: "error", message: "This event already has a session at that date and start time. Choose another time." });
+      return;
+    }
+    const wasEditing = Boolean(editingSessionId);
+    const savedDate = sessionDate;
+    const savedStart = startTime;
+    const savedEnd = endTime;
     void run(async () => {
       if (editingSessionId) {
         await updateSession(
@@ -282,8 +454,9 @@ export function CleanupEventDraftEditor({
         await addSession(accessToken, organizationId, selected.id, sessionInput());
       }
       await refreshDraft(selected.id);
-      resetSession();
-      setNotice({ tone: "success", message: "Draft session saved." });
+      if (wasEditing) resetSession();
+      else prepareNextSession(savedDate, savedStart, savedEnd);
+      setNotice({ tone: "success", message: wasEditing ? "Draft session updated." : "Session added. The next available time is ready below." });
     }, "Unable to save the draft session.");
   }
 
@@ -297,7 +470,7 @@ export function CleanupEventDraftEditor({
         </div>
         <div className="event-editor-header-actions">
           {onBack && <button className="secondary" type="button" onClick={onBack}>Back</button>}
-          <button type="button" onClick={() => { setSelected(undefined); setShowCreate(true); }}>
+          <button type="button" onClick={() => resetCreateForm(null)}>
             New draft
           </button>
         </div>
@@ -308,7 +481,32 @@ export function CleanupEventDraftEditor({
       {showCreate && (
         <form className="event-editor-panel" onSubmit={submitCreate}>
           <div className="event-editor-section-heading"><span>01</span><div><h2>Draft details</h2><p>Required planning information remains organization-private.</p></div></div>
-          {incidentId && <p className="event-editor-linked">Linked incident: <code>{incidentId}</code></p>}
+          {activeIncidentId && linkedIncidentLoading && (
+            <p className="event-editor-linked">Loading linked incident…</p>
+          )}
+          {activeIncidentId && linkedIncidentError && (
+            <div className="event-editor-linked event-editor-linked-error" role="alert">
+              <strong>Linked incident unavailable</strong>
+              <span>{linkedIncidentError}</span>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setLinkedIncidentReload((value) => value + 1)}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          {linkedIncidentReady && linkedIncident && (
+            <div className="event-editor-linked event-editor-linked-summary">
+              <span>LINKED INCIDENT</span>
+              <strong>{linkedIncident.title}</strong>
+              <small>
+                {linkedIncident.category.name} · {linkedIncident.status}
+                {linkedIncident.addressText ? ` · ${linkedIncident.addressText}` : ""}
+              </small>
+            </div>
+          )}
           <div className="event-editor-fields">
             <label>Title<input name="title" minLength={3} maxLength={160} required /></label>
             <label className="wide">Description<textarea name="description" minLength={10} maxLength={5000} rows={5} required /></label>
@@ -319,12 +517,16 @@ export function CleanupEventDraftEditor({
           <div className="event-editor-section-heading"><span>02</span><div><h2>Event location</h2><p>Move the map and confirm the exact Sri Lankan location.</p></div></div>
           <LocationPicker
             value={createLocation}
-            disabled={busy}
+            disabled={busy || Boolean(activeIncidentId && !linkedIncidentReady)}
+            confirmed={createLocationConfirmed}
+            confirmLabel="Confirm event location"
+            referenceMarker={linkedMarker}
+            focusReferenceLabel="Focus incident"
             onChange={(value) => { setCreateLocation(value); setCreateLocationConfirmed(false); }}
             onConfirm={(value) => { setCreateLocation(value); setCreateLocationConfirmed(true); }}
           />
           <label className="event-editor-check"><input type="checkbox" checked={createMeetingAtEvent} onChange={(event) => setCreateMeetingAtEvent(event.target.checked)} />Use the event location as the meeting point</label>
-          <div className="event-editor-actions"><button type="button" className="secondary" onClick={() => setShowCreate(false)}>Cancel</button><button disabled={busy || !createLocationConfirmed}>{busy ? "Saving…" : "Save private draft"}</button></div>
+          <div className="event-editor-actions"><button type="button" className="secondary" onClick={() => setShowCreate(false)}>Cancel</button><button disabled={busy || !createLocationConfirmed || Boolean(activeIncidentId && !linkedIncidentReady)}>{busy ? "Saving…" : "Save private draft"}</button></div>
         </form>
       )}
 
@@ -345,7 +547,7 @@ export function CleanupEventDraftEditor({
 
           <div className="event-editor-detail">
             <form className="event-editor-panel" onSubmit={saveDraft}>
-              <div className="event-editor-section-heading"><span>01</span><div><h2>Edit draft</h2><p>{selected.incidentId ? `Linked to incident ${selected.incidentId}` : "Direct cleanup event"}</p></div></div>
+              <div className="event-editor-section-heading"><span>01</span><div><h2>Edit draft</h2><p>{selected.incidentId ? linkedIncident ? `Linked to ${linkedIncident.title}` : "Incident-linked cleanup event" : "Direct cleanup event"}</p></div></div>
               <div className="event-editor-fields">
                 <label>Title<input value={editTitle} minLength={3} maxLength={160} onChange={(event) => setEditTitle(event.target.value)} required /></label>
                 <label className="wide">Description<textarea value={editDescription} minLength={10} maxLength={5000} rows={5} onChange={(event) => setEditDescription(event.target.value)} required /></label>
@@ -353,9 +555,26 @@ export function CleanupEventDraftEditor({
                 <label>Event address<input value={editAddress} maxLength={500} onChange={(event) => setEditAddress(event.target.value)} /></label>
                 <label>Meeting address<input value={editMeetingAddress} maxLength={500} onChange={(event) => setEditMeetingAddress(event.target.value)} /></label>
               </div>
-              <LocationPicker value={editLocation} disabled={busy} onChange={(value) => { setEditLocation(value); setEditLocationConfirmed(false); }} onConfirm={(value) => { setEditLocation(value); setEditLocationConfirmed(true); }} />
+              {activeIncidentId && linkedIncidentLoading && (
+                <p className="event-editor-linked">Loading linked incident…</p>
+              )}
+              {activeIncidentId && linkedIncidentError && (
+                <div className="event-editor-linked event-editor-linked-error" role="alert">
+                  <strong>Linked incident unavailable</strong>
+                  <span>{linkedIncidentError}</span>
+                  <button type="button" className="secondary" onClick={() => setLinkedIncidentReload((value) => value + 1)}>Retry</button>
+                </div>
+              )}
+              {linkedIncidentReady && linkedIncident && (
+                <div className="event-editor-linked event-editor-linked-summary">
+                  <span>LINKED INCIDENT</span>
+                  <strong>{linkedIncident.title}</strong>
+                  <small>{linkedIncident.category.name} · {linkedIncident.status}{linkedIncident.addressText ? ` · ${linkedIncident.addressText}` : ""}</small>
+                </div>
+              )}
+              <LocationPicker value={editLocation} disabled={busy || Boolean(activeIncidentId && !linkedIncidentReady)} confirmed={editLocationConfirmed} confirmLabel="Confirm event location" referenceMarker={linkedMarker} focusReferenceLabel="Focus incident" onChange={(value) => { setEditLocation(value); setEditLocationConfirmed(false); }} onConfirm={(value) => { setEditLocation(value); setEditLocationConfirmed(true); }} />
               <label className="event-editor-check"><input type="checkbox" checked={editMeetingAtEvent} onChange={(event) => setEditMeetingAtEvent(event.target.checked)} />Use the event location as the meeting point</label>
-              <div className="event-editor-actions"><button disabled={busy || !editLocationConfirmed}>{busy ? "Saving…" : "Save changes"}</button><button className="danger" type="button" disabled={busy} onClick={() => { if (window.confirm("Discard this private draft and all of its sessions?")) void run(async () => { await discardDraft(accessToken, organizationId, selected.id); setDrafts((current) => current.filter((draft) => draft.id !== selected.id)); setSelected(undefined); setNotice({ tone: "success", message: "Private draft discarded." }); }, "Unable to discard the draft."); }}>Discard draft</button></div>
+              <div className="event-editor-actions"><button disabled={busy || !editLocationConfirmed || Boolean(activeIncidentId && !linkedIncidentReady)}>{busy ? "Saving…" : "Save changes"}</button><button className="danger" type="button" disabled={busy} onClick={() => { if (window.confirm("Discard this private draft and all of its sessions?")) void run(async () => { await discardDraft(accessToken, organizationId, selected.id); setDrafts((current) => current.filter((draft) => draft.id !== selected.id)); setSelected(undefined); setNotice({ tone: "success", message: "Private draft discarded." }); }, "Unable to discard the draft."); }}>Discard draft</button></div>
             </form>
 
             <section className="event-editor-panel">
@@ -365,12 +584,10 @@ export function CleanupEventDraftEditor({
                 <label>Starts<input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required /></label>
                 <label>Ends<input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} required /></label>
                 <label>Capacity<input type="number" min="1" max="100000" value={capacity} onChange={(event) => setCapacity(event.target.value)} /></label>
-                <label>Session address<input value={sessionAddress} maxLength={500} onChange={(event) => setSessionAddress(event.target.value)} /></label>
                 <label className="wide">Notes<textarea value={sessionNotes} maxLength={2000} onChange={(event) => setSessionNotes(event.target.value)} /></label>
-                <label className="event-editor-check wide"><input type="checkbox" checked={sessionAtEvent} onChange={(event) => setSessionAtEvent(event.target.checked)} />Use the event coordinates for this session</label>
-                <div className="event-editor-actions wide"><button disabled={busy}>{editingSessionId ? "Update session" : "Add session"}</button>{editingSessionId && <button className="secondary" type="button" onClick={resetSession}>Cancel edit</button>}</div>
+                <div className="event-editor-actions wide"><button disabled={busy}>{editingSessionId ? "Update session" : "Add session"}</button>{editingSessionId && <button className="secondary" type="button" disabled={busy} onClick={resetSession}>Cancel edit</button>}</div>
               </form>
-              <div className="event-editor-item-list">{selected.sessions.length === 0 ? <p>No sessions added.</p> : selected.sessions.map((session) => <article key={session.id}><span><strong>{session.sessionDate}</strong><small>{session.startTime.slice(0, 5)}–{session.endTime.slice(0, 5)} · {session.capacity ?? "Open"} capacity</small></span><span className="event-editor-row-actions"><button type="button" onClick={() => editSession(session)}>Edit</button><button type="button" className="danger" onClick={() => void run(async () => { await removeSession(accessToken, organizationId, selected.id, session.id); await refreshDraft(selected.id); }, "Unable to remove the session.")}>Remove</button></span></article>)}</div>
+              <div className="event-editor-item-list">{selected.sessions.length === 0 ? <p>No sessions added.</p> : selected.sessions.map((session) => <article key={session.id}><span><strong>{session.sessionDate}</strong><small>{session.startTime.slice(0, 5)}–{session.endTime.slice(0, 5)} · {session.capacity ?? "Open"} capacity</small></span><span className="event-editor-row-actions"><button type="button" disabled={busy} onClick={() => editSession(session)}>Edit</button><button type="button" className="danger" disabled={busy} onClick={() => { if (window.confirm("Remove this session from the draft?")) void run(async () => { await removeSession(accessToken, organizationId, selected.id, session.id); await refreshDraft(selected.id); setNotice({ tone: "success", message: "Session removed." }); }, "Unable to remove the session."); }}>Remove</button></span></article>)}</div>
             </section>
 
             <section className="event-editor-panel">

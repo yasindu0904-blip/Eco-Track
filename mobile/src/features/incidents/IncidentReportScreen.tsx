@@ -175,6 +175,7 @@ export function IncidentReportScreen({ accessToken, onBack, onSubmitted }: Props
         <LocationPicker
           value={location}
           disabled={busy}
+          confirmed={locationConfirmed}
           confirmLabel={locationConfirmed ? "✓ Location confirmed" : "Confirm incident location"}
           onMapInteractionChange={setMapInteracting}
           onChange={(next) => { setLocation(next); setLocationConfirmed(false); }}

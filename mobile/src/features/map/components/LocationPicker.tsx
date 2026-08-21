@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 
@@ -12,14 +11,17 @@ import {
   COLOMBO_MAP_CENTER,
   isWithinSriLankaBounds,
 } from "../map.constants";
-import type { MapLocation } from "../map.types";
+import type { MapLocation, MapMarkerFeature } from "../map.types";
 import { EcoMap } from "./EcoMap";
 
 export interface LocationPickerProps {
   value?: MapLocation | null;
   initialValue?: MapLocation;
   disabled?: boolean;
+  confirmed?: boolean;
   confirmLabel?: string;
+  referenceMarker?: MapMarkerFeature;
+  focusReferenceLabel?: string;
   onChange?: (location: MapLocation) => void;
   onConfirm: (location: MapLocation) => void;
   onMapInteractionChange?: (isInteracting: boolean) => void;
@@ -29,7 +31,10 @@ export function LocationPicker({
   value,
   initialValue = COLOMBO_MAP_CENTER,
   disabled = false,
+  confirmed = false,
   confirmLabel = "Confirm this location",
+  referenceMarker,
+  focusReferenceLabel = "Focus reference location",
   onChange,
   onConfirm,
   onMapInteractionChange,
@@ -37,20 +42,26 @@ export function LocationPicker({
   const [internalLocation, setInternalLocation] =
     useState<MapLocation>(initialValue);
   const selectedLocation = value ?? internalLocation;
-  const [latitudeText, setLatitudeText] = useState(
-    selectedLocation.latitude.toFixed(6),
-  );
-  const [longitudeText, setLongitudeText] = useState(
-    selectedLocation.longitude.toFixed(6),
-  );
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
   );
-
-  useEffect(() => {
-    setLatitudeText(selectedLocation.latitude.toFixed(6));
-    setLongitudeText(selectedLocation.longitude.toFixed(6));
-  }, [selectedLocation.latitude, selectedLocation.longitude]);
+  const [focusRequest, setFocusRequest] = useState<{
+    referenceId: string;
+    location: MapLocation;
+  } | null>(null);
+  const [selectedReferenceId, setSelectedReferenceId] = useState<string | null>(
+    null,
+  );
+  const referenceLocation = referenceMarker
+    ? {
+        latitude: referenceMarker.geometry.coordinates[1],
+        longitude: referenceMarker.geometry.coordinates[0],
+      }
+    : null;
+  const activeFocusLocation =
+    referenceMarker && focusRequest?.referenceId === referenceMarker.properties.id
+      ? focusRequest.location
+      : null;
 
   const selectLocation = (location: MapLocation) => {
     if (disabled) {
@@ -65,29 +76,9 @@ export function LocationPicker({
     }
 
     setInternalLocation(location);
-    setLatitudeText(location.latitude.toFixed(6));
-    setLongitudeText(location.longitude.toFixed(6));
+    setSelectedReferenceId(referenceMarker?.properties.id ?? null);
     setValidationMessage(null);
     onChange?.(location);
-  };
-
-  const applyCoordinates = () => {
-    const latitude = Number(latitudeText);
-    const longitude = Number(longitudeText);
-    const location = { latitude, longitude };
-
-    if (
-      !Number.isFinite(latitude) ||
-      !Number.isFinite(longitude) ||
-      !isWithinSriLankaBounds(location)
-    ) {
-      setValidationMessage(
-        "Enter coordinates inside the supported Sri Lanka map area.",
-      );
-      return;
-    }
-
-    selectLocation(location);
   };
 
   const confirmLocation = () => {
@@ -105,51 +96,57 @@ export function LocationPicker({
   return (
     <View style={styles.shell}>
       <EcoMap
-        initialCenter={selectedLocation}
+        markers={referenceMarker ? [referenceMarker] : []}
+        initialCenter={referenceLocation ?? selectedLocation}
         initialZoom={14}
-        selectedLocation={selectedLocation}
+        focusLocation={activeFocusLocation}
+        selectedMarkerId={referenceMarker?.properties.id}
+        selectedLocation={
+          referenceMarker && selectedReferenceId !== referenceMarker.properties.id
+            ? null
+            : selectedLocation
+        }
         selectionEnabled={!disabled}
-        selectionMode="center"
+        selectionMode={referenceMarker ? "point" : "center"}
         height={420}
         accessibleLabel="Choose and confirm an EcoTrack location"
+        showListFallback={false}
+        showCurrentLocation={!referenceMarker}
         onLocationSelect={selectLocation}
         onInteractionChange={onMapInteractionChange}
       />
 
       <View style={styles.controls}>
-        <Text style={styles.eyebrow}>Selected coordinates</Text>
-        <Text style={styles.coordinates}>
-          {selectedLocation.latitude.toFixed(6)},{" "}
-          {selectedLocation.longitude.toFixed(6)}
+        <Text style={[styles.eyebrow, confirmed && styles.confirmedEyebrow]}>
+          {confirmed ? "Location confirmed" : "Location selection"}
         </Text>
-        <Text style={styles.helper}>API order: latitude, longitude</Text>
+        <Text style={styles.statusTitle}>
+          {confirmed ? "Ready to save" : "Choose a point on the map"}
+        </Text>
+        <Text style={styles.helper}>
+          {confirmed
+            ? "Use the form's save button to keep this location."
+            : "Tap the map, then confirm the event location."}
+        </Text>
 
-        <View style={styles.inputRow}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Latitude</Text>
-            <TextInput
-              value={latitudeText}
-              style={styles.input}
-              editable={!disabled}
-              keyboardType="numbers-and-punctuation"
-              accessibilityLabel="Latitude"
-              onChangeText={setLatitudeText}
-              onSubmitEditing={applyCoordinates}
-            />
-          </View>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Longitude</Text>
-            <TextInput
-              value={longitudeText}
-              style={styles.input}
-              editable={!disabled}
-              keyboardType="numbers-and-punctuation"
-              accessibilityLabel="Longitude"
-              onChangeText={setLongitudeText}
-              onSubmitEditing={applyCoordinates}
-            />
-          </View>
-        </View>
+        {referenceMarker && referenceLocation ? (
+          <Pressable
+            style={({ pressed }) => [
+              styles.focusButton,
+              pressed && styles.buttonPressed,
+              disabled && styles.buttonDisabled,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={focusReferenceLabel}
+            disabled={disabled}
+            onPress={() => setFocusRequest({
+              referenceId: referenceMarker.properties.id,
+              location: { ...referenceLocation },
+            })}
+          >
+            <Text style={styles.focusButtonText}>{focusReferenceLabel}</Text>
+          </Pressable>
+        ) : null}
 
         {validationMessage && (
           <Text
@@ -167,10 +164,13 @@ export function LocationPicker({
             disabled && styles.buttonDisabled,
           ]}
           accessibilityRole="button"
+          accessibilityLabel={confirmLabel}
           disabled={disabled}
           onPress={confirmLocation}
         >
-          <Text style={styles.confirmButtonText}>{confirmLabel}</Text>
+          <Text style={styles.confirmButtonText}>
+            {confirmed ? "Location confirmed" : confirmLabel}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -196,39 +196,33 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
   },
-  coordinates: {
+  statusTitle: {
     color: colors.text,
     fontSize: 17,
     fontWeight: "800",
+  },
+  confirmedEyebrow: {
+    color: colors.primary,
   },
   helper: {
     marginTop: -5,
     color: colors.textMuted,
     fontSize: 12,
   },
-  inputRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 4,
-  },
-  inputGroup: {
-    flex: 1,
-    gap: 6,
-  },
-  inputLabel: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  input: {
+  focusButton: {
+    alignItems: "center",
+    justifyContent: "center",
     minHeight: 46,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.primary,
     borderRadius: 11,
-    color: colors.text,
     backgroundColor: colors.surface,
+  },
+  focusButtonText: {
+    color: colors.primaryDark,
     fontSize: 14,
+    fontWeight: "800",
   },
   confirmButton: {
     alignItems: "center",

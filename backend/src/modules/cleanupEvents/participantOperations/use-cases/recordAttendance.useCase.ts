@@ -2,7 +2,12 @@ import { ApplicationError } from "../../../../errors/applicationError.js";
 import { awardSessionAttendanceContribution } from "../../../rewards/services/awardContribution.service.js";
 import type { CleanupEventDependencies } from "../../cleanupEvent.dependencies.js";
 import { findAllocationOperationRecord, findParticipantOperationsEvent } from "../participantOperations.repository.js";
-import { hasSessionStarted, notifyParticipantOperation, requireOperationalLifecycle, toAllocationDto } from "../participantOperations.support.js";
+import {
+  isAttendanceOpen,
+  notifyParticipantOperation,
+  requireParticipantFinalizationLifecycle,
+  toAllocationDto,
+} from "../participantOperations.support.js";
 import type { ParticipantOperationAllocationDto } from "../participantOperations.types.js";
 import type { ValidatedRecordAttendance } from "../participantOperations.validation.js";
 
@@ -20,7 +25,7 @@ export async function recordAttendance(
     await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`event-attendance:${input.allocationId}`}))`;
     const event = await findParticipantOperationsEvent(transaction, input.organizationId, input.eventId);
     if (!event) throw new ApplicationError(404, "CLEANUP_EVENT_NOT_FOUND", "The organization cleanup event was not found.");
-    requireOperationalLifecycle(event.lifecycleStatus);
+    requireParticipantFinalizationLifecycle(event.lifecycleStatus);
     const allocation = await findAllocationOperationRecord(transaction, input.organizationId, input.eventId, input.allocationId);
     if (!allocation) throw new ApplicationError(404, "SESSION_ALLOCATION_NOT_FOUND", "The session allocation was not found.");
     if (allocation.status === input.status) return toAllocationDto(allocation);
@@ -30,7 +35,7 @@ export async function recordAttendance(
     if (allocation.status === "REMOVED") {
       throw new ApplicationError(409, "ALLOCATION_REMOVED", "Attendance cannot be recorded for a removed allocation.");
     }
-    if (allocation.session.status === "CANCELLED" || !hasSessionStarted(allocation.session.sessionDate, allocation.session.startTime, new Date())) {
+    if (!isAttendanceOpen(allocation.session)) {
       throw new ApplicationError(409, "ATTENDANCE_NOT_OPEN", "Attendance opens after a non-cancelled session starts.");
     }
     const now = new Date();
