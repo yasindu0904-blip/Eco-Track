@@ -3,7 +3,7 @@ import { Alert, StyleSheet, Text, View } from "react-native";
 
 import { describeApiFailure } from "../../../api/apiError";
 import { colors, spacing } from "../../../components/theme";
-import { BrandHeader, Button, Field, Notice, Screen, sharedStyles } from "../../../components/ui";
+import { Button, Field, Notice, PageHeader, Screen, sharedStyles } from "../../../components/ui";
 import {
   addExistingMember,
   approveMembershipRequest,
@@ -165,8 +165,13 @@ export function MembershipAdministrationScreen({ accessToken, organizationId, or
 
   return (
     <Screen>
-      <BrandHeader eyebrow="Organization workspace" title="Membership administration" subtitle={organizationName} compact />
-      <Button label="Back" variant="secondary" onPress={onBack} />
+      <PageHeader
+        eyebrow="Organization workspace"
+        title="Membership administration"
+        subtitle={organizationName}
+        onBack={onBack}
+        backLabel="Workspace"
+      />
       {notice ? <Notice message={notice} tone="success" /> : null}
 
       <View style={sharedStyles.card}>

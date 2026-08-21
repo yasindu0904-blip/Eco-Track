@@ -1,13 +1,21 @@
 import { useCallback } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { getCitizenSummary } from "../dashboards/dashboard.api";
-import { Metric, SummaryCards, total } from "../dashboards/SummaryCards";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
-import { BrandHeader, Button, Notice, Screen, sharedStyles } from "../../components/ui";
-import { colors, spacing } from "../../components/theme";
-import { NotificationButton } from "../notifications/NotificationInboxScreen";
+import {
+  ActionRow,
+  AppMark,
+  Button,
+  Screen,
+  SectionHeader,
+  memberColors,
+  memberSpacing,
+  sharedStyles,
+} from "../../components/memberUi";
+import { getCitizenSummary } from "../dashboards/dashboard.api";
+import { Metric, SummaryCards, total } from "../dashboards/SummaryCards";
 import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
+import { NotificationButton } from "../notifications/NotificationInboxScreen";
 
 type CitizenDashboardProps = {
   profile: AuthenticatedUserProfile;
@@ -45,147 +53,207 @@ export function CitizenDashboard({
   onSignOut,
 }: CitizenDashboardProps) {
   const displayName = profile.fullName?.trim() || "EcoTrack member";
-  const loadSummary = useCallback(() => getCitizenSummary(accessToken), [accessToken]);
+  const firstName = displayName.split(/\s+/)[0];
+  const loadSummary = useCallback(
+    () => getCitizenSummary(accessToken),
+    [accessToken],
+  );
 
   return (
     <Screen>
-      <BrandHeader eyebrow="Citizen & volunteer" compact />
-
-      <View style={[sharedStyles.card, styles.welcomeCard]}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
+      <View style={styles.topBar}>
+        <View style={styles.brandRow}>
+          <AppMark compact />
+          <View>
+            <Text style={styles.brandName}>EcoTrack</Text>
+            <Text style={styles.workspaceLabel}>Personal workspace</Text>
+          </View>
         </View>
-        <View style={styles.welcomeCopy}>
-          <Text style={styles.greeting}>Welcome back</Text>
-          <Text style={styles.name}>{displayName}</Text>
-          <Text style={styles.email}>{profile.email}</Text>
-        </View>
+        <NotificationButton
+          accessToken={accessToken}
+          onOpen={onOpenNotifications}
+          compact
+        />
       </View>
 
-      <Notice
-        message="Every normal EcoTrack account can report as a citizen and voluntarily join cleanup events. Organization access is additional to this account."
-      />
+      <View style={styles.welcome}>
+        <Text style={styles.welcomeEyebrow}>Welcome back</Text>
+        <Text style={styles.welcomeTitle}>{firstName}</Text>
+        <Text style={styles.welcomeCopy}>
+          Take action in your community or continue an organization workspace.
+        </Text>
+      </View>
 
-      <NotificationButton
-        accessToken={accessToken}
-        onOpen={onOpenNotifications}
-      />
-      <SummaryCards load={loadSummary} label="Citizen summary">{(summary) => <><Metric label="My reports" value={total(summary.reportsByState)} /><Metric label="Upcoming joined events" value={summary.upcomingEvents} /><Metric label="Unread notifications" value={summary.unreadNotifications} /><Metric label="Impact points" value={summary.contributions.points} /></>}</SummaryCards>
+      <SummaryCards load={loadSummary} label="Your activity" compact>
+        {(summary) => (
+          <View style={styles.metricGrid}>
+            <Metric compact label="Reports" value={total(summary.reportsByState)} />
+            <Metric compact label="Upcoming" value={summary.upcomingEvents} />
+            <Metric compact label="Impact points" value={summary.contributions.points} />
+            <Metric compact label="Unread" value={summary.unreadNotifications} />
+          </View>
+        )}
+      </SummaryCards>
 
-      {activeOrganization && onOpenOrganizationWorkspace ? (
-        <View style={[sharedStyles.card, styles.organizationCard]}>
-          <Text style={styles.organizationEyebrow}>ACTIVE ORGANIZATION</Text>
-          <Text style={sharedStyles.sectionTitle}>
-            {activeOrganization.organization.name}
-          </Text>
-          <Text style={sharedStyles.sectionSubtitle}>
-            {activeOrganization.role === "ORG_ADMIN"
-              ? "Organization admin"
-              : "Organization member"}
-          </Text>
-          <Button
-            label="Open organization workspace"
+      <View style={styles.section}>
+        <SectionHeader
+          title="Start here"
+          subtitle="Choose one community action to continue."
+        />
+        <ActionRow
+          title="Report an incident"
+          description="Pin the location and share what you found."
+          symbol="!"
+          tone="primary"
+          onPress={onReportIncident}
+        />
+        <ActionRow
+          title="Explore the community map"
+          description="Find incidents and cleanup activity around you."
+          symbol="⌖"
+          tone="warm"
+          onPress={onFindCleanupActivity}
+        />
+        <ActionRow
+          title="Browse cleanup events"
+          description="Review schedules and join as a volunteer."
+          symbol="＋"
+          onPress={onBrowseCleanupEvents}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeader title="Your activity" />
+        <ActionRow
+          title="My reports"
+          description="Check report details and status history."
+          symbol="≡"
+          onPress={onViewReports}
+        />
+        <ActionRow
+          title="My joined events"
+          description="See availability, assignments, and attendance."
+          symbol="✓"
+          onPress={onViewJoinedCleanupEvents}
+        />
+        <ActionRow
+          title="My impact"
+          description="Review points and community achievements."
+          symbol="★"
+          onPress={onOpenImpact}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeader title="Organizations" subtitle="Access stays separate for each organization." />
+        {activeOrganization && onOpenOrganizationWorkspace ? (
+          <Pressable
+            accessibilityRole="button"
             onPress={onOpenOrganizationWorkspace}
-          />
-        </View>
-      ) : null}
-
-      <View style={sharedStyles.card}>
-        <Text style={sharedStyles.sectionTitle}>Organization membership</Text>
-        <Text style={sharedStyles.sectionSubtitle}>
-          Find active organizations, request member access, edit your profile,
-          and track your request status.
-        </Text>
-        <Button label="Manage membership" onPress={onManageMembership} />
-      </View>
-
-      <View style={sharedStyles.card}>
-        <Text style={sharedStyles.sectionTitle}>Organization onboarding</Text>
-        <Text style={sharedStyles.sectionSubtitle}>
-          Request a verified EcoTrack workspace for an existing environmental organization and select its official GN Division service areas.
-        </Text>
-        <Button
-          label="Create organization request"
-          onPress={onCreateOrganizationApplication}
+            style={({ pressed }) => [styles.organizationCard, pressed && styles.pressed]}
+          >
+            <View style={styles.organizationMark}>
+              <Text style={styles.organizationMarkText}>
+                {activeOrganization.organization.name.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.organizationCopy}>
+              <Text style={styles.organizationMeta}>
+                {activeOrganization.role === "ORG_ADMIN" ? "Organization admin" : "Organization member"}
+              </Text>
+              <Text style={styles.organizationName}>{activeOrganization.organization.name}</Text>
+            </View>
+            <Text style={styles.organizationArrow}>›</Text>
+          </Pressable>
+        ) : (
+          <View style={[sharedStyles.card, styles.emptyOrganization]}>
+            <Text style={sharedStyles.sectionTitle}>No active workspace yet</Text>
+            <Text style={sharedStyles.sectionSubtitle}>
+              Join an approved organization or request a workspace for an existing environmental group.
+            </Text>
+          </View>
+        )}
+        <ActionRow
+          title="Manage membership"
+          description="Find an organization or review your request."
+          symbol="⌂"
+          onPress={onManageMembership}
+        />
+        <ActionRow
+          title="Organization requests"
+          description="Submit a request or follow its review status."
+          symbol="＋"
+          onPress={activeOrganization ? onViewApplications : onCreateOrganizationApplication}
         />
         <Button
-          label="View my requests"
-          variant="secondary"
+          label="View application history"
+          variant="ghost"
+          compact
           onPress={onViewApplications}
         />
       </View>
 
-      <View style={[sharedStyles.card, styles.upcomingCard]}>
-        <Text style={styles.upcomingEyebrow}>AVAILABLE NOW</Text>
-        <Text style={sharedStyles.sectionTitle}>Incident reporting</Text>
-        <Text style={sharedStyles.sectionSubtitle}>
-          Confirm your current location or a manually positioned map pin, add evidence, and follow the shared status.
-        </Text>
-        <Button label="Report an incident" onPress={onReportIncident} />
-        <Button label="View My Reports" variant="secondary" onPress={onViewReports} />
+      <View style={styles.accountFooter}>
+        <View style={styles.accountAvatar}>
+          <Text style={styles.accountAvatarText}>{displayName.charAt(0).toUpperCase()}</Text>
+        </View>
+        <View style={styles.accountCopy}>
+          <Text style={styles.accountName}>{displayName}</Text>
+          <Text style={styles.accountEmail}>{profile.email}</Text>
+        </View>
+        <Button label="Sign out" variant="ghost" compact onPress={onSignOut} />
       </View>
-
-      <View style={sharedStyles.card}>
-        <Text style={styles.upcomingEyebrow}>FIND CLEANUP ACTIVITY</Text>
-        <Text style={sharedStyles.sectionTitle}>Discover incidents nearby</Text>
-        <Text style={sharedStyles.sectionSubtitle}>
-          Browse environmental incidents in the visible map area or run an
-          explicit five-kilometre search from your current location.
-        </Text>
-        <Button label="Open discovery map" onPress={onFindCleanupActivity} />
-      </View>
-
-      <View style={sharedStyles.card}>
-        <Text style={styles.upcomingEyebrow}>PUBLISHED CLEANUPS</Text>
-        <Text style={sharedStyles.sectionTitle}>Browse cleanup events</Text>
-        <Text style={sharedStyles.sectionSubtitle}>See public schedules, event locations, and volunteer instructions.</Text>
-        <Button label="View published events" onPress={onBrowseCleanupEvents} />
-        <Button label="My joined events" variant="secondary" onPress={onViewJoinedCleanupEvents} />
-      </View>
-
-      <View style={sharedStyles.card}>
-        <Text style={styles.upcomingEyebrow}>MY IMPACT</Text>
-        <Text style={sharedStyles.sectionTitle}>Rewards and achievements</Text>
-        <Text style={sharedStyles.sectionSubtitle}>
-          See non-monetary points and the private history behind every verified contribution.
-        </Text>
-        <Button label="Open My Impact" onPress={onOpenImpact} />
-      </View>
-
-      <Button label="Sign out" variant="secondary" onPress={onSignOut} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  welcomeCard: { flexDirection: "row", alignItems: "center" },
-  avatar: {
-    width: 62,
-    height: 62,
-    borderRadius: 20,
+  topBar: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.primary,
+    justifyContent: "space-between",
+    gap: memberSpacing.md,
+    paddingBottom: memberSpacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: memberColors.border,
   },
-  avatarText: { color: colors.surface, fontSize: 27, fontWeight: "900" },
-  welcomeCopy: { flex: 1, gap: 2 },
-  greeting: { color: colors.textMuted, fontSize: 13 },
-  name: { color: colors.text, fontSize: 22, fontWeight: "900" },
-  email: { color: colors.textMuted, fontSize: 13 },
-  upcomingCard: { backgroundColor: colors.surfaceMuted },
-  upcomingEyebrow: {
-    color: colors.primary,
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 1.1,
-  },
+  brandRow: { flexDirection: "row", alignItems: "center", gap: memberSpacing.sm },
+  brandName: { color: memberColors.text, fontSize: 18, fontWeight: "900", letterSpacing: -0.4 },
+  workspaceLabel: { marginTop: 1, color: memberColors.textMuted, fontSize: 11 },
+  welcome: { paddingVertical: memberSpacing.sm },
+  welcomeEyebrow: { color: "#477456", fontSize: 11, fontWeight: "800", letterSpacing: 1, textTransform: "uppercase" },
+  welcomeTitle: { marginTop: 4, color: memberColors.text, fontSize: 34, fontWeight: "900", letterSpacing: -1.1 },
+  welcomeCopy: { maxWidth: 330, marginTop: 5, color: memberColors.textMuted, fontSize: 14, lineHeight: 21 },
+  metricGrid: { flexDirection: "row", flexWrap: "wrap" },
+  section: { gap: memberSpacing.sm },
   organizationCard: {
-    borderColor: colors.primary,
+    minHeight: 78,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: memberSpacing.md,
+    padding: memberSpacing.md,
+    borderRadius: 14,
+    backgroundColor: "#183F2B",
   },
-  organizationEyebrow: {
-    color: colors.primary,
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 1.1,
+  organizationMark: { width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 12, backgroundColor: memberColors.accent },
+  organizationMarkText: { color: memberColors.primaryPressed, fontSize: 19, fontWeight: "900" },
+  organizationCopy: { flex: 1, gap: 3 },
+  organizationMeta: { color: "rgba(255,255,255,0.62)", fontSize: 11 },
+  organizationName: { color: memberColors.surface, fontSize: 15, fontWeight: "800" },
+  organizationArrow: { color: memberColors.surface, fontSize: 27 },
+  emptyOrganization: { backgroundColor: memberColors.surfaceMuted, shadowOpacity: 0, elevation: 0 },
+  pressed: { opacity: 0.9 },
+  accountFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: memberSpacing.sm,
+    paddingTop: memberSpacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: memberColors.border,
   },
+  accountAvatar: { width: 38, height: 38, alignItems: "center", justifyContent: "center", borderRadius: 11, backgroundColor: memberColors.primarySoft },
+  accountAvatarText: { color: memberColors.primary, fontSize: 14, fontWeight: "900" },
+  accountCopy: { flex: 1 },
+  accountName: { color: memberColors.text, fontSize: 13, fontWeight: "800" },
+  accountEmail: { color: memberColors.textMuted, fontSize: 11 },
 });

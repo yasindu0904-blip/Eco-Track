@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import { colors, spacing } from "../../components/theme";
-import { BrandHeader, Button, Field, Notice, Screen, sharedStyles } from "../../components/ui";
+import { Button, Field, Notice, PageHeader, Screen, sharedStyles } from "../../components/ui";
 import {
   listMyMembershipRequests,
   requestMembership,
@@ -131,8 +131,13 @@ export function MembershipSelfServiceScreen({ accessToken, profile, onProfileUpd
 
   return (
     <Screen>
-      <BrandHeader eyebrow="Account & membership" title="Join an organization" compact />
-      <Button label="Back to dashboard" variant="secondary" onPress={onBack} />
+      <PageHeader
+        eyebrow="Account & membership"
+        title="Profile and membership"
+        subtitle="Update your details or request access to an approved organization."
+        onBack={onBack}
+        backLabel="Dashboard"
+      />
 
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.sectionTitle}>Edit profile</Text>

@@ -199,17 +199,13 @@ export function OrganizationWorkspace({
               </div>
             </section>
 
-            <section className="organization-workspace-panel">
+            <section className="organization-workspace-section-heading">
               <div>
-                <span>Access granted</span>
-                <h2>Organization onboarding accepted</h2>
-                <p>
-                  This workspace is available through your active organization
-                  membership.
-                </p>
+                <span>Workspace tools</span>
+                <h2>Manage local action</h2>
               </div>
               <button type="button" onClick={onViewApplications}>
-                View organization requests
+                Organization requests
               </button>
             </section>
 
@@ -227,18 +223,18 @@ export function OrganizationWorkspace({
                 </span>
                 <span className="organization-workspace-tool-copy">
                   <small>Incident discovery</small>
-                  <strong>Available now</strong>
+                  <strong>Review covered incidents</strong>
                   <span>Search covered reports and review them by GN Division.</span>
                 </span>
                 <span className="organization-workspace-tool-action" aria-hidden="true">
-                  Open <b>→</b>
+                  Open <b>&rarr;</b>
                 </span>
               </button>
               {membership.role === "ORG_ADMIN" && (
                 <button type="button" className="organization-workspace-tool-card" onClick={() => setActiveTab("members")}>
                   <span className="organization-workspace-tool-icon" aria-hidden="true">M</span>
                   <span className="organization-workspace-tool-copy"><small>Membership administration</small><strong>Members and requests</strong><span>Review requests and manage roles for this organization.</span></span>
-                  <span className="organization-workspace-tool-action" aria-hidden="true">Open →</span>
+                  <span className="organization-workspace-tool-action" aria-hidden="true">Open &rarr;</span>
                 </button>
               )}
               {membership.role === "ORG_ADMIN" && (
@@ -256,13 +252,13 @@ export function OrganizationWorkspace({
                     <strong>Draft workspace</strong>
                     <span>Create private plans, sessions, and coordinator assignments.</span>
                   </span>
-                  <span className="organization-workspace-tool-action" aria-hidden="true">Open →</span>
+                  <span className="organization-workspace-tool-action" aria-hidden="true">Open &rarr;</span>
                 </button>
               )}
               <button type="button" className="organization-workspace-tool-card" onClick={() => setActiveTab("events")}>
-                <span className="organization-workspace-tool-icon" aria-hidden="true">✓</span>
-                <span className="organization-workspace-tool-copy"><small>Cleanup events</small><strong>Lifecycle overview</strong><span>See this organization’s private drafts and published events.</span></span>
-                <span className="organization-workspace-tool-action" aria-hidden="true">Open →</span>
+                <span className="organization-workspace-tool-icon" aria-hidden="true">E</span>
+                <span className="organization-workspace-tool-copy"><small>Cleanup events</small><strong>Manage event activity</strong><span>See this organization&apos;s private drafts and published events.</span></span>
+                <span className="organization-workspace-tool-action" aria-hidden="true">Open &rarr;</span>
               </button>
             </section>
           </>

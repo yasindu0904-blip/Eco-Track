@@ -2,7 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import { BackHandler, Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
-import { BrandHeader, Button, Screen, sharedStyles } from "../../components/ui";
+import {
+  ActionRow,
+  Button,
+  PageHeader,
+  Screen,
+  SectionHeader,
+  sharedStyles,
+} from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
 import { CleanupEventDraftScreen, OrganizationCleanupEventListScreen } from "../cleanupEvents";
@@ -77,11 +84,12 @@ export function OrganizationWorkspaceScreen({
 
   return (
     <Screen scrollEnabled={!mapInteracting}>
-      <BrandHeader
+      <PageHeader
         eyebrow="Organization workspace"
         title={membership.organization.name}
         subtitle={profile.email}
-        compact
+        onBack={onBack}
+        backLabel="Dashboard"
       />
 
       {memberships.length > 1 ? (
@@ -169,7 +177,7 @@ export function OrganizationWorkspaceScreen({
         />
       ) : activeTab === "overview" ? (
         <>
-          <SummaryCards load={loadSummary} label="Organization summary">{(summary) => <><Metric label="Covered incidents" value={total(summary.coveringIncidentsByState)} /><Metric label="Upcoming sessions" value={summary.upcomingSessions} /><Metric label="Joined participants" value={summary.joinedParticipants} /><Metric label="Pending membership requests" value={summary.pendingMembershipRequests} /></>}</SummaryCards>
+          <SummaryCards compact load={loadSummary} label="Organization summary">{(summary) => <><Metric compact label="Covered incidents" value={total(summary.coveringIncidentsByState)} /><Metric compact label="Upcoming sessions" value={summary.upcomingSessions} /><Metric compact label="Joined participants" value={summary.joinedParticipants} /><Metric compact label="Pending requests" value={summary.pendingMembershipRequests} /></>}</SummaryCards>
           <View style={sharedStyles.card}>
             <View style={sharedStyles.spacedRow}>
               <View style={styles.accessValue}>
@@ -191,83 +199,51 @@ export function OrganizationWorkspaceScreen({
             </View>
           </View>
 
-          <View style={[sharedStyles.card, styles.acceptedCard]}>
-            <Text style={styles.acceptedEyebrow}>ACCESS GRANTED</Text>
-            <Text style={sharedStyles.sectionTitle}>
-              Organization onboarding accepted
-            </Text>
-            <Text style={sharedStyles.sectionSubtitle}>
-              This workspace is available through your active organization
-              membership.
-            </Text>
-            <Button
-              label="View organization requests"
-              onPress={onViewApplications}
+          <SectionHeader
+            title="Manage local action"
+            subtitle="Workspace tools"
+            action={(
+              <Button
+                compact
+                label="Requests"
+                variant="ghost"
+                onPress={onViewApplications}
+              />
+            )}
+          />
+          <View style={styles.toolList}>
+            <ActionRow
+              title="Review covered incidents"
+              description="Search reports in this organization's GN Divisions."
+              symbol="!"
+              onPress={() => setActiveTab("incidentDiscovery")}
+            />
+            {membership.role === "ORG_ADMIN" ? (
+              <ActionRow
+                title="Members and requests"
+                description="Review requests and manage organization roles."
+                symbol="M"
+                onPress={() => setActiveTab("members")}
+              />
+            ) : null}
+            {membership.role === "ORG_ADMIN" ? (
+              <ActionRow
+                title="Plan a cleanup event"
+                description="Create drafts, sessions, and coordinator assignments."
+                symbol="+"
+                onPress={() => {
+                  setLinkedIncidentId(undefined);
+                  setActiveTab("eventDrafts");
+                }}
+              />
+            ) : null}
+            <ActionRow
+              title="Manage cleanup events"
+              description="See private drafts and published organization events."
+              symbol="E"
+              onPress={() => setActiveTab("events")}
             />
           </View>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Open incident discovery"
-            onPress={() => setActiveTab("incidentDiscovery")}
-            style={({ pressed }) => [
-              styles.toolCard,
-              pressed && styles.toolCardPressed,
-            ]}
-          >
-            <View style={styles.toolIcon}>
-              <Text style={styles.toolIconText}>!</Text>
-            </View>
-            <View style={styles.toolCopy}>
-              <Text style={styles.toolEyebrow}>INCIDENT DISCOVERY</Text>
-              <Text style={styles.toolTitle}>Available now</Text>
-              <Text style={styles.toolDescription}>
-                Search covered reports and review them by GN Division.
-              </Text>
-            </View>
-            <Text style={styles.toolArrow}>→</Text>
-          </Pressable>
-          {membership.role === "ORG_ADMIN" ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open membership administration"
-              onPress={() => setActiveTab("members")}
-              style={({ pressed }) => [styles.toolCard, pressed && styles.toolCardPressed]}
-            >
-              <View style={styles.toolIcon}><Text style={styles.toolIconText}>M</Text></View>
-              <View style={styles.toolCopy}><Text style={styles.toolEyebrow}>MEMBERSHIP ADMINISTRATION</Text><Text style={styles.toolTitle}>Members and requests</Text><Text style={styles.toolDescription}>Review requests and manage roles for this organization.</Text></View>
-              <Text style={styles.toolArrow}>→</Text>
-            </Pressable>
-          ) : null}
-          {membership.role === "ORG_ADMIN" ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Open cleanup-event drafts"
-              onPress={() => {
-                setLinkedIncidentId(undefined);
-                setActiveTab("eventDrafts");
-              }}
-              style={({ pressed }) => [styles.toolCard, pressed && styles.toolCardPressed]}
-            >
-              <View style={styles.toolIcon}><Text style={styles.toolIconText}>+</Text></View>
-              <View style={styles.toolCopy}>
-                <Text style={styles.toolEyebrow}>CLEANUP-EVENT PLANNING</Text>
-                <Text style={styles.toolTitle}>Draft workspace</Text>
-                <Text style={styles.toolDescription}>Create private plans, sessions, and coordinator assignments.</Text>
-              </View>
-              <Text style={styles.toolArrow}>→</Text>
-            </Pressable>
-          ) : null}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Open organization cleanup events"
-            onPress={() => setActiveTab("events")}
-            style={({ pressed }) => [styles.toolCard, pressed && styles.toolCardPressed]}
-          >
-            <View style={styles.toolIcon}><Text style={styles.toolIconText}>✓</Text></View>
-            <View style={styles.toolCopy}><Text style={styles.toolEyebrow}>ORGANIZATION EVENTS</Text><Text style={styles.toolTitle}>Lifecycle overview</Text><Text style={styles.toolDescription}>See private drafts and published cleanup events for this organization.</Text></View>
-            <Text style={styles.toolArrow}>→</Text>
-          </Pressable>
         </>
       ) : (
         <OrganizationIncidentDiscovery
@@ -295,7 +271,6 @@ export function OrganizationWorkspaceScreen({
         />
       )}
 
-      <Button label="Back to citizen dashboard" variant="secondary" onPress={onBack} />
       <Button label="Sign out" variant="secondary" onPress={onSignOut} />
     </Screen>
   );
@@ -341,16 +316,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.successSoft,
   },
   statusText: { color: colors.success, fontSize: 11, fontWeight: "900" },
-  acceptedCard: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primarySoft,
-  },
-  acceptedEyebrow: {
-    color: colors.primary,
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
   tabs: {
     flexDirection: "row",
     gap: spacing.xs,
@@ -373,42 +338,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
   },
-  toolCard: {
-    minHeight: 128,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 18,
-    backgroundColor: colors.surface,
-  },
-  toolCardPressed: {
-    borderColor: colors.warning,
-    backgroundColor: colors.warningSoft,
-  },
-  toolIcon: {
-    width: 58,
-    height: 58,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 17,
-    backgroundColor: colors.warningSoft,
-  },
-  toolIconText: {
-    color: colors.warning,
-    fontSize: 24,
-    fontWeight: "900",
-  },
-  toolCopy: { flex: 1, gap: 3 },
-  toolEyebrow: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-  },
-  toolTitle: { color: colors.text, fontSize: 20, fontWeight: "900" },
-  toolDescription: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
-  toolArrow: { color: colors.warning, fontSize: 24, fontWeight: "900" },
+  toolList: { gap: spacing.sm },
 });

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { ApiRequestError } from "../../api/apiClient";
-import { BrandHeader, Button, LoadingState, Notice, Screen, sharedStyles } from "../../components/ui";
+import { Button, LoadingState, Notice, PageHeader, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import { listMyOrganizationApplications } from "./organizationApplication.api";
 import type { OrganizationApplication, OrganizationStatus } from "./organizationApplication.types";
@@ -61,7 +61,13 @@ export function MyOrganizationApplicationsScreen({
 
   return (
     <Screen>
-      <BrandHeader eyebrow="My requests" title="Application status" compact />
+      <PageHeader
+        eyebrow="My requests"
+        title="Organization requests"
+        subtitle="Follow each application from submission through review."
+        onBack={onBack}
+        backLabel="Dashboard"
+      />
       {submittedApplication ? (
         <Notice message={`${submittedApplication.name} was submitted successfully and is waiting for Super Admin review.`} tone="success" />
       ) : null}
@@ -102,7 +108,6 @@ export function MyOrganizationApplicationsScreen({
 
       <Button label="Refresh statuses" onPress={() => void load()} />
       <Button label="Create another request" variant="secondary" onPress={onCreateAnother} />
-      <Button label="Back to dashboard" variant="secondary" onPress={onBack} />
     </Screen>
   );
 }

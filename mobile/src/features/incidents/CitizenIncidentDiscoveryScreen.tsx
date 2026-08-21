@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { describeApiFailure } from "../../api/apiError";
-import { Button, Notice, Screen, sharedStyles } from "../../components/ui";
+import { Button, Notice, PageHeader, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import {
   EcoMap,
@@ -389,14 +389,13 @@ export function CitizenIncidentDiscoveryScreen({ accessToken, onBack, onReportIn
 
   return (
     <Screen scrollEnabled={!mapInteracting}>
-      <Pressable onPress={onBack}><Text style={styles.back}>← Dashboard</Text></Pressable>
-      <View style={styles.intro}>
-        <Text style={styles.eyebrow}>FIND CLEANUP ACTIVITY</Text>
-        <Text style={styles.title}>Discover cleanup activity nearby</Text>
-        <Text style={sharedStyles.sectionSubtitle}>
-          Browse the visible map or request foreground location once for a five-kilometre search.
-        </Text>
-      </View>
+      <PageHeader
+        eyebrow="Community map"
+        title="Discover cleanup activity"
+        subtitle="Browse the visible map or request your location once for a five-kilometre search."
+        onBack={onBack}
+        backLabel="Dashboard"
+      />
 
       <Button
         label={locating ? "Finding your location…" : "Find activity near me"}

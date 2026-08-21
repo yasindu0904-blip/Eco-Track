@@ -1,0 +1,603 @@
+/*
+ * Shared product styling for authenticated citizen and organization surfaces.
+ * Everything is scoped to the member shell so Super Admin screens are unchanged.
+ */
+.citizen-dashboard-shell {
+  --member-bg: #f5f7f4;
+  --member-surface: #ffffff;
+  --member-surface-subtle: #f8faf7;
+  --member-text: #17251d;
+  --member-muted: #68756d;
+  --member-border: #dce4dc;
+  --member-border-strong: #b8c9bb;
+  --member-primary: #195f38;
+  --member-primary-hover: #124b2b;
+  --member-soft: #eaf3ec;
+  --member-danger: #a43a32;
+  --member-radius: 14px;
+  --member-shadow: 0 7px 22px rgba(30, 60, 39, 0.055);
+}
+
+.citizen-dashboard-shell :where(button, input, textarea, select) { font: inherit; }
+.citizen-dashboard-shell :where(button):focus-visible,
+.citizen-dashboard-shell :where(input, textarea, select):focus-visible {
+  outline: 3px solid rgba(25, 95, 56, 0.16);
+  outline-offset: 2px;
+}
+
+.citizen-dashboard-shell :where(
+  .incident-shell,
+  .organization-shell,
+  .organization-workspace-shell,
+  .membership-page,
+  .membership-admin-page,
+  .notification-page,
+  .impact-page,
+  .public-events-shell,
+  .workflow-page
+) {
+  min-height: 100vh;
+  color: var(--member-text);
+  background: var(--member-bg);
+}
+
+.citizen-dashboard-shell :where(
+  .membership-page,
+  .membership-admin-page,
+  .notification-page,
+  .impact-page,
+  .public-events-shell,
+  .workflow-page
+) {
+  width: min(100%, 1280px);
+  margin: 0 auto;
+  padding: 38px clamp(22px, 4vw, 52px) 64px;
+}
+
+/* Consistent page headers and correctly placed navigation controls. */
+.citizen-dashboard-shell :where(
+  .membership-page-header,
+  .membership-admin-header,
+  .notification-header,
+  .impact-header,
+  .event-editor-header
+) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: end;
+  margin: 0 0 28px;
+  padding: 0 0 22px;
+  border: 0;
+  border-bottom: 1px solid var(--member-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.citizen-dashboard-shell :where(
+  .membership-page-header,
+  .membership-admin-header,
+  .notification-header,
+  .impact-header,
+  .event-editor-header
+) > :where(button, .button, .ma-button, .event-action-button) {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+}
+
+.citizen-dashboard-shell .notification-header {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  max-width: none;
+}
+
+.citizen-dashboard-shell .notification-header > button {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.citizen-dashboard-shell .notification-header > strong {
+  grid-column: 3;
+  grid-row: 1;
+  padding: 6px 10px;
+  color: #315d43;
+  background: var(--member-soft);
+  font-size: 0.72rem;
+}
+
+.citizen-dashboard-shell :where(
+  .membership-page-header,
+  .membership-admin-header,
+  .notification-header,
+  .impact-header,
+  .event-editor-header,
+  .organization-workspace-heading,
+  .organization-intro,
+  .incident-intro,
+  .incident-list-heading,
+  .citizen-discovery-intro
+) h1 {
+  margin: 5px 0 6px;
+  color: var(--member-text);
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.citizen-dashboard-shell :where(
+  .membership-page-header,
+  .membership-admin-header,
+  .notification-header,
+  .impact-header,
+  .event-editor-header,
+  .organization-workspace-heading,
+  .organization-intro,
+  .incident-intro,
+  .incident-list-heading,
+  .citizen-discovery-intro
+) p {
+  margin: 0;
+  color: var(--member-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.citizen-dashboard-shell :where(
+  .membership-page-header,
+  .membership-admin-header,
+  .notification-header,
+  .impact-header,
+  .event-editor-header,
+  .organization-workspace-heading,
+  .organization-intro,
+  .incident-intro,
+  .incident-list-heading,
+  .citizen-discovery-intro
+) :where(span:first-child) {
+  color: #477456;
+  font-size: 0.67rem;
+  font-weight: 780;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* A quiet, consistent card and form language across feature modules. */
+.citizen-dashboard-shell :where(
+  .membership-card,
+  .ma-card,
+  .organization-card,
+  .organization-workspace-panel,
+  .incident-card,
+  .notification-card,
+  .notification-empty,
+  .notification-message,
+  .impact-section,
+  .impact-breakdown article,
+  .event-editor-panel,
+  .event-participant-operations,
+  .event-participant-card,
+  .public-event-list button,
+  .public-event-list article,
+  .citizen-discovery-filters,
+  .citizen-discovery-list,
+  .citizen-discovery-detail
+) {
+  border-color: var(--member-border);
+  border-radius: var(--member-radius);
+  background: var(--member-surface);
+  box-shadow: var(--member-shadow);
+}
+
+.citizen-dashboard-shell :where(.membership-card, .ma-card, .organization-card, .incident-card, .event-editor-panel) {
+  padding: clamp(18px, 2.2vw, 26px);
+}
+
+.citizen-dashboard-shell :where(input:not([type="checkbox"]):not([type="radio"]), textarea, select) {
+  min-height: 44px;
+  padding: 10px 12px;
+  color: var(--member-text);
+  border: 1px solid #cdd8cf;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.citizen-dashboard-shell :where(input:not([type="checkbox"]):not([type="radio"]), textarea, select):focus {
+  border-color: #4f8764;
+  box-shadow: 0 0 0 3px rgba(25, 95, 56, 0.09);
+  outline: none;
+}
+
+.citizen-dashboard-shell :where(textarea) { resize: vertical; }
+.citizen-dashboard-shell :where(input:disabled, textarea:disabled, select:disabled) {
+  color: #758078;
+  background: #f0f3ef;
+}
+
+.citizen-dashboard-shell :where(
+  .button,
+  .ma-button,
+  .event-action-button,
+  .event-editor-actions button,
+  .organization-back-button,
+  .organization-user button,
+  .notification-header button,
+  .notification-toolbar button,
+  .notification-load-more,
+  .notification-retry,
+  .impact-header button,
+  .impact-notice button,
+  .impact-load-more
+) {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 14px;
+  border-radius: 9px;
+  font-size: 0.79rem;
+  font-weight: 720;
+  box-shadow: none;
+}
+
+.citizen-dashboard-shell :where(.button-primary, .ma-primary, .event-action-button:not(.secondary), .notification-toolbar button) {
+  color: #fff;
+  border-color: var(--member-primary);
+  background: var(--member-primary);
+}
+
+.citizen-dashboard-shell :where(.button-primary, .ma-primary, .event-action-button:not(.secondary), .notification-toolbar button):hover:not(:disabled) {
+  border-color: var(--member-primary-hover);
+  background: var(--member-primary-hover);
+  transform: none;
+}
+
+.citizen-dashboard-shell :where(.button-secondary, .ma-secondary, .event-action-button.secondary) {
+  color: #285f3f;
+  border-color: #b7c9bb;
+  background: #fff;
+}
+
+.citizen-dashboard-shell :where(.button-secondary, .ma-secondary, .event-action-button.secondary):hover:not(:disabled) {
+  color: #174c2e;
+  border-color: #6e9a7a;
+  background: #f1f6f2;
+  transform: none;
+}
+
+.citizen-dashboard-shell :where(.ma-danger, button.danger) {
+  color: var(--member-danger);
+  border-color: #d8aaa6;
+  background: #fff7f6;
+}
+
+/* Incident pages: retain feature tabs, remove the duplicate app-brand clutter. */
+.citizen-dashboard-shell .incident-shell { background: var(--member-bg); }
+.citizen-dashboard-shell .incident-header {
+  position: sticky;
+  top: 0;
+  min-height: 58px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 18px;
+  padding: 8px clamp(20px, 4vw, 48px);
+  border-color: var(--member-border);
+  background: rgba(255, 255, 255, 0.96);
+}
+.citizen-dashboard-shell .incident-header-start div,
+.citizen-dashboard-shell .incident-profile { display: none; }
+.citizen-dashboard-shell .incident-back {
+  min-height: 36px;
+  padding: 7px 10px;
+  color: #315f43;
+  border: 1px solid #c8d6ca;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.citizen-dashboard-shell .incident-header nav { justify-self: end; gap: 4px; }
+.citizen-dashboard-shell .incident-header nav button {
+  min-height: 38px;
+  padding: 8px 11px;
+  border: 0;
+  border-radius: 8px;
+  color: #66756c;
+  font-size: 0.76rem;
+}
+.citizen-dashboard-shell .incident-header nav button.active {
+  color: #1e5f39;
+  border: 0;
+  background: var(--member-soft);
+}
+.citizen-dashboard-shell .incident-content {
+  width: min(100% - 44px, 1160px);
+  padding: 36px 0 64px;
+}
+.citizen-dashboard-shell .incident-intro,
+.citizen-dashboard-shell .incident-list-heading { align-items: end; margin-bottom: 22px; }
+.citizen-dashboard-shell .incident-safety-note {
+  padding: 15px;
+  border-radius: 11px;
+  box-shadow: none;
+}
+.citizen-dashboard-shell .incident-form { gap: 15px; }
+.citizen-dashboard-shell .incident-card { border-radius: var(--member-radius); box-shadow: var(--member-shadow); }
+.citizen-dashboard-shell .incident-card-title > span {
+  flex-basis: 32px;
+  height: 32px;
+  border-radius: 9px;
+  font-size: 0.72rem;
+}
+.citizen-dashboard-shell .incident-category-grid button {
+  min-height: 92px;
+  padding: 14px;
+  border-radius: 10px;
+}
+.citizen-dashboard-shell .incident-category-grid button.selected {
+  border-width: 1px;
+  border-color: #477f5e;
+  box-shadow: inset 0 0 0 1px #477f5e;
+}
+.citizen-dashboard-shell .incident-submit-bar {
+  bottom: 14px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(25, 53, 35, 0.14);
+}
+
+/* Organization workspace: one product header and compact tabs. */
+.citizen-dashboard-shell .organization-workspace-shell { background: var(--member-bg); }
+.citizen-dashboard-shell .organization-workspace-header {
+  min-height: 58px;
+  grid-template-columns: 1fr auto;
+  padding: 9px clamp(20px, 4vw, 48px);
+  border-color: var(--member-border);
+}
+.citizen-dashboard-shell .organization-workspace-header > strong { display: none; }
+.citizen-dashboard-shell .organization-workspace-header button {
+  min-height: 38px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+}
+.citizen-dashboard-shell .organization-workspace-main {
+  width: min(100% - 44px, 1160px);
+  padding: 34px 0 64px;
+}
+.citizen-dashboard-shell .organization-workspace-heading { align-items: end; }
+.citizen-dashboard-shell .organization-workspace-tabs {
+  gap: 4px;
+  overflow-x: auto;
+  padding: 5px;
+  border: 1px solid var(--member-border);
+  border-radius: 11px;
+  background: #fff;
+}
+.citizen-dashboard-shell .organization-workspace-tabs button {
+  min-width: max-content;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  color: #657269;
+  background: transparent;
+  font-size: 0.76rem;
+}
+.citizen-dashboard-shell .organization-workspace-tabs button.is-active {
+  color: #1c5c37;
+  background: var(--member-soft);
+}
+.citizen-dashboard-shell .organization-workspace-section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: end;
+  margin-top: 26px;
+}
+.citizen-dashboard-shell .organization-workspace-section-heading span {
+  color: #68756c;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.citizen-dashboard-shell .organization-workspace-section-heading h2 {
+  margin: 4px 0 0;
+  font-size: 1.3rem;
+}
+.citizen-dashboard-shell .organization-workspace-section-heading button {
+  min-height: 38px;
+  padding: 8px 12px;
+  color: var(--member-primary);
+  border: 1px solid var(--member-border-strong);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+.citizen-dashboard-shell .organization-workspace-overview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.citizen-dashboard-shell .organization-workspace-tool-card {
+  width: 100%;
+  min-height: 112px;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 17px;
+  border-color: var(--member-border);
+  border-radius: 13px;
+  box-shadow: none;
+  transform: none;
+}
+.citizen-dashboard-shell .organization-workspace-tool-card:hover,
+.citizen-dashboard-shell .organization-workspace-tool-card:focus-visible {
+  border-color: var(--member-border-strong);
+  box-shadow: 0 8px 22px rgba(24, 60, 37, 0.07);
+  transform: none;
+}
+.citizen-dashboard-shell .organization-workspace-tool-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  color: var(--member-primary);
+  background: var(--member-soft);
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+.citizen-dashboard-shell .organization-workspace-tool-icon svg {
+  width: 21px;
+  height: 21px;
+}
+.citizen-dashboard-shell .organization-workspace-tool-copy strong { font-size: 0.96rem; }
+.citizen-dashboard-shell .organization-workspace-tool-copy > span { font-size: 0.8rem; }
+.citizen-dashboard-shell .organization-workspace-tool-action {
+  opacity: 1;
+  padding: 0;
+  background: transparent;
+  transform: none;
+}
+
+/* Application, membership, notification, reward, event and map refinements. */
+.citizen-dashboard-shell .organization-header {
+  position: sticky;
+  min-height: 58px;
+  padding: 9px clamp(20px, 4vw, 48px);
+  box-shadow: none;
+}
+.citizen-dashboard-shell .organization-brand { font-size: 1rem; }
+.citizen-dashboard-shell .organization-header p { display: none; }
+.citizen-dashboard-shell .organization-content { width: min(100% - 44px, 1120px); padding-top: 34px; }
+.citizen-dashboard-shell .organization-intro { align-items: end; }
+.citizen-dashboard-shell .organization-step { box-shadow: none; }
+.citizen-dashboard-shell .organization-tabs {
+  padding: 5px;
+  border: 1px solid var(--member-border);
+  border-radius: 11px;
+  background: #fff;
+}
+.citizen-dashboard-shell .organization-tabs button { border-radius: 8px; }
+.citizen-dashboard-shell .organization-tabs button.active { background: var(--member-soft); }
+
+.citizen-dashboard-shell .membership-layout { max-width: none; gap: 16px; }
+.citizen-dashboard-shell .membership-card,
+.citizen-dashboard-shell .ma-card { box-shadow: var(--member-shadow); }
+.citizen-dashboard-shell .organization-results article,
+.citizen-dashboard-shell .membership-request-list article,
+.citizen-dashboard-shell :where(.ma-request, .ma-member) {
+  border-radius: 11px;
+  background: var(--member-surface-subtle);
+}
+.citizen-dashboard-shell .ma-add-form { background: #f1f6f2; }
+.citizen-dashboard-shell .ma-chips span,
+.citizen-dashboard-shell .membership-status { padding: 4px 8px; font-size: 0.68rem; }
+
+.citizen-dashboard-shell .notification-toolbar,
+.citizen-dashboard-shell .notification-list { max-width: none; }
+.citizen-dashboard-shell .notification-card {
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+.citizen-dashboard-shell .notification-card-unread {
+  border-left-width: 3px;
+  background: #fbfdfb;
+}
+.citizen-dashboard-shell .notification-card-read { opacity: 1; }
+.citizen-dashboard-shell .notification-card em { padding: 4px 7px; font-size: 0.65rem; }
+
+.citizen-dashboard-shell .impact-page { background: var(--member-bg); }
+.citizen-dashboard-shell .impact-points-card {
+  border-radius: var(--member-radius);
+  background: #195f38;
+  box-shadow: var(--member-shadow);
+}
+.citizen-dashboard-shell .impact-breakdown article,
+.citizen-dashboard-shell .impact-section { border-radius: var(--member-radius); box-shadow: var(--member-shadow); }
+
+.citizen-dashboard-shell .public-events-shell { max-width: 1280px; }
+.citizen-dashboard-shell .public-events-layout { gap: 16px; }
+.citizen-dashboard-shell .public-event-list { gap: 7px; }
+.citizen-dashboard-shell .public-event-list button,
+.citizen-dashboard-shell .public-event-list article { padding: 14px; border-radius: 11px; box-shadow: none; }
+.citizen-dashboard-shell .public-event-status,
+.citizen-dashboard-shell .participation-status { padding: 4px 8px; font-size: 0.68rem; }
+.citizen-dashboard-shell .event-editor-header { padding: 0 0 20px; }
+.citizen-dashboard-shell .event-editor-panel { border-radius: var(--member-radius); box-shadow: var(--member-shadow); }
+
+.citizen-dashboard-shell .eco-map-shell {
+  border-radius: 14px;
+  box-shadow: var(--member-shadow);
+}
+.citizen-dashboard-shell .eco-map-location-control,
+.citizen-dashboard-shell .eco-map-boundary-control {
+  min-height: 38px;
+  height: 38px;
+  border-radius: 9px;
+  box-shadow: 0 5px 16px rgba(25, 53, 35, 0.13);
+  font-size: 0.73rem;
+}
+.citizen-dashboard-shell .citizen-discovery { gap: 18px; }
+.citizen-dashboard-shell .citizen-discovery-intro { align-items: end; }
+.citizen-dashboard-shell .citizen-discovery-filters { padding: 14px; border-radius: 12px; box-shadow: none; }
+.citizen-dashboard-shell .citizen-discovery-layout { gap: 14px; }
+.citizen-dashboard-shell .citizen-discovery-list { border-radius: 12px; box-shadow: none; }
+.citizen-dashboard-shell .citizen-discovery-detail { padding: 18px; border-radius: 12px; box-shadow: none; }
+
+@media (max-width: 900px) {
+  .citizen-dashboard-shell :where(
+    .membership-page,
+    .membership-admin-page,
+    .notification-page,
+    .impact-page,
+    .public-events-shell,
+    .workflow-page
+  ) { padding: 28px 18px 48px; }
+
+  .citizen-dashboard-shell .incident-header { grid-template-columns: 1fr; gap: 6px; }
+  .citizen-dashboard-shell .incident-header nav { justify-self: stretch; overflow-x: auto; }
+  .citizen-dashboard-shell .incident-header nav button { flex: 1; min-width: max-content; }
+  .citizen-dashboard-shell .incident-content,
+  .citizen-dashboard-shell .organization-workspace-main,
+  .citizen-dashboard-shell .organization-content { width: min(100% - 32px, 1160px); }
+}
+
+@media (max-width: 680px) {
+  .citizen-dashboard-shell :where(
+    .membership-page-header,
+    .membership-admin-header,
+    .impact-header,
+    .event-editor-header
+  ) { grid-template-columns: 1fr; align-items: start; }
+
+  .citizen-dashboard-shell :where(
+    .membership-page-header,
+    .membership-admin-header,
+    .impact-header,
+    .event-editor-header
+  ) > :where(button, .button, .ma-button, .event-action-button) {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+    order: -1;
+  }
+
+  .citizen-dashboard-shell .notification-header { grid-template-columns: auto 1fr; }
+  .citizen-dashboard-shell .notification-header > strong { grid-column: 2; justify-self: end; }
+  .citizen-dashboard-shell .notification-header > div { grid-column: 1 / -1; }
+  .citizen-dashboard-shell .organization-workspace-heading,
+  .citizen-dashboard-shell .organization-intro,
+  .citizen-dashboard-shell .incident-intro,
+  .citizen-dashboard-shell .incident-list-heading,
+  .citizen-dashboard-shell .citizen-discovery-intro { align-items: stretch; flex-direction: column; }
+  .citizen-dashboard-shell .organization-workspace-overview { grid-template-columns: 1fr; }
+  .citizen-dashboard-shell .organization-workspace-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .citizen-dashboard-shell .incident-card { padding: 18px; }
+  .citizen-dashboard-shell .incident-category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

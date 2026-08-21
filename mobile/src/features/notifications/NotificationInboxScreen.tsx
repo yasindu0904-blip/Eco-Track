@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AppState, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 
 import { describeApiFailure } from "../../api/apiError";
-import { BrandHeader, Button, Notice, Screen, sharedStyles } from "../../components/ui";
+import { Button, Notice, PageHeader, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import {
   getUnreadNotificationCount,
@@ -21,9 +21,11 @@ type InboxProps = {
 export function NotificationButton({
   accessToken,
   onOpen,
+  compact = false,
 }: {
   accessToken: string;
   onOpen: () => void;
+  compact?: boolean;
 }) {
   const [count, setCount] = useState(0);
 
@@ -45,8 +47,8 @@ export function NotificationButton({
   }, [accessToken]);
 
   return (
-    <Pressable style={styles.trigger} onPress={onOpen} accessibilityRole="button">
-      <Text style={styles.triggerText}>🔔 Notifications</Text>
+    <Pressable style={[styles.trigger, compact && styles.triggerCompact]} onPress={onOpen} accessibilityRole="button" accessibilityLabel="Notifications">
+      <Text style={[styles.triggerText, compact && styles.triggerIcon]}>{compact ? "●" : "Notifications"}</Text>
       {count > 0 && <Text style={styles.badge}>{count > 99 ? "99+" : count}</Text>}
     </Pressable>
   );
@@ -139,11 +141,13 @@ export function NotificationInboxScreen({
 
   return (
     <Screen>
-      <BrandHeader eyebrow="Personal inbox" title="Notifications" compact />
-      <View style={sharedStyles.spacedRow}>
-        <Button label="Back" variant="secondary" onPress={onBack} />
-        <Text style={styles.unread}>{unreadCount} unread</Text>
-      </View>
+      <PageHeader
+        eyebrow="Personal inbox"
+        title="Notifications"
+        subtitle="Updates from your reports, memberships, events, and rewards."
+        onBack={onBack}
+        action={<Text style={styles.unread}>{unreadCount} unread</Text>}
+      />
       <View style={[sharedStyles.card, sharedStyles.spacedRow]}>
         <Text style={styles.filterLabel}>Unread only</Text>
         <Switch value={unreadOnly} onValueChange={setUnreadOnly} trackColor={{ true: colors.primary }} />
@@ -176,7 +180,9 @@ export function NotificationInboxScreen({
 
 const styles = StyleSheet.create({
   trigger: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.primary, borderRadius: 14, backgroundColor: colors.surface },
+  triggerCompact: { width: 42, minHeight: 42, justifyContent: "center", paddingHorizontal: 0, borderColor: colors.border, borderRadius: 12 },
   triggerText: { color: colors.primary, fontWeight: "800" },
+  triggerIcon: { fontSize: 13 },
   badge: { minWidth: 24, paddingHorizontal: 6, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.danger, color: colors.surface, fontSize: 11, fontWeight: "900", textAlign: "center" },
   unread: { color: colors.primary, fontWeight: "900" },
   filterLabel: { color: colors.text, fontWeight: "800" },

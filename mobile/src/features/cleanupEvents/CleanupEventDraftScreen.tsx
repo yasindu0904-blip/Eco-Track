@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { describeApiFailure } from "../../api/apiError";
-import { Button, Field, Notice, sharedStyles } from "../../components/ui";
+import { Button, Field, Notice, PageHeader, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import { listOrganizationMembers } from "../memberships/administration/membershipAdministration.api";
 import type { OrganizationMember } from "../memberships/administration/membershipAdministration.types";
@@ -247,9 +247,13 @@ export function CleanupEventDraftScreen({
   if (mode === "list") {
     return (
       <View style={styles.container}>
-        <Text style={styles.eyebrow}>PRIVATE PLANNING</Text>
-        <Text style={sharedStyles.sectionTitle}>Cleanup-event drafts</Text>
-        <Text style={sharedStyles.sectionSubtitle}>Drafts do not claim incidents or appear publicly.</Text>
+        <PageHeader
+          eyebrow="Private planning"
+          title="Cleanup-event drafts"
+          subtitle="Drafts do not claim incidents or appear publicly."
+          onBack={onBack}
+          backLabel="Overview"
+        />
         {notice ? <Notice tone={notice.tone} message={notice.message} /> : null}
         <Button label="New direct draft" onPress={() => { resetDraftForm(); setMode("create"); }} />
         {drafts.length === 0 ? <Text style={styles.empty}>No private drafts yet.</Text> : drafts.map((draft) => (
@@ -258,15 +262,19 @@ export function CleanupEventDraftScreen({
             <Text style={styles.muted}>{draft.incidentId ? "Incident-linked" : "Direct"} · {draft.sessions.length} sessions · {draft.coordinators.length} coordinators</Text>
           </Pressable>
         ))}
-        <Button label="Back to organization overview" variant="secondary" onPress={onBack} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.eyebrow}>{mode === "create" ? "NEW PRIVATE DRAFT" : "EDIT PRIVATE DRAFT"}</Text>
-      <Text style={sharedStyles.sectionTitle}>{mode === "create" ? "Plan cleanup activity" : selected?.title}</Text>
+      <PageHeader
+        eyebrow={mode === "create" ? "New private draft" : "Edit private draft"}
+        title={mode === "create" ? "Plan cleanup activity" : selected?.title ?? "Cleanup-event draft"}
+        subtitle="Set the event location, sessions, and coordinators before publishing."
+        onBack={() => setMode("list")}
+        backLabel="Drafts"
+      />
       {incidentId && mode === "create" ? <Notice message={`Linked incident: ${incidentId}`} /> : null}
       {notice ? <Notice tone={notice.tone} message={notice.message} /> : null}
 

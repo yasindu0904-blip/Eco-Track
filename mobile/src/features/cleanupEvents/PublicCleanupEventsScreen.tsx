@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { describeApiFailure } from "../../api/apiError";
-import { BrandHeader, Button, Notice, Screen, sharedStyles } from "../../components/ui";
+import { Button, Notice, PageHeader, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import { getPublicCleanupEvent, listPublicCleanupEvents } from "./cleanupEvent.api";
 import type { CleanupEventPublicDetail, CleanupEventPublicSummary } from "./cleanupEvent.types";
@@ -37,13 +37,17 @@ export function PublicCleanupEventsScreen({ accessToken, initialEventId, onBack 
   }
 
   return <Screen>
-    <BrandHeader eyebrow="Community cleanups" title="Published events" subtitle="Verified schedules, instructions, and volunteer availability" compact />
+    <PageHeader
+      eyebrow="Community cleanups"
+      title={selected ? selected.title : "Published events"}
+      subtitle={selected ? selected.organization.name : "Verified schedules, instructions, and volunteer availability."}
+      onBack={selected ? () => setSelected(undefined) : onBack}
+      backLabel={selected ? "Events" : "Dashboard"}
+      action={selected ? <Text style={styles.status}>{selected.lifecycleStatus.replaceAll("_", " ")}</Text> : undefined}
+    />
     {error ? <Notice tone="error" message={error} /> : null}
     {selected ? <>
       <View style={[sharedStyles.card, styles.detail]}>
-        <Text style={styles.status}>{selected.lifecycleStatus.replaceAll("_", " ")}</Text>
-        <Text style={sharedStyles.sectionTitle}>{selected.title}</Text>
-        <Text style={styles.organization}>{selected.organization.name}</Text>
         <Text style={styles.copy}>{selected.description}</Text>
         <Text style={styles.heading}>VOLUNTEER INSTRUCTIONS</Text><Text style={styles.copy}>{selected.publicInstructions}</Text>
         <Text style={styles.heading}>LOCATION</Text><Text style={styles.copy}>{selected.meetingAddress || selected.eventAddress || `${selected.eventLatitude}, ${selected.eventLongitude}`}</Text>
@@ -52,13 +56,11 @@ export function PublicCleanupEventsScreen({ accessToken, initialEventId, onBack 
       </View>
       <EventParticipationPanel accessToken={accessToken} event={selected} />
       <ParticipantEventUpdatesPanel accessToken={accessToken} eventId={selected.id} />
-      <Button label="Back to event list" variant="secondary" onPress={() => setSelected(undefined)} />
     </> : <View style={sharedStyles.card}>
       <Text style={sharedStyles.sectionTitle}>Upcoming and active events</Text>
       {busy && items.length === 0 ? <Text style={styles.copy}>Loading events...</Text> : items.length === 0 ? <Text style={styles.copy}>No published events yet.</Text> : items.map((item) => <Pressable key={item.id} onPress={() => void open(item.id)} style={styles.item}><View style={styles.flex}><Text style={styles.itemTitle}>{item.title}</Text><Text style={styles.copy}>{item.organization.name}</Text><Text style={styles.meta}>{item.lifecycleStatus.replaceAll("_", " ")}</Text></View><Text style={styles.arrow}>→</Text></Pressable>)}
       {nextCursor ? <Button label="Load more" variant="secondary" loading={busy} onPress={() => void load(nextCursor)} /> : null}
     </View>}
-    <Button label="Citizen dashboard" variant="secondary" onPress={onBack} />
   </Screen>;
 }
 

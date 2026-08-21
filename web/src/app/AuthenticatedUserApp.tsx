@@ -8,6 +8,7 @@ import type { ActiveOrganizationMembership } from "../features/memberships/admin
 import { isUserDestination, useBrowserNavigation, type UserDestination } from "./navigation";
 import { resolveUserNotificationDestination } from "./notificationDestination";
 import { RouteBoundary } from "./RouteBoundary";
+import "../styles/memberApp.css";
 
 const NotificationInbox = lazy(() => import("../features/notifications/NotificationInbox").then(
   (module) => ({ default: module.NotificationInbox }),

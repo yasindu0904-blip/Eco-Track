@@ -49,6 +49,11 @@ vi.mock("../../components/ui", async () => {
       onPress,
     }, label),
     Notice: ({ message }: { message: string }) => React.createElement("Text", null, message),
+    PageHeader: ({ title, subtitle }: { title: string; subtitle?: string }) =>
+      React.createElement("View", null,
+        React.createElement("Text", null, title),
+        subtitle ? React.createElement("Text", null, subtitle) : null,
+      ),
     Screen: ({ children }: { children: React.ReactNode }) => React.createElement("View", null, children),
     sharedStyles: {
       card: {}, divider: {}, sectionSubtitle: {}, sectionTitle: {}, spacedRow: {},

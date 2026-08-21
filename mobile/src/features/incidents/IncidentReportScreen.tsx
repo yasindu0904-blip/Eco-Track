@@ -3,7 +3,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { Button, Field, Notice, Screen, sharedStyles } from "../../components/ui";
+import { Button, Field, Notice, PageHeader, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import { COLOMBO_MAP_CENTER, LocationPicker, type MapLocation } from "../map";
 import { createIncident, listIncidentCategories, uploadEvidence } from "./incident.api";
@@ -145,8 +145,13 @@ export function IncidentReportScreen({ accessToken, onBack, onSubmitted }: Props
 
   return (
     <Screen scrollEnabled={!mapInteracting}>
-      <View style={styles.topRow}><Pressable onPress={onBack}><Text style={styles.back}>← Dashboard</Text></Pressable><Text style={styles.brand}>EcoTrack</Text></View>
-      <View style={styles.intro}><Text style={styles.eyebrow}>COMMUNITY REPORT</Text><Text style={styles.title}>Report an incident</Text><Text style={styles.subtitle}>Confirm the location and share evidence that helps nearby organizations understand the concern.</Text></View>
+      <PageHeader
+        eyebrow="Community report"
+        title="Report an incident"
+        subtitle="Confirm the location and share evidence that helps nearby organizations understand the concern."
+        onBack={onBack}
+        backLabel="Dashboard"
+      />
       {error ? <Notice message={error} tone="error" /> : null}
       {message ? <Notice message={message} tone="info" /> : null}
 
@@ -185,16 +190,11 @@ export function IncidentReportScreen({ accessToken, onBack, onSubmitted }: Props
       </View>
 
       <Button label="Submit incident report" loading={busy} disabled={!locationConfirmed || categories.length === 0} onPress={() => void submit()} />
-      <Button label="Back to dashboard" variant="secondary" disabled={busy} onPress={onBack} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  back: { color: colors.primary, fontWeight: "800" }, brand: { color: colors.primaryDark, fontSize: 20, fontWeight: "900" },
-  intro: { gap: spacing.xs, paddingVertical: spacing.md }, eyebrow: { color: colors.primary, fontSize: 11, fontWeight: "900", letterSpacing: 1.2 },
-  title: { color: colors.text, fontSize: 34, fontWeight: "900" }, subtitle: { color: colors.textMuted, fontSize: 15, lineHeight: 22 },
   optionGrid: { gap: spacing.sm }, option: { padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: 14, backgroundColor: colors.surfaceMuted },
   optionSelected: { borderWidth: 2, borderColor: colors.primary, backgroundColor: colors.primarySoft }, optionTitle: { color: colors.text, fontWeight: "800" }, optionHelp: { marginTop: 4, color: colors.textMuted, lineHeight: 19 },
   label: { color: colors.text, fontWeight: "800" }, severityRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }, severity: { paddingHorizontal: 12, paddingVertical: 9, borderWidth: 1, borderColor: colors.border, borderRadius: 20 },

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ApiRequestError } from "../../api/apiClient";
-import { BrandHeader, Button, Field, Notice, Screen, sharedStyles } from "../../components/ui";
+import { Button, Field, Notice, PageHeader, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import {
   createOrganizationApplication,
@@ -147,7 +147,13 @@ export function OrganizationApplicationScreen({
 
   return (
     <Screen>
-      <BrandHeader eyebrow="Organization onboarding" title="Create a request" compact />
+      <PageHeader
+        eyebrow="Organization onboarding"
+        title="Request a workspace"
+        subtitle="Submit an existing environmental organization for platform review."
+        onBack={onBack}
+        backLabel="Dashboard"
+      />
       <Notice message="This request is for an existing real environmental organization. A Super Admin must review it before its workspace and service areas become active." />
 
       <View style={sharedStyles.card}>
@@ -222,7 +228,6 @@ export function OrganizationApplicationScreen({
 
       {error ? <Notice message={error} tone="error" /> : null}
       <Button label="Submit for Super Admin review" onPress={() => void submit()} loading={submitting} />
-      <Button label="Back to dashboard" variant="secondary" onPress={onBack} disabled={submitting} />
     </Screen>
   );
 }
