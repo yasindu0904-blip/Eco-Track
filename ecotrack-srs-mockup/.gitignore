@@ -32,3 +32,5 @@ playwright-report/
 # Misc
 output/
 *.log
+
+new/
