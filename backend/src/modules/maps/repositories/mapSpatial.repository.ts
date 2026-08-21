@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../../generated/prisma/client.js";
+import { Prisma, type PrismaClient } from "../../../generated/prisma/client.js";
 
 import type {
   GeoJsonBoundary,
@@ -72,15 +72,33 @@ export async function isLocationCoveredByActiveOrganizationServiceArea(
 export async function listOrganizationServiceAreaBoundaryFeatures(
   prisma: PrismaClient,
   organizationId: string,
-  query: MapViewportQuery,
+  query: MapViewportQuery | { scope: "all"; limit: number },
 ): Promise<OrganizationServiceAreaBoundaryCollection> {
-  const simplificationTolerance = query.zoom >= 15
+  const boundaryDetailZoom = "scope" in query ? 15 : query.zoom;
+  const simplificationTolerance = boundaryDetailZoom >= 15
     ? 0.00001
-    : query.zoom >= 12
+    : boundaryDetailZoom >= 12
       ? 0.00005
-      : query.zoom >= 9
+      : boundaryDetailZoom >= 9
         ? 0.0002
         : 0.001;
+  const viewportFilter = "scope" in query
+    ? Prisma.empty
+    : Prisma.sql`
+      AND extensions.ST_Intersects(
+        COALESCE(
+          service_area."boundary",
+          administrative_area."boundary"
+        )::extensions.geometry,
+        extensions.ST_MakeEnvelope(
+          ${query.west}::double precision,
+          ${query.south}::double precision,
+          ${query.east}::double precision,
+          ${query.north}::double precision,
+          4326
+        )
+      )
+    `;
   const rows = await prisma.$queryRaw<
     ServiceAreaBoundaryRow[]
   >`
@@ -118,19 +136,7 @@ export async function listOrganizationServiceAreaBoundaryFeatures(
         service_area."boundary",
         administrative_area."boundary"
       ) IS NOT NULL
-      AND extensions.ST_Intersects(
-        COALESCE(
-          service_area."boundary",
-          administrative_area."boundary"
-        )::extensions.geometry,
-        extensions.ST_MakeEnvelope(
-          ${query.west}::double precision,
-          ${query.south}::double precision,
-          ${query.east}::double precision,
-          ${query.north}::double precision,
-          4326
-        )
-      )
+      ${viewportFilter}
     ORDER BY "name", service_area."id"
     LIMIT ${query.limit + 1}
   `;

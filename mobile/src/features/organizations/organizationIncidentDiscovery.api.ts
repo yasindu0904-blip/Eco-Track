@@ -1,5 +1,5 @@
 import { apiRequest } from "../../api/apiClient";
-import type { MapBoundaryFeatureCollection, MapViewport } from "../map";
+import type { MapBoundaryFeatureCollection } from "../map";
 import type {
   OrganizationIncidentDetail,
   OrganizationIncidentPage,
@@ -73,16 +73,11 @@ export async function updateOrganizationIncidentReview(
 export async function listOrganizationServiceAreaBoundaries(
   accessToken: string,
   organizationId: string,
-  viewport: MapViewport & { limit?: number },
   signal?: AbortSignal,
 ): Promise<MapBoundaryFeatureCollection> {
   const query = new URLSearchParams({
-    west: String(viewport.west),
-    south: String(viewport.south),
-    east: String(viewport.east),
-    north: String(viewport.north),
-    zoom: String(Math.round(viewport.zoom)),
-    limit: String(viewport.limit ?? 100),
+    scope: "all",
+    limit: "500",
   });
   return (
     await apiRequest<DataResponse<MapBoundaryFeatureCollection>>(

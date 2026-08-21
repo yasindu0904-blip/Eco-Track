@@ -1,0 +1,186 @@
+import type { AuthenticatedUserProfile } from "../auth/auth.types";
+import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
+import { NotificationButton } from "../notifications/NotificationButton";
+
+export type CitizenIconName =
+  | "home"
+  | "organization"
+  | "report"
+  | "volunteer"
+  | "arrow"
+  | "shield";
+
+export function CitizenIcon({ name }: { name: CitizenIconName }) {
+  if (name === "organization") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 21V7l8-4 8 4v14" />
+        <path d="M8 10h2M14 10h2M8 14h2M14 14h2M10 21v-3h4v3" />
+      </svg>
+    );
+  }
+
+  if (name === "report") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" />
+        <path d="M12 7v6M12 17h.01" />
+      </svg>
+    );
+  }
+
+  if (name === "volunteer") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10Z" />
+      </svg>
+    );
+  }
+
+  if (name === "arrow") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 12h14M14 7l5 5-5 5" />
+      </svg>
+    );
+  }
+
+  if (name === "shield") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3 4.5 6v5c0 4.8 3 8.3 7.5 10 4.5-1.7 7.5-5.2 7.5-10V6L12 3Z" />
+        <path d="m8.5 12 2.2 2.2 4.8-5" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m3 11 9-8 9 8" />
+      <path d="M5 10v11h14V10M9 21v-7h6v7" />
+    </svg>
+  );
+}
+
+type CitizenSidebarProps = {
+  profile: AuthenticatedUserProfile;
+  accessToken: string;
+  activeScreen: string;
+  activeOrganization?: ActiveOrganizationMembership;
+  onDashboard: () => void;
+  onOpenNotifications: () => void;
+  onManageMembership: () => void;
+  onOpenOrganizationWorkspaces: () => void;
+  onOpenOrganizationWorkspace?: () => void;
+  onViewOrganizationApplications: () => void;
+  onReportIncident: () => void;
+  onViewIncidentReports: () => void;
+  onFindCleanupActivity: () => void;
+  onBrowseCleanupEvents: () => void;
+  onViewJoinedCleanupEvents: () => void;
+  onOpenImpact: () => void;
+  onSignOut: () => void;
+};
+
+export function CitizenSidebar({
+  profile,
+  accessToken,
+  activeScreen,
+  activeOrganization,
+  onDashboard,
+  onOpenNotifications,
+  onManageMembership,
+  onOpenOrganizationWorkspaces,
+  onOpenOrganizationWorkspace,
+  onViewOrganizationApplications,
+  onReportIncident,
+  onViewIncidentReports,
+  onFindCleanupActivity,
+  onBrowseCleanupEvents,
+  onViewJoinedCleanupEvents,
+  onOpenImpact,
+  onSignOut,
+}: CitizenSidebarProps) {
+  const displayName = profile.fullName ?? "EcoTrack member";
+  const initial = displayName.charAt(0).toUpperCase();
+  const active = (...screens: string[]) => screens.includes(activeScreen);
+  const navigationState = (isActive: boolean) => ({
+    className: isActive ? "citizen-dashboard-nav-active" : undefined,
+    "aria-current": isActive ? ("page" as const) : undefined,
+  });
+
+  return (
+    <aside className="citizen-dashboard-sidebar">
+      <div className="citizen-dashboard-brand">
+        <span className="citizen-dashboard-brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64">
+            <path className="citizen-brand-stem" d="M32 48V24" />
+            <path className="citizen-brand-leaf" d="M31 27C18 28 11 20 10 10c12-1 21 4 23 15" />
+            <path className="citizen-brand-leaf citizen-brand-leaf-right" d="M33 30c12 0 20-7 21-17-11-2-20 3-23 14" />
+            <path className="citizen-brand-soil" d="M18 53c2-9 7-14 14-14s12 5 14 14H18Z" />
+          </svg>
+        </span>
+        <span>
+          <strong>EcoTrack</strong>
+          <small>Citizen &amp; volunteer</small>
+        </span>
+      </div>
+
+      <nav className="citizen-dashboard-nav" aria-label="Citizen navigation">
+        <span className="citizen-dashboard-nav-label">Overview</span>
+        <button type="button" onClick={onDashboard} {...navigationState(active("dashboard"))}>
+          <CitizenIcon name="home" /> Dashboard
+        </button>
+        <span className="citizen-dashboard-nav-label">Organizations</span>
+        {activeOrganization && onOpenOrganizationWorkspace && (
+          <button type="button" onClick={onOpenOrganizationWorkspace} {...navigationState(active("organization-workspace"))}>
+            <CitizenIcon name="organization" /> Organization workspace
+          </button>
+        )}
+        <button type="button" onClick={onViewOrganizationApplications} {...navigationState(active("organization-apply", "organization-applications"))}>
+          <CitizenIcon name="organization" /> My organization requests
+        </button>
+        <button type="button" onClick={onManageMembership} {...navigationState(active("membership"))}>
+          <CitizenIcon name="organization" /> Join an organization
+        </button>
+        <button type="button" onClick={onOpenOrganizationWorkspaces} {...navigationState(active("organization-workspaces"))}>
+          <CitizenIcon name="shield" /> Organization workspaces
+        </button>
+        <span className="citizen-dashboard-nav-label">Community action</span>
+        <button type="button" onClick={onReportIncident} {...navigationState(active("incident-create"))}>
+          <CitizenIcon name="report" /> Report incident
+        </button>
+        <button type="button" onClick={onViewIncidentReports} {...navigationState(active("incident-reports"))}>
+          <CitizenIcon name="report" /> My Reports
+        </button>
+        <button type="button" onClick={onFindCleanupActivity} {...navigationState(active("incident-discovery"))}>
+          <CitizenIcon name="volunteer" /> Find cleanup activity
+        </button>
+        <button type="button" onClick={onBrowseCleanupEvents} {...navigationState(active("cleanup-events"))}>
+          <CitizenIcon name="volunteer" /> Browse cleanup events
+        </button>
+        <button type="button" onClick={onViewJoinedCleanupEvents} {...navigationState(active("joined-cleanup-events"))}>
+          <CitizenIcon name="volunteer" /> My joined events
+        </button>
+        <button type="button" onClick={onOpenImpact} {...navigationState(active("impact"))}>
+          <CitizenIcon name="volunteer" /> My Impact
+        </button>
+        <span className="citizen-dashboard-nav-label">Account</span>
+        <NotificationButton
+          accessToken={accessToken}
+          onOpen={onOpenNotifications}
+          active={active("notifications")}
+        />
+      </nav>
+
+      <div className="citizen-dashboard-user">
+        <span className="citizen-dashboard-avatar" aria-hidden="true">{initial}</span>
+        <span>
+          <strong>{displayName}</strong>
+          <small>{profile.email}</small>
+        </span>
+        <button type="button" onClick={onSignOut}>Sign out</button>
+      </div>
+    </aside>
+  );
+}

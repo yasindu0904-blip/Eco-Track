@@ -104,6 +104,8 @@ export function OrganizationIncidentDiscovery({
   const [categories, setCategories] = useState<IncidentCategory[]>([]);
   const [boundaries, setBoundaries] =
     useState<MapBoundaryFeatureCollection>();
+  const [boundariesLoading, setBoundariesLoading] = useState(true);
+  const [boundaryError, setBoundaryError] = useState<string>();
   const [incidents, setIncidents] = useState<OrganizationIncidentSummary[]>([]);
   const [events, setEvents] = useState<CleanupEventMapFeature[]>([]);
   const [viewport, setViewport] = useState<MapViewport>();
@@ -159,6 +161,35 @@ export function OrganizationIncidentDiscovery({
       active = false;
     };
   }, [accessToken]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setBoundaries(undefined);
+    setBoundariesLoading(true);
+    setBoundaryError(undefined);
+    void listOrganizationServiceAreaBoundaries(
+      accessToken,
+      organizationId,
+      controller.signal,
+    )
+      .then((overlay) => {
+        if (!controller.signal.aborted) setBoundaries(overlay);
+      })
+      .catch((requestError: unknown) => {
+        if (!controller.signal.aborted) {
+          setBoundaryError(
+            describeApiFailure(
+              requestError,
+              "Unable to load all organization service areas.",
+            ).message,
+          );
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setBoundariesLoading(false);
+      });
+    return () => controller.abort();
+  }, [accessToken, organizationId]);
 
   useEffect(() => () => activeRequest.current?.abort(), []);
 
@@ -216,7 +247,6 @@ export function OrganizationIncidentDiscovery({
         append?: boolean;
         cursor?: string;
         eventCursor?: string;
-        includeBoundaries?: boolean;
         externalSignal?: AbortSignal;
       } = {},
     ) => {
@@ -278,16 +308,6 @@ export function OrganizationIncidentDiscovery({
             selectMarker(undefined);
           }
         }
-
-        if (options.includeBoundaries) {
-          const overlay = await listOrganizationServiceAreaBoundaries(
-            accessToken,
-            organizationId,
-            { ...nextViewport, limit: 100 },
-            controller.signal,
-          );
-          if (!controller.signal.aborted) setBoundaries(overlay);
-        }
       } catch (requestError) {
         if (controller.signal.aborted) return;
         setError(
@@ -313,7 +333,7 @@ export function OrganizationIncidentDiscovery({
       return loadDiscovery(
         nextViewport,
         { status, categoryId, timeRange },
-        { includeBoundaries: true, externalSignal: context.signal },
+        { externalSignal: context.signal },
       );
     },
     [categoryId, loadDiscovery, status, timeRange],
@@ -324,7 +344,6 @@ export function OrganizationIncidentDiscovery({
       void loadDiscovery(
         viewport,
         { status, categoryId, timeRange },
-        { includeBoundaries: true },
       );
     }
   }, [categoryId, loadDiscovery, status, timeRange, viewport]);
@@ -449,10 +468,15 @@ export function OrganizationIncidentDiscovery({
           <Text style={styles.eyebrow}>COVERED INCIDENTS</Text>
           <Text style={styles.count}>
             {loading
-              ? "Loading activity in this view"
+              ? "Loading incidents and events in this map view…"
               : (nextCursor || nextEventCursor)
                 ? `Showing the first ${incidents.length + events.length} items in view`
-                : `${incidents.length} incidents · ${events.length} owned events`}
+                : `${incidents.length} incidents and ${events.length} owned events loaded in this map view`}
+          </Text>
+          <Text style={styles.areaCount}>
+            {boundariesLoading
+              ? "Loading all organization service areas…"
+              : `${boundaries?.features.length ?? 0} organization service areas loaded`}
           </Text>
         </View>
         {loading ? <ActivityIndicator color={colors.primary} /> : null}
@@ -517,8 +541,15 @@ export function OrganizationIncidentDiscovery({
       </View>
 
       {error ? <Notice tone="error" message={error} /> : null}
+      {boundaryError ? <Notice tone="error" message={boundaryError} /> : null}
       {boundaries?.truncated ? (
-        <Notice tone="warning" message="The service-area overlay reached its 100-feature display limit. Zoom in to view the remaining boundaries." />
+        <Notice tone="warning" message="The organization has more than 500 service areas, so this overlay is incomplete." />
+      ) : null}
+      {loading ? (
+        <Notice
+          tone="info"
+          message="Loading incidents and cleanup events for the current map view. Visible results may change."
+        />
       ) : null}
 
       <EcoMap
@@ -719,6 +750,7 @@ const styles = StyleSheet.create({
   container: { gap: spacing.md },
   eyebrow: { color: colors.primary, fontSize: 11, fontWeight: "900", letterSpacing: 1 },
   count: { color: colors.text, fontSize: 18, fontWeight: "900", marginTop: 4 },
+  areaCount: { color: colors.textMuted, fontSize: 12, fontWeight: "700", marginTop: 4 },
   filterLabel: { color: colors.textMuted, fontSize: 11, fontWeight: "900", letterSpacing: 1 },
   filters: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
   filter: {

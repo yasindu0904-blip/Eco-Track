@@ -21,7 +21,9 @@ describe("SummaryPanel", () => {
       </SummaryPanel>,
     );
     expect(await screen.findByText("2 reports")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Refresh Citizen summary" }),
+    );
     expect(await screen.findByText("3 reports")).toBeTruthy();
   });
 
@@ -36,7 +38,9 @@ describe("SummaryPanel", () => {
       </SummaryPanel>,
     );
     await screen.findByText("2 reports");
-    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Refresh Citizen summary" }),
+    );
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toContain("offline"),
     );

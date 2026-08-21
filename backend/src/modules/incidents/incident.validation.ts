@@ -148,13 +148,26 @@ export const publicIncidentRadiusDiscoveryQuerySchema =
 export const organizationIncidentDiscoveryQuerySchema =
   sriLankaMapViewportQuerySchema.safeExtend(incidentDiscoveryFilters);
 
-export const organizationServiceAreaBoundaryQuerySchema =
+const organizationServiceAreaViewportBoundaryQuerySchema =
   sriLankaMapViewportQuerySchema.safeExtend({
     cursor: z.never().optional(),
     limit: z.coerce.number().int().min(1)
       .max(ORGANIZATION_BOUNDARY_DISPLAY_LIMITS.maxFeatureLimit)
       .default(ORGANIZATION_BOUNDARY_DISPLAY_LIMITS.defaultFeatureLimit),
   });
+
+const allOrganizationServiceAreaBoundaryQuerySchema = z.object({
+  scope: z.literal("all"),
+  cursor: z.never().optional(),
+  limit: z.coerce.number().int().min(1)
+    .max(ORGANIZATION_BOUNDARY_DISPLAY_LIMITS.allFeatureLimit)
+    .default(ORGANIZATION_BOUNDARY_DISPLAY_LIMITS.allFeatureLimit),
+}).strict();
+
+export const organizationServiceAreaBoundaryQuerySchema = z.union([
+  allOrganizationServiceAreaBoundaryQuerySchema,
+  organizationServiceAreaViewportBoundaryQuerySchema,
+]);
 
 export type ValidatedCreateIncident = z.infer<typeof createIncidentSchema>;
 export type ValidatedEvidenceUploadRequest = z.infer<typeof createEvidenceUploadIntentsSchema>;

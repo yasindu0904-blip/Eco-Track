@@ -1,6 +1,6 @@
 .notification-page { min-height: 100vh; padding: 32px clamp(18px, 5vw, 76px) 60px; background: #f4f8f4; color: #10251a; }
 .notification-header { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 24px; max-width: 980px; margin: 0 auto 24px; padding: 28px; border: 1px solid #d7e3d8; border-radius: 24px; background: #fff; }
-.notification-header button, .notification-toolbar button, .notification-load-more { border: 1px solid #1a6c30; border-radius: 12px; padding: 11px 16px; background: #fff; color: #135d28; font: inherit; font-weight: 800; cursor: pointer; }
+.notification-header button, .notification-toolbar button, .notification-load-more, .notification-retry { border: 1px solid #1a6c30; border-radius: 12px; padding: 11px 16px; background: #fff; color: #135d28; font: inherit; font-weight: 800; cursor: pointer; }
 .notification-header span { color: #187331; font-size: 12px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
 .notification-header h1 { margin: 4px 0; font-size: clamp(30px, 5vw, 48px); }
 .notification-header p { margin: 0; color: #607068; }

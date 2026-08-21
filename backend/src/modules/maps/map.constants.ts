@@ -11,6 +11,7 @@ export const MAP_LIMITS = {
 export const ORGANIZATION_BOUNDARY_DISPLAY_LIMITS = {
   defaultFeatureLimit: 100,
   maxFeatureLimit: 100,
+  allFeatureLimit: 500,
 } as const;
 
 export const SRI_LANKA_MAP_DEFAULTS = {

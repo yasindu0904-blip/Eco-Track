@@ -2,6 +2,7 @@ import { lazy, useCallback, useEffect, useRef, useState } from "react";
 
 import type { AuthenticatedUserProfile } from "../features/auth/auth.types";
 import { CitizenDashboard } from "../features/citizen/CitizenDashboard";
+import { CitizenSidebar } from "../features/citizen/CitizenSidebar";
 import { listMyActiveOrganizationMemberships } from "../features/memberships/administration/membershipAdministration.api";
 import type { ActiveOrganizationMembership } from "../features/memberships/administration/membershipAdministration.types";
 import { isUserDestination, useBrowserNavigation, type UserDestination } from "./navigation";
@@ -197,7 +198,7 @@ export function AuthenticatedUserApp({
           <div className="auth-card-content auth-state" role="alert">
             <h2>Organization access is unavailable</h2>
             <p>Your active memberships changed or this workspace is no longer available.</p>
-            <button type="button" onClick={() => navigate(personalDashboard, true)}>
+            <button className="button button-primary" type="button" onClick={() => navigate(personalDashboard, true)}>
               Return to personal dashboard
             </button>
           </div>
@@ -260,7 +261,6 @@ export function AuthenticatedUserApp({
       <CitizenDashboard
         profile={profile}
         accessToken={accessToken}
-        onOpenNotifications={() => navigate({ screen: "notifications" })}
         onManageMembership={() => navigate({ screen: "membership" })}
         onOpenOrganizationWorkspaces={() => navigate({
           screen: "organization-workspaces",
@@ -286,14 +286,45 @@ export function AuthenticatedUserApp({
           screen: "joined-cleanup-events",
         })}
         onOpenImpact={() => navigate({ screen: "impact" })}
-        onSignOut={() => void signOut()}
       />
     );
   }
 
   return (
-    <RouteBoundary resetKey={JSON.stringify(destination)}>
-      {content}
-    </RouteBoundary>
+    <div className="citizen-dashboard-shell">
+      <CitizenSidebar
+        profile={profile}
+        accessToken={accessToken}
+        activeScreen={destination.screen}
+        activeOrganization={firstMembership}
+        onDashboard={() => navigate(personalDashboard)}
+        onOpenNotifications={() => navigate({ screen: "notifications" })}
+        onManageMembership={() => navigate({ screen: "membership" })}
+        onOpenOrganizationWorkspaces={() => navigate({
+          screen: "organization-workspaces",
+        })}
+        onOpenOrganizationWorkspace={firstMembership
+          ? () => navigate({
+            screen: "organization-workspace",
+            organizationId: firstMembership.organization.id,
+          })
+          : undefined}
+        onViewOrganizationApplications={() => navigate({
+          screen: "organization-applications",
+        })}
+        onReportIncident={() => navigate({ screen: "incident-create" })}
+        onViewIncidentReports={() => navigate({ screen: "incident-reports" })}
+        onFindCleanupActivity={() => navigate({ screen: "incident-discovery" })}
+        onBrowseCleanupEvents={() => navigate({ screen: "cleanup-events" })}
+        onViewJoinedCleanupEvents={() => navigate({
+          screen: "joined-cleanup-events",
+        })}
+        onOpenImpact={() => navigate({ screen: "impact" })}
+        onSignOut={() => void signOut()}
+      />
+      <RouteBoundary resetKey={JSON.stringify(destination)}>
+        {content}
+      </RouteBoundary>
+    </div>
   );
 }

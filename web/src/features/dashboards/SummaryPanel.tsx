@@ -46,11 +46,19 @@ export function SummaryPanel<T>({
       <div className="dashboard-summary-state">
         <strong>{label}</strong>
         <button
+          className="dashboard-summary-refresh"
           type="button"
           onClick={() => void refresh()}
           disabled={loading}
+          aria-label={loading ? `Refreshing ${label}` : `Refresh ${label}`}
+          title={loading ? `Refreshing ${label}` : `Refresh ${label}`}
         >
-          {loading ? "Loading…" : "Refresh"}
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 6v5h-5" />
+            <path d="M4 18v-5h5" />
+            <path d="M6.1 9a7 7 0 0 1 11.6-2.6L20 11" />
+            <path d="m4 13 2.3 4.6A7 7 0 0 0 17.9 15" />
+          </svg>
         </button>
       </div>
       {error ? (

@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   createIncidentSchema,
   organizationIncidentDiscoveryQuerySchema,
+  organizationServiceAreaBoundaryQuerySchema,
   publicIncidentRadiusDiscoveryQuerySchema,
   publicIncidentViewportDiscoveryQuerySchema,
 } from "./incident.validation.js";
@@ -90,6 +91,21 @@ test("rejects unbounded organization and public discovery", () => {
       latitude: 6.9271,
       longitude: 79.8612,
       radiusMeters: 50_001,
+    }).success,
+    false,
+  );
+});
+
+test("allows an authorized organization to request its complete service-area overlay", () => {
+  const query = organizationServiceAreaBoundaryQuerySchema.parse({
+    scope: "all",
+  });
+  assert.deepEqual(query, { scope: "all", limit: 500 });
+
+  assert.equal(
+    organizationServiceAreaBoundaryQuerySchema.safeParse({
+      scope: "all",
+      west: 79.8,
     }).success,
     false,
   );

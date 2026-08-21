@@ -6,9 +6,10 @@ import "./notificationInbox.css";
 type NotificationButtonProps = {
   accessToken?: string;
   onOpen: () => void;
+  active?: boolean;
 };
 
-export function NotificationButton({ accessToken, onOpen }: NotificationButtonProps) {
+export function NotificationButton({ accessToken, onOpen, active = false }: NotificationButtonProps) {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -33,7 +34,12 @@ export function NotificationButton({ accessToken, onOpen }: NotificationButtonPr
 
   if (!accessToken) return null;
   return (
-    <button className="notification-trigger" type="button" onClick={onOpen}>
+    <button
+      className={`notification-trigger${active ? " citizen-dashboard-nav-active" : ""}`}
+      type="button"
+      onClick={onOpen}
+      aria-current={active ? "page" : undefined}
+    >
       <span aria-hidden="true">🔔</span>
       Notifications
       {unreadCount > 0 && (
