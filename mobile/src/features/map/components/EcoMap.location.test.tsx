@@ -5,7 +5,10 @@ import * as Location from "expo-location";
 import { EcoMap } from "./EcoMap";
 import type { MapMarkerFeature } from "../map.types";
 
-const scheduleViewport = vi.hoisted(() => vi.fn());
+const { scheduleViewport, cameraFitBounds } = vi.hoisted(() => ({
+  scheduleViewport: vi.fn(),
+  cameraFitBounds: vi.fn(),
+}));
 
 vi.mock("expo-location", () => ({
   Accuracy: { Balanced: 3 },
@@ -29,7 +32,13 @@ vi.mock("react-native", () => ({
 vi.mock("@maplibre/maplibre-react-native", async () => {
   const React = await import("react");
   return {
-    Camera: React.forwardRef(() => React.createElement("Camera")),
+    Camera: React.forwardRef((_props, ref) => {
+      React.useImperativeHandle(ref, () => ({
+        fitBounds: cameraFitBounds,
+        easeTo: vi.fn(),
+      }));
+      return React.createElement("Camera");
+    }),
     GeoJSONSource: React.forwardRef((props: Record<string, unknown>) =>
       React.createElement("GeoJSONSource", props)),
     Layer: "Layer",
@@ -188,6 +197,65 @@ describe("EcoMap location fallback", () => {
       });
     });
     expect(onMarkerSelect).toHaveBeenCalledWith(markers[137]);
+  });
+
+  test("selected cleanup-event marker exposes its map action", async () => {
+    const marker: MapMarkerFeature = {
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [79.8612, 6.9271] },
+      properties: {
+        id: "event-1",
+        kind: "CLEANUP_EVENT",
+        title: "Canal cleanup",
+        status: "Published",
+        isJoined: false,
+      },
+    };
+    const onMarkerAction = vi.fn();
+    let renderer: TestRenderer.ReactTestRenderer;
+
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <EcoMap
+          markers={[marker]}
+          selectedMarkerId={marker.properties.id}
+          markerActionLabel={() => "Join event"}
+          onMarkerAction={onMarkerAction}
+        />,
+      );
+    });
+
+    expect(textContent(renderer!)).toContain("Canal cleanup");
+    const action = renderer!.root.findByProps({ accessibilityLabel: "Join event" });
+    await act(async () => {
+      action.props.onPress();
+    });
+    expect(onMarkerAction).toHaveBeenCalledWith(marker);
+  });
+
+  test("frames the two-kilometre search area without rendering a radius circle", async () => {
+    const location = { latitude: 7.1, longitude: 80.1 };
+    let renderer: TestRenderer.ReactTestRenderer;
+
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <EcoMap
+          focusLocation={location}
+          selectedLocation={location}
+          searchRadiusMeters={2_000}
+          showCurrentLocation={false}
+        />,
+      );
+    });
+
+    expect(cameraFitBounds).toHaveBeenCalledTimes(1);
+    const bounds = cameraFitBounds.mock.calls[0]?.[0] as [number, number, number, number];
+    expect(bounds[0]).toBeLessThan(location.longitude);
+    expect(bounds[1]).toBeLessThan(location.latitude);
+    expect(bounds[2]).toBeGreaterThan(location.longitude);
+    expect(bounds[3]).toBeGreaterThan(location.latitude);
+    expect(renderer!.root.findAllByProps({ id: "eco-map-search-radius" })).toHaveLength(0);
+    expect(renderer!.root.findAllByProps({ accessibilityLabel: "Use my current location" })).toHaveLength(0);
   });
 
   test("wide viewport changes are blocked while bounded changes are scheduled", async () => {

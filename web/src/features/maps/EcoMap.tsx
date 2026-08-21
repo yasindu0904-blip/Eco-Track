@@ -39,6 +39,7 @@ export interface EcoMapProps {
   initialCenter?: MapLocation;
   initialZoom?: number;
   focusLocation?: MapLocation | null;
+  searchRadiusMeters?: number;
   selectedMarkerId?: string;
   selectedLocation?: MapLocation | null;
   selectionEnabled?: boolean;
@@ -49,6 +50,8 @@ export interface EcoMapProps {
   showListFallback?: boolean;
   showCurrentLocation?: boolean;
   onMarkerSelect?: (marker: MapMarkerFeature) => void;
+  markerActionLabel?: (marker: MapMarkerFeature) => string | undefined;
+  onMarkerAction?: (marker: MapMarkerFeature) => void;
   onLocationSelect?: (location: MapLocation) => void;
   onViewportChange?: MapViewportChangeHandler;
 }
@@ -232,11 +235,13 @@ function MapInteractionController({
 interface MapCenterSynchronizerProps {
   location: MapLocation | null | undefined;
   enabled: boolean;
+  radiusMeters?: number;
 }
 
 function MapCenterSynchronizer({
   location,
   enabled,
+  radiusMeters,
 }: MapCenterSynchronizerProps) {
   const map = useMap();
 
@@ -250,10 +255,18 @@ function MapCenterSynchronizer({
       location.longitude,
     ];
 
-    if (map.distance(map.getCenter(), nextCenter) > 1) {
+    if (radiusMeters) {
+      const latitudeDelta = radiusMeters / 111_320;
+      const longitudeDelta = radiusMeters /
+        (111_320 * Math.max(Math.cos(location.latitude * Math.PI / 180), 0.01));
+      map.fitBounds([
+        [location.latitude - latitudeDelta, location.longitude - longitudeDelta],
+        [location.latitude + latitudeDelta, location.longitude + longitudeDelta],
+      ], { padding: [36, 36] });
+    } else if (map.distance(map.getCenter(), nextCenter) > 1) {
       map.panTo(nextCenter);
     }
-  }, [enabled, location, map]);
+  }, [enabled, location, map, radiusMeters]);
 
   return null;
 }
@@ -315,6 +328,8 @@ interface MarkerLayerProps {
   zoom: number;
   selectedMarkerId?: string;
   onMarkerSelect?: (marker: MapMarkerFeature) => void;
+  markerActionLabel?: (marker: MapMarkerFeature) => string | undefined;
+  onMarkerAction?: (marker: MapMarkerFeature) => void;
 }
 
 function ClusteredMarkerLayer({
@@ -322,6 +337,8 @@ function ClusteredMarkerLayer({
   zoom,
   selectedMarkerId,
   onMarkerSelect,
+  markerActionLabel,
+  onMarkerAction,
 }: MarkerLayerProps) {
   const map = useMap();
   const clusters = useMemo(
@@ -363,6 +380,7 @@ function ClusteredMarkerLayer({
     const location = markerLocation(marker);
     const isIncident = marker.properties.kind === "INCIDENT";
     const isSelected = marker.properties.id === selectedMarkerId;
+    const actionLabel = markerActionLabel?.(marker);
 
     return (
       <CircleMarker
@@ -383,6 +401,18 @@ function ClusteredMarkerLayer({
           <strong>{marker.properties.title}</strong>
           <br />
           {marker.properties.category ?? marker.properties.status}
+          {actionLabel && onMarkerAction ? (
+            <>
+              <br />
+              <button
+                type="button"
+                className="eco-map-marker-action"
+                onClick={() => onMarkerAction(marker)}
+              >
+                {actionLabel}
+              </button>
+            </>
+          ) : null}
         </Popup>
       </CircleMarker>
     );
@@ -395,6 +425,7 @@ export function EcoMap({
   initialCenter = COLOMBO_MAP_CENTER,
   initialZoom = 12,
   focusLocation,
+  searchRadiusMeters,
   selectedMarkerId,
   selectedLocation,
   selectionEnabled = false,
@@ -405,6 +436,8 @@ export function EcoMap({
   showListFallback = true,
   showCurrentLocation = true,
   onMarkerSelect,
+  markerActionLabel,
+  onMarkerAction,
   onLocationSelect,
   onViewportChange,
 }: EcoMapProps) {
@@ -449,6 +482,7 @@ export function EcoMap({
           />
           <MapCenterSynchronizer
             location={focusLocation ?? selectedLocation}
+            radiusMeters={searchRadiusMeters}
             enabled={
               Boolean(focusLocation) ||
               (selectionEnabled && selectionMode === "center")
@@ -459,6 +493,8 @@ export function EcoMap({
             zoom={zoom}
             selectedMarkerId={selectedMarkerId}
             onMarkerSelect={onMarkerSelect}
+            markerActionLabel={markerActionLabel}
+            onMarkerAction={onMarkerAction}
           />
           {boundaries && boundaries.features.length > 0 && (
             <OrganizationBoundaryLayer boundaries={boundaries} />

@@ -236,7 +236,7 @@ export function AuthenticatedUserApp({
       <PublicCleanupEventsPage
         accessToken={accessToken}
         initialEventId={destination.eventId}
-        onBack={() => navigate(personalDashboard)}
+        onBack={() => back({ screen: "incident-discovery" })}
       />
     );
   } else if (destination.screen === "joined-cleanup-events") {
@@ -282,7 +282,6 @@ export function AuthenticatedUserApp({
         onReportIncident={() => navigate({ screen: "incident-create" })}
         onViewIncidentReports={() => navigate({ screen: "incident-reports" })}
         onFindCleanupActivity={() => navigate({ screen: "incident-discovery" })}
-        onBrowseCleanupEvents={() => navigate({ screen: "cleanup-events" })}
         onViewJoinedCleanupEvents={() => navigate({
           screen: "joined-cleanup-events",
         })}
@@ -316,7 +315,6 @@ export function AuthenticatedUserApp({
         onReportIncident={() => navigate({ screen: "incident-create" })}
         onViewIncidentReports={() => navigate({ screen: "incident-reports" })}
         onFindCleanupActivity={() => navigate({ screen: "incident-discovery" })}
-        onBrowseCleanupEvents={() => navigate({ screen: "cleanup-events" })}
         onViewJoinedCleanupEvents={() => navigate({
           screen: "joined-cleanup-events",
         })}

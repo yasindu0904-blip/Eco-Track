@@ -62,6 +62,7 @@ export interface EcoMapProps {
   initialCenter?: MapLocation;
   initialZoom?: number;
   focusLocation?: MapLocation | null;
+  searchRadiusMeters?: number;
   selectedMarkerId?: string;
   selectedLocation?: MapLocation | null;
   selectionEnabled?: boolean;
@@ -71,6 +72,8 @@ export interface EcoMapProps {
   showListFallback?: boolean;
   showCurrentLocation?: boolean;
   onMarkerSelect?: (marker: MapMarkerFeature) => void;
+  markerActionLabel?: (marker: MapMarkerFeature) => string | undefined;
+  onMarkerAction?: (marker: MapMarkerFeature) => void;
   onLocationSelect?: (location: MapLocation) => void;
   onViewportChange?: MapViewportChangeHandler;
   onInteractionChange?: (isInteracting: boolean) => void;
@@ -131,12 +134,28 @@ function locationsDiffer(
   );
 }
 
+function radiusBounds(
+  center: MapLocation,
+  radiusMeters: number,
+): [number, number, number, number] {
+  const latitudeDelta = radiusMeters / 111_320;
+  const longitudeDelta = radiusMeters /
+    (111_320 * Math.max(Math.cos(center.latitude * Math.PI / 180), 0.01));
+  return [
+    center.longitude - longitudeDelta,
+    center.latitude - latitudeDelta,
+    center.longitude + longitudeDelta,
+    center.latitude + latitudeDelta,
+  ];
+}
+
 export function EcoMap({
   markers = [],
   boundaries,
   initialCenter = COLOMBO_MAP_CENTER,
   initialZoom = 12,
   focusLocation,
+  searchRadiusMeters,
   selectedMarkerId,
   selectedLocation,
   selectionEnabled = false,
@@ -146,6 +165,8 @@ export function EcoMap({
   showListFallback = true,
   showCurrentLocation = true,
   onMarkerSelect,
+  markerActionLabel,
+  onMarkerAction,
   onLocationSelect,
   onViewportChange,
   onInteractionChange,
@@ -169,6 +190,18 @@ export function EcoMap({
     }),
     [markers],
   );
+  const searchBounds = useMemo(
+    () => selectedLocation && searchRadiusMeters
+      ? radiusBounds(selectedLocation, searchRadiusMeters)
+      : null,
+    [searchRadiusMeters, selectedLocation],
+  );
+  const selectedMarker = markers.find(
+    (marker) => marker.properties.id === selectedMarkerId,
+  );
+  const selectedMarkerActionLabel = selectedMarker
+    ? markerActionLabel?.(selectedMarker)
+    : undefined;
   const activeArea = boundaries?.features[activeAreaIndex] ?? boundaries?.features[0];
   const activeAreaBounds = useMemo(
     () => activeArea ? getGeometryBounds(activeArea.geometry.coordinates) : null,
@@ -202,19 +235,23 @@ export function EcoMap({
       location &&
       (Boolean(focusLocation) ||
         (selectionEnabled && selectionMode === "center")) &&
-      locationsDiffer(lastMapCenterRef.current, location)
+      (Boolean(searchBounds) || locationsDiffer(lastMapCenterRef.current, location))
     ) {
       lastMapCenterRef.current = location;
-      cameraRef.current?.easeTo({
-        center: [
-          location.longitude,
-          location.latitude,
-        ],
-        zoom: focusLocation ? 14 : undefined,
-        duration: 250,
-      });
+      if (searchBounds) {
+        focusBounds(searchBounds);
+      } else {
+        cameraRef.current?.easeTo({
+          center: [
+            location.longitude,
+            location.latitude,
+          ],
+          zoom: focusLocation ? 14 : undefined,
+          duration: 250,
+        });
+      }
     }
-  }, [focusLocation, selectedLocation, selectionEnabled, selectionMode]);
+  }, [focusBounds, focusLocation, searchBounds, selectedLocation, selectionEnabled, selectionMode]);
 
   const selectLocation = useCallback(
     (location: MapLocation) => {
@@ -659,6 +696,32 @@ export function EcoMap({
             </Text>
           </View>
         )}
+
+        {selectedMarker && (
+          <View style={styles.markerCallout}>
+            <Text style={styles.markerCalloutKind}>
+              {selectedMarker.properties.kind === "CLEANUP_EVENT"
+                ? "CLEANUP EVENT"
+                : selectedMarker.properties.category ?? "INCIDENT"}
+            </Text>
+            <Text style={styles.markerCalloutTitle} numberOfLines={1}>
+              {selectedMarker.properties.title}
+            </Text>
+            <Text style={styles.markerCalloutStatus} numberOfLines={1}>
+              {selectedMarker.properties.status}
+            </Text>
+            {selectedMarkerActionLabel && onMarkerAction ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={selectedMarkerActionLabel}
+                style={({ pressed }) => [styles.markerCalloutAction, pressed && styles.buttonPressed]}
+                onPress={() => onMarkerAction(selectedMarker)}
+              >
+                <Text style={styles.markerCalloutActionText}>{selectedMarkerActionLabel}</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        )}
       </View>
 
       {message && (
@@ -784,6 +847,47 @@ const styles = StyleSheet.create({
   boundaryButtonText: {
     color: "#101312",
     fontSize: 12,
+    fontWeight: "900",
+  },
+  markerCallout: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    bottom: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "rgba(16,19,18,0.2)",
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.97)",
+    elevation: 5,
+  },
+  markerCalloutKind: {
+    color: colors.primary,
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  markerCalloutTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+  markerCalloutStatus: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  markerCalloutAction: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 40,
+    marginTop: 10,
+    borderRadius: 9,
+    backgroundColor: colors.primary,
+  },
+  markerCalloutActionText: {
+    color: colors.surface,
+    fontSize: 13,
     fontWeight: "900",
   },
   centerPinContainer: {

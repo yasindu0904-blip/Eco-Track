@@ -20,7 +20,10 @@ export function PublicCleanupEventsScreen({ accessToken, initialEventId, onBack 
   const load = useCallback(async (cursor?: string) => {
     setBusy(true); setError(undefined);
     try {
-      if (initialEventId && !cursor) setSelected(await getPublicCleanupEvent(accessToken, initialEventId));
+      if (initialEventId && !cursor) {
+        setSelected(await getPublicCleanupEvent(accessToken, initialEventId));
+        return;
+      }
       const page = await listPublicCleanupEvents(accessToken, cursor);
       setItems((current) => cursor ? [...current, ...page.items] : page.items);
       setNextCursor(page.nextCursor);
@@ -41,8 +44,8 @@ export function PublicCleanupEventsScreen({ accessToken, initialEventId, onBack 
       eyebrow="Community cleanups"
       title={selected ? selected.title : "Published events"}
       subtitle={selected ? selected.organization.name : "Verified schedules, instructions, and volunteer availability."}
-      onBack={selected ? () => setSelected(undefined) : onBack}
-      backLabel={selected ? "Events" : "Dashboard"}
+      onBack={selected && !initialEventId ? () => setSelected(undefined) : onBack}
+      backLabel={selected && !initialEventId ? "Events" : "Back"}
       action={selected ? <Text style={styles.status}>{selected.lifecycleStatus.replaceAll("_", " ")}</Text> : undefined}
     />
     {error ? <Notice tone="error" message={error} /> : null}

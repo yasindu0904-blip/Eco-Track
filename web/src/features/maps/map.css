@@ -29,6 +29,25 @@
   background: #ffffff;
 }
 
+.eco-map-marker-action {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #174c33;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.eco-map-marker-action:hover,
+.eco-map-marker-action:focus-visible {
+  background: #0f3925;
+}
+
 .eco-map-location-control {
   position: absolute;
   z-index: 800;

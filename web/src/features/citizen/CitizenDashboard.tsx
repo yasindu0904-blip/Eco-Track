@@ -20,7 +20,6 @@ interface CitizenDashboardProps {
   onReportIncident: () => void;
   onViewIncidentReports: () => void;
   onFindCleanupActivity: () => void;
-  onBrowseCleanupEvents: () => void;
   onViewJoinedCleanupEvents: () => void;
   onOpenImpact: () => void;
 }
@@ -72,7 +71,6 @@ export function CitizenDashboard({
   onReportIncident,
   onViewIncidentReports,
   onFindCleanupActivity,
-  onBrowseCleanupEvents,
   onViewJoinedCleanupEvents,
   onOpenImpact,
 }: CitizenDashboardProps) {
@@ -147,17 +145,11 @@ export function CitizenDashboard({
             onClick={onReportIncident}
           />
           <DashboardAction
-            title="Explore the community map"
+            title="Find cleanup activity"
             description="Find current incidents and cleanup activity nearby."
             icon="volunteer"
             emphasis="warm"
             onClick={onFindCleanupActivity}
-          />
-          <DashboardAction
-            title="Browse cleanup events"
-            description="Review published schedules and join as a volunteer."
-            icon="volunteer"
-            onClick={onBrowseCleanupEvents}
           />
         </div>
       </section>

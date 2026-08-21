@@ -1,33 +1,22 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+
 import * as Location from "expo-location";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { describeApiFailure } from "../../api/apiError";
 import { Button, Notice, PageHeader, Screen, sharedStyles } from "../../components/ui";
-import { colors, spacing } from "../../components/theme";
+import { colors } from "../../components/theme";
+import { getPublicCleanupEvent, listNearbyCleanupEventMap, listPublicCleanupEventMap } from "../cleanupEvents/cleanupEvent.api";
+import type { CleanupEventMapFeature, CleanupEventPublicDetail } from "../cleanupEvents/cleanupEvent.types";
 import {
+  COLOMBO_MAP_CENTER,
   EcoMap,
   SRI_LANKA_MAP_BOUNDS,
   type MapLocation,
-  type MapMarkerFeature,
   type MapViewport,
   type MapViewportChangeHandler,
   useRefreshOnForeground,
 } from "../map";
-import {
-  getPublicIncident,
-  listIncidentCategories,
-  listNearbyPublicIncidents,
-  listPublicIncidents,
-} from "./incident.api";
-import type {
-  IncidentCategory,
-  IncidentDetail,
-  IncidentStatus,
-  PublicIncidentSummary,
-} from "./incident.types";
-import { getPublicCleanupEvent, listNearbyCleanupEventMap, listPublicCleanupEventMap } from "../cleanupEvents/cleanupEvent.api";
-import type { CleanupEventMapFeature, CleanupEventPublicDetail } from "../cleanupEvents/cleanupEvent.types";
 
 type Props = {
   accessToken: string;
@@ -40,34 +29,8 @@ type SearchContext =
   | { mode: "viewport"; viewport: MapViewport }
   | { mode: "nearby"; location: MapLocation; radiusMeters: number };
 
-const statuses: Array<{ value: "" | IncidentStatus; label: string }> = [
-  { value: "", label: "All current" },
-  { value: "ACTIVE", label: "Active" },
-  { value: "CLEANUP_ORGANIZED", label: "Organized" },
-  { value: "RESOLVED", label: "Resolved" },
-  { value: "EXPIRED", label: "Expired" },
-];
-
-const times = [
-  { value: "", label: "Any time", milliseconds: 0 },
-  { value: "24h", label: "24 hours", milliseconds: 24 * 60 * 60 * 1000 },
-  { value: "7d", label: "7 days", milliseconds: 7 * 24 * 60 * 60 * 1000 },
-  { value: "30d", label: "30 days", milliseconds: 30 * 24 * 60 * 60 * 1000 },
-] as const;
-
 function readable(value: string): string {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((word) => word[0]?.toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-function reportedAfterFor(value: (typeof times)[number]["value"]): string | undefined {
-  const option = times.find((candidate) => candidate.value === value);
-  return option?.milliseconds
-    ? new Date(Date.now() - option.milliseconds).toISOString()
-    : undefined;
+  return value.toLowerCase().replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
 function locationInsideSriLanka(location: MapLocation): boolean {
@@ -79,32 +42,17 @@ function locationInsideSriLanka(location: MapLocation): boolean {
   );
 }
 
-function mergeUnique(
-  current: PublicIncidentSummary[],
-  incoming: PublicIncidentSummary[],
-): PublicIncidentSummary[] {
-  const items = new Map(current.map((item) => [item.id, item]));
-  incoming.forEach((item) => items.set(item.id, item));
-  return [...items.values()];
-}
-
-export function CitizenIncidentDiscoveryScreen({ accessToken, onBack, onReportIncident, onOpenEvent }: Props) {
-  const [categories, setCategories] = useState<IncidentCategory[]>([]);
-  const [incidents, setIncidents] = useState<PublicIncidentSummary[]>([]);
+export function CitizenIncidentDiscoveryScreen({
+  accessToken,
+  onBack,
+  onReportIncident,
+  onOpenEvent,
+}: Props) {
   const [events, setEvents] = useState<CleanupEventMapFeature[]>([]);
-  const [detail, setDetail] = useState<IncidentDetail>();
   const [eventDetail, setEventDetail] = useState<CleanupEventPublicDetail>();
   const [selectedId, setSelectedId] = useState<string>();
-  const [selectedKind, setSelectedKind] = useState<"INCIDENT" | "CLEANUP_EVENT">("INCIDENT");
   const [search, setSearch] = useState<SearchContext>();
   const [focusLocation, setFocusLocation] = useState<MapLocation>();
-  const [status, setStatus] = useState<"" | IncidentStatus>("");
-  const [categoryId, setCategoryId] = useState("");
-  const [timeRange, setTimeRange] =
-    useState<(typeof times)[number]["value"]>("");
-  const [activityKind, setActivityKind] = useState<"ALL" | "INCIDENT" | "CLEANUP_EVENT">("ALL");
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [nextEventCursor, setNextEventCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -115,32 +63,10 @@ export function CitizenIncidentDiscoveryScreen({ accessToken, onBack, onReportIn
   const ignoreNextFocusedViewport = useRef(false);
   const selectedIdRef = useRef<string | undefined>(undefined);
 
-  const selectMarker = useCallback((id: string | undefined, kind: "INCIDENT" | "CLEANUP_EVENT" = "INCIDENT") => {
+  const selectEvent = useCallback((id?: string) => {
     selectedIdRef.current = id;
     setSelectedId(id);
-    setSelectedKind(kind);
   }, []);
-
-  useEffect(() => {
-    let active = true;
-    void listIncidentCategories(accessToken)
-      .then((loaded) => {
-        if (active) setCategories(loaded);
-      })
-      .catch((requestError: unknown) => {
-        if (active) {
-          setError(
-            describeApiFailure(
-              requestError,
-              "Unable to load incident categories.",
-            ).message,
-          );
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [accessToken]);
 
   useEffect(
     () => () => {
@@ -153,102 +79,67 @@ export function CitizenIncidentDiscoveryScreen({ accessToken, onBack, onReportIn
   const runSearch = useCallback(
     async (
       context: SearchContext,
-      options: {
-        append?: boolean;
-        cursor?: string;
-        eventCursor?: string;
-        externalSignal?: AbortSignal;
-      } = {},
+      options: { externalSignal?: AbortSignal } = {},
     ) => {
       requestController.current?.abort();
       const controller = new AbortController();
       requestController.current = controller;
       const abortFromExternal = () => controller.abort();
-      options.externalSignal?.addEventListener("abort", abortFromExternal, {
-        once: true,
-      });
+      options.externalSignal?.addEventListener("abort", abortFromExternal, { once: true });
       if (options.externalSignal?.aborted) controller.abort();
 
       setLoading(true);
       setError(undefined);
-      const filters = {
-        limit: 50,
-        cursor: options.cursor,
-        status: status || undefined,
-        categoryId: categoryId || undefined,
-        reportedAfter: reportedAfterFor(timeRange),
-      };
-
       try {
-        const incidentRequest = options.append && !options.cursor
-          ? Promise.resolve({ items: [], nextCursor: null })
-          : context.mode === "viewport"
-            ? listPublicIncidents(
-              accessToken,
-              { ...context.viewport, ...filters },
-              controller.signal,
-            )
-            : listNearbyPublicIncidents(
-              accessToken,
-              { ...context.location, radiusMeters: context.radiusMeters, ...filters },
-              controller.signal,
-            );
-        const eventRequest = options.append && !options.eventCursor
-          ? Promise.resolve({ type: "FeatureCollection" as const, features: [], nextCursor: null })
-          : context.mode === "viewport"
-            ? listPublicCleanupEventMap(accessToken, {
-                ...context.viewport, limit: 50, cursor: options.eventCursor,
-              }, controller.signal)
-            : listNearbyCleanupEventMap(accessToken, {
-                ...context.location, radiusMeters: context.radiusMeters, limit: 50, cursor: options.eventCursor,
-              }, controller.signal);
-        const [page, eventPage] = await Promise.all([incidentRequest, eventRequest]);
-        if (controller.signal.aborted) return;
+        const loadedEvents: CleanupEventMapFeature[] = [];
+        let cursor: string | undefined;
+        const seenCursors = new Set<string>();
+        let shouldLoad = true;
 
-        setIncidents((current) =>
-          options.append ? mergeUnique(current, page.items) : page.items,
-        );
-        setEvents((current) => options.append
-          ? [...new Map([...current, ...eventPage.features].map((item) => [item.properties.id, item])).values()]
-          : eventPage.features);
-        if (!options.append || !selectedIdRef.current) {
-          const currentId = selectedIdRef.current;
-          if (currentId && page.items.some((incident) => incident.id === currentId)) {
-            selectMarker(currentId, "INCIDENT");
-          } else if (currentId && eventPage.features.some((event) => event.properties.id === currentId)) {
-            selectMarker(currentId, "CLEANUP_EVENT");
-          } else if (page.items[0]) {
-            selectMarker(page.items[0].id, "INCIDENT");
-          } else if (eventPage.features[0]) {
-            selectMarker(eventPage.features[0].properties.id, "CLEANUP_EVENT");
+        while (shouldLoad) {
+          const page = context.mode === "viewport"
+            ? await listPublicCleanupEventMap(accessToken, {
+                ...context.viewport,
+                limit: 50,
+                cursor,
+              }, controller.signal)
+            : await listNearbyCleanupEventMap(accessToken, {
+                ...context.location,
+                radiusMeters: context.radiusMeters,
+                limit: 50,
+                cursor,
+              }, controller.signal);
+          if (controller.signal.aborted) return;
+
+          loadedEvents.push(...page.features);
+          const nextCursor = page.nextCursor ?? undefined;
+          if (nextCursor && !seenCursors.has(nextCursor)) {
+            seenCursors.add(nextCursor);
+            cursor = nextCursor;
           } else {
-            selectMarker(undefined);
+            shouldLoad = false;
           }
         }
-        setNextCursor(page.nextCursor);
-        setNextEventCursor(eventPage.nextCursor);
+
+        setEvents(loadedEvents);
+        const currentId = selectedIdRef.current;
+        selectEvent(currentId && loadedEvents.some((event) => event.properties.id === currentId)
+          ? currentId
+          : undefined);
       } catch (requestError) {
         if (controller.signal.aborted) return;
-        setError(
-          describeApiFailure(
-            requestError,
-            "Unable to discover cleanup activity.",
-          ).message,
-        );
+        setError(describeApiFailure(requestError, "Unable to discover cleanup events.").message);
       } finally {
         options.externalSignal?.removeEventListener("abort", abortFromExternal);
         if (requestController.current === controller) setLoading(false);
       }
     },
-    [accessToken, categoryId, selectMarker, status, timeRange],
+    [accessToken, selectEvent],
   );
 
   const handleViewportChange = useCallback<MapViewportChangeHandler>(
     (viewport, context) => {
-      if (ignoreNextFocusedViewport.current) {
-        ignoreNextFocusedViewport.current = false;
-        return;
-      }
+      if (ignoreNextFocusedViewport.current) return;
       const nextSearch: SearchContext = { mode: "viewport", viewport };
       setSearch(nextSearch);
       return runSearch(nextSearch, { externalSignal: context.signal });
@@ -263,69 +154,30 @@ export function CitizenIncidentDiscoveryScreen({ accessToken, onBack, onReportIn
 
   useEffect(() => {
     detailController.current?.abort();
-    if (!selectedId) {
-      return;
-    }
+    if (!selectedId) return;
+
     const controller = new AbortController();
     detailController.current = controller;
-    void Promise.resolve<void>(undefined)
-      .then<IncidentDetail | CleanupEventPublicDetail | undefined>(() => {
+    void Promise.resolve()
+      .then(() => {
         if (controller.signal.aborted) return undefined;
-        setDetail(undefined);
         setEventDetail(undefined);
         setDetailLoading(true);
-        return selectedKind === "INCIDENT"
-          ? getPublicIncident(accessToken, selectedId, controller.signal)
-          : getPublicCleanupEvent(accessToken, selectedId, controller.signal);
+        return getPublicCleanupEvent(accessToken, selectedId, controller.signal);
       })
       .then((loaded) => {
-        if (!controller.signal.aborted && loaded) {
-          if (selectedKind === "INCIDENT") setDetail(loaded as IncidentDetail);
-          else setEventDetail(loaded as CleanupEventPublicDetail);
-        }
+        if (!controller.signal.aborted && loaded) setEventDetail(loaded);
       })
       .catch((requestError: unknown) => {
         if (!controller.signal.aborted) {
-          setError(
-            describeApiFailure(
-              requestError,
-              "Unable to load incident details.",
-            ).message,
-          );
+          setError(describeApiFailure(requestError, "Unable to load cleanup event details.").message);
         }
       })
       .finally(() => {
         if (!controller.signal.aborted) setDetailLoading(false);
       });
     return () => controller.abort();
-  }, [accessToken, selectedId, selectedKind]);
-
-  const markers = useMemo<MapMarkerFeature[]>(
-    () => [...(activityKind === "CLEANUP_EVENT" ? [] : incidents.map((incident) => ({
-      type: "Feature",
-      geometry: {
-        type: "Point",
-        coordinates: [incident.longitude, incident.latitude],
-      },
-      properties: {
-        id: incident.id,
-        kind: "INCIDENT",
-        title: incident.title,
-        status: readable(incident.status),
-        category: incident.category.name,
-        occurredAt: incident.reportedAt,
-        isOwnReport: incident.isOwnReport,
-      },
-    } satisfies MapMarkerFeature))), ...(activityKind === "INCIDENT" ? [] : events)],
-    [activityKind, events, incidents],
-  );
-
-  const changeActivityKind = (next: typeof activityKind) => {
-    setActivityKind(next);
-    if (next === "ALL" || selectedKind === next) return;
-    if (next === "INCIDENT") selectMarker(incidents[0]?.id, "INCIDENT");
-    else selectMarker(events[0]?.properties.id, "CLEANUP_EVENT");
-  };
+  }, [accessToken, selectedId]);
 
   const findNearMe = async () => {
     if (locating) return;
@@ -348,11 +200,7 @@ export function CitizenIncidentDiscoveryScreen({ accessToken, onBack, onReportIn
         setError("Your current position is outside the supported Sri Lanka map area.");
         return;
       }
-      const nextSearch: SearchContext = {
-        mode: "nearby",
-        location,
-        radiusMeters: 5_000,
-      };
+      const nextSearch: SearchContext = { mode: "nearby", location, radiusMeters: 2_000 };
       ignoreNextFocusedViewport.current = true;
       setTimeout(() => {
         ignoreNextFocusedViewport.current = false;
@@ -367,165 +215,71 @@ export function CitizenIncidentDiscoveryScreen({ accessToken, onBack, onReportIn
     }
   };
 
-  const selected = incidents.find((incident) => incident.id === selectedId);
   const selectedEvent = events.find((event) => event.properties.id === selectedId);
-
-  const chip = (
-    value: string,
-    label: string,
-    selected: boolean,
-    onPress: () => void,
-  ) => (
-    <Pressable
-      key={value || "all"}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      style={[styles.chip, selected && styles.chipSelected]}
-    >
-      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
-    </Pressable>
-  );
 
   return (
     <Screen scrollEnabled={!mapInteracting}>
       <PageHeader
         eyebrow="Community map"
-        title="Discover cleanup activity"
-        subtitle="Browse the visible map or request your location once for a five-kilometre search."
+        title="Find cleanup activity"
+        subtitle="Browse published cleanup events or request your location once for a two-kilometre search."
         onBack={onBack}
         backLabel="Dashboard"
       />
 
-      <Button
-        label={locating ? "Finding your location…" : "Find activity near me"}
-        loading={locating}
-        onPress={() => void findNearMe()}
-      />
-      <Button
-        label="Refresh results"
-        variant="secondary"
-        disabled={!search || loading}
-        onPress={() => search && void runSearch(search)}
-      />
+      <Button label={locating ? "Finding your location..." : "Use my location"} loading={locating} onPress={() => void findNearMe()} />
+      <Button label="Refresh events" variant="secondary" disabled={!search || loading} onPress={() => search && void runSearch(search)} />
       <Button label="Report an environmental incident" variant="secondary" onPress={onReportIncident} />
 
-      <View style={sharedStyles.card}>
-        <Text style={sharedStyles.sectionTitle}>Filters</Text>
-        <Text style={styles.filterLabel}>ACTIVITY</Text>
-        <View style={styles.chips}>
-          {chip("ALL", "All activity", activityKind === "ALL", () => changeActivityKind("ALL"))}
-          {chip("INCIDENT", "Incidents", activityKind === "INCIDENT", () => changeActivityKind("INCIDENT"))}
-          {chip("CLEANUP_EVENT", "Events", activityKind === "CLEANUP_EVENT", () => changeActivityKind("CLEANUP_EVENT"))}
-        </View>
-        <Text style={styles.filterLabel}>STATUS</Text>
-        <View style={styles.chips}>
-          {statuses.map((option) => chip(option.value, option.label, status === option.value, () => setStatus(option.value)))}
-        </View>
-        <Text style={styles.filterLabel}>CATEGORY</Text>
-        <View style={styles.chips}>
-          {chip("", "All categories", categoryId === "", () => setCategoryId(""))}
-          {categories.map((category) => chip(category.id, category.name, categoryId === category.id, () => setCategoryId(category.id)))}
-        </View>
-        <Text style={styles.filterLabel}>REPORTED</Text>
-        <View style={styles.chips}>
-          {times.map((option) => chip(option.value, option.label, timeRange === option.value, () => setTimeRange(option.value)))}
-        </View>
-        <Button
-          label="Apply filters"
-          disabled={!search || loading}
-          onPress={() => search && void runSearch(search)}
-        />
-      </View>
-
       {error ? <Notice tone="error" message={error} /> : null}
-
-      <View style={sharedStyles.spacedRow}>
-        <View>
-          <Text style={styles.eyebrow}>{search?.mode === "nearby" ? "WITHIN 5 KM" : "VISIBLE MAP AREA"}</Text>
-          <Text style={styles.count}>{loading ? "Loading…" : `${markers.length} found`}</Text>
-        </View>
-        {loading ? <ActivityIndicator color={colors.primary} /> : null}
-      </View>
+      {loading ? (
+        <Notice
+          tone="info"
+          message={`Loading published cleanup events${search?.mode === "nearby" ? " within 2 km" : " for the current map view"}. Visible results may change until loading is complete.`}
+        />
+      ) : null}
 
       <EcoMap
-        markers={markers}
+        markers={events}
         selectedMarkerId={selectedId}
         focusLocation={focusLocation}
+        selectedLocation={focusLocation ?? COLOMBO_MAP_CENTER}
+        searchRadiusMeters={search?.mode === "nearby" ? 2_000 : undefined}
         showListFallback={false}
+        showCurrentLocation={false}
         height={430}
-        accessibleLabel="Citizen cleanup activity discovery map"
-        onMarkerSelect={(marker) => selectMarker(marker.properties.id, marker.properties.kind)}
+        accessibleLabel="Published cleanup event discovery map"
+        onMarkerSelect={(marker) => selectEvent(marker.properties.id)}
+        markerActionLabel={(marker) => marker.properties.isJoined
+          ? `View event details: ${marker.properties.title}`
+          : `Join event: ${marker.properties.title}`}
+        onMarkerAction={(marker) => onOpenEvent(marker.properties.id)}
         onViewportChange={handleViewportChange}
         onInteractionChange={setMapInteracting}
       />
 
-      {!loading && markers.length === 0 ? (
-        <View style={sharedStyles.card}>
-          <Text style={sharedStyles.sectionTitle}>No incidents found</Text>
-          <Text style={sharedStyles.sectionSubtitle}>Move the map, widen the filters, or refresh the search.</Text>
-        </View>
-      ) : activityKind === "CLEANUP_EVENT" ? null : incidents.map((incident) => (
-        <Pressable
-          key={incident.id}
-          accessibilityRole="button"
-          onPress={() => selectMarker(incident.id, "INCIDENT")}
-          style={[sharedStyles.card, styles.incidentCard, incident.id === selectedId && styles.incidentCardSelected]}
-        >
-          <Text style={styles.category}>{incident.category.name}{incident.isOwnReport ? " · Your report" : ""}</Text>
-          <Text style={styles.incidentTitle}>{incident.title}</Text>
-          <Text style={styles.meta}>{readable(incident.severity)} · {readable(incident.status)}</Text>
-        </Pressable>
-      ))}
-
-      {activityKind !== "INCIDENT" && events.map((event) => (
-        <Pressable key={`event-${event.properties.id}`} accessibilityRole="button"
-          onPress={() => selectMarker(event.properties.id, "CLEANUP_EVENT")}
-          style={[sharedStyles.card, styles.incidentCard, event.properties.id === selectedId && styles.incidentCardSelected]}>
-          <Text style={styles.category}>CLEANUP EVENT{event.properties.isJoined ? " · JOINED" : ""}</Text>
-          <Text style={styles.incidentTitle}>{event.properties.title}</Text>
-          <Text style={styles.meta}>{event.properties.organizationName} · {readable(event.properties.status)}</Text>
-        </Pressable>
-      ))}
-
-      {(nextCursor || nextEventCursor) && search ? (
-        <Button
-          label="Load more"
-          variant="secondary"
-          loading={loading}
-          onPress={() => void runSearch(search, { append: true, cursor: nextCursor ?? undefined, eventCursor: nextEventCursor ?? undefined })}
-        />
-      ) : null}
-
-      {selected ? (
-        <View style={[sharedStyles.card, styles.detail]}>
-          <Text style={styles.category}>{selected.category.name}</Text>
-          <Text style={sharedStyles.sectionTitle}>{selected.title}</Text>
-          <Text style={sharedStyles.sectionSubtitle}>
-            {selected.addressText ?? `${selected.latitude.toFixed(5)}, ${selected.longitude.toFixed(5)}`}
-          </Text>
-          {detailLoading ? <ActivityIndicator color={colors.primary} /> : detail ? (
-            <>
-              <View style={sharedStyles.divider} />
-              <Text style={styles.description}>{detail.description}</Text>
-              <View style={sharedStyles.spacedRow}><Text style={styles.detailLabel}>STATUS</Text><Text style={styles.detailValue}>{readable(detail.status)}</Text></View>
-              <View style={sharedStyles.spacedRow}><Text style={styles.detailLabel}>SEVERITY</Text><Text style={styles.detailValue}>{readable(detail.severity)}</Text></View>
-              <View style={sharedStyles.spacedRow}><Text style={styles.detailLabel}>PUBLIC FALSE COUNT</Text><Text style={styles.detailValue}>{selected.falseReviewCount}</Text></View>
-            </>
-          ) : null}
-        </View>
-      ) : null}
-      {selectedKind === "CLEANUP_EVENT" && selectedEvent ? (
+      {selectedEvent ? (
         <View style={[sharedStyles.card, styles.detail]}>
           <Text style={styles.category}>{selectedEvent.properties.organizationName}</Text>
           <Text style={sharedStyles.sectionTitle}>{selectedEvent.properties.title}</Text>
           <Text style={sharedStyles.sectionSubtitle}>{selectedEvent.properties.isJoined ? "You joined this event." : "Published cleanup event"}</Text>
           {detailLoading ? <ActivityIndicator color={colors.primary} /> : eventDetail ? <>
-            <View style={sharedStyles.divider} /><Text style={styles.description}>{eventDetail.description}</Text>
+            <View style={sharedStyles.divider} />
+            <Text style={styles.description}>{eventDetail.description}</Text>
+            {eventDetail.publicInstructions ? <Text style={styles.description}>Volunteer instructions: {eventDetail.publicInstructions}</Text> : null}
             <View style={sharedStyles.spacedRow}><Text style={styles.detailLabel}>STATUS</Text><Text style={styles.detailValue}>{readable(eventDetail.lifecycleStatus)}</Text></View>
+            <View style={sharedStyles.spacedRow}><Text style={styles.detailLabel}>LOCATION</Text><Text style={styles.detailValue}>{eventDetail.meetingAddress ?? eventDetail.eventAddress ?? "Map location"}</Text></View>
             <View style={sharedStyles.spacedRow}><Text style={styles.detailLabel}>SESSIONS</Text><Text style={styles.detailValue}>{eventDetail.sessions.length}</Text></View>
-            <Button label="Open full event details" onPress={() => onOpenEvent(selectedEvent.properties.id)} />
+            <View style={sharedStyles.spacedRow}><Text style={styles.detailLabel}>PARTICIPATION</Text><Text style={styles.detailValue}>{selectedEvent.properties.isJoined ? "Joined" : "Not joined"}</Text></View>
+            <Button label={selectedEvent.properties.isJoined ? "View event details" : "Join event"} onPress={() => onOpenEvent(selectedEvent.properties.id)} />
           </> : null}
+        </View>
+      ) : null}
+
+      {!loading && events.length === 0 ? (
+        <View style={sharedStyles.card}>
+          <Text style={sharedStyles.sectionTitle}>No published cleanup events found</Text>
+          <Text style={sharedStyles.sectionSubtitle}>Move the map or refresh the search.</Text>
         </View>
       ) : null}
     </Screen>
@@ -533,22 +287,7 @@ export function CitizenIncidentDiscoveryScreen({ accessToken, onBack, onReportIn
 }
 
 const styles = StyleSheet.create({
-  back: { color: colors.primary, fontWeight: "800", paddingVertical: 8 },
-  intro: { gap: spacing.xs, paddingVertical: spacing.md },
-  eyebrow: { color: colors.primary, fontSize: 11, fontWeight: "900", letterSpacing: 1.2 },
-  title: { color: colors.text, fontSize: 34, fontWeight: "900" },
-  count: { color: colors.text, fontSize: 20, fontWeight: "900", marginTop: 4 },
-  filterLabel: { color: colors.textMuted, fontSize: 11, fontWeight: "900", letterSpacing: 1 },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  chip: { minHeight: 38, justifyContent: "center", paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: 9, backgroundColor: colors.surface },
-  chipSelected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
-  chipText: { color: colors.textMuted, fontSize: 12, fontWeight: "800" },
-  chipTextSelected: { color: colors.primary },
-  incidentCard: { borderRadius: 10 },
-  incidentCardSelected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
   category: { color: colors.primary, fontSize: 11, fontWeight: "900" },
-  incidentTitle: { color: colors.text, fontSize: 18, fontWeight: "900" },
-  meta: { color: colors.textMuted, fontSize: 13 },
   detail: { borderRadius: 10 },
   description: { color: colors.textMuted, fontSize: 14, lineHeight: 21 },
   detailLabel: { color: colors.textMuted, fontSize: 11, fontWeight: "900" },
