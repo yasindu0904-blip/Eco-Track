@@ -3,9 +3,9 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { describeApiFailure } from "../../api/apiError";
 import {
-  BrandHeader,
   Button,
   Notice,
+  PageHeader,
   Screen,
   sharedStyles,
 } from "../../components/ui";
@@ -80,13 +80,13 @@ export function MyImpactScreen({
 
   return (
     <Screen>
-      <BrandHeader
-        eyebrow="Citizen & volunteer"
+      <PageHeader
+        eyebrow="Citizen and volunteer"
         title="My Impact"
-        subtitle="Verified community action and non-monetary achievements"
-        compact
+        subtitle="Verified community action and non-monetary achievements."
+        onBack={onBack}
+        backLabel="Dashboard"
       />
-      <Button label="Back to dashboard" variant="secondary" onPress={onBack} />
 
       {error ? (
         <>

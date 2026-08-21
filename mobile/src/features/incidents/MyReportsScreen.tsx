@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { Button, LoadingState, Notice, Screen, sharedStyles } from "../../components/ui";
+import { Button, LoadingState, Notice, PageHeader, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import { getMyIncident, listMyIncidents } from "./incident.api";
 import type { IncidentDetail, IncidentStatus, IncidentSummary } from "./incident.types";
@@ -57,8 +57,14 @@ export function MyReportsScreen({ accessToken, submittedIncident, initialInciden
   if (detail) {
     return (
       <Screen>
-        <Pressable onPress={() => { setDetail(null); if (submittedIncident) onBack(); }}><Text style={styles.back}>← {submittedIncident ? "Dashboard" : "My Reports"}</Text></Pressable>
-        <View style={styles.detailHero}><Text style={styles.eyebrow}>{detail.category.name}</Text><Text style={styles.detailTitle}>{detail.title}</Text><View style={styles.status}><Text style={styles.statusText}>{label(detail.status)}</Text></View><Text style={styles.heroMeta}>Reported {date(detail.reportedAt)}</Text></View>
+        <PageHeader
+          eyebrow={detail.category.name}
+          title={detail.title}
+          subtitle={`Reported ${date(detail.reportedAt)}`}
+          onBack={() => { setDetail(null); if (submittedIncident) onBack(); }}
+          backLabel={submittedIncident ? "Dashboard" : "My reports"}
+          action={<View style={styles.status}><Text style={styles.statusText}>{label(detail.status)}</Text></View>}
+        />
         {error ? <Notice tone="error" message={error} /> : null}
         <View style={sharedStyles.card}><Text style={sharedStyles.sectionTitle}>Description</Text><Text style={styles.body}>{detail.description}</Text></View>
         <View style={sharedStyles.card}><Text style={sharedStyles.sectionTitle}>Location</Text><Text style={styles.body}>{detail.addressText ?? "No address supplied"}</Text><Text style={styles.coordinates}>{detail.latitude.toFixed(6)}, {detail.longitude.toFixed(6)}</Text></View>
@@ -66,15 +72,20 @@ export function MyReportsScreen({ accessToken, submittedIncident, initialInciden
         <View style={sharedStyles.card}><Text style={sharedStyles.sectionTitle}>Status history</Text>{detail.statusHistory.map((history) => <View key={history.id} style={styles.history}><View style={styles.dot} /><View style={styles.historyText}><Text style={styles.historyTitle}>{label(history.toStatus)}</Text><Text style={styles.historyDate}>{date(history.changedAt)}</Text>{history.reason ? <Text style={styles.body}>{history.reason}</Text> : null}</View></View>)}</View>
         <View style={sharedStyles.card}><Text style={sharedStyles.sectionTitle}>Lifecycle</Text><Text style={styles.metaLabel}>Severity</Text><Text style={styles.metaValue}>{label(detail.severity)}</Text><Text style={styles.metaLabel}>Highlighted until</Text><Text style={styles.metaValue}>{date(detail.highlightUntil)}</Text><Text style={styles.metaLabel}>Archive after</Text><Text style={styles.metaValue}>{date(detail.archiveAfter)}</Text></View>
         <Button label="Report another incident" onPress={onNewReport} />
-        <Button label="Back to dashboard" variant="secondary" onPress={onBack} />
       </Screen>
     );
   }
 
   return (
     <Screen>
-      <View style={styles.top}><Pressable onPress={onBack}><Text style={styles.back}>← Dashboard</Text></Pressable><Button label="New report" onPress={onNewReport} /></View>
-      <View style={styles.intro}><Text style={styles.eyebrow}>YOUR ACTIVITY</Text><Text style={styles.title}>My Reports</Text><Text style={sharedStyles.sectionSubtitle}>Follow the shared status of incidents you submitted.</Text></View>
+      <PageHeader
+        eyebrow="Your activity"
+        title="My reports"
+        subtitle="Follow the shared status of incidents you submitted."
+        onBack={onBack}
+        backLabel="Dashboard"
+        action={<Button label="New report" compact onPress={onNewReport} />}
+      />
       {error ? <Notice tone="error" message={error} /> : null}
       {reports.length === 0 ? <View style={sharedStyles.card}><Text style={sharedStyles.sectionTitle}>No reports yet</Text><Text style={sharedStyles.sectionSubtitle}>Your submitted environmental incidents will appear here.</Text><Button label="Report an incident" onPress={onNewReport} /></View> : reports.map((report) => <Pressable key={report.id} onPress={() => void open(report.id)} style={sharedStyles.card}>{report.thumbnailUrl ? <Image source={{ uri: report.thumbnailUrl }} style={styles.thumbnail} /> : null}<View style={styles.reportHeading}><Text style={styles.category}>{report.category.name}</Text><Text style={styles.reportStatus}>{label(report.status as IncidentStatus)}</Text></View><Text style={styles.reportTitle}>{report.title}</Text><Text style={styles.body}>{report.addressText ?? `${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}`}</Text><View style={sharedStyles.spacedRow}><Text style={styles.date}>{date(report.reportedAt)}</Text><Text style={styles.open}>View →</Text></View></Pressable>)}
     </Screen>

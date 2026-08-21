@@ -4,7 +4,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { describeApiFailure } from "../../api/apiError";
 import { Button, Notice, sharedStyles } from "../../components/ui";
@@ -14,12 +14,14 @@ type SummaryCardsProps<T> = {
   load: () => Promise<T>;
   children: (value: T) => ReactNode;
   label: string;
+  compact?: boolean;
 };
 
 export function SummaryCards<T>({
   load,
   children,
   label,
+  compact = false,
 }: SummaryCardsProps<T>) {
   const [value, setValue] = useState<T>();
   const [loading, setLoading] = useState(true);
@@ -46,17 +48,30 @@ export function SummaryCards<T>({
 
   return (
     <View
-      style={sharedStyles.card}
+      style={[sharedStyles.card, compact && styles.compactCard]}
       accessibilityLabel={label}
       accessibilityState={{ busy: loading }}
     >
-      <Text style={sharedStyles.sectionTitle}>{label}</Text>
-      <Button
-        label={loading ? "Loading…" : "Refresh"}
-        variant="secondary"
-        disabled={loading}
-        onPress={() => void refresh()}
-      />
+      <View style={styles.headingRow}>
+        <Text style={sharedStyles.sectionTitle}>{label}</Text>
+        {compact ? (
+          <Pressable
+            accessibilityRole="button"
+            disabled={loading}
+            onPress={() => void refresh()}
+            style={styles.refreshButton}
+          >
+            <Text style={styles.refreshText}>{loading ? "Loading" : "Refresh"}</Text>
+          </Pressable>
+        ) : (
+          <Button
+            label={loading ? "Loading…" : "Refresh"}
+            variant="secondary"
+            disabled={loading}
+            onPress={() => void refresh()}
+          />
+        )}
+      </View>
       {error ? (
         <Notice
           tone="error"
@@ -76,18 +91,30 @@ export const total = (states: Record<string, number>) =>
 export const Metric = ({
   label,
   value,
+  compact = false,
 }: {
   label: string;
   value: number | string;
+  compact?: boolean;
 }) => (
-  <View style={styles.metric}>
+  <View style={[styles.metric, compact && styles.metricCompact]}>
     <Text style={styles.label}>{label}</Text>
     <Text style={styles.value}>{value}</Text>
   </View>
 );
 
 const styles = StyleSheet.create({
+  compactCard: { gap: spacing.sm, padding: spacing.md },
+  headingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  refreshButton: { paddingHorizontal: 8, paddingVertical: 5 },
+  refreshText: { color: "#176B2A", fontSize: 12, fontWeight: "800" },
   metric: { paddingVertical: spacing.sm },
+  metricCompact: { width: "50%", paddingHorizontal: 5 },
   label: { fontSize: 12, fontWeight: "800", color: "#53645d" },
   value: { fontSize: 25, fontWeight: "900", color: "#173b2c" },
 });
