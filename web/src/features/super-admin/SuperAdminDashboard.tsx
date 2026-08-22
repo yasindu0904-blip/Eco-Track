@@ -386,9 +386,42 @@ export function SuperAdminDashboard({
                 <span className="super-admin-eyebrow">Review workspace</span>
                 <h2>Organization applications</h2>
               </div>
-              <span className="super-admin-coming-badge">
-                {applications.length} pending
-              </span>
+              <div className="super-admin-review-heading-actions">
+                <span className="super-admin-coming-badge">
+                  {applications.length} pending
+                </span>
+                <button
+                  className="super-admin-refresh-button"
+                  type="button"
+                  disabled={reviewStatus === "loading" || reviewStatus === "submitting"}
+                  onClick={() => {
+                    if (!accessToken) return;
+                    setReviewStatus("loading");
+                    setReviewMessage(null);
+                    void listPendingOrganizationApplications(accessToken)
+                      .then((loadedApplications) => {
+                        setApplications(loadedApplications);
+                        setSelectedApplicationId(loadedApplications[0]?.id ?? null);
+                        setReviewStatus("ready");
+                      })
+                      .catch((error: unknown) => {
+                        setReviewStatus("error");
+                        setReviewMessage(
+                          error instanceof Error ? error.message : "Unable to load applications.",
+                        );
+                      });
+                  }}
+                  aria-label="Refresh organization applications"
+                  title="Refresh organization applications"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M20 6v5h-5" />
+                    <path d="M4 18v-5h5" />
+                    <path d="M6.1 9a7 7 0 0 1 11.6-2.6L20 11" />
+                    <path d="m4 13 2.3 4.6A7 7 0 0 0 17.9 15" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             {reviewMessage && (

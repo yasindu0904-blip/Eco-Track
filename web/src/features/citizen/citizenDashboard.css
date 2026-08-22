@@ -219,30 +219,6 @@
 }
 
 .citizen-dashboard-main > section[aria-label="Your activity"] { display: grid; gap: 12px; }
-.citizen-dashboard-main .dashboard-summary-state { display: flex; align-items: center; justify-content: space-between; }
-.citizen-dashboard-main .dashboard-summary-state > strong { color: #34443a; font-size: 0.82rem; font-weight: 720; }
-.citizen-dashboard-main .dashboard-summary-refresh {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  color: #4e6656;
-  border: 1px solid #d8e1d9;
-  border-radius: 9px;
-  background: #fff;
-}
-.citizen-dashboard-main .dashboard-summary-refresh svg {
-  width: 15px;
-  height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.citizen-dashboard-main .dashboard-summary-refresh:disabled { opacity: 0.55; }
-
 .citizen-dashboard-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

@@ -360,6 +360,53 @@
   letter-spacing: -0.025em;
 }
 
+.super-admin-review-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.super-admin-refresh-button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--color-primary);
+  border: 1px solid #b8cab9;
+  border-radius: 9px;
+  background: #ffffff;
+}
+
+.super-admin-refresh-button:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.super-admin-refresh-button:focus-visible {
+  outline: 3px solid rgba(27, 94, 32, 0.18);
+  outline-offset: 2px;
+}
+
+.super-admin-refresh-button svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.super-admin-refresh-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.super-admin-refresh-button:disabled svg {
+  animation: spin 900ms linear infinite;
+}
+
 .super-admin-coming-badge {
   flex: 0 0 auto;
   padding: 6px 10px;
