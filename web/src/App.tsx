@@ -45,7 +45,6 @@ function App() {
     profile,
     accessToken,
     errorMessage,
-    checkSuperAdminAccess,
     replaceProfile,
     retry,
     signOut,
@@ -107,7 +106,6 @@ function App() {
       <SuperAdminApp
         profile={profile}
         accessToken={accessToken}
-        onCheckAccess={checkSuperAdminAccess}
         onSignOut={signOut}
       />
     );
