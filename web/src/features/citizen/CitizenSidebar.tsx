@@ -62,6 +62,10 @@ export function CitizenIcon({ name }: { name: CitizenIconName }) {
   );
 }
 
+function SidebarBullet() {
+  return <span className="citizen-dashboard-nav-bullet" aria-hidden="true" />;
+}
+
 type CitizenSidebarProps = {
   profile: AuthenticatedUserProfile;
   accessToken: string;
@@ -127,38 +131,38 @@ export function CitizenSidebar({
       <nav className="citizen-dashboard-nav" aria-label="Citizen navigation">
         <span className="citizen-dashboard-nav-label">Overview</span>
         <button type="button" onClick={onDashboard} {...navigationState(active("dashboard"))}>
-          <CitizenIcon name="home" /> Dashboard
+          <SidebarBullet /> Dashboard
         </button>
         <span className="citizen-dashboard-nav-label">Organizations</span>
         {activeOrganization && onOpenOrganizationWorkspace && (
           <button type="button" onClick={onOpenOrganizationWorkspace} {...navigationState(active("organization-workspace"))}>
-            <CitizenIcon name="organization" /> Organization workspace
+            <SidebarBullet /> Organization workspace
           </button>
         )}
         <button type="button" onClick={onViewOrganizationApplications} {...navigationState(active("organization-apply", "organization-applications"))}>
-          <CitizenIcon name="organization" /> My organization requests
+          <SidebarBullet /> My organization requests
         </button>
         <button type="button" onClick={onManageMembership} {...navigationState(active("membership"))}>
-          <CitizenIcon name="organization" /> Join an organization
+          <SidebarBullet /> Join an organization
         </button>
         <button type="button" onClick={onOpenOrganizationWorkspaces} {...navigationState(active("organization-workspaces"))}>
-          <CitizenIcon name="shield" /> Organization workspaces
+          <SidebarBullet /> Organization workspaces
         </button>
         <span className="citizen-dashboard-nav-label">Community action</span>
         <button type="button" onClick={onReportIncident} {...navigationState(active("incident-create"))}>
-          <CitizenIcon name="report" /> Report incident
+          <SidebarBullet /> Report incident
         </button>
         <button type="button" onClick={onViewIncidentReports} {...navigationState(active("incident-reports"))}>
-          <CitizenIcon name="report" /> My Reports
+          <SidebarBullet /> My Reports
         </button>
         <button type="button" onClick={onFindCleanupActivity} {...navigationState(active("incident-discovery"))}>
-          <CitizenIcon name="volunteer" /> Find cleanup activity
+          <SidebarBullet /> Find cleanup activity
         </button>
         <button type="button" onClick={onViewJoinedCleanupEvents} {...navigationState(active("joined-cleanup-events"))}>
-          <CitizenIcon name="volunteer" /> My joined events
+          <SidebarBullet /> My joined events
         </button>
         <button type="button" onClick={onOpenImpact} {...navigationState(active("impact"))}>
-          <CitizenIcon name="volunteer" /> My Impact
+          <SidebarBullet /> My Impact
         </button>
         <span className="citizen-dashboard-nav-label">Account</span>
         <NotificationButton

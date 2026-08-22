@@ -102,6 +102,27 @@
   font-weight: 650;
 }
 
+.super-admin-nav-bullet {
+  width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+}
+
+.super-admin-nav-bullet::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+.super-admin-nav-item-active .super-admin-nav-bullet::before,
+.super-admin-navigation .citizen-dashboard-nav-active .notification-trigger-icon::before {
+  background: #b5e27f;
+  box-shadow: 0 0 0 3px rgba(181, 226, 127, 0.16);
+}
+
 .super-admin-nav-item svg,
 .super-admin-security-note svg,
 .super-admin-status-icon svg,
