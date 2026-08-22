@@ -22,5 +22,7 @@
 .notification-error { border-color: #e5b9b9; background: #fff2f2; color: #a12626; }
 .notification-load-more { display: block; margin: 22px auto 0; min-width: 160px; }
 .notification-trigger { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #cbdacb; border-radius: 12px; padding: 9px 12px; background: #fff; color: #155e29; font: inherit; font-weight: 800; cursor: pointer; }
+.notification-trigger-icon { display: grid; width: 18px; height: 18px; flex: 0 0 18px; place-items: center; }
+.notification-trigger-icon::before { width: 7px; height: 7px; border-radius: 50%; background: currentColor; content: ""; }
 .notification-count { display: inline-grid; min-width: 23px; height: 23px; place-items: center; border-radius: 999px; padding: 0 6px; background: #c83232; color: #fff; font-size: 11px; }
 @media (max-width: 680px) { .notification-header { grid-template-columns: 1fr; } .notification-toolbar { align-items: stretch; flex-direction: column; } .notification-card { grid-template-columns: auto 1fr; } .notification-card em { display: none; } }

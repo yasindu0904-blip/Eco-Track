@@ -94,6 +94,28 @@
   box-shadow: inset 3px 0 #a8dc70;
 }
 
+.citizen-dashboard-nav-bullet {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  flex: 0 0 18px;
+  place-items: center;
+}
+
+.citizen-dashboard-nav-bullet::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+.citizen-dashboard-nav-active .citizen-dashboard-nav-bullet::before,
+.citizen-dashboard-nav-active .notification-trigger-icon::before {
+  background: #b5e27f;
+  box-shadow: 0 0 0 3px rgba(181, 226, 127, 0.16);
+}
+
 .citizen-dashboard-nav svg,
 .citizen-dashboard-action svg,
 .citizen-dashboard-organization svg {

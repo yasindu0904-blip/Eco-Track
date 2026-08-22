@@ -96,6 +96,10 @@ function DashboardIcon({ name }: DashboardIconProps) {
   );
 }
 
+function SidebarBullet() {
+  return <span className="super-admin-nav-bullet" aria-hidden="true" />;
+}
+
 function formatAccountStatus(value: string): string {
   return value
     .toLowerCase()
@@ -266,7 +270,7 @@ export function SuperAdminDashboard({
             type="button"
             aria-current="page"
           >
-            <DashboardIcon name="dashboard" />
+            <SidebarBullet />
             Overview
           </button>
           <button
@@ -278,12 +282,12 @@ export function SuperAdminDashboard({
               });
             }}
           >
-            <DashboardIcon name="review" />
+            <SidebarBullet />
             Organization reviews
             <span>{applications.length}</span>
           </button>
           <button className="super-admin-nav-item" type="button" disabled>
-            <DashboardIcon name="area" />
+            <SidebarBullet />
             Service areas
             <span>Next</span>
           </button>

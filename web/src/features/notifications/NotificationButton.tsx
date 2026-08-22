@@ -40,7 +40,7 @@ export function NotificationButton({ accessToken, onOpen, active = false }: Noti
       onClick={onOpen}
       aria-current={active ? "page" : undefined}
     >
-      <span aria-hidden="true">🔔</span>
+      <span className="notification-trigger-icon" aria-hidden="true" />
       Notifications
       {unreadCount > 0 && (
         <span className="notification-count" aria-label={`${unreadCount} unread notifications`}>
