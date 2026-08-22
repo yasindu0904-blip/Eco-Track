@@ -14,14 +14,12 @@ const NotificationInbox = lazy(() => import("../features/notifications/Notificat
 type Props = {
   profile: AuthenticatedUserProfile;
   accessToken: string;
-  onCheckAccess: () => Promise<string>;
   onSignOut: () => Promise<void> | void;
 };
 
 export function SuperAdminApp({
   profile,
   accessToken,
-  onCheckAccess,
   onSignOut,
 }: Props) {
   const { destination, navigate, back } = useBrowserNavigation(
@@ -40,7 +38,6 @@ export function SuperAdminApp({
         <SuperAdminDashboard
           profile={profile}
           accessToken={accessToken}
-          onCheckAccess={onCheckAccess}
           onOpenNotifications={() => navigate({ screen: "notifications" })}
           onSignOut={() => void onSignOut()}
         />

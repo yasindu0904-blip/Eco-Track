@@ -18,23 +18,12 @@ import { SuperAdminMapOverview } from "./SuperAdminMapOverview";
 interface SuperAdminDashboardProps {
   profile: AuthenticatedUserProfile;
   accessToken?: string;
-  onCheckAccess: () => Promise<string>;
   onOpenNotifications?: () => void;
   onSignOut: () => void;
 }
 
-type AccessCheckState =
-  | { status: "idle"; message: null }
-  | { status: "checking"; message: null }
-  | { status: "success"; message: string }
-  | { status: "error"; message: string };
-
 type DashboardIconName =
-  | "dashboard"
-  | "organization"
   | "shield"
-  | "area"
-  | "review"
   | "check";
 
 interface DashboardIconProps {
@@ -42,44 +31,6 @@ interface DashboardIconProps {
 }
 
 function DashboardIcon({ name }: DashboardIconProps) {
-  if (name === "dashboard") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-      </svg>
-    );
-  }
-
-  if (name === "organization") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 21V7l8-4 8 4v14" />
-        <path d="M8 10h2M14 10h2M8 14h2M14 14h2M10 21v-3h4v3" />
-      </svg>
-    );
-  }
-
-  if (name === "area") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="m4 6 5-3 6 3 5-3v15l-5 3-6-3-5 3V6Z" />
-        <path d="M9 3v15M15 6v15" />
-      </svg>
-    );
-  }
-
-  if (name === "review") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M9 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3" />
-        <path d="M9 3h6v4H9zM8 12h8M8 16h5" />
-      </svg>
-    );
-  }
-
   if (name === "check") {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -111,15 +62,9 @@ function formatAccountStatus(value: string): string {
 export function SuperAdminDashboard({
   profile,
   accessToken,
-  onCheckAccess,
   onOpenNotifications,
   onSignOut,
 }: SuperAdminDashboardProps) {
-  const [accessCheck, setAccessCheck] =
-    useState<AccessCheckState>({
-      status: "idle",
-      message: null,
-    });
   const [applications, setApplications] = useState<OrganizationReviewApplication[]>([]);
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
@@ -212,30 +157,6 @@ export function SuperAdminDashboard({
 
   const displayName = profile.fullName ?? "EcoTrack Super Admin";
   const initial = displayName.charAt(0).toUpperCase();
-
-  async function handleAccessCheck(): Promise<void> {
-    setAccessCheck({
-      status: "checking",
-      message: null,
-    });
-
-    try {
-      const message = await onCheckAccess();
-
-      setAccessCheck({
-        status: "success",
-        message,
-      });
-    } catch (error) {
-      setAccessCheck({
-        status: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to verify Super Admin access.",
-      });
-    }
-  }
 
   return (
     <div className="super-admin-shell">
@@ -330,7 +251,7 @@ export function SuperAdminDashboard({
             <span className="super-admin-eyebrow">Platform overview</span>
             <h1>Good to see you, {displayName}</h1>
             <p>
-              Review EcoTrack onboarding readiness and protected platform services.
+              Review organization applications and monitor platform activity.
             </p>
           </div>
 
@@ -344,44 +265,6 @@ export function SuperAdminDashboard({
             </span>
           </div>
         </header>
-
-        <section className="super-admin-status-grid" aria-label="Platform status">
-          <article className="super-admin-status-card">
-            <span className="super-admin-status-icon">
-              <DashboardIcon name="organization" />
-            </span>
-            <div>
-              <small>Organization intake</small>
-              <strong>Live</strong>
-              <p>Citizens can submit applications for review.</p>
-            </div>
-            <span className="super-admin-live-dot" aria-label="Available" />
-          </article>
-
-          <article className="super-admin-status-card">
-            <span className="super-admin-status-icon">
-              <DashboardIcon name="shield" />
-            </span>
-            <div>
-              <small>Authorization</small>
-              <strong>CASL active</strong>
-              <p>Platform and organization permissions are enforced.</p>
-            </div>
-            <span className="super-admin-live-dot" aria-label="Available" />
-          </article>
-
-          <article className="super-admin-status-card">
-            <span className="super-admin-status-icon">
-              <DashboardIcon name="area" />
-            </span>
-            <div>
-              <small>Service areas</small>
-              <strong>PostGIS ready</strong>
-              <p>Submitted boundaries are stored for controlled review.</p>
-            </div>
-            <span className="super-admin-live-dot" aria-label="Available" />
-          </article>
-        </section>
 
         <div className="super-admin-content-grid">
           <section className="super-admin-review-card" id="organization-reviews">
@@ -552,67 +435,31 @@ export function SuperAdminDashboard({
             )}
           </section>
 
-          <aside className="super-admin-side-column">
-            <section className="super-admin-access-card">
-              <span className="super-admin-access-icon" aria-hidden="true">
-                <DashboardIcon name="shield" />
-              </span>
-              <span className="super-admin-eyebrow">Security check</span>
-              <h2>Protected API access</h2>
-              <p>
-                Verify that the current Supabase session receives Super Admin
-                permission from the EcoTrack API.
-              </p>
-
-              {accessCheck.message && (
-                <div
-                  className={`super-admin-access-result super-admin-access-result-${accessCheck.status}`}
-                  role={accessCheck.status === "error" ? "alert" : "status"}
-                >
-                  <DashboardIcon name="check" />
-                  {accessCheck.message}
-                </div>
-              )}
-
-              <button
-                type="button"
-                disabled={accessCheck.status === "checking"}
-                onClick={() => {
-                  void handleAccessCheck();
-                }}
-              >
-                {accessCheck.status === "checking"
-                  ? "Verifying access..."
-                  : "Verify protected access"}
-              </button>
-            </section>
-
-            <section className="super-admin-account-card">
-              <div className="super-admin-section-heading">
-                <div>
-                  <span className="super-admin-eyebrow">Signed-in account</span>
-                  <h2>Account details</h2>
-                </div>
+          <aside className="super-admin-account-card">
+            <div className="super-admin-section-heading">
+              <div>
+                <span className="super-admin-eyebrow">Signed-in account</span>
+                <h2>Account details</h2>
               </div>
-              <dl>
-                <div>
-                  <dt>Email</dt>
-                  <dd>{profile.email}</dd>
-                </div>
-                <div>
-                  <dt>Platform role</dt>
-                  <dd>Super Admin</dd>
-                </div>
-                <div>
-                  <dt>Account status</dt>
-                  <dd>
-                    <span className="super-admin-account-status">
-                      {formatAccountStatus(profile.accountStatus)}
-                    </span>
-                  </dd>
-                </div>
-              </dl>
-            </section>
+            </div>
+            <dl>
+              <div>
+                <dt>Email</dt>
+                <dd>{profile.email}</dd>
+              </div>
+              <div>
+                <dt>Platform role</dt>
+                <dd>Super Admin</dd>
+              </div>
+              <div>
+                <dt>Account status</dt>
+                <dd>
+                  <span className="super-admin-account-status">
+                    {formatAccountStatus(profile.accountStatus)}
+                  </span>
+                </dd>
+              </div>
+            </dl>
           </aside>
         </div>
         {accessToken && <SuperAdminMapOverview accessToken={accessToken} />}
