@@ -2,6 +2,7 @@ export { EcoMap } from "./EcoMap";
 export type { EcoMapProps } from "./EcoMap";
 export { LocationPicker } from "./LocationPicker";
 export type { LocationPickerProps } from "./LocationPicker";
+export { AdministrativeAreaMapSearch } from "./AdministrativeAreaMapSearch";
 export { MapFoundationPreview } from "./MapFoundationPreview";
 export {
   COLOMBO_MAP_CENTER,

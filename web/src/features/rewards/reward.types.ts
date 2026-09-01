@@ -1,6 +1,6 @@
 export type ContributionType =
   | "VERIFIED_INCIDENT_REPORT"
-  | "SESSION_ATTENDED"
+  | "EVENT_ATTENDED"
   | "EVENT_COMPLETED"
   | "SPECIAL_CONTRIBUTION";
 

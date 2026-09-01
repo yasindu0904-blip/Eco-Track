@@ -1,15 +1,3 @@
-export type CleanupEventSessionDto = {
-  id: string;
-  sessionDate: string;
-  startTime: string;
-  endTime: string;
-  capacity: number | null;
-  locationLatitude: number | null;
-  locationLongitude: number | null;
-  locationAddress: string | null;
-  notes: string | null;
-};
-
 export type CleanupEventCoordinatorDto = {
   id: string;
   membershipId: string;
@@ -22,11 +10,24 @@ export type CleanupEventCoordinatorDto = {
   };
 };
 
+export type CleanupEventLifecycleStatus =
+  | "DRAFT"
+  | "PUBLISHED"
+  | "COMPLETED"
+  | "CANCELLED";
+export type CleanupEventDisplayStatus =
+  | "DRAFT"
+  | "UPCOMING"
+  | "ONGOING"
+  | "COMPLETED"
+  | "CANCELLED";
+
 export type CleanupEventDraftDto = {
   id: string;
   organizationId: string;
   incidentId: string | null;
   lifecycleStatus: "DRAFT";
+  displayStatus: "DRAFT";
   title: string;
   description: string;
   publicInstructions: string | null;
@@ -36,9 +37,11 @@ export type CleanupEventDraftDto = {
   meetingLatitude: number | null;
   meetingLongitude: number | null;
   meetingAddress: string | null;
+  startsAt: string | null;
+  capacity: number | null;
+  locationLockedToIncident: boolean;
   createdAt: string;
   updatedAt: string;
-  sessions: CleanupEventSessionDto[];
   coordinators: CleanupEventCoordinatorDto[];
 };
 
@@ -47,26 +50,20 @@ export type CleanupEventDraftPageDto = {
   nextCursor: string | null;
 };
 
-export type CleanupEventPublicLifecycleStatus =
-  | "PUBLISHED"
-  | "SCHEDULED"
-  | "IN_PROGRESS"
-  | "COMPLETION_SUBMITTED"
-  | "COMPLETED"
-  | "CANCELLED";
-
 export type CleanupEventPublicSummaryDto = {
   id: string;
   organization: { id: string; name: string };
   incidentId: string | null;
   title: string;
   description: string;
-  lifecycleStatus: CleanupEventPublicLifecycleStatus;
+  lifecycleStatus: Exclude<CleanupEventLifecycleStatus, "DRAFT">;
+  displayStatus: Exclude<CleanupEventDisplayStatus, "DRAFT">;
   eventLatitude: number;
   eventLongitude: number;
   eventAddress: string | null;
+  startsAt: string;
+  capacity: number | null;
   publishedAt: string;
-  firstSessionAt: string | null;
 };
 
 export type CleanupEventPublicDetailDto = CleanupEventPublicSummaryDto & {
@@ -74,23 +71,23 @@ export type CleanupEventPublicDetailDto = CleanupEventPublicSummaryDto & {
   meetingLatitude: number | null;
   meetingLongitude: number | null;
   meetingAddress: string | null;
-  sessions: Array<Omit<CleanupEventSessionDto, "notes">>;
+  joinedVolunteerCount: number;
 };
 
 export type CleanupEventPublicPageDto = {
   items: CleanupEventPublicSummaryDto[];
   nextCursor: string | null;
 };
-
 export type CleanupEventOwnedSummaryDto = Omit<
   CleanupEventPublicSummaryDto,
-  "lifecycleStatus" | "publishedAt"
+  "lifecycleStatus" | "displayStatus" | "publishedAt" | "startsAt"
 > & {
-  lifecycleStatus: "DRAFT" | CleanupEventPublicLifecycleStatus;
+  lifecycleStatus: CleanupEventLifecycleStatus;
+  displayStatus: CleanupEventDisplayStatus;
+  startsAt: string | null;
   publishedAt: string | null;
   updatedAt: string;
 };
-
 export type CleanupEventOwnedPageDto = {
   items: CleanupEventOwnedSummaryDto[];
   nextCursor: string | null;
@@ -98,12 +95,11 @@ export type CleanupEventOwnedPageDto = {
 
 export type CleanupEventPublishCheckCode =
   | "PUBLIC_DETAILS"
-  | "FUTURE_SESSION"
+  | "EVENT_TIME"
   | "ACTIVE_COORDINATOR"
   | "WORKFLOW_TRANSITION"
   | "INCIDENT_REVIEW"
   | "INCIDENT_AVAILABLE";
-
 export type CleanupEventPublishReadinessDto = {
   eventId: string;
   ready: boolean;
@@ -113,7 +109,6 @@ export type CleanupEventPublishReadinessDto = {
     message: string;
   }>;
 };
-
 export type CleanupEventPublishResultDto = {
   event: CleanupEventPublicDetailDto;
   incidentUpdated: boolean;
@@ -144,30 +139,20 @@ export type CleanupEventMapFeatureCollectionDto = {
 };
 
 export type EventParticipationStatus = "JOINED" | "WITHDRAWN" | "REMOVED";
-
-export type PersonalSessionAllocationDto = {
-  id: string;
-  sessionId: string;
-  status: "PLANNED" | "ATTENDED" | "ABSENT" | "REMOVED";
-  allocatedAt: string;
-  attendanceMarkedAt: string | null;
-};
-
+export type EventAttendanceStatus = "UNMARKED" | "ATTENDED" | "ABSENT";
 export type EventParticipationDto = {
   id: string;
   status: EventParticipationStatus;
+  attendanceStatus: EventAttendanceStatus;
+  attendanceMarkedAt: string | null;
   joinedAt: string;
   withdrawnAt: string | null;
-  availableSessionIds: string[];
-  allocations: PersonalSessionAllocationDto[];
   event: CleanupEventPublicDetailDto;
 };
-
 export type EventParticipationPageDto = {
   items: EventParticipationDto[];
   nextCursor: string | null;
 };
-
 export type JoinEventResultDto = {
   participation: EventParticipationDto;
   created: boolean;

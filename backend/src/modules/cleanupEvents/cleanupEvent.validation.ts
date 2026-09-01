@@ -19,12 +19,20 @@ const draftFieldsSchema = z
     title: z.string().trim().min(3).max(160),
     description: z.string().trim().min(10).max(5_000),
     publicInstructions: optionalText(3_000),
-    eventLatitude: coordinate,
-    eventLongitude: coordinate,
+    eventLatitude: coordinate.optional(),
+    eventLongitude: coordinate.optional(),
     eventAddress: optionalText(500),
     meetingLatitude: coordinate.nullable().optional(),
     meetingLongitude: coordinate.nullable().optional(),
     meetingAddress: optionalText(500),
+    startsAt: z.coerce.date(),
+    capacity: z.coerce
+      .number()
+      .int()
+      .positive()
+      .max(100_000)
+      .nullable()
+      .optional(),
   })
   .strict();
 
@@ -35,15 +43,28 @@ type CoordinatePair = {
 
 function addLocationIssues(
   value: {
+    incidentId?: string | null;
     eventLatitude?: number;
     eventLongitude?: number;
     meetingLatitude?: number | null;
     meetingLongitude?: number | null;
   },
   context: z.RefinementCtx,
+  requireDirectLocation = false,
 ): void {
   const hasEventLatitude = Object.hasOwn(value, "eventLatitude");
   const hasEventLongitude = Object.hasOwn(value, "eventLongitude");
+  if (
+    requireDirectLocation &&
+    !value.incidentId &&
+    (!hasEventLatitude || !hasEventLongitude)
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["eventLatitude"],
+      message: "A direct cleanup event requires a confirmed map location.",
+    });
+  }
   if (hasEventLatitude !== hasEventLongitude) {
     context.addIssue({
       code: "custom",
@@ -59,7 +80,8 @@ function addLocationIssues(
       context.addIssue({
         code: "custom",
         path: ["eventLatitude"],
-        message: "The event location must be within the supported Sri Lanka map range.",
+        message:
+          "The event location must be within the supported Sri Lanka map range.",
       });
     }
   }
@@ -73,7 +95,10 @@ function addLocationIssues(
       path: ["meetingLatitude"],
       message: "Meeting latitude and longitude must be supplied together.",
     });
-  } else if (meeting.meetingLatitude != null && meeting.meetingLongitude != null) {
+  } else if (
+    meeting.meetingLatitude != null &&
+    meeting.meetingLongitude != null
+  ) {
     const meetingLocation = sriLankaMapLocationSchema.safeParse({
       latitude: meeting.meetingLatitude,
       longitude: meeting.meetingLongitude,
@@ -82,80 +107,29 @@ function addLocationIssues(
       context.addIssue({
         code: "custom",
         path: ["meetingLatitude"],
-        message: "The meeting location must be within the supported Sri Lanka map range.",
+        message:
+          "The meeting location must be within the supported Sri Lanka map range.",
       });
     }
   }
 }
 
-export const createDraftSchema = draftFieldsSchema.superRefine(addLocationIssues);
+export const createDraftSchema = draftFieldsSchema.superRefine(
+  (value, context) => addLocationIssues(value, context, true),
+);
 
 export const updateDraftSchema = draftFieldsSchema
   .partial()
   .refine((value) => Object.keys(value).length > 0, {
     message: "Provide at least one field to update.",
   })
-  .superRefine(addLocationIssues);
+  .superRefine((value, context) => addLocationIssues(value, context));
 
 const organizationParametersSchema = z.object({ organizationId: uuidSchema });
 
 export const draftIdParametersSchema = organizationParametersSchema
   .extend({ id: uuidSchema })
   .strict();
-
-function isRealDate(value: string): boolean {
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(Date.UTC(year!, month! - 1, day));
-  return (
-    date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month! - 1 &&
-    date.getUTCDate() === day
-  );
-}
-
-export const createSessionSchema = z
-  .object({
-    sessionDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .refine(isRealDate, "Session date must be a real calendar date."),
-    startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/),
-    endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/),
-    capacity: z.coerce.number().int().positive().max(100_000).nullable().optional(),
-    locationLatitude: coordinate.nullable().optional(),
-    locationLongitude: coordinate.nullable().optional(),
-    locationAddress: optionalText(500),
-    notes: optionalText(2_000),
-  })
-  .strict()
-  .superRefine((value, context) => {
-    if (value.endTime <= value.startTime) {
-      context.addIssue({
-        code: "custom",
-        path: ["endTime"],
-        message: "Session end time must be after start time.",
-      });
-    }
-    if ((value.locationLatitude == null) !== (value.locationLongitude == null)) {
-      context.addIssue({
-        code: "custom",
-        path: ["locationLatitude"],
-        message: "Session latitude and longitude must be supplied together.",
-      });
-    } else if (value.locationLatitude != null && value.locationLongitude != null) {
-      const location = sriLankaMapLocationSchema.safeParse({
-        latitude: value.locationLatitude,
-        longitude: value.locationLongitude,
-      });
-      if (!location.success) {
-        context.addIssue({
-          code: "custom",
-          path: ["locationLatitude"],
-          message: "The session location must be within the supported Sri Lanka map range.",
-        });
-      }
-    }
-  });
 
 export const eventParametersSchema = organizationParametersSchema
   .extend({ eventId: uuidSchema })
@@ -165,9 +139,7 @@ export const publicEventParametersSchema = z
   .object({ eventId: uuidSchema })
   .strict();
 
-export const eventSessionParametersSchema = organizationParametersSchema
-  .extend({ eventId: uuidSchema, sessionId: uuidSchema })
-  .strict();
+export const emptyParticipationBodySchema = z.object({}).strict();
 
 export const assignCoordinatorSchema = z
   .object({ membershipId: uuidSchema })
@@ -190,21 +162,6 @@ export const listCleanupEventsQuerySchema = z
 export const cleanupEventMapQuerySchema = sriLankaMapViewportQuerySchema;
 export const cleanupEventNearbyMapQuerySchema = sriLankaMapRadiusQuerySchema;
 
-export const participationAvailabilitySchema = z
-  .object({
-    sessionIds: z.array(uuidSchema).min(1).max(100),
-  })
-  .strict()
-  .superRefine((value, context) => {
-    if (new Set(value.sessionIds).size !== value.sessionIds.length) {
-      context.addIssue({
-        code: "custom",
-        path: ["sessionIds"],
-        message: "Session IDs must be unique.",
-      });
-    }
-  });
-
 export const listMyParticipationsQuerySchema = z
   .object({
     scope: z.enum(["active", "history", "all"]).default("active"),
@@ -215,10 +172,16 @@ export const listMyParticipationsQuerySchema = z
 
 export type ValidatedCreateDraft = z.infer<typeof createDraftSchema>;
 export type ValidatedUpdateDraft = z.infer<typeof updateDraftSchema>;
-export type ValidatedCreateSession = z.infer<typeof createSessionSchema>;
 export type ValidatedDraftListQuery = z.infer<typeof listDraftQuerySchema>;
-export type ValidatedCleanupEventListQuery = z.infer<typeof listCleanupEventsQuerySchema>;
-export type ValidatedCleanupEventMapQuery = z.infer<typeof cleanupEventMapQuerySchema>;
-export type ValidatedCleanupEventNearbyMapQuery = z.infer<typeof cleanupEventNearbyMapQuerySchema>;
-export type ValidatedParticipationAvailability = z.infer<typeof participationAvailabilitySchema>;
-export type ValidatedMyParticipationsQuery = z.infer<typeof listMyParticipationsQuerySchema>;
+export type ValidatedCleanupEventListQuery = z.infer<
+  typeof listCleanupEventsQuerySchema
+>;
+export type ValidatedCleanupEventMapQuery = z.infer<
+  typeof cleanupEventMapQuerySchema
+>;
+export type ValidatedCleanupEventNearbyMapQuery = z.infer<
+  typeof cleanupEventNearbyMapQuerySchema
+>;
+export type ValidatedMyParticipationsQuery = z.infer<
+  typeof listMyParticipationsQuerySchema
+>;

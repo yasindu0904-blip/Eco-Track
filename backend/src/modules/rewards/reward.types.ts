@@ -1,7 +1,4 @@
-import type {
-  Prisma,
-  PrismaClient,
-} from "../../generated/prisma/client.js";
+import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
 import type { ContributionType } from "../../generated/prisma/enums.js";
 
 export type RewardTransaction = Prisma.TransactionClient;
@@ -69,9 +66,9 @@ export type ContributionSource =
       recordedByUserId: string | null;
     }
   | {
-      type: "SESSION_ATTENDED";
+      type: "EVENT_ATTENDED";
       userId: string;
-      sessionAllocationId: string;
+      eventParticipantId: string;
       recordedByUserId: string | null;
     }
   | {

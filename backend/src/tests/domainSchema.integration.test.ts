@@ -23,8 +23,6 @@ const administrativeAreaId = randomUUID();
 const incidentId = randomUUID();
 const eventAId = randomUUID();
 const eventBId = randomUUID();
-const sessionAId = randomUUID();
-const sessionBId = randomUUID();
 const participantId = randomUUID();
 
 type WorkflowStatusIds = {
@@ -38,24 +36,19 @@ let workflowB: WorkflowStatusIds;
 async function loadWorkflowStatusIds(
   organizationId: string,
 ): Promise<WorkflowStatusIds> {
-  const statuses =
-    await prisma.cleanupWorkflowStatus.findMany({
-      where: {
-        organizationId,
-        code: { in: ["DRAFT", "PUBLISHED"] },
-      },
-      select: {
-        id: true,
-        code: true,
-      },
-    });
+  const statuses = await prisma.cleanupWorkflowStatus.findMany({
+    where: {
+      organizationId,
+      code: { in: ["DRAFT", "PUBLISHED"] },
+    },
+    select: {
+      id: true,
+      code: true,
+    },
+  });
 
-  const draft = statuses.find(
-    (status) => status.code === "DRAFT",
-  );
-  const published = statuses.find(
-    (status) => status.code === "PUBLISHED",
-  );
+  const draft = statuses.find((status) => status.code === "DRAFT");
+  const published = statuses.find((status) => status.code === "PUBLISHED");
 
   assert.ok(draft);
   assert.ok(published);
@@ -184,12 +177,8 @@ before(async () => {
     ],
   });
 
-  workflowA = await loadWorkflowStatusIds(
-    organizationAId,
-  );
-  workflowB = await loadWorkflowStatusIds(
-    organizationBId,
-  );
+  workflowA = await loadWorkflowStatusIds(organizationAId);
+  workflowB = await loadWorkflowStatusIds(organizationBId);
 
   await prisma.$executeRaw`
     INSERT INTO "administrative_areas" (
@@ -245,29 +234,16 @@ before(async () => {
       severity: "MEDIUM",
       latitude: 6.93,
       longitude: 79.86,
-      highlightUntil: new Date(
-        reportedAt.getTime() + 48 * 60 * 60 * 1000,
-      ),
-      archiveAfter: new Date(
-        reportedAt.getTime() + 9 * 24 * 60 * 60 * 1000,
-      ),
+      highlightUntil: new Date(reportedAt.getTime() + 48 * 60 * 60 * 1000),
+      archiveAfter: new Date(reportedAt.getTime() + 9 * 24 * 60 * 60 * 1000),
       reportedAt,
     },
   });
 });
 
 after(async () => {
-  await prisma.participantSessionAvailability.deleteMany({
-    where: { participantId },
-  });
-  await prisma.sessionAllocation.deleteMany({
-    where: { participantId },
-  });
   await prisma.eventParticipant.deleteMany({
     where: { id: participantId },
-  });
-  await prisma.eventSession.deleteMany({
-    where: { id: { in: [sessionAId, sessionBId] } },
   });
   await prisma.cleanupEvent.deleteMany({
     where: { id: { in: [eventAId, eventBId] } },
@@ -306,18 +282,17 @@ after(async () => {
 });
 
 test("new organizations receive the required default cleanup workflow", async () => {
-  const [statusCount, transitionCount] =
-    await Promise.all([
-      prisma.cleanupWorkflowStatus.count({
-        where: { organizationId: organizationAId },
-      }),
-      prisma.cleanupWorkflowTransition.count({
-        where: { organizationId: organizationAId },
-      }),
-    ]);
+  const [statusCount, transitionCount] = await Promise.all([
+    prisma.cleanupWorkflowStatus.count({
+      where: { organizationId: organizationAId },
+    }),
+    prisma.cleanupWorkflowTransition.count({
+      where: { organizationId: organizationAId },
+    }),
+  ]);
 
-  assert.equal(statusCount, 7);
-  assert.equal(transitionCount, 10);
+  assert.equal(statusCount, 4);
+  assert.equal(transitionCount, 3);
 });
 
 test("incident coordinates create a PostGIS point and find every covering organization", async () => {
@@ -358,19 +333,11 @@ test("incident coordinates create a PostGIS point and find every covering organi
   `;
 
   const coveringOrganizationIds = new Set(
-    coveringOrganizations.map(
-      (organization) => organization.organizationId,
-    ),
+    coveringOrganizations.map((organization) => organization.organizationId),
   );
 
-  assert.equal(
-    coveringOrganizationIds.has(organizationAId),
-    true,
-  );
-  assert.equal(
-    coveringOrganizationIds.has(organizationBId),
-    true,
-  );
+  assert.equal(coveringOrganizationIds.has(organizationAId), true);
+  assert.equal(coveringOrganizationIds.has(organizationBId), true);
 });
 
 test("cleanup events reject cross-organization creators and mismatched lifecycle statuses", async () => {
@@ -457,44 +424,19 @@ test("only one claiming cleanup event can be active for an incident", async () =
     `,
   );
 
-  const claimingEventCount =
-    await prisma.cleanupEvent.count({
-      where: {
-        incidentId,
-        lifecycleStatus: {
-          in: [
-            "PUBLISHED",
-            "SCHEDULED",
-            "IN_PROGRESS",
-            "COMPLETION_SUBMITTED",
-          ],
-        },
+  const claimingEventCount = await prisma.cleanupEvent.count({
+    where: {
+      incidentId,
+      lifecycleStatus: {
+        in: ["PUBLISHED"],
       },
-    });
+    },
+  });
 
   assert.equal(claimingEventCount, 1);
 });
 
-test("participant availability cannot reference a session from another event", async () => {
-  await prisma.eventSession.createMany({
-    data: [
-      {
-        id: sessionAId,
-        cleanupEventId: eventAId,
-        sessionDate: new Date("2026-08-20T00:00:00.000Z"),
-        startTime: new Date("1970-01-01T09:00:00.000Z"),
-        endTime: new Date("1970-01-01T11:00:00.000Z"),
-      },
-      {
-        id: sessionBId,
-        cleanupEventId: eventBId,
-        sessionDate: new Date("2026-08-20T00:00:00.000Z"),
-        startTime: new Date("1970-01-01T09:00:00.000Z"),
-        endTime: new Date("1970-01-01T11:00:00.000Z"),
-      },
-    ],
-  });
-
+test("event-level attendance requires a complete, internally consistent marker", async () => {
   await prisma.eventParticipant.create({
     data: {
       id: participantId,
@@ -503,27 +445,27 @@ test("participant availability cannot reference a session from another event", a
     },
   });
 
-  await assert.rejects(
-    prisma.participantSessionAvailability.create({
-      data: {
-        participantId,
-        sessionId: sessionBId,
-      },
-    }),
-  );
+  await assert.rejects(prisma.$executeRaw`
+    UPDATE "event_participants"
+    SET "attendance_status" = 'ATTENDED'::"AttendanceStatus"
+    WHERE "id" = ${participantId}::uuid
+  `);
 
-  await prisma.participantSessionAvailability.create({
+  await prisma.eventParticipant.update({
+    where: { id: participantId },
     data: {
-      participantId,
-      sessionId: sessionAId,
+      attendanceStatus: "ATTENDED",
+      attendanceMarkedAt: new Date(),
+      attendanceMarkedByMembershipId: membershipAId,
     },
   });
-
   assert.equal(
-    await prisma.participantSessionAvailability.count({
-      where: { participantId },
-    }),
-    1,
+    (
+      await prisma.eventParticipant.findUniqueOrThrow({
+        where: { id: participantId },
+      })
+    ).attendanceStatus,
+    "ATTENDED",
   );
 });
 
@@ -536,11 +478,8 @@ test("every new domain table has RLS and no frontend-role table privileges", asy
     "incident_reviews",
     "incident_status_history",
     "cleanup_events",
-    "event_sessions",
     "event_coordinators",
     "event_participants",
-    "participant_session_availability",
-    "session_allocations",
     "event_notes",
     "event_evidence",
     "event_status_history",
@@ -574,11 +513,8 @@ test("every new domain table has RLS and no frontend-role table privileges", asy
         'incident_reviews',
         'incident_status_history',
         'cleanup_events',
-        'event_sessions',
         'event_coordinators',
         'event_participants',
-        'participant_session_availability',
-        'session_allocations',
         'event_notes',
         'event_evidence',
         'event_status_history',
@@ -594,11 +530,7 @@ test("every new domain table has RLS and no frontend-role table privileges", asy
   for (const table of security) {
     assert.equal(table.rlsEnabled, true, table.tableName);
     assert.equal(table.anonSelect, false, table.tableName);
-    assert.equal(
-      table.authenticatedSelect,
-      false,
-      table.tableName,
-    );
+    assert.equal(table.authenticatedSelect, false, table.tableName);
   }
 });
 

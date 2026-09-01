@@ -5,7 +5,6 @@ import type { CleanupEventDependencies } from "../cleanupEvent.dependencies.js";
 import {
   assignCoordinator,
   createDraft,
-  createSession,
   discardDraft,
   getOrganizationDraft,
   getOwnedCleanupEvent,
@@ -18,20 +17,16 @@ import {
   listPublicCleanupEvents,
   listOrganizationDrafts,
   removeCoordinator,
-  removeSession,
   publishEvent,
   updateDraft,
-  updateSession,
 } from "../services/cleanupEvent.service.js";
 import {
   assignCoordinatorSchema,
   createDraftSchema,
-  createSessionSchema,
   cleanupEventMapQuerySchema,
   cleanupEventNearbyMapQuerySchema,
   draftIdParametersSchema,
   eventParametersSchema,
-  eventSessionParametersSchema,
   listDraftQuerySchema,
   listCleanupEventsQuerySchema,
   publicEventParametersSchema,
@@ -55,7 +50,11 @@ function validationError(validation: FailedValidation): ApplicationError {
 }
 
 export function createDraftController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+  return async (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const validation = createDraftSchema.safeParse(request.body);
       if (!validation.success) throw validationError(validation);
@@ -74,7 +73,11 @@ export function createDraftController(dependencies: CleanupEventDependencies) {
 }
 
 export function updateDraftController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+  return async (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const parameters = draftIdParametersSchema.safeParse(request.params);
       if (!parameters.success) throw validationError(parameters);
@@ -94,8 +97,14 @@ export function updateDraftController(dependencies: CleanupEventDependencies) {
   };
 }
 
-export function listOrganizationDraftsController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+export function listOrganizationDraftsController(
+  dependencies: CleanupEventDependencies,
+) {
+  return async (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const validation = listDraftQuerySchema.safeParse(request.query);
       if (!validation.success) throw validationError(validation);
@@ -112,8 +121,14 @@ export function listOrganizationDraftsController(dependencies: CleanupEventDepen
   };
 }
 
-export function getOrganizationDraftController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+export function getOrganizationDraftController(
+  dependencies: CleanupEventDependencies,
+) {
+  return async (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const parameters = draftIdParametersSchema.safeParse(request.params);
       if (!parameters.success) throw validationError(parameters);
@@ -131,7 +146,11 @@ export function getOrganizationDraftController(dependencies: CleanupEventDepende
 }
 
 export function discardDraftController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+  return async (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const parameters = draftIdParametersSchema.safeParse(request.params);
       if (!parameters.success) throw validationError(parameters);
@@ -147,69 +166,14 @@ export function discardDraftController(dependencies: CleanupEventDependencies) {
   };
 }
 
-export function createSessionController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
-    try {
-      const parameters = eventParametersSchema.safeParse(request.params);
-      if (!parameters.success) throw validationError(parameters);
-      const validation = createSessionSchema.safeParse(request.body);
-      if (!validation.success) throw validationError(validation);
-      response.status(201).json({
-        data: await createSession(
-          dependencies,
-          request.tenant!.organization.id,
-          parameters.data.eventId,
-          validation.data,
-        ),
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
-}
-
-export function updateSessionController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
-    try {
-      const parameters = eventSessionParametersSchema.safeParse(request.params);
-      if (!parameters.success) throw validationError(parameters);
-      const validation = createSessionSchema.safeParse(request.body);
-      if (!validation.success) throw validationError(validation);
-      response.status(200).json({
-        data: await updateSession(
-          dependencies,
-          request.tenant!.organization.id,
-          parameters.data.eventId,
-          parameters.data.sessionId,
-          validation.data,
-        ),
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
-}
-
-export function removeSessionController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
-    try {
-      const parameters = eventSessionParametersSchema.safeParse(request.params);
-      if (!parameters.success) throw validationError(parameters);
-      await removeSession(
-        dependencies,
-        request.tenant!.organization.id,
-        parameters.data.eventId,
-        parameters.data.sessionId,
-      );
-      response.status(204).send();
-    } catch (error) {
-      next(error);
-    }
-  };
-}
-
-export function assignCoordinatorController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+export function assignCoordinatorController(
+  dependencies: CleanupEventDependencies,
+) {
+  return async (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const parameters = eventParametersSchema.safeParse(request.params);
       if (!parameters.success) throw validationError(parameters);
@@ -230,8 +194,14 @@ export function assignCoordinatorController(dependencies: CleanupEventDependenci
   };
 }
 
-export function removeCoordinatorController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+export function removeCoordinatorController(
+  dependencies: CleanupEventDependencies,
+) {
+  return async (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const parameters = eventParametersSchema.safeParse(request.params);
       if (!parameters.success) throw validationError(parameters);
@@ -250,8 +220,14 @@ export function removeCoordinatorController(dependencies: CleanupEventDependenci
   };
 }
 
-export function publishReadinessController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+export function publishReadinessController(
+  dependencies: CleanupEventDependencies,
+) {
+  return async (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const parameters = eventParametersSchema.safeParse(request.params);
       if (!parameters.success) throw validationError(parameters);
@@ -269,7 +245,11 @@ export function publishReadinessController(dependencies: CleanupEventDependencie
 }
 
 export function publishEventController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+  return async (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const parameters = eventParametersSchema.safeParse(request.params);
       if (!parameters.success) throw validationError(parameters);
@@ -287,20 +267,26 @@ export function publishEventController(dependencies: CleanupEventDependencies) {
   };
 }
 
-export function listOwnedEventsController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+export function listOwnedEventsController(
+  dependencies: CleanupEventDependencies,
+) {
+  return async (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const validation = listCleanupEventsQuerySchema.safeParse(request.query);
       if (!validation.success) throw validationError(validation);
       response.status(200).json({
-          data: await listOwnedCleanupEvents(
-            dependencies,
-            request.tenant!.organization.id,
-            {
-              id: request.tenant!.membership.id,
-              role: request.tenant!.membership.role,
-            },
-            validation.data,
+        data: await listOwnedCleanupEvents(
+          dependencies,
+          request.tenant!.organization.id,
+          {
+            id: request.tenant!.membership.id,
+            role: request.tenant!.membership.role,
+          },
+          validation.data,
         ),
       });
     } catch (error) {
@@ -309,20 +295,36 @@ export function listOwnedEventsController(dependencies: CleanupEventDependencies
   };
 }
 
-export function listPublicEventsController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+export function listPublicEventsController(
+  dependencies: CleanupEventDependencies,
+) {
+  return async (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const validation = listCleanupEventsQuerySchema.safeParse(request.query);
       if (!validation.success) throw validationError(validation);
-      response.status(200).json({ data: await listPublicCleanupEvents(dependencies, validation.data) });
+      response
+        .status(200)
+        .json({
+          data: await listPublicCleanupEvents(dependencies, validation.data),
+        });
     } catch (error) {
       next(error);
     }
   };
 }
 
-export function getOwnedEventController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+export function getOwnedEventController(
+  dependencies: CleanupEventDependencies,
+) {
+  return async (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const validation = eventParametersSchema.safeParse(request.params);
       if (!validation.success) throw validationError(validation);
@@ -339,13 +341,22 @@ export function getOwnedEventController(dependencies: CleanupEventDependencies) 
   };
 }
 
-export function getPublicEventController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+export function getPublicEventController(
+  dependencies: CleanupEventDependencies,
+) {
+  return async (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const validation = publicEventParametersSchema.safeParse(request.params);
       if (!validation.success) throw validationError(validation);
       response.status(200).json({
-        data: await getPublicCleanupEvent(dependencies, validation.data.eventId),
+        data: await getPublicCleanupEvent(
+          dependencies,
+          validation.data.eventId,
+        ),
       });
     } catch (error) {
       next(error);
@@ -353,8 +364,14 @@ export function getPublicEventController(dependencies: CleanupEventDependencies)
   };
 }
 
-export function listPublicEventMapController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+export function listPublicEventMapController(
+  dependencies: CleanupEventDependencies,
+) {
+  return async (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const validation = cleanupEventMapQuerySchema.safeParse(request.query);
       if (!validation.success) throw validationError(validation);
@@ -371,10 +388,18 @@ export function listPublicEventMapController(dependencies: CleanupEventDependenc
   };
 }
 
-export function listNearbyPublicEventMapController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+export function listNearbyPublicEventMapController(
+  dependencies: CleanupEventDependencies,
+) {
+  return async (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
-      const validation = cleanupEventNearbyMapQuerySchema.safeParse(request.query);
+      const validation = cleanupEventNearbyMapQuerySchema.safeParse(
+        request.query,
+      );
       if (!validation.success) throw validationError(validation);
       response.status(200).json({
         data: await listNearbyPublicCleanupEventMap(
@@ -383,12 +408,20 @@ export function listNearbyPublicEventMapController(dependencies: CleanupEventDep
           request.authentication.profile.id,
         ),
       });
-    } catch (error) { next(error); }
+    } catch (error) {
+      next(error);
+    }
   };
 }
 
-export function listOrganizationEventMapController(dependencies: CleanupEventDependencies) {
-  return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
+export function listOrganizationEventMapController(
+  dependencies: CleanupEventDependencies,
+) {
+  return async (
+    request: Request,
+    response: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const validation = cleanupEventMapQuerySchema.safeParse(request.query);
       if (!validation.success) throw validationError(validation);
@@ -399,6 +432,8 @@ export function listOrganizationEventMapController(dependencies: CleanupEventDep
           validation.data,
         ),
       });
-    } catch (error) { next(error); }
+    } catch (error) {
+      next(error);
+    }
   };
 }

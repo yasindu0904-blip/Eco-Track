@@ -6,6 +6,7 @@ import type { IncidentCategory } from "../../incidents/incident.types";
 import { listOrganizationCleanupEventMap } from "../../cleanup-events/cleanupEvent.api";
 import type { CleanupEventMapFeature } from "../../cleanup-events/cleanupEvent.types";
 import {
+  AdministrativeAreaMapSearch,
   EcoMap,
   type MapBoundaryFeatureCollection,
   type MapMarkerFeature,
@@ -44,7 +45,11 @@ const timeOptions = [
   { value: "", label: "Any time", milliseconds: 0 },
   { value: "24h", label: "Last 24 hours", milliseconds: 24 * 60 * 60 * 1000 },
   { value: "7d", label: "Last 7 days", milliseconds: 7 * 24 * 60 * 60 * 1000 },
-  { value: "30d", label: "Last 30 days", milliseconds: 30 * 24 * 60 * 60 * 1000 },
+  {
+    value: "30d",
+    label: "Last 30 days",
+    milliseconds: 30 * 24 * 60 * 60 * 1000,
+  },
 ] as const;
 
 const reviewReasonOptions: Array<{
@@ -54,7 +59,10 @@ const reviewReasonOptions: Array<{
   { value: "INSUFFICIENT_EVIDENCE", label: "Insufficient evidence" },
   { value: "LOCATION_INCORRECT", label: "Location is incorrect" },
   { value: "DUPLICATE_REPORT", label: "Duplicate report" },
-  { value: "NOT_AN_ENVIRONMENTAL_INCIDENT", label: "Not an environmental incident" },
+  {
+    value: "NOT_AN_ENVIRONMENTAL_INCIDENT",
+    label: "Not an environmental incident",
+  },
   { value: "OUTSIDE_SERVICE_SCOPE", label: "Outside service scope" },
   { value: "OTHER", label: "Other" },
 ];
@@ -65,7 +73,9 @@ type DiscoveryFilters = {
   timeRange: (typeof timeOptions)[number]["value"];
 };
 
-function reportedAfterFor(value: DiscoveryFilters["timeRange"]): string | undefined {
+function reportedAfterFor(
+  value: DiscoveryFilters["timeRange"],
+): string | undefined {
   const option = timeOptions.find((candidate) => candidate.value === value);
   return option?.milliseconds
     ? new Date(Date.now() - option.milliseconds).toISOString()
@@ -96,7 +106,8 @@ export function OrganizationIncidentDiscovery({
   onOpenEvent,
 }: OrganizationIncidentDiscoveryProps) {
   const [categories, setCategories] = useState<IncidentCategory[]>([]);
-  const [boundaries, setBoundaries] =
+  const [boundaries, setBoundaries] = useState<MapBoundaryFeatureCollection>();
+  const [searchedBoundary, setSearchedBoundary] =
     useState<MapBoundaryFeatureCollection>();
   const [boundariesLoading, setBoundariesLoading] = useState(true);
   const [boundaryError, setBoundaryError] = useState<string>();
@@ -104,7 +115,9 @@ export function OrganizationIncidentDiscovery({
   const [events, setEvents] = useState<CleanupEventMapFeature[]>([]);
   const [viewport, setViewport] = useState<MapViewport>();
   const [selectedId, setSelectedId] = useState<string>();
-  const [selectedKind, setSelectedKind] = useState<"INCIDENT" | "CLEANUP_EVENT">("INCIDENT");
+  const [selectedKind, setSelectedKind] = useState<
+    "INCIDENT" | "CLEANUP_EVENT"
+  >("INCIDENT");
   const [status, setStatus] =
     useState<(typeof statusOptions)[number]["value"]>("");
   const [categoryId, setCategoryId] = useState("");
@@ -117,8 +130,10 @@ export function OrganizationIncidentDiscovery({
   const [error, setError] = useState<string>();
   const [detail, setDetail] = useState<OrganizationIncidentDetail>();
   const [detailLoading, setDetailLoading] = useState(false);
-  const [reviewStatus, setReviewStatus] = useState<OrganizationIncidentReviewStatus>("VIEWED");
-  const [reasonCode, setReasonCode] = useState<OrganizationIncidentFalseReasonCode>();
+  const [reviewStatus, setReviewStatus] =
+    useState<OrganizationIncidentReviewStatus>("VIEWED");
+  const [reasonCode, setReasonCode] =
+    useState<OrganizationIncidentFalseReasonCode>();
   const [privateNotes, setPrivateNotes] = useState("");
   const [reviewError, setReviewError] = useState<string>();
   const [reviewNotice, setReviewNotice] = useState<string>();
@@ -127,11 +142,17 @@ export function OrganizationIncidentDiscovery({
   const detailRequest = useRef<AbortController | undefined>(undefined);
   const selectedIdRef = useRef<string | undefined>(undefined);
 
-  const selectMarker = useCallback((id: string | undefined, kind: "INCIDENT" | "CLEANUP_EVENT" = "INCIDENT") => {
-    selectedIdRef.current = id;
-    setSelectedId(id);
-    setSelectedKind(kind);
-  }, []);
+  const selectMarker = useCallback(
+    (
+      id: string | undefined,
+      kind: "INCIDENT" | "CLEANUP_EVENT" = "INCIDENT",
+    ) => {
+      selectedIdRef.current = id;
+      setSelectedId(id);
+      setSelectedKind(kind);
+    },
+    [],
+  );
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
@@ -144,12 +165,13 @@ export function OrganizationIncidentDiscovery({
         if (active) setCategories(loaded);
       })
       .catch((requestError: unknown) => {
-        if (active) setError(
-          describeApiFailure(
-            requestError,
-            "Unable to load incident categories.",
-          ).message,
-        );
+        if (active)
+          setError(
+            describeApiFailure(
+              requestError,
+              "Unable to load incident categories.",
+            ).message,
+          );
       });
     return () => {
       active = false;
@@ -217,14 +239,19 @@ export function OrganizationIncidentDiscovery({
           setDetail(loaded);
           setReviewStatus(loaded.currentReview?.status ?? "VIEWED");
           setReasonCode(
-            (loaded.currentReview?.reasonCode as OrganizationIncidentFalseReasonCode | null) ?? undefined,
+            (loaded.currentReview
+              ?.reasonCode as OrganizationIncidentFalseReasonCode | null) ??
+              undefined,
           );
           setPrivateNotes(loaded.currentReview?.privateNotes ?? "");
         })
         .catch((requestError: unknown) => {
           if (!controller.signal.aborted) {
             setReviewError(
-              describeApiFailure(requestError, "Unable to load the incident details.").message,
+              describeApiFailure(
+                requestError,
+                "Unable to load the incident details.",
+              ).message,
             );
           }
         })
@@ -254,7 +281,9 @@ export function OrganizationIncidentDiscovery({
       const controller = new AbortController();
       activeRequest.current = controller;
       const abortFromExternal = () => controller.abort();
-      options.externalSignal?.addEventListener("abort", abortFromExternal, { once: true });
+      options.externalSignal?.addEventListener("abort", abortFromExternal, {
+        once: true,
+      });
       if (options.externalSignal?.aborted) controller.abort();
 
       if (options.append) setLoadingMore(true);
@@ -264,41 +293,74 @@ export function OrganizationIncidentDiscovery({
       }
       setError(undefined);
       try {
-        const incidentRequest = options.append && !options.cursor
-          ? Promise.resolve({ items: [], nextCursor: null })
-          : listOrganizationIncidents(
-              accessToken,
-              organizationId,
-              {
-                ...nextViewport,
-                limit: 100,
-                cursor: options.cursor,
-                status: filters.status || undefined,
-                categoryId: filters.categoryId || undefined,
-                reportedAfter: reportedAfterFor(filters.timeRange),
-              },
-              controller.signal,
-            );
-        const eventRequest = options.append && !options.eventCursor
-          ? Promise.resolve({ type: "FeatureCollection" as const, features: [], nextCursor: null })
-          : listOrganizationCleanupEventMap(accessToken, organizationId, {
-              ...nextViewport, limit: 100, cursor: options.eventCursor,
-            }, controller.signal);
-        const [page, eventPage] = await Promise.all([incidentRequest, eventRequest]);
+        const incidentRequest =
+          options.append && !options.cursor
+            ? Promise.resolve({ items: [], nextCursor: null })
+            : listOrganizationIncidents(
+                accessToken,
+                organizationId,
+                {
+                  ...nextViewport,
+                  limit: 100,
+                  cursor: options.cursor,
+                  status: filters.status || undefined,
+                  categoryId: filters.categoryId || undefined,
+                  reportedAfter: reportedAfterFor(filters.timeRange),
+                },
+                controller.signal,
+              );
+        const eventRequest =
+          options.append && !options.eventCursor
+            ? Promise.resolve({
+                type: "FeatureCollection" as const,
+                features: [],
+                nextCursor: null,
+              })
+            : listOrganizationCleanupEventMap(
+                accessToken,
+                organizationId,
+                {
+                  ...nextViewport,
+                  limit: 100,
+                  cursor: options.eventCursor,
+                },
+                controller.signal,
+              );
+        const [page, eventPage] = await Promise.all([
+          incidentRequest,
+          eventRequest,
+        ]);
         if (controller.signal.aborted) return;
         setIncidents((current) =>
           options.append ? mergeUnique(current, page.items) : page.items,
         );
         setNextCursor(page.nextCursor);
-        setEvents((current) => options.append
-          ? [...new Map([...current, ...eventPage.features].map((item) => [item.properties.id, item])).values()]
-          : eventPage.features);
+        setEvents((current) =>
+          options.append
+            ? [
+                ...new Map(
+                  [...current, ...eventPage.features].map((item) => [
+                    item.properties.id,
+                    item,
+                  ]),
+                ).values(),
+              ]
+            : eventPage.features,
+        );
         setNextEventCursor(eventPage.nextCursor);
         if (!options.append || !selectedIdRef.current) {
           const currentId = selectedIdRef.current;
-          if (currentId && page.items.some((incident) => incident.id === currentId)) {
+          if (
+            currentId &&
+            page.items.some((incident) => incident.id === currentId)
+          ) {
             selectMarker(currentId, "INCIDENT");
-          } else if (currentId && eventPage.features.some((event) => event.properties.id === currentId)) {
+          } else if (
+            currentId &&
+            eventPage.features.some(
+              (event) => event.properties.id === currentId,
+            )
+          ) {
             selectMarker(currentId, "CLEANUP_EVENT");
           } else if (page.items[0]) {
             selectMarker(page.items[0].id, "INCIDENT");
@@ -311,10 +373,8 @@ export function OrganizationIncidentDiscovery({
       } catch (requestError) {
         if (controller.signal.aborted) return;
         setError(
-          describeApiFailure(
-            requestError,
-            "Unable to load covered incidents.",
-          ).message,
+          describeApiFailure(requestError, "Unable to load covered incidents.")
+            .message,
         );
       } finally {
         options.externalSignal?.removeEventListener("abort", abortFromExternal);
@@ -339,42 +399,77 @@ export function OrganizationIncidentDiscovery({
     [categoryId, loadDiscovery, status, timeRange],
   );
 
-  const changeStatus = (nextStatus: (typeof statusOptions)[number]["value"]) => {
+  const changeStatus = (
+    nextStatus: (typeof statusOptions)[number]["value"],
+  ) => {
     setStatus(nextStatus);
-    if (viewport) void loadDiscovery(viewport, { status: nextStatus, categoryId, timeRange });
+    if (viewport)
+      void loadDiscovery(viewport, {
+        status: nextStatus,
+        categoryId,
+        timeRange,
+      });
   };
 
   const changeCategory = (nextCategoryId: string) => {
     setCategoryId(nextCategoryId);
-    if (viewport) void loadDiscovery(viewport, { status, categoryId: nextCategoryId, timeRange });
+    if (viewport)
+      void loadDiscovery(viewport, {
+        status,
+        categoryId: nextCategoryId,
+        timeRange,
+      });
   };
 
   const changeTimeRange = (nextTimeRange: DiscoveryFilters["timeRange"]) => {
     setTimeRange(nextTimeRange);
-    if (viewport) void loadDiscovery(viewport, { status, categoryId, timeRange: nextTimeRange });
+    if (viewport)
+      void loadDiscovery(viewport, {
+        status,
+        categoryId,
+        timeRange: nextTimeRange,
+      });
   };
 
   const markers = useMemo<MapMarkerFeature[]>(
-    () =>
-      [...incidents.map((incident) => ({
-        type: "Feature",
-        geometry: {
-          type: "Point",
-          coordinates: [incident.longitude, incident.latitude],
-        },
-        properties: {
-          id: incident.id,
-          kind: "INCIDENT",
-          title: incident.title,
-          status: readable(incident.status),
-          category: incident.category.name,
-          occurredAt: incident.reportedAt,
-        },
-      } satisfies MapMarkerFeature)), ...events],
+    () => [
+      ...incidents.map(
+        (incident) =>
+          ({
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [incident.longitude, incident.latitude],
+            },
+            properties: {
+              id: incident.id,
+              kind: "INCIDENT",
+              title: incident.title,
+              status: readable(incident.status),
+              category: incident.category.name,
+              occurredAt: incident.reportedAt,
+            },
+          }) satisfies MapMarkerFeature,
+      ),
+      ...events,
+    ],
     [events, incidents],
   );
+  const displayedBoundaries = useMemo<
+    MapBoundaryFeatureCollection | undefined
+  >(() => {
+    if (!searchedBoundary) return boundaries;
+    if (!boundaries) return searchedBoundary;
+    return {
+      type: "FeatureCollection",
+      truncated: boundaries.truncated,
+      features: [...boundaries.features, ...searchedBoundary.features],
+    };
+  }, [boundaries, searchedBoundary]);
   const selected = incidents.find((incident) => incident.id === selectedId);
-  const selectedEvent = events.find((event) => event.properties.id === selectedId);
+  const selectedEvent = events.find(
+    (event) => event.properties.id === selectedId,
+  );
   const selectedDetail = detail?.id === selectedId ? detail : undefined;
 
   const submitReview = async () => {
@@ -384,14 +479,20 @@ export function OrganizationIncidentDiscovery({
       selectedDetail.currentReview &&
       selectedDetail.currentReview.status !== "VIEWED"
     ) {
-      setReviewError("A completed VALID or FALSE decision cannot be changed back to VIEWED. Choose VALID or FALSE.");
+      setReviewError(
+        "A completed VALID or FALSE decision cannot be changed back to VIEWED. Choose VALID or FALSE.",
+      );
       return;
     }
     if (reviewStatus === "FALSE" && !reasonCode) {
       setReviewError("Choose a reason before marking this incident false.");
       return;
     }
-    if (reviewStatus === "FALSE" && reasonCode === "OTHER" && privateNotes.trim().length < 10) {
+    if (
+      reviewStatus === "FALSE" &&
+      reasonCode === "OTHER" &&
+      privateNotes.trim().length < 10
+    ) {
       setReviewError("Explain an OTHER reason in at least 10 characters.");
       return;
     }
@@ -419,27 +520,32 @@ export function OrganizationIncidentDiscovery({
           currentReview: result.review,
           falseReviewCount: Math.max(
             0,
-            current.falseReviewCount + (isFalse && !wasFalse ? 1 : wasFalse && !isFalse ? -1 : 0),
+            current.falseReviewCount +
+              (isFalse && !wasFalse ? 1 : wasFalse && !isFalse ? -1 : 0),
           ),
         };
       });
-      setIncidents((current) => current.map((incident) =>
-        incident.id === selectedId
-          ? {
-              ...incident,
-              falseReviewCount: Math.max(
-                0,
-                incident.falseReviewCount +
-                  (result.review.status === "FALSE" && incident.currentReviewStatus !== "FALSE"
-                    ? 1
-                    : result.review.status !== "FALSE" && incident.currentReviewStatus === "FALSE"
-                      ? -1
-                      : 0),
-              ),
-              currentReviewStatus: result.review.status,
-            }
-          : incident,
-      ));
+      setIncidents((current) =>
+        current.map((incident) =>
+          incident.id === selectedId
+            ? {
+                ...incident,
+                falseReviewCount: Math.max(
+                  0,
+                  incident.falseReviewCount +
+                    (result.review.status === "FALSE" &&
+                    incident.currentReviewStatus !== "FALSE"
+                      ? 1
+                      : result.review.status !== "FALSE" &&
+                          incident.currentReviewStatus === "FALSE"
+                        ? -1
+                        : 0),
+                ),
+                currentReviewStatus: result.review.status,
+              }
+            : incident,
+        ),
+      );
       if (selectedIdRef.current === selectedId) {
         setReviewNotice(
           result.rewardAwarded
@@ -452,7 +558,8 @@ export function OrganizationIncidentDiscovery({
     } catch (requestError) {
       if (selectedIdRef.current === selectedId) {
         setReviewError(
-          describeApiFailure(requestError, "Unable to save this review.").message,
+          describeApiFailure(requestError, "Unable to save this review.")
+            .message,
         );
       }
     } finally {
@@ -468,7 +575,7 @@ export function OrganizationIncidentDiscovery({
           <strong>
             {loading
               ? "Loading incidents and events in this map view…"
-              : (nextCursor || nextEventCursor)
+              : nextCursor || nextEventCursor
                 ? `Showing the first ${incidents.length + events.length} items in view`
                 : `${incidents.length} incidents and ${events.length} owned events loaded in this map view`}
           </strong>
@@ -514,7 +621,9 @@ export function OrganizationIncidentDiscovery({
           <select
             value={timeRange}
             onChange={(event) =>
-              changeTimeRange(event.target.value as DiscoveryFilters["timeRange"])
+              changeTimeRange(
+                event.target.value as DiscoveryFilters["timeRange"],
+              )
             }
           >
             {timeOptions.map((option) => (
@@ -526,60 +635,96 @@ export function OrganizationIncidentDiscovery({
         </label>
       </div>
 
-      {error && <p className="organization-review-error" role="alert">{error}</p>}
-      {boundaryError && <p className="organization-review-error" role="alert">{boundaryError}</p>}
+      {error && (
+        <p className="organization-review-error" role="alert">
+          {error}
+        </p>
+      )}
+      {boundaryError && (
+        <p className="organization-review-error" role="alert">
+          {boundaryError}
+        </p>
+      )}
       {boundaries?.truncated && (
         <p className="organization-review-error" role="status">
-          The organization has more than 500 service areas, so this overlay is incomplete.
+          The organization has more than 500 service areas, so this overlay is
+          incomplete.
         </p>
       )}
       {loading && (
-        <p className="organization-review-loading" role="status" aria-live="polite">
+        <p
+          className="organization-review-loading"
+          role="status"
+          aria-live="polite"
+        >
           <span aria-hidden="true" />
-          Loading incidents and cleanup events for the current map view. Visible results may change.
+          Loading incidents and cleanup events for the current map view. Visible
+          results may change.
         </p>
       )}
+
+      <AdministrativeAreaMapSearch
+        accessToken={accessToken}
+        onBoundaryChange={setSearchedBoundary}
+      />
 
       <div className="organization-review-layout">
         <EcoMap
           markers={markers}
-          boundaries={boundaries}
+          boundaries={displayedBoundaries}
           selectedMarkerId={selectedId}
           showListFallback={false}
           showCurrentLocation={false}
           height={560}
           accessibleLabel="Organization incident discovery map"
-          onMarkerSelect={(marker) => selectMarker(marker.properties.id, marker.properties.kind)}
+          onMarkerSelect={(marker) =>
+            selectMarker(marker.properties.id, marker.properties.kind)
+          }
           onViewportChange={handleViewportChange}
         />
 
-        <aside className="organization-review-list" aria-label="Covered incidents">
+        <aside
+          className="organization-review-list"
+          aria-label="Covered incidents"
+        >
           {incidents.length + events.length === 0 && !loading ? (
             <div className="organization-review-empty">
               <strong>No covered incidents in this view</strong>
-              <p>Use the focus control on the map to return to your service areas.</p>
+              <p>
+                Use the focus control on the map to return to your service
+                areas.
+              </p>
             </div>
           ) : (
             incidents.map((incident) => (
               <button
                 key={incident.id}
                 type="button"
-                className={incident.id === selectedId ? "is-selected" : undefined}
+                className={
+                  incident.id === selectedId ? "is-selected" : undefined
+                }
                 onClick={() => selectMarker(incident.id, "INCIDENT")}
               >
                 <span>{incident.category.name}</span>
                 <strong>{incident.title}</strong>
                 <small>
-                  {readable(incident.severity)} severity · {readable(incident.status)}
+                  {readable(incident.severity)} severity ·{" "}
+                  {readable(incident.status)}
                 </small>
               </button>
             ))
           )}
           {events.map((event) => (
-            <button key={`event-${event.properties.id}`} type="button"
-              className={event.properties.id === selectedId ? "is-selected" : undefined}
-              onClick={() => selectMarker(event.properties.id, "CLEANUP_EVENT")}>
-              <span>Owned cleanup event</span><strong>{event.properties.title}</strong>
+            <button
+              key={`event-${event.properties.id}`}
+              type="button"
+              className={
+                event.properties.id === selectedId ? "is-selected" : undefined
+              }
+              onClick={() => selectMarker(event.properties.id, "CLEANUP_EVENT")}
+            >
+              <span>Owned cleanup event</span>
+              <strong>{event.properties.title}</strong>
               <small>{readable(event.properties.status)}</small>
             </button>
           ))}
@@ -595,7 +740,11 @@ export function OrganizationIncidentDiscovery({
             void loadDiscovery(
               viewport,
               { status, categoryId, timeRange },
-              { append: true, cursor: nextCursor ?? undefined, eventCursor: nextEventCursor ?? undefined },
+              {
+                append: true,
+                cursor: nextCursor ?? undefined,
+                eventCursor: nextEventCursor ?? undefined,
+              },
             )
           }
         >
@@ -608,16 +757,36 @@ export function OrganizationIncidentDiscovery({
           <div>
             <span>{selected.category.name}</span>
             <h2>{selected.title}</h2>
-            <p>{selected.addressText ?? `${selected.latitude.toFixed(5)}, ${selected.longitude.toFixed(5)}`}</p>
+            <p>
+              {selected.addressText ??
+                `${selected.latitude.toFixed(5)}, ${selected.longitude.toFixed(5)}`}
+            </p>
           </div>
           <dl>
-            <div><dt>Severity</dt><dd>{readable(selected.severity)}</dd></div>
-            <div><dt>Your review</dt><dd>{selected.currentReviewStatus ? readable(selected.currentReviewStatus) : "Not reviewed"}</dd></div>
-            <div><dt>Public false count</dt><dd>{selected.falseReviewCount}</dd></div>
+            <div>
+              <dt>Severity</dt>
+              <dd>{readable(selected.severity)}</dd>
+            </div>
+            <div>
+              <dt>Your review</dt>
+              <dd>
+                {selected.currentReviewStatus
+                  ? readable(selected.currentReviewStatus)
+                  : "Not reviewed"}
+              </dd>
+            </div>
+            <div>
+              <dt>Public false count</dt>
+              <dd>{selected.falseReviewCount}</dd>
+            </div>
           </dl>
-          {detailLoading ? <p role="status">Loading incident details...</p> : null}
+          {detailLoading ? (
+            <p role="status">Loading incident details...</p>
+          ) : null}
           {canReview && reviewError && !selectedDetail ? (
-            <p className="organization-review-error" role="alert">{reviewError}</p>
+            <p className="organization-review-error" role="alert">
+              {reviewError}
+            </p>
           ) : null}
           {!canReview ? (
             <p className="organization-review-no-evidence">
@@ -630,11 +799,19 @@ export function OrganizationIncidentDiscovery({
                   <span>Organization review</span>
                   <h3>{selectedDetail.accessSource.replaceAll("_", " ")}</h3>
                 </div>
-                <small>{selectedDetail.photos.length} evidence photo{selectedDetail.photos.length === 1 ? "" : "s"}</small>
+                <small>
+                  {selectedDetail.photos.length} evidence photo
+                  {selectedDetail.photos.length === 1 ? "" : "s"}
+                </small>
               </div>
-              <p className="organization-review-description">{selectedDetail.description}</p>
+              <p className="organization-review-description">
+                {selectedDetail.description}
+              </p>
               {selectedDetail.photos.length > 0 ? (
-                <div className="organization-review-evidence" aria-label="Incident evidence">
+                <div
+                  className="organization-review-evidence"
+                  aria-label="Incident evidence"
+                >
                   {selectedDetail.photos.map((photo, index) => (
                     <figure key={photo.id}>
                       <img
@@ -642,12 +819,16 @@ export function OrganizationIncidentDiscovery({
                         alt={photo.caption || `Incident evidence ${index + 1}`}
                         loading="lazy"
                       />
-                      {photo.caption ? <figcaption>{photo.caption}</figcaption> : null}
+                      {photo.caption ? (
+                        <figcaption>{photo.caption}</figcaption>
+                      ) : null}
                     </figure>
                   ))}
                 </div>
               ) : (
-                <p className="organization-review-no-evidence">No photo evidence was submitted.</p>
+                <p className="organization-review-no-evidence">
+                  No photo evidence was submitted.
+                </p>
               )}
               <label>
                 Review status
@@ -655,7 +836,8 @@ export function OrganizationIncidentDiscovery({
                   value={reviewStatus}
                   disabled={reviewSubmitting}
                   onChange={(event) => {
-                    const next = event.target.value as OrganizationIncidentReviewStatus;
+                    const next = event.target
+                      .value as OrganizationIncidentReviewStatus;
                     setReviewStatus(next);
                     if (next !== "FALSE") setReasonCode(undefined);
                   }}
@@ -664,10 +846,14 @@ export function OrganizationIncidentDiscovery({
                     value="VIEWED"
                     disabled={Boolean(
                       selectedDetail.currentReview &&
-                      selectedDetail.currentReview.status !== "VIEWED",
+                        selectedDetail.currentReview.status !== "VIEWED",
                     )}
                   >
-                    Viewed{selectedDetail.currentReview && selectedDetail.currentReview.status !== "VIEWED" ? " (initial state only)" : ""}
+                    Viewed
+                    {selectedDetail.currentReview &&
+                    selectedDetail.currentReview.status !== "VIEWED"
+                      ? " (initial state only)"
+                      : ""}
                   </option>
                   <option value="VALID">Valid</option>
                   <option value="FALSE">False</option>
@@ -680,11 +866,18 @@ export function OrganizationIncidentDiscovery({
                     <select
                       value={reasonCode ?? ""}
                       disabled={reviewSubmitting}
-                      onChange={(event) => setReasonCode(event.target.value as OrganizationIncidentFalseReasonCode)}
+                      onChange={(event) =>
+                        setReasonCode(
+                          event.target
+                            .value as OrganizationIncidentFalseReasonCode,
+                        )
+                      }
                     >
                       <option value="">Choose a reason</option>
                       {reviewReasonOptions.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
                       ))}
                     </select>
                   </label>
@@ -701,13 +894,26 @@ export function OrganizationIncidentDiscovery({
                   </label>
                 </>
               ) : null}
-              {reviewError ? <p className="organization-review-error" role="alert">{reviewError}</p> : null}
-              {reviewNotice ? <p className="organization-review-success" role="status">{reviewNotice}</p> : null}
-              <button type="button" className="organization-review-submit" disabled={reviewSubmitting || !selectedDetail} onClick={() => void submitReview()}>
+              {reviewError ? (
+                <p className="organization-review-error" role="alert">
+                  {reviewError}
+                </p>
+              ) : null}
+              {reviewNotice ? (
+                <p className="organization-review-success" role="status">
+                  {reviewNotice}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                className="organization-review-submit"
+                disabled={reviewSubmitting || !selectedDetail}
+                onClick={() => void submitReview()}
+              >
                 {reviewSubmitting ? "Saving review..." : "Save review"}
               </button>
             </div>
-           ) : null}
+          ) : null}
           {onCreateDraftFromIncident && (
             <button
               className="organization-review-action"
@@ -721,11 +927,35 @@ export function OrganizationIncidentDiscovery({
       )}
       {selectedKind === "CLEANUP_EVENT" && selectedEvent && (
         <article className="organization-review-detail">
-          <div><span>Owned cleanup event</span><h2>{selectedEvent.properties.title}</h2>
-            <p>{selectedEvent.properties.organizationName}</p></div>
-          <dl><div><dt>Status</dt><dd>{readable(selectedEvent.properties.status)}</dd></div>
-            <div><dt>Linked incident</dt><dd>{selectedEvent.properties.incidentId ?? "None"}</dd></div></dl>
-          {onOpenEvent && <button className="organization-review-action" type="button" onClick={() => onOpenEvent(selectedEvent.properties.id, selectedEvent.properties.status)}>Open selected event</button>}
+          <div>
+            <span>Owned cleanup event</span>
+            <h2>{selectedEvent.properties.title}</h2>
+            <p>{selectedEvent.properties.organizationName}</p>
+          </div>
+          <dl>
+            <div>
+              <dt>Status</dt>
+              <dd>{readable(selectedEvent.properties.status)}</dd>
+            </div>
+            <div>
+              <dt>Linked incident</dt>
+              <dd>{selectedEvent.properties.incidentId ?? "None"}</dd>
+            </div>
+          </dl>
+          {onOpenEvent && (
+            <button
+              className="organization-review-action"
+              type="button"
+              onClick={() =>
+                onOpenEvent(
+                  selectedEvent.properties.id,
+                  selectedEvent.properties.status,
+                )
+              }
+            >
+              Open selected event
+            </button>
+          )}
         </article>
       )}
     </section>

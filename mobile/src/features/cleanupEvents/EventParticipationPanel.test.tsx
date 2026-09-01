@@ -2,8 +2,8 @@ import TestRenderer, { act } from "react-test-renderer";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { EventParticipationPanel } from "./EventParticipationPanel";
-import { getMyEventParticipation } from "./cleanupEvent.api";
-import type { CleanupEventPublicDetail, EventParticipation } from "./cleanupEvent.types";
+import { getMyEventParticipation, joinCleanupEvent } from "./cleanupEvent.api";
+import type { CleanupEventPublicDetail } from "./cleanupEvent.types";
 
 vi.mock("../../config/env", () => ({
   mobileEnv: {
@@ -13,25 +13,20 @@ vi.mock("../../config/env", () => ({
     supabaseUrl: "https://example.supabase.co",
   },
 }));
-
 vi.mock("react-native", () => ({
   Alert: { alert: vi.fn() },
-  Pressable: "Pressable",
-  StyleSheet: { create: <T,>(styles: T) => styles },
+  StyleSheet: { create: <T,>(value: T) => value },
   Text: "Text",
   View: "View",
 }));
-
 vi.mock("../../components/ui", () => ({
   Button: "Button",
   Notice: "Notice",
   sharedStyles: { card: {}, sectionTitle: {}, sectionSubtitle: {} },
 }));
-
 vi.mock("./cleanupEvent.api", () => ({
   getMyEventParticipation: vi.fn(),
   joinCleanupEvent: vi.fn(),
-  updateEventAvailability: vi.fn(),
   withdrawFromCleanupEvent: vi.fn(),
 }));
 
@@ -41,51 +36,54 @@ const event: CleanupEventPublicDetail = {
   incidentId: null,
   title: "Canal cleanup",
   description: "Remove litter beside the canal.",
-  publicInstructions: "Bring drinking water.",
+  publicInstructions: "Bring water.",
   lifecycleStatus: "PUBLISHED",
-  eventLatitude: 6.9271,
-  eventLongitude: 79.8612,
-  eventAddress: "Canal road",
-  meetingLatitude: 6.9271,
-  meetingLongitude: 79.8612,
-  meetingAddress: "Community hall",
+  displayStatus: "UPCOMING",
+  eventLatitude: 6.92,
+  eventLongitude: 79.86,
+  eventAddress: "Canal Road",
+  meetingLatitude: null,
+  meetingLongitude: null,
+  meetingAddress: null,
+  startsAt: "2099-09-01T03:30:00.000Z",
+  capacity: 25,
   publishedAt: "2026-08-21T08:00:00.000Z",
-  firstSessionAt: "2026-08-23T09:00:00.000Z",
-  sessions: [{ id: "session-1", sessionDate: "2026-08-23", startTime: "09:00:00", endTime: "11:00:00", capacity: 5, locationLatitude: 6.9271, locationLongitude: 79.8612, locationAddress: null }],
+  joinedVolunteerCount: 0,
 };
 
-const participation: EventParticipation = {
-  id: "participant-1",
-  status: "JOINED",
-  joinedAt: "2026-08-21T09:00:00.000Z",
-  withdrawnAt: null,
-  availableSessionIds: ["session-1"],
-  allocations: [{ id: "allocation-1", sessionId: "session-1", status: "PLANNED", allocatedAt: "2026-08-21T10:00:00.000Z", attendanceMarkedAt: null }],
-  event,
-};
-
-describe("EventParticipationPanel assignments", () => {
+describe("EventParticipationPanel simplified volunteering", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getMyEventParticipation).mockResolvedValue(participation);
+    vi.mocked(getMyEventParticipation).mockResolvedValue(null);
   });
 
-  test("shows the volunteer's assignment and refreshes from the API", async () => {
+  test("joins with one Volunteer action and no session selection", async () => {
+    vi.mocked(joinCleanupEvent).mockResolvedValue({
+      created: true,
+      rejoined: false,
+      participation: {
+        id: "participant-1",
+        status: "JOINED",
+        attendanceStatus: "UNMARKED",
+        attendanceMarkedAt: null,
+        joinedAt: "2026-08-21T09:00:00.000Z",
+        withdrawnAt: null,
+        event,
+      },
+    });
     let renderer: TestRenderer.ReactTestRenderer;
     await act(async () => {
-      renderer = TestRenderer.create(<EventParticipationPanel accessToken="token" event={event} />);
+      renderer = TestRenderer.create(
+        <EventParticipationPanel accessToken="token" event={event} />,
+      );
     });
-
-    const text = renderer!.root.findAllByType("Text" as never).flatMap((node) => node.props.children).join(" ");
-    expect(text).toContain("Your assigned sessions");
-    expect(text).toContain("ASSIGNED");
-    expect(text).toContain("2026-08-23 · 09:00–11:00");
-
-    const refresh = renderer!.root.findAllByType("Button" as never).find((node) => node.props.label === "Refresh assignment");
-    expect(refresh).toBeTruthy();
+    const volunteer = renderer!.root
+      .findAllByType("Button" as never)
+      .find((node) => node.props.label === "Volunteer");
+    expect(volunteer).toBeTruthy();
     await act(async () => {
-      refresh!.props.onPress();
+      await volunteer!.props.onPress();
     });
-    expect(getMyEventParticipation).toHaveBeenCalledTimes(2);
+    expect(joinCleanupEvent).toHaveBeenCalledWith("token", "event-1");
   });
 });

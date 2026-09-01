@@ -29,6 +29,72 @@
   background: #ffffff;
 }
 
+.eco-area-search {
+  position: relative;
+  z-index: 900;
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.eco-area-search label {
+  display: grid;
+  gap: 7px;
+  color: #18382a;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.eco-area-search input {
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid #cbdacf;
+  border-radius: 12px;
+  color: #18382a;
+  background: #ffffff;
+  font: inherit;
+}
+
+.eco-area-search input:focus {
+  border-color: #2d8354;
+  outline: 3px solid rgba(45, 131, 84, 0.13);
+}
+
+.eco-area-search-results {
+  position: absolute;
+  top: calc(100% - 1px);
+  right: 0;
+  left: 0;
+  overflow: hidden;
+  border: 1px solid #cbdacf;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 16px 38px rgba(25, 67, 43, 0.16);
+}
+
+.eco-area-search-results button {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 11px 14px;
+  border: 0;
+  border-bottom: 1px solid #e4ece6;
+  color: #18382a;
+  background: #ffffff;
+  text-align: left;
+}
+
+.eco-area-search-results button:hover,
+.eco-area-search-results button:focus-visible {
+  background: #eef7f0;
+}
+
+.eco-area-search-results span,
+.eco-area-search > small {
+  color: #66776d;
+  font-size: 0.78rem;
+}
+
 .eco-map-marker-action {
   width: 100%;
   min-height: 38px;

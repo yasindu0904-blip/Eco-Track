@@ -50,6 +50,7 @@ const event = {
   description: "Remove litter beside the canal.",
   publicInstructions: "Bring drinking water.",
   lifecycleStatus: "PUBLISHED" as const,
+  displayStatus: "UPCOMING" as const,
   eventLatitude: 6.9271,
   eventLongitude: 79.8612,
   eventAddress: "Canal road",
@@ -57,8 +58,9 @@ const event = {
   meetingLongitude: 79.8612,
   meetingAddress: "Community hall",
   publishedAt: "2026-08-21T08:00:00.000Z",
-  firstSessionAt: "2026-08-23T08:00:00.000Z",
-  sessions: [],
+  startsAt: "2026-08-23T08:00:00.000Z",
+  capacity: 25,
+  joinedVolunteerCount: 0,
 };
 
 beforeEach(() => {
@@ -83,13 +85,21 @@ describe("PublicCleanupEventsScreen participant updates", () => {
       await Promise.resolve();
     });
 
-    expect(renderer!.root.findAllByType("ParticipantEventUpdatesPanel" as never)).toHaveLength(0);
-    const participationPanel = renderer!.root.findByType("EventParticipationPanel" as never);
+    expect(
+      renderer!.root.findAllByType("ParticipantEventUpdatesPanel" as never),
+    ).toHaveLength(0);
+    const participationPanel = renderer!.root.findByType(
+      "EventParticipationPanel" as never,
+    );
 
     await act(async () => {
-      participationPanel.props.onChanged({ status: "JOINED" } as EventParticipation);
+      participationPanel.props.onChanged({
+        status: "JOINED",
+      } as EventParticipation);
     });
 
-    expect(renderer!.root.findAllByType("ParticipantEventUpdatesPanel" as never)).toHaveLength(1);
+    expect(
+      renderer!.root.findAllByType("ParticipantEventUpdatesPanel" as never),
+    ).toHaveLength(1);
   });
 });

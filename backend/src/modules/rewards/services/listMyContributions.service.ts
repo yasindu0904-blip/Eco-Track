@@ -21,7 +21,8 @@ function decodeCursor(encodedCursor: string): ContributionCursor {
     const validation = contributionCursorPayloadSchema.safeParse(payload);
     if (!validation.success) throw new Error("Invalid cursor.");
     const createdAt = new Date(validation.data.createdAt);
-    if (Number.isNaN(createdAt.getTime())) throw new Error("Invalid cursor date.");
+    if (Number.isNaN(createdAt.getTime()))
+      throw new Error("Invalid cursor date.");
     return { createdAt, id: validation.data.id };
   } catch {
     throw new ApplicationError(
@@ -33,13 +34,18 @@ function decodeCursor(encodedCursor: string): ContributionCursor {
 }
 
 function encodeCursor(cursor: ContributionCursor): string {
-  return Buffer.from(JSON.stringify({
-    createdAt: cursor.createdAt.toISOString(),
-    id: cursor.id,
-  }), "utf8").toString("base64url");
+  return Buffer.from(
+    JSON.stringify({
+      createdAt: cursor.createdAt.toISOString(),
+      id: cursor.id,
+    }),
+    "utf8",
+  ).toString("base64url");
 }
 
-function toContributionDto(record: Awaited<ReturnType<typeof listContributionRecords>>[number]): ContributionDto {
+function toContributionDto(
+  record: Awaited<ReturnType<typeof listContributionRecords>>[number],
+): ContributionDto {
   let reason: string;
   let cleanupEventId = record.cleanupEventId;
 
@@ -49,13 +55,14 @@ function toContributionDto(record: Awaited<ReturnType<typeof listContributionRec
         ? `Your report “${record.incident.title}” received an authorized VALID organization review.`
         : "Your incident report received an authorized VALID organization review.";
       break;
-    case ContributionType.SESSION_ATTENDED: {
-      const event = record.sessionAllocation?.session.cleanupEvent;
-      const date = record.sessionAllocation?.session.sessionDate;
+    case ContributionType.EVENT_ATTENDED: {
+      const event = record.eventParticipant?.cleanupEvent;
+      const date = event?.startsAt;
       cleanupEventId = event?.id ?? null;
-      reason = event && date
-        ? `Attendance was confirmed for “${event.title}” on ${date.toISOString().slice(0, 10)}.`
-        : "An authorized coordinator confirmed your cleanup-session attendance.";
+      reason =
+        event && date
+          ? `Attendance was confirmed for “${event.title}” on ${date.toISOString().slice(0, 10)}.`
+          : "An authorized coordinator confirmed your cleanup-event attendance.";
       break;
     }
     case ContributionType.EVENT_COMPLETED:
@@ -64,7 +71,8 @@ function toContributionDto(record: Awaited<ReturnType<typeof listContributionRec
         : "You contributed to a completed cleanup event.";
       break;
     case ContributionType.SPECIAL_CONTRIBUTION:
-      reason = "An authorized EcoTrack administrator approved a special community contribution.";
+      reason =
+        "An authorized EcoTrack administrator approved a special community contribution.";
       break;
   }
 
@@ -88,22 +96,20 @@ export async function listMyContributions(
     encodedCursor?: string;
   },
 ): Promise<ContributionPageDto> {
-  const records = await listContributionRecords(
-    dependencies.prisma,
-    {
-      userId: input.userId,
-      limit: input.limit,
-      cursor: input.encodedCursor ? decodeCursor(input.encodedCursor) : null,
-    },
-  );
+  const records = await listContributionRecords(dependencies.prisma, {
+    userId: input.userId,
+    limit: input.limit,
+    cursor: input.encodedCursor ? decodeCursor(input.encodedCursor) : null,
+  });
   const hasMore = records.length > input.limit;
   const pageRecords = hasMore ? records.slice(0, input.limit) : records;
   const last = pageRecords.at(-1);
 
   return {
     items: pageRecords.map(toContributionDto),
-    nextCursor: hasMore && last
-      ? encodeCursor({ createdAt: last.createdAt, id: last.id })
-      : null,
+    nextCursor:
+      hasMore && last
+        ? encodeCursor({ createdAt: last.createdAt, id: last.id })
+        : null,
   };
 }

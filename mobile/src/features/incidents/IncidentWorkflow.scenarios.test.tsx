@@ -1,3 +1,5 @@
+import { manipulateAsync } from "expo-image-manipulator";
+import * as ImagePicker from "expo-image-picker";
 import TestRenderer, { act } from "react-test-renderer";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -16,7 +18,10 @@ vi.mock("expo-image-manipulator", () => ({
 }));
 
 vi.mock("expo-image-picker", () => ({
+  CameraType: { back: "back" },
+  launchCameraAsync: vi.fn(),
   launchImageLibraryAsync: vi.fn(),
+  requestCameraPermissionsAsync: vi.fn(),
   requestMediaLibraryPermissionsAsync: vi.fn(),
 }));
 
@@ -31,40 +36,68 @@ vi.mock("react-native", () => ({
 vi.mock("../../components/ui", async () => {
   const React = await import("react");
   return {
-    Button: ({ label, onPress, disabled, loading }: {
+    Button: ({
+      label,
+      onPress,
+      disabled,
+      loading,
+    }: {
       label: string;
       onPress: () => void;
       disabled?: boolean;
       loading?: boolean;
-    }) => React.createElement("Button", {
-      accessibilityLabel: label,
-      disabled: Boolean(disabled || loading),
-      onPress,
-    }, label),
-    Field: ({ label, value, onChangeText }: {
+    }) =>
+      React.createElement(
+        "Button",
+        {
+          accessibilityLabel: label,
+          disabled: Boolean(disabled || loading),
+          onPress,
+        },
+        label,
+      ),
+    Field: ({
+      label,
+      value,
+      onChangeText,
+    }: {
       label: string;
       value: string;
       onChangeText: (value: string) => void;
     }) => React.createElement("Field", { label, value, onChangeText }),
-    LoadingState: ({ message }: { message: string }) => React.createElement("Text", null, message),
-    Notice: ({ message }: { message: string }) => React.createElement("Text", null, message),
+    LoadingState: ({ message }: { message: string }) =>
+      React.createElement("Text", null, message),
+    Notice: ({ message }: { message: string }) =>
+      React.createElement("Text", null, message),
     PageHeader: ({ title, subtitle }: { title: string; subtitle?: string }) =>
-      React.createElement("View", null,
+      React.createElement(
+        "View",
+        null,
         React.createElement("Text", null, title),
         subtitle ? React.createElement("Text", null, subtitle) : null,
       ),
-    Screen: ({ children }: { children: React.ReactNode }) => React.createElement("View", null, children),
+    Screen: ({ children }: { children: React.ReactNode }) =>
+      React.createElement("View", null, children),
     sharedStyles: {
-      card: {}, divider: {}, sectionSubtitle: {}, sectionTitle: {}, spacedRow: {},
+      card: {},
+      divider: {},
+      sectionSubtitle: {},
+      sectionTitle: {},
+      spacedRow: {},
     },
   };
 });
 
 vi.mock("../../components/theme", () => ({
   colors: {
-    border: "gray", primary: "green", primaryDark: "darkgreen",
-    primarySoft: "lightgreen", surface: "white", surfaceMuted: "whitesmoke",
-    text: "black", textMuted: "gray",
+    border: "gray",
+    primary: "green",
+    primaryDark: "darkgreen",
+    primarySoft: "lightgreen",
+    surface: "white",
+    surfaceMuted: "whitesmoke",
+    text: "black",
+    textMuted: "gray",
   },
   spacing: { xs: 4, sm: 8, md: 16, lg: 24 },
 }));
@@ -73,6 +106,7 @@ vi.mock("../map", async () => {
   const React = await import("react");
   return {
     COLOMBO_MAP_CENTER: { latitude: 6.9271, longitude: 79.8612 },
+    AdministrativeAreaMapSearch: () => null,
     LocationPicker: (props: Record<string, unknown>) =>
       React.createElement("LocationPicker", props),
   };
@@ -150,7 +184,8 @@ const completedDetail = {
       id: "resolved-history",
       fromStatus: "CLEANUP_ORGANIZED" as const,
       toStatus: "RESOLVED" as const,
-      reason: "The linked cleanup event was completed with recorded attendance and evidence.",
+      reason:
+        "The linked cleanup event was completed with recorded attendance and evidence.",
       changedAt: "2026-08-20T14:00:00.000Z",
     },
   ],
@@ -171,6 +206,79 @@ beforeEach(() => {
 });
 
 describe("mobile incident workflow scenarios", () => {
+  test("library photos append across selections and can be removed", async () => {
+    vi.mocked(
+      ImagePicker.requestMediaLibraryPermissionsAsync,
+    ).mockResolvedValue({
+      granted: true,
+    } as never);
+    vi.mocked(ImagePicker.launchImageLibraryAsync)
+      .mockResolvedValueOnce({
+        canceled: false,
+        assets: [
+          {
+            uri: "file:///canal.jpg",
+            fileName: "canal.jpg",
+            width: 1200,
+            height: 900,
+          },
+        ],
+      } as never)
+      .mockResolvedValueOnce({
+        canceled: false,
+        assets: [
+          {
+            uri: "file:///waste.jpg",
+            fileName: "waste.jpg",
+            width: 1200,
+            height: 900,
+          },
+        ],
+      } as never);
+    vi.mocked(manipulateAsync).mockImplementation(
+      async (uri) =>
+        ({ uri: `${uri}-prepared`, width: 1200, height: 900 }) as never,
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        arrayBuffer: async () => new ArrayBuffer(128),
+      }),
+    );
+
+    let renderer: TestRenderer.ReactTestRenderer;
+    await act(async () => {
+      renderer = TestRenderer.create(
+        <IncidentReportScreen
+          accessToken="token"
+          onBack={vi.fn()}
+          onSubmitted={vi.fn()}
+        />,
+      );
+    });
+    await act(async () => {
+      renderer!.root
+        .findByProps({ accessibilityLabel: "Choose from library" })
+        .props.onPress();
+    });
+    await act(async () => {
+      renderer!.root
+        .findByProps({ accessibilityLabel: "Add from library" })
+        .props.onPress();
+    });
+
+    expect(textContent(renderer!)).toContain("canal.jpg");
+    expect(textContent(renderer!)).toContain("waste.jpg");
+    await act(async () => {
+      renderer!.root
+        .findByProps({ accessibilityLabel: "Remove canal.jpg" })
+        .props.onPress();
+    });
+    expect(textContent(renderer!)).not.toContain("canal.jpg");
+    expect(textContent(renderer!)).toContain("waste.jpg");
+    vi.unstubAllGlobals();
+  });
+
   test("weak-network retry preserves the report and reuses one submission id", async () => {
     const onSubmitted = vi.fn();
     vi.mocked(createIncident)
@@ -192,20 +300,27 @@ describe("mobile incident workflow scenarios", () => {
         latitude: 6.96,
         longitude: 79.92,
       });
-      renderer!.root.findByProps({ label: "Incident title" }).props.onChangeText(
-        "Mobile canal report",
-      );
-      renderer!.root.findByProps({ label: "Description" }).props.onChangeText(
-        "Plastic waste is blocking the community canal.",
-      );
+      renderer!.root
+        .findByProps({ label: "Incident title" })
+        .props.onChangeText("Mobile canal report");
+      renderer!.root
+        .findByProps({ label: "Description" })
+        .props.onChangeText("Plastic waste is blocking the community canal.");
     });
 
-    const submit = () => renderer!.root.findByProps({
-      accessibilityLabel: "Submit incident report",
-    }).props.onPress();
-    await act(async () => { submit(); });
+    const submit = () =>
+      renderer!.root
+        .findByProps({
+          accessibilityLabel: "Submit incident report",
+        })
+        .props.onPress();
+    await act(async () => {
+      submit();
+    });
     expect(textContent(renderer!)).toContain("weak network");
-    await act(async () => { submit(); });
+    await act(async () => {
+      submit();
+    });
 
     expect(createIncident).toHaveBeenCalledTimes(2);
     const firstInput = vi.mocked(createIncident).mock.calls[0]?.[1];
@@ -228,11 +343,16 @@ describe("mobile incident workflow scenarios", () => {
       );
     });
 
-    const reportCard = renderer!.root.findAllByType("Pressable" as never).find((node) =>
-      node.findAllByType("Text" as never).some((text) =>
-        text.children.join("") === "Mobile canal report"),
-    );
-    await act(async () => { reportCard!.props.onPress(); });
+    const reportCard = renderer!.root
+      .findAllByType("Pressable" as never)
+      .find((node) =>
+        node
+          .findAllByType("Text" as never)
+          .some((text) => text.children.join("") === "Mobile canal report"),
+      );
+    await act(async () => {
+      reportCard!.props.onPress();
+    });
 
     expect(getMyIncident).toHaveBeenCalledWith("token", summary.id);
     expect(textContent(renderer!)).toContain("Cleanup Organized");
@@ -244,24 +364,42 @@ describe("mobile incident workflow scenarios", () => {
   });
 
   test("My Reports renders cancellation, replacement, and completed incident history", async () => {
-    vi.mocked(listMyIncidents).mockResolvedValueOnce([{ ...summary, status: "RESOLVED" }]);
+    vi.mocked(listMyIncidents).mockResolvedValueOnce([
+      { ...summary, status: "RESOLVED" },
+    ]);
     vi.mocked(getMyIncident).mockResolvedValueOnce(completedDetail);
     let renderer: TestRenderer.ReactTestRenderer;
     await act(async () => {
       renderer = TestRenderer.create(
-        <MyReportsScreen accessToken="token" onBack={vi.fn()} onNewReport={vi.fn()} />,
+        <MyReportsScreen
+          accessToken="token"
+          onBack={vi.fn()}
+          onNewReport={vi.fn()}
+        />,
       );
     });
-    const reportCard = renderer!.root.findAllByType("Pressable" as never).find((node) =>
-      node.findAllByType("Text" as never).some((text) => text.children.join("") === "Mobile canal report"),
-    );
-    await act(async () => { reportCard!.props.onPress(); });
+    const reportCard = renderer!.root
+      .findAllByType("Pressable" as never)
+      .find((node) =>
+        node
+          .findAllByType("Text" as never)
+          .some((text) => text.children.join("") === "Mobile canal report"),
+      );
+    await act(async () => {
+      reportCard!.props.onPress();
+    });
 
     const rendered = textContent(renderer!);
     expect(rendered).toContain("Resolved");
-    expect(rendered).toContain("Cleanup event cancelled: unsafe weather conditions.");
-    expect(rendered).toContain("A replacement cleanup event was published for this incident.");
-    expect(rendered).toContain("The linked cleanup event was completed with recorded attendance and evidence.");
+    expect(rendered).toContain(
+      "Cleanup event cancelled: unsafe weather conditions.",
+    );
+    expect(rendered).toContain(
+      "A replacement cleanup event was published for this incident.",
+    );
+    expect(rendered).toContain(
+      "The linked cleanup event was completed with recorded attendance and evidence.",
+    );
     expect(rendered).not.toContain("privateNotes");
   });
 });

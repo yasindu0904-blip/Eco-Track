@@ -2,16 +2,10 @@ import { Prisma, type PrismaClient } from "../../../generated/prisma/client.js";
 
 import type {
   ValidatedCreateDraft,
-  ValidatedCreateSession,
   ValidatedUpdateDraft,
 } from "../cleanupEvent.validation.js";
 
-export const publicCleanupEventLifecycleStatuses = [
-  "PUBLISHED",
-  "SCHEDULED",
-  "IN_PROGRESS",
-  "COMPLETION_SUBMITTED",
-] as const;
+export const publicCleanupEventLifecycleStatuses = ["PUBLISHED"] as const;
 
 export const visibleCleanupEventLifecycleStatuses = [
   ...publicCleanupEventLifecycleStatuses,
@@ -20,12 +14,6 @@ export const visibleCleanupEventLifecycleStatuses = [
 ] as const;
 
 export const cleanupEventDraftInclude = {
-  sessions: {
-    orderBy: [
-      { sessionDate: "asc" },
-      { startTime: "asc" },
-    ],
-  },
   coordinators: {
     where: { removedAt: null },
     orderBy: { assignedAt: "asc" },
@@ -81,23 +69,12 @@ const publicEventSelect = {
   meetingLatitude: true,
   meetingLongitude: true,
   meetingAddress: true,
+  startsAt: true,
+  capacity: true,
   publishedAt: true,
   updatedAt: true,
   organization: { select: { id: true, name: true } },
-  sessions: {
-    where: { status: { not: "CANCELLED" } },
-    orderBy: [{ sessionDate: "asc" }, { startTime: "asc" }],
-    select: {
-      id: true,
-      sessionDate: true,
-      startTime: true,
-      endTime: true,
-      capacity: true,
-      locationLatitude: true,
-      locationLongitude: true,
-      locationAddress: true,
-    },
-  },
+  _count: { select: { participants: { where: { status: "JOINED" } } } },
 } satisfies Prisma.CleanupEventSelect;
 
 export type CleanupEventPublicRecord = Prisma.CleanupEventGetPayload<{
@@ -105,9 +82,18 @@ export type CleanupEventPublicRecord = Prisma.CleanupEventGetPayload<{
 }>;
 
 export const publishCandidateInclude = {
-  organization: { select: { id: true, name: true, status: true } },
+  organization: {
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      memberships: {
+        where: { role: "ORG_ADMIN", status: "ACTIVE" },
+        select: { userId: true },
+      },
+    },
+  },
   currentWorkflowStatus: true,
-  sessions: { orderBy: [{ sessionDate: "asc" }, { startTime: "asc" }] },
   coordinators: {
     where: { removedAt: null },
     include: {
@@ -161,6 +147,43 @@ export async function isIncidentVisibleToOrganization(
   return rows.length === 1;
 }
 
+export async function findVisibleIncidentLocation(
+  prisma: PrismaClient,
+  organizationId: string,
+  incidentId: string,
+): Promise<{
+  latitude: number;
+  longitude: number;
+  addressText: string | null;
+} | null> {
+  const rows = await prisma.$queryRaw<
+    Array<{ latitude: number; longitude: number; addressText: string | null }>
+  >(Prisma.sql`
+    SELECT incident."latitude"::double precision AS "latitude",
+           incident."longitude"::double precision AS "longitude",
+           incident."address_text" AS "addressText"
+    FROM "incidents" AS incident
+    WHERE incident."id" = ${incidentId}::uuid
+      AND EXISTS (
+        SELECT 1 FROM "organization_service_areas" AS service_area
+        JOIN "organizations" AS organization
+          ON organization."id" = service_area."organization_id"
+         AND organization."status" = 'ACTIVE'::"OrganizationStatus"
+        LEFT JOIN "administrative_areas" AS administrative_area
+          ON administrative_area."id" = service_area."administrative_area_id"
+         AND administrative_area."is_active" = true
+        WHERE service_area."organization_id" = ${organizationId}::uuid
+          AND service_area."status" = 'ACTIVE'::"ServiceAreaStatus"
+          AND extensions.ST_Covers(
+            COALESCE(service_area."boundary", administrative_area."boundary"),
+            incident."geo_point"
+          )
+      )
+    LIMIT 1
+  `);
+  return rows[0] ?? null;
+}
+
 export async function findDraftWorkflowStatusId(
   prisma: PrismaClient,
   organizationId: string,
@@ -194,12 +217,14 @@ export function createDraftRecord(
       title: data.title,
       description: data.description,
       publicInstructions: data.publicInstructions || null,
-      eventLatitude: data.eventLatitude,
-      eventLongitude: data.eventLongitude,
+      eventLatitude: data.eventLatitude!,
+      eventLongitude: data.eventLongitude!,
       eventAddress: data.eventAddress || null,
       meetingLatitude: data.meetingLatitude ?? null,
       meetingLongitude: data.meetingLongitude ?? null,
       meetingAddress: data.meetingAddress || null,
+      startsAt: data.startsAt,
+      capacity: data.capacity ?? null,
     },
     include: cleanupEventDraftInclude,
   });
@@ -273,67 +298,6 @@ export async function discardDraftRecord(
 ): Promise<boolean> {
   const deleted = await prisma.cleanupEvent.deleteMany({
     where: { id: draftId, organizationId, lifecycleStatus: "DRAFT" },
-  });
-  return deleted.count === 1;
-}
-
-function sessionData(data: ValidatedCreateSession) {
-  return {
-    sessionDate: new Date(`${data.sessionDate}T00:00:00.000Z`),
-    startTime: new Date(`1970-01-01T${data.startTime}Z`),
-    endTime: new Date(`1970-01-01T${data.endTime}Z`),
-    capacity: data.capacity ?? null,
-    locationLatitude: data.locationLatitude ?? null,
-    locationLongitude: data.locationLongitude ?? null,
-    locationAddress: data.locationAddress || null,
-    notes: data.notes || null,
-  };
-}
-
-export function createEventSessionRecord(
-  prisma: PrismaClient,
-  cleanupEventId: string,
-  data: ValidatedCreateSession,
-) {
-  return prisma.eventSession.create({
-    data: { cleanupEventId, ...sessionData(data) },
-  });
-}
-
-export async function updateEventSessionRecord(
-  prisma: PrismaClient,
-  organizationId: string,
-  eventId: string,
-  sessionId: string,
-  data: ValidatedCreateSession,
-) {
-  const session = await prisma.eventSession.findFirst({
-    where: {
-      id: sessionId,
-      cleanupEventId: eventId,
-      cleanupEvent: { organizationId, lifecycleStatus: "DRAFT" },
-    },
-    select: { id: true },
-  });
-  if (!session) return null;
-  return prisma.eventSession.update({
-    where: { id: sessionId },
-    data: sessionData(data),
-  });
-}
-
-export async function removeEventSessionRecord(
-  prisma: PrismaClient,
-  organizationId: string,
-  eventId: string,
-  sessionId: string,
-): Promise<boolean> {
-  const deleted = await prisma.eventSession.deleteMany({
-    where: {
-      id: sessionId,
-      cleanupEventId: eventId,
-      cleanupEvent: { organizationId, lifecycleStatus: "DRAFT" },
-    },
   });
   return deleted.count === 1;
 }
@@ -506,7 +470,9 @@ export async function publishCleanupEventRecord(
       action: "CLEANUP_EVENT_PUBLISHED",
       entityType: "CleanupEvent",
       entityId: command.eventId,
-      metadata: command.incidentId ? { incidentId: command.incidentId } : undefined,
+      metadata: command.incidentId
+        ? { incidentId: command.incidentId }
+        : undefined,
     },
   });
 
@@ -568,19 +534,23 @@ export function listPublicCleanupEventRecords(
 
 export function listOwnedCleanupEventRecords(
   prisma: PrismaClient,
-    command: {
-      organizationId: string;
-      coordinatorMembershipId?: string;
-      cursor: CleanupEventOwnedCursor | null;
+  command: {
+    organizationId: string;
+    coordinatorMembershipId?: string;
+    cursor: CleanupEventOwnedCursor | null;
     limit: number;
   },
 ): Promise<CleanupEventPublicRecord[]> {
   return prisma.cleanupEvent.findMany({
-      where: {
-        organizationId: command.organizationId,
-        ...(command.coordinatorMembershipId ? {
-          coordinators: { some: { membershipId: command.coordinatorMembershipId } },
-        } : {}),
+    where: {
+      organizationId: command.organizationId,
+      ...(command.coordinatorMembershipId
+        ? {
+            coordinators: {
+              some: { membershipId: command.coordinatorMembershipId },
+            },
+          }
+        : {}),
       ...(command.cursor
         ? {
             OR: [
@@ -605,6 +575,7 @@ export type CleanupEventMapRow = {
   lifecycleStatus: string;
   latitude: number;
   longitude: number;
+  startsAt: Date | null;
   publishedAt: Date | null;
   updatedAt: Date;
   organizationId: string;
@@ -622,10 +593,7 @@ type PublicCleanupEventMapInput = {
 };
 
 const publicMapStatuses = Prisma.sql`
-  'PUBLISHED'::"CleanupLifecycleStatus",
-  'SCHEDULED'::"CleanupLifecycleStatus",
-  'IN_PROGRESS'::"CleanupLifecycleStatus",
-  'COMPLETION_SUBMITTED'::"CleanupLifecycleStatus"
+  'PUBLISHED'::"CleanupLifecycleStatus"
 `;
 
 function publicMapCursor(cursor: CleanupEventMapCursor | null) {
@@ -636,7 +604,12 @@ function publicMapCursor(cursor: CleanupEventMapCursor | null) {
 
 export function listPublicCleanupEventMapRecords(
   prisma: PrismaClient,
-  query: PublicCleanupEventMapInput & { west: number; south: number; east: number; north: number },
+  query: PublicCleanupEventMapInput & {
+    west: number;
+    south: number;
+    east: number;
+    north: number;
+  },
 ): Promise<CleanupEventMapRow[]> {
   const cursor = publicMapCursor(query.cursor);
   return prisma.$queryRaw<CleanupEventMapRow[]>(Prisma.sql`
@@ -646,6 +619,7 @@ export function listPublicCleanupEventMapRecords(
       event."lifecycle_status"::text AS "lifecycleStatus",
       event."event_latitude"::double precision AS "latitude",
       event."event_longitude"::double precision AS "longitude",
+      event."starts_at" AS "startsAt",
       event."published_at" AS "publishedAt",
       event."updated_at" AS "updatedAt",
       event."organization_id" AS "organizationId",
@@ -681,7 +655,11 @@ export function listPublicCleanupEventMapRecords(
 
 export function listNearbyPublicCleanupEventMapRecords(
   prisma: PrismaClient,
-  query: PublicCleanupEventMapInput & { latitude: number; longitude: number; radiusMeters: number },
+  query: PublicCleanupEventMapInput & {
+    latitude: number;
+    longitude: number;
+    radiusMeters: number;
+  },
 ): Promise<CleanupEventMapRow[]> {
   const cursor = publicMapCursor(query.cursor);
   return prisma.$queryRaw<CleanupEventMapRow[]>(Prisma.sql`
@@ -689,6 +667,7 @@ export function listNearbyPublicCleanupEventMapRecords(
       event."lifecycle_status"::text AS "lifecycleStatus",
       event."event_latitude"::double precision AS "latitude",
       event."event_longitude"::double precision AS "longitude",
+      event."starts_at" AS "startsAt",
       event."published_at" AS "publishedAt", event."updated_at" AS "updatedAt",
       event."organization_id" AS "organizationId", organization."name" AS "organizationName",
       event."incident_id" AS "incidentId",
@@ -718,7 +697,15 @@ export function listNearbyPublicCleanupEventMapRecords(
 
 export function listOrganizationCleanupEventMapRecords(
   prisma: PrismaClient,
-  query: { organizationId: string; limit: number; cursor: CleanupEventMapCursor | null; west: number; south: number; east: number; north: number },
+  query: {
+    organizationId: string;
+    limit: number;
+    cursor: CleanupEventMapCursor | null;
+    west: number;
+    south: number;
+    east: number;
+    north: number;
+  },
 ): Promise<CleanupEventMapRow[]> {
   const cursor = query.cursor
     ? Prisma.sql`AND (event."updated_at", event."id") < (${query.cursor.sortAt}, ${query.cursor.id}::uuid)`
@@ -728,6 +715,7 @@ export function listOrganizationCleanupEventMapRecords(
       event."lifecycle_status"::text AS "lifecycleStatus",
       event."event_latitude"::double precision AS "latitude",
       event."event_longitude"::double precision AS "longitude",
+      event."starts_at" AS "startsAt",
       event."published_at" AS "publishedAt", event."updated_at" AS "updatedAt",
       event."organization_id" AS "organizationId", organization."name" AS "organizationName",
       event."incident_id" AS "incidentId", false AS "isJoined"

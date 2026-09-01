@@ -13,10 +13,3 @@ export const EVENT_CANCELLATION_REASON_LIMITS = {
   minimumLength: 10,
   maximumLength: 2_000,
 } as const;
-
-export const SESSION_STATUS_TRANSITIONS = {
-  SCHEDULED: ["IN_PROGRESS", "CANCELLED"],
-  IN_PROGRESS: ["COMPLETED", "CANCELLED"],
-  COMPLETED: [],
-  CANCELLED: [],
-} as const;

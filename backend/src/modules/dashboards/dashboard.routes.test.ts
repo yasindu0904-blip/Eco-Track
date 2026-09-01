@@ -104,7 +104,7 @@ const prisma = {
     count: async () => 0,
     groupBy: async () => [],
   },
-  cleanupEvent: { groupBy: async () => [] },
+  cleanupEvent: { groupBy: async () => [], count: async () => 0 },
   incidentReview: {
     groupBy: async ({ where }: { where: { organizationId: string } }) => [
       {
@@ -113,7 +113,6 @@ const prisma = {
       },
     ],
   },
-  eventSession: { count: async () => 0 },
   organizationMembershipRequest: { count: async () => 0 },
   $queryRaw: async () => [{ status: "ACTIVE", count: 3n }],
 };
@@ -125,39 +124,33 @@ before(async () => {
   const app = express();
 
   app.use(
-    createDashboardRouter(
-      authenticationDependencies,
-      {
-        prisma: prisma as never,
-        authorization: {
-          async findActiveTenantContext(userId, organizationId) {
-            if (
-              userId !== citizenId ||
-              organizationId !== organizationAId
-            ) {
-              return null;
-            }
-
-            return {
-              organization: {
-                id: organizationId,
-                status: "ACTIVE",
-              },
-              membership: {
-                id: randomUUID(),
-                organizationId,
-                userId,
-                role: "ORG_ADMIN",
-                status: "ACTIVE",
-              },
-            };
-          },
-          async findEventAuthorizationContext() {
+    createDashboardRouter(authenticationDependencies, {
+      prisma: prisma as never,
+      authorization: {
+        async findActiveTenantContext(userId, organizationId) {
+          if (userId !== citizenId || organizationId !== organizationAId) {
             return null;
-          },
+          }
+
+          return {
+            organization: {
+              id: organizationId,
+              status: "ACTIVE",
+            },
+            membership: {
+              id: randomUUID(),
+              organizationId,
+              userId,
+              role: "ORG_ADMIN",
+              status: "ACTIVE",
+            },
+          };
+        },
+        async findEventAuthorizationContext() {
+          return null;
         },
       },
-    ),
+    }),
   );
   app.use(errorMiddleware);
 
@@ -193,14 +186,8 @@ test("citizen and platform routes use the CASL dashboard contract", async () => 
     { ACTIVE: 2 },
   );
 
-  assert.equal(
-    (await get("super-admin", "/dashboards/citizen")).status,
-    403,
-  );
-  assert.equal(
-    (await get("citizen", "/dashboards/platform")).status,
-    403,
-  );
+  assert.equal((await get("super-admin", "/dashboards/citizen")).status, 403);
+  assert.equal((await get("citizen", "/dashboards/platform")).status, 403);
 
   const platform = await get("super-admin", "/dashboards/platform");
   assert.equal(platform.status, 200);
@@ -218,9 +205,11 @@ test("organization route requires the exact active tenant", async () => {
   );
   assert.equal(allowed.status, 200);
   assert.equal(
-    ((await allowed.json()) as {
-      data: { reviewsByState: Record<string, number> };
-    }).data.reviewsByState.VIEWED,
+    (
+      (await allowed.json()) as {
+        data: { reviewsByState: Record<string, number> };
+      }
+    ).data.reviewsByState.VIEWED,
     1,
   );
 
@@ -237,10 +226,7 @@ test("organization route requires the exact active tenant", async () => {
 
 test("dashboard routes reject missing authentication and incomplete profiles", async () => {
   assert.equal((await fetch(`${baseUrl}/dashboards/citizen`)).status, 401);
-  assert.equal(
-    (await get("incomplete", "/dashboards/citizen")).status,
-    403,
-  );
+  assert.equal((await get("incomplete", "/dashboards/citizen")).status, 403);
 });
 
 test("dashboard routes reject unsafe date ranges", async () => {

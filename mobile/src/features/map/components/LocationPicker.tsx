@@ -1,17 +1,13 @@
 import { useState } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { colors } from "../../../components/theme";
-import {
-  COLOMBO_MAP_CENTER,
-  isWithinSriLankaBounds,
-} from "../map.constants";
-import type { MapLocation, MapMarkerFeature } from "../map.types";
+import { COLOMBO_MAP_CENTER, isWithinSriLankaBounds } from "../map.constants";
+import type {
+  MapBoundaryFeatureCollection,
+  MapLocation,
+  MapMarkerFeature,
+} from "../map.types";
 import { EcoMap } from "./EcoMap";
 
 export interface LocationPickerProps {
@@ -22,6 +18,7 @@ export interface LocationPickerProps {
   confirmLabel?: string;
   referenceMarker?: MapMarkerFeature;
   focusReferenceLabel?: string;
+  boundaries?: MapBoundaryFeatureCollection;
   onChange?: (location: MapLocation) => void;
   onConfirm: (location: MapLocation) => void;
   onMapInteractionChange?: (isInteracting: boolean) => void;
@@ -35,6 +32,7 @@ export function LocationPicker({
   confirmLabel = "Confirm this location",
   referenceMarker,
   focusReferenceLabel = "Focus reference location",
+  boundaries,
   onChange,
   onConfirm,
   onMapInteractionChange,
@@ -59,7 +57,8 @@ export function LocationPicker({
       }
     : null;
   const activeFocusLocation =
-    referenceMarker && focusRequest?.referenceId === referenceMarker.properties.id
+    referenceMarker &&
+    focusRequest?.referenceId === referenceMarker.properties.id
       ? focusRequest.location
       : null;
 
@@ -97,12 +96,14 @@ export function LocationPicker({
     <View style={styles.shell}>
       <EcoMap
         markers={referenceMarker ? [referenceMarker] : []}
+        boundaries={boundaries}
         initialCenter={referenceLocation ?? selectedLocation}
         initialZoom={14}
         focusLocation={activeFocusLocation}
         selectedMarkerId={referenceMarker?.properties.id}
         selectedLocation={
-          referenceMarker && selectedReferenceId !== referenceMarker.properties.id
+          referenceMarker &&
+          selectedReferenceId !== referenceMarker.properties.id
             ? null
             : selectedLocation
         }
@@ -139,20 +140,19 @@ export function LocationPicker({
             accessibilityRole="button"
             accessibilityLabel={focusReferenceLabel}
             disabled={disabled}
-            onPress={() => setFocusRequest({
-              referenceId: referenceMarker.properties.id,
-              location: { ...referenceLocation },
-            })}
+            onPress={() =>
+              setFocusRequest({
+                referenceId: referenceMarker.properties.id,
+                location: { ...referenceLocation },
+              })
+            }
           >
             <Text style={styles.focusButtonText}>{focusReferenceLabel}</Text>
           </Pressable>
         ) : null}
 
         {validationMessage && (
-          <Text
-            style={styles.error}
-            accessibilityLiveRegion="assertive"
-          >
+          <Text style={styles.error} accessibilityLiveRegion="assertive">
             {validationMessage}
           </Text>
         )}

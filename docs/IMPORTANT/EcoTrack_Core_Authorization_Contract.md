@@ -26,9 +26,9 @@ ManageMembership
 Core actions:
 
 ```text
-ManageWorkflow, Publish, Join, Withdraw, ManageAvailability,
-AssignCoordinator, Allocate, RemoveParticipant, RecordAttendance,
-AddNote, UploadEvidence, Transition, Cancel, Complete, MarkRead
+ManageWorkflow, Publish, Join, Withdraw, AssignCoordinator,
+RemoveParticipant, RecordAttendance, AddNote, UploadEvidence,
+Cancel, Complete, MarkRead
 ```
 
 Do not pass raw action strings to `authorize`.
@@ -41,9 +41,8 @@ Import `Subjects` from `backend/src/authorization/subjects.ts`.
 Platform, UserProfile, OrganizationApplication, Organization,
 OrganizationServiceArea, OrganizationMembership, Notification,
 Incident, IncidentReview, CleanupWorkflow, CleanupEvent,
-EventSession, EventCoordinator, EventParticipant,
-ParticipantAvailability, SessionAllocation, EventNote,
-EventEvidence, Contribution, Achievement, Dashboard
+EventCoordinator, EventParticipant, EventNote, EventEvidence,
+Contribution, Achievement, Dashboard
 ```
 
 Do not create aliases such as `Task`, `VolunteerJob`, or `ReportReview` for these same core resources.
@@ -84,14 +83,14 @@ The incident repository must additionally prove approved active service-area cov
 ### Event route usable by ORG_ADMIN or assigned coordinator
 
 ```ts
-router.patch(
-  "/organizations/:organizationId/events/:eventId/status",
+router.post(
+  "/organizations/:organizationId/events/:eventId/complete",
   authenticate,
   requireCompletedProfile,
   createTenantMiddleware(authorizationDependencies),
   createEventAuthorizationMiddleware(authorizationDependencies),
   abilityMiddleware,
-  authorize(Actions.Transition, Subjects.CleanupEvent),
+  authorize(Actions.Complete, Subjects.CleanupEvent),
   controller,
 );
 ```
@@ -119,7 +118,7 @@ Feature code must type the loaded request property through Express augmentation.
 
 - citizen incident create/read/own-report abilities;
 - public cleanup-event read/join abilities;
-- own withdrawal and availability abilities;
+- own event withdrawal ability;
 - own notifications, contributions, achievements, and dashboard;
 - organization operations only through an active verified membership.
 
@@ -127,21 +126,21 @@ Feature code must type the loaded request property through Express augmentation.
 
 - manages memberships and workflow only in that organization;
 - reviews the organization’s legitimately visible incidents;
-- creates/publishes/transitions/cancels/completes organization events;
-- manages same-organization coordinators, participants, allocations, attendance, notes, and evidence.
+- creates/publishes/cancels/completes organization events;
+- manages same-organization coordinators, participants, event-level attendance, notes, and evidence.
 
 ### ORG_MEMBER in active tenant
 
 - does not automatically manage events;
 - receives operational permissions only after `createEventAuthorizationMiddleware` proves a current coordinator assignment for the route event;
 - cannot publish/cancel events or manage organization memberships;
-- can perform allowed coordination, attendance, note/evidence, transition, and completion operations only for the assigned event, with service workflow checks still required.
+- can perform allowed coordination, attendance, note/evidence, and completion operations only for the assigned event, with service workflow checks still required.
 
 ### SUPER_ADMIN
 
 - platform/dashboard oversight and organization-application review;
 - public/oversight reads for organizations, service areas, incidents, and cleanup events;
-- no ordinary incident creation, event publication, volunteer joining/allocation, attendance, cancellation, or completion ability.
+- no ordinary incident creation, event publication, volunteer joining, attendance, cancellation, or completion ability.
 
 ### Incomplete or inactive profile
 

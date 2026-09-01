@@ -14,81 +14,73 @@ import { incidentDependencies } from "./modules/incidents/incident.dependencies.
 import { organizationApplicationDependencies } from "./modules/organizations/application/application.dependencies.js";
 import { rewardDependencies } from "./modules/rewards/reward.dependencies.js";
 import { dashboardDependencies } from "./modules/dashboards/dashboard.dependencies.js";
+import { processDueCleanupEventReminders } from "./modules/cleanupEvents/reminders/cleanupEventReminder.service.js";
 
-const app = createApp(
-  authenticationDependencies,
-  {
-    webOrigin: env.WEB_ORIGIN,
-    authorizationDependencies,
-    cleanupWorkflowDependencies,
-    cleanupEventDependencies,
-    membershipAdministrationDependencies,
-    notificationDependencies,
-    membershipSelfServiceDependencies,
-    incidentDependencies,
-    organizationApplicationDependencies,
-    rewardDependencies,
-    dashboardDependencies,
-  },
-);
+const app = createApp(authenticationDependencies, {
+  webOrigin: env.WEB_ORIGIN,
+  authorizationDependencies,
+  cleanupWorkflowDependencies,
+  cleanupEventDependencies,
+  membershipAdministrationDependencies,
+  notificationDependencies,
+  membershipSelfServiceDependencies,
+  incidentDependencies,
+  organizationApplicationDependencies,
+  rewardDependencies,
+  dashboardDependencies,
+});
 
-const server = app.listen(
-  env.PORT,
-  () => {
-    console.log(
-      `EcoTrack backend listening on port ${env.PORT}.`,
-    );
+const server = app.listen(env.PORT, () => {
+  console.log(`EcoTrack backend listening on port ${env.PORT}.`);
+});
+
+const reminderInterval = setInterval(() => {
+  void processDueCleanupEventReminders(cleanupEventDependencies).catch(
+    (error: unknown) => {
+      console.error("Cleanup-event reminder processing failed:", error);
+    },
+  );
+}, 30_000);
+reminderInterval.unref();
+void processDueCleanupEventReminders(cleanupEventDependencies).catch(
+  (error: unknown) => {
+    console.error("Initial cleanup-event reminder processing failed:", error);
   },
 );
 
 let shutdownStarted = false;
 
-async function shutdown(
-  signal: string,
-): Promise<void> {
+async function shutdown(signal: string): Promise<void> {
   if (shutdownStarted) {
     return;
   }
 
   shutdownStarted = true;
+  clearInterval(reminderInterval);
 
-  console.log(
-    `${signal} received. Shutting down EcoTrack backend.`,
-  );
+  console.log(`${signal} received. Shutting down EcoTrack backend.`);
 
   server.close(async (serverError) => {
     try {
       await prisma.$disconnect();
     } catch (disconnectError) {
-      console.error(
-        "Prisma disconnection failed:",
-        disconnectError,
-      );
+      console.error("Prisma disconnection failed:", disconnectError);
 
       process.exitCode = 1;
     }
 
     if (serverError) {
-      console.error(
-        "HTTP server shutdown failed:",
-        serverError,
-      );
+      console.error("HTTP server shutdown failed:", serverError);
 
       process.exitCode = 1;
     }
   });
 }
 
-process.once(
-  "SIGINT",
-  () => {
-    void shutdown("SIGINT");
-  },
-);
+process.once("SIGINT", () => {
+  void shutdown("SIGINT");
+});
 
-process.once(
-  "SIGTERM",
-  () => {
-    void shutdown("SIGTERM");
-  },
-);
+process.once("SIGTERM", () => {
+  void shutdown("SIGTERM");
+});

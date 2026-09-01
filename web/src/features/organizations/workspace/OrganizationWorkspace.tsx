@@ -5,7 +5,10 @@ import { total } from "../../dashboards/dashboard.utils";
 
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import type { ActiveOrganizationMembership } from "../../memberships/administration/membershipAdministration.types";
-import { CleanupEventDraftEditor, OrganizationCleanupEventList } from "../../cleanup-events";
+import {
+  CleanupEventDraftEditor,
+  OrganizationCleanupEventList,
+} from "../../cleanup-events";
 import { MembershipAdministrationPage } from "../../memberships/administration/MembershipAdministrationPage";
 
 import "./organizationWorkspace.css";
@@ -20,7 +23,12 @@ interface OrganizationWorkspaceProps {
   onBackToDashboard: () => void;
   onViewApplications: () => void;
   onSignOut: () => void;
-  initialTab?: "overview" | "incident-discovery" | "event-drafts" | "events" | "members";
+  initialTab?:
+    | "overview"
+    | "incident-discovery"
+    | "event-drafts"
+    | "events"
+    | "members";
   initialIncidentId?: string;
   initialEventId?: string;
 }
@@ -38,19 +46,26 @@ export function OrganizationWorkspace({
   initialIncidentId,
   initialEventId,
 }: OrganizationWorkspaceProps) {
-  const [activeTab, setActiveTab] =
-    useState<"overview" | "incident-discovery" | "event-drafts" | "events" | "members">(initialTab);
-  const [linkedIncidentId, setLinkedIncidentId] = useState<string | undefined>(initialIncidentId);
-  const [selectedOwnedEventId, setSelectedOwnedEventId] = useState<string | undefined>(initialEventId);
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "incident-discovery" | "event-drafts" | "events" | "members"
+  >(initialTab);
+  const [linkedIncidentId, setLinkedIncidentId] = useState<string | undefined>(
+    initialIncidentId,
+  );
+  const [selectedOwnedEventId, setSelectedOwnedEventId] = useState<
+    string | undefined
+  >(initialEventId);
   const [selectedDraftId, setSelectedDraftId] = useState<string | undefined>(
     initialTab === "event-drafts" ? initialEventId : undefined,
   );
-  const membership =
-    memberships.find(
-      (item) => item.organization.id === selectedOrganizationId,
-    );
+  const membership = memberships.find(
+    (item) => item.organization.id === selectedOrganizationId,
+  );
   const organizationId = membership?.organization.id ?? "";
-  const loadSummary = useCallback(() => getOrganizationSummary(accessToken, organizationId), [accessToken, organizationId]);
+  const loadSummary = useCallback(
+    () => getOrganizationSummary(accessToken, organizationId),
+    [accessToken, organizationId],
+  );
 
   if (!membership) {
     return null;
@@ -107,7 +122,10 @@ export function OrganizationWorkspace({
           )}
         </section>
 
-        <nav className="organization-workspace-tabs" aria-label="Organization workspace">
+        <nav
+          className="organization-workspace-tabs"
+          aria-label="Organization workspace"
+        >
           <button
             type="button"
             className={activeTab === "overview" ? "is-active" : undefined}
@@ -121,8 +139,12 @@ export function OrganizationWorkspace({
           {activeTab === "event-drafts" && (
             <span aria-current="page">/ Cleanup-event drafts</span>
           )}
-          {activeTab === "events" && <span aria-current="page">/ Organization events</span>}
-          {activeTab === "members" && <span aria-current="page">/ Membership administration</span>}
+          {activeTab === "events" && (
+            <span aria-current="page">/ Organization events</span>
+          )}
+          {activeTab === "members" && (
+            <span aria-current="page">/ Membership administration</span>
+          )}
         </nav>
 
         {activeTab === "members" && membership.role === "ORG_ADMIN" ? (
@@ -159,13 +181,20 @@ export function OrganizationWorkspace({
             accessToken={accessToken}
             organizationId={membership.organization.id}
             canReview={membership.role === "ORG_ADMIN"}
-            onCreateDraftFromIncident={membership.role === "ORG_ADMIN" ? (incidentId) => {
-              setLinkedIncidentId(incidentId);
-              setActiveTab("event-drafts");
-            } : undefined}
+            onCreateDraftFromIncident={
+              membership.role === "ORG_ADMIN"
+                ? (incidentId) => {
+                    setLinkedIncidentId(incidentId);
+                    setActiveTab("event-drafts");
+                  }
+                : undefined
+            }
             onOpenEvent={(eventId, lifecycleStatus) => {
               setSelectedOwnedEventId(eventId);
-              if (lifecycleStatus === "DRAFT" && membership.role === "ORG_ADMIN") {
+              if (
+                lifecycleStatus === "DRAFT" &&
+                membership.role === "ORG_ADMIN"
+              ) {
                 setSelectedDraftId(eventId);
                 setActiveTab("event-drafts");
               } else {
@@ -176,22 +205,44 @@ export function OrganizationWorkspace({
           />
         ) : (
           <>
-            <SummaryPanel load={loadSummary} label="Organization summary">{(summary) => (
-              <section className="organization-workspace-access" aria-label="Organization metrics">
-                <div><small>Covered incidents</small><strong>{total(summary.coveringIncidentsByState)}</strong></div>
-                <div><small>Upcoming sessions</small><strong>{summary.upcomingSessions}</strong></div>
-                <div><small>Joined participants</small><strong>{summary.joinedParticipants}</strong></div>
-                <div><small>Membership requests</small><strong>{summary.pendingMembershipRequests}</strong></div>
-              </section>
-            )}</SummaryPanel>
-            <section className="organization-workspace-access" aria-label="Organization access">
+            <SummaryPanel load={loadSummary} label="Organization summary">
+              {(summary) => (
+                <section
+                  className="organization-workspace-access"
+                  aria-label="Organization metrics"
+                >
+                  <div>
+                    <small>Covered incidents</small>
+                    <strong>{total(summary.coveringIncidentsByState)}</strong>
+                  </div>
+                  <div>
+                    <small>Upcoming events</small>
+                    <strong>{summary.upcomingEvents}</strong>
+                  </div>
+                  <div>
+                    <small>Joined participants</small>
+                    <strong>{summary.joinedParticipants}</strong>
+                  </div>
+                  <div>
+                    <small>Membership requests</small>
+                    <strong>{summary.pendingMembershipRequests}</strong>
+                  </div>
+                </section>
+              )}
+            </SummaryPanel>
+            <section
+              className="organization-workspace-access"
+              aria-label="Organization access"
+            >
               <div>
                 <small>Membership</small>
                 <strong>{roleLabel}</strong>
               </div>
               <div>
                 <small>Status</small>
-                <strong className="organization-workspace-status">Active</strong>
+                <strong className="organization-workspace-status">
+                  Active
+                </strong>
               </div>
               <div>
                 <small>Workspace</small>
@@ -209,13 +260,19 @@ export function OrganizationWorkspace({
               </button>
             </section>
 
-            <section className="organization-workspace-overview" aria-label="Workspace tools">
+            <section
+              className="organization-workspace-overview"
+              aria-label="Workspace tools"
+            >
               <button
                 type="button"
                 className="organization-workspace-tool-card"
                 onClick={() => setActiveTab("incident-discovery")}
               >
-                <span className="organization-workspace-tool-icon" aria-hidden="true">
+                <span
+                  className="organization-workspace-tool-icon"
+                  aria-hidden="true"
+                >
                   <svg viewBox="0 0 24 24">
                     <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" />
                     <path d="M12 7v6M12 17h.01" />
@@ -224,17 +281,42 @@ export function OrganizationWorkspace({
                 <span className="organization-workspace-tool-copy">
                   <small>Incident discovery</small>
                   <strong>Review covered incidents</strong>
-                  <span>Search covered reports and review them by GN Division.</span>
+                  <span>
+                    Search covered reports and review them by GN Division.
+                  </span>
                 </span>
-                <span className="organization-workspace-tool-action" aria-hidden="true">
+                <span
+                  className="organization-workspace-tool-action"
+                  aria-hidden="true"
+                >
                   Open <b>&rarr;</b>
                 </span>
               </button>
               {membership.role === "ORG_ADMIN" && (
-                <button type="button" className="organization-workspace-tool-card" onClick={() => setActiveTab("members")}>
-                  <span className="organization-workspace-tool-icon" aria-hidden="true">M</span>
-                  <span className="organization-workspace-tool-copy"><small>Membership administration</small><strong>Members and requests</strong><span>Review requests and manage roles for this organization.</span></span>
-                  <span className="organization-workspace-tool-action" aria-hidden="true">Open &rarr;</span>
+                <button
+                  type="button"
+                  className="organization-workspace-tool-card"
+                  onClick={() => setActiveTab("members")}
+                >
+                  <span
+                    className="organization-workspace-tool-icon"
+                    aria-hidden="true"
+                  >
+                    M
+                  </span>
+                  <span className="organization-workspace-tool-copy">
+                    <small>Membership administration</small>
+                    <strong>Members and requests</strong>
+                    <span>
+                      Review requests and manage roles for this organization.
+                    </span>
+                  </span>
+                  <span
+                    className="organization-workspace-tool-action"
+                    aria-hidden="true"
+                  >
+                    Open &rarr;
+                  </span>
                 </button>
               )}
               {membership.role === "ORG_ADMIN" && (
@@ -246,19 +328,52 @@ export function OrganizationWorkspace({
                     setActiveTab("event-drafts");
                   }}
                 >
-                  <span className="organization-workspace-tool-icon" aria-hidden="true">+</span>
+                  <span
+                    className="organization-workspace-tool-icon"
+                    aria-hidden="true"
+                  >
+                    +
+                  </span>
                   <span className="organization-workspace-tool-copy">
                     <small>Cleanup-event planning</small>
                     <strong>Draft workspace</strong>
-                    <span>Create private plans, sessions, and coordinator assignments.</span>
+                    <span>
+                      Create one-date event plans and assign coordinators.
+                    </span>
                   </span>
-                  <span className="organization-workspace-tool-action" aria-hidden="true">Open &rarr;</span>
+                  <span
+                    className="organization-workspace-tool-action"
+                    aria-hidden="true"
+                  >
+                    Open &rarr;
+                  </span>
                 </button>
               )}
-              <button type="button" className="organization-workspace-tool-card" onClick={() => setActiveTab("events")}>
-                <span className="organization-workspace-tool-icon" aria-hidden="true">E</span>
-                <span className="organization-workspace-tool-copy"><small>Cleanup events</small><strong>Manage event activity</strong><span>See this organization&apos;s private drafts and published events.</span></span>
-                <span className="organization-workspace-tool-action" aria-hidden="true">Open &rarr;</span>
+              <button
+                type="button"
+                className="organization-workspace-tool-card"
+                onClick={() => setActiveTab("events")}
+              >
+                <span
+                  className="organization-workspace-tool-icon"
+                  aria-hidden="true"
+                >
+                  E
+                </span>
+                <span className="organization-workspace-tool-copy">
+                  <small>Cleanup events</small>
+                  <strong>Manage event activity</strong>
+                  <span>
+                    See this organization&apos;s private drafts and published
+                    events.
+                  </span>
+                </span>
+                <span
+                  className="organization-workspace-tool-action"
+                  aria-hidden="true"
+                >
+                  Open &rarr;
+                </span>
               </button>
             </section>
           </>

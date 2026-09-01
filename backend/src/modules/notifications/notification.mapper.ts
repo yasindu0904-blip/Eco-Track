@@ -11,7 +11,7 @@ const safeNotificationDataKeys = [
   "incidentId",
   "membershipRequestId",
   "organizationId",
-  "sessionId",
+  "startsAt",
   "status",
 ] as const satisfies ReadonlyArray<keyof SafeNotificationData>;
 
@@ -29,11 +29,7 @@ type NotificationRecord = {
 export function sanitizeNotificationData(
   data: unknown,
 ): SafeNotificationData | null {
-  if (
-    !data ||
-    typeof data !== "object" ||
-    Array.isArray(data)
-  ) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
     return null;
   }
 
@@ -48,14 +44,10 @@ export function sanitizeNotificationData(
     }
   }
 
-  return Object.keys(safeData).length > 0
-    ? safeData
-    : null;
+  return Object.keys(safeData).length > 0 ? safeData : null;
 }
 
-export function toNotificationDto(
-  record: NotificationRecord,
-): NotificationDto {
+export function toNotificationDto(record: NotificationRecord): NotificationDto {
   return {
     id: record.id,
     organizationId: record.organizationId,

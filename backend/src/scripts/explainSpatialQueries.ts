@@ -60,10 +60,13 @@ export const acceptedPlanIndexes: Record<string, readonly string[]> = {
   ],
 };
 
-export const boundedFixtureScanLimits: Record<string, {
-  rowCountKey: keyof FixtureRowCounts;
-  maximumRows: number;
-}> = {
+export const boundedFixtureScanLimits: Record<
+  string,
+  {
+    rowCountKey: keyof FixtureRowCounts;
+    maximumRows: number;
+  }
+> = {
   serviceAreaViewport: {
     rowCountKey: "organizationServiceAreas",
     maximumRows: 101,
@@ -103,17 +106,20 @@ export function hashText(value: string): string {
 }
 
 export async function captureSourceHashes(): Promise<Record<string, string>> {
-  return Object.fromEntries(await Promise.all(
-    Object.entries(sourceFiles).map(async ([name, url]) => [
-      name,
-      hashText(await readFile(url, "utf8")),
-    ]),
-  ));
+  return Object.fromEntries(
+    await Promise.all(
+      Object.entries(sourceFiles).map(async ([name, url]) => [
+        name,
+        hashText(await readFile(url, "utf8")),
+      ]),
+    ),
+  );
 }
 
-const explainMode = process.env.MAP_EXPLAIN_ANALYZE === "false"
-  ? "EXPLAIN (FORMAT JSON)"
-  : "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)";
+const explainMode =
+  process.env.MAP_EXPLAIN_ANALYZE === "false"
+    ? "EXPLAIN (FORMAT JSON)"
+    : "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)";
 
 export const queries = {
   incidentViewport: `
@@ -176,12 +182,7 @@ export const queries = {
     JOIN "organizations" organization
       ON organization."id" = event."organization_id"
      AND organization."status" = 'ACTIVE'::"OrganizationStatus"
-    WHERE event."lifecycle_status" IN (
-      'PUBLISHED'::"CleanupLifecycleStatus",
-      'SCHEDULED'::"CleanupLifecycleStatus",
-      'IN_PROGRESS'::"CleanupLifecycleStatus",
-      'COMPLETION_SUBMITTED'::"CleanupLifecycleStatus"
-    )
+    WHERE event."lifecycle_status" = 'PUBLISHED'::"CleanupLifecycleStatus"
       AND event."published_at" IS NOT NULL
       AND extensions.ST_Covers(
         extensions.ST_MakeEnvelope(79.80, 6.80, 80.00, 7.10, 4326)::extensions.geography,
@@ -196,12 +197,7 @@ export const queries = {
     JOIN "organizations" organization
       ON organization."id" = event."organization_id"
      AND organization."status" = 'ACTIVE'::"OrganizationStatus"
-    WHERE event."lifecycle_status" IN (
-      'PUBLISHED'::"CleanupLifecycleStatus",
-      'SCHEDULED'::"CleanupLifecycleStatus",
-      'IN_PROGRESS'::"CleanupLifecycleStatus",
-      'COMPLETION_SUBMITTED'::"CleanupLifecycleStatus"
-    )
+    WHERE event."lifecycle_status" = 'PUBLISHED'::"CleanupLifecycleStatus"
       AND event."published_at" IS NOT NULL
       AND extensions.ST_DWithin(
         event."event_geo_point",
@@ -292,50 +288,68 @@ export async function main(): Promise<void> {
       (SELECT COUNT(*)::integer FROM "administrative_areas") AS "administrativeAreas"
   `;
 
-  const availableIndexNames = new Set(indexes.map(({ indexname }) => indexname));
-  const missingIndexes = requiredIndexes.filter((name) => !availableIndexNames.has(name));
+  const availableIndexNames = new Set(
+    indexes.map(({ indexname }) => indexname),
+  );
+  const missingIndexes = requiredIndexes.filter(
+    (name) => !availableIndexNames.has(name),
+  );
   if (missingIndexes.length > 0) {
-    throw new Error(`Missing required MAP-03 indexes: ${missingIndexes.join(", ")}`);
+    throw new Error(
+      `Missing required MAP-03 indexes: ${missingIndexes.join(", ")}`,
+    );
   }
 
   const plans: Record<string, unknown> = {};
   const planSummary: Record<string, PlanSummary> = {};
   const indexEligibilityPlans: Record<string, unknown> = {};
   const indexEligibilitySummary: Record<string, PlanSummary> = {};
-  const planChecks: Record<string, {
-    acceptedIndexes: readonly string[];
-    selectedAcceptedIndexes: string[];
-    indexEligibilitySelectedIndexes: string[];
-    naturalIndexSelected: boolean;
-    boundedFixtureScanAccepted: boolean;
-    evidenceKind: "NATURAL_INDEX" | "BOUNDED_FIXTURE_SCAN" | "UNSATISFIED";
-    satisfied: boolean;
-  }> = {};
+  const planChecks: Record<
+    string,
+    {
+      acceptedIndexes: readonly string[];
+      selectedAcceptedIndexes: string[];
+      indexEligibilitySelectedIndexes: string[];
+      naturalIndexSelected: boolean;
+      boundedFixtureScanAccepted: boolean;
+      evidenceKind: "NATURAL_INDEX" | "BOUNDED_FIXTURE_SCAN" | "UNSATISFIED";
+      satisfied: boolean;
+    }
+  > = {};
   for (const [name, sql] of Object.entries(queries)) {
-    const rows = await prisma.$queryRawUnsafe<QueryPlanRow[]>(`${explainMode} ${sql}`);
+    const rows = await prisma.$queryRawUnsafe<QueryPlanRow[]>(
+      `${explainMode} ${sql}`,
+    );
     plans[name] = rows[0]?.["QUERY PLAN"] ?? null;
     planSummary[name] = summarizePlan(plans[name]);
     const acceptedIndexes = acceptedPlanIndexes[name] ?? [];
     const selectedAcceptedIndexes = acceptedIndexes.filter((indexName) =>
-      planSummary[name]!.indexes.includes(indexName));
+      planSummary[name]!.indexes.includes(indexName),
+    );
     const naturalIndexSelected = selectedAcceptedIndexes.length > 0;
     const boundedScan = boundedFixtureScanLimits[name];
     const boundedFixtureScanAccepted = Boolean(
-      boundedScan && rowCounts &&
-      rowCounts[boundedScan.rowCountKey] <= boundedScan.maximumRows,
+      boundedScan &&
+        rowCounts &&
+        rowCounts[boundedScan.rowCountKey] <= boundedScan.maximumRows,
     );
     if (!naturalIndexSelected && boundedFixtureScanAccepted) {
       const eligibilityRows = await prisma.$transaction(async (transaction) => {
         await transaction.$executeRawUnsafe("SET LOCAL enable_seqscan = off");
-        return transaction.$queryRawUnsafe<QueryPlanRow[]>(`EXPLAIN (FORMAT JSON) ${sql}`);
+        return transaction.$queryRawUnsafe<QueryPlanRow[]>(
+          `EXPLAIN (FORMAT JSON) ${sql}`,
+        );
       });
       indexEligibilityPlans[name] = eligibilityRows[0]?.["QUERY PLAN"] ?? null;
-      indexEligibilitySummary[name] = summarizePlan(indexEligibilityPlans[name]);
+      indexEligibilitySummary[name] = summarizePlan(
+        indexEligibilityPlans[name],
+      );
     }
-    const indexEligibilitySelectedIndexes = acceptedIndexes.filter((indexName) =>
-      indexEligibilitySummary[name]?.indexes.includes(indexName));
-    const boundedFixtureEvidenceSatisfied = boundedFixtureScanAccepted &&
-      indexEligibilitySelectedIndexes.length > 0;
+    const indexEligibilitySelectedIndexes = acceptedIndexes.filter(
+      (indexName) => indexEligibilitySummary[name]?.indexes.includes(indexName),
+    );
+    const boundedFixtureEvidenceSatisfied =
+      boundedFixtureScanAccepted && indexEligibilitySelectedIndexes.length > 0;
     planChecks[name] = {
       acceptedIndexes,
       selectedAcceptedIndexes,
@@ -365,19 +379,23 @@ export async function main(): Promise<void> {
   );
   const sourceHashes = await captureSourceHashes();
 
-  const output = `${JSON.stringify({
-    capturedAt: new Date().toISOString(),
-    explainMode,
-    rowCounts,
-    indexes,
-    planSummary,
-    indexEligibilitySummary,
-    planChecks,
-    queryHashes,
-    sourceHashes,
-    plans,
-    indexEligibilityPlans,
-  }, null, 2)}\n`;
+  const output = `${JSON.stringify(
+    {
+      capturedAt: new Date().toISOString(),
+      explainMode,
+      rowCounts,
+      indexes,
+      planSummary,
+      indexEligibilitySummary,
+      planChecks,
+      queryHashes,
+      sourceHashes,
+      plans,
+      indexEligibilityPlans,
+    },
+    null,
+    2,
+  )}\n`;
   const outputPath = process.env.MAP_EXPLAIN_OUTPUT?.trim();
   if (outputPath) {
     await writeFile(outputPath, output, "utf8");
@@ -386,7 +404,10 @@ export async function main(): Promise<void> {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   void main()
     .catch((error: unknown) => {
       console.error("Unable to capture EcoTrack spatial query plans.", error);

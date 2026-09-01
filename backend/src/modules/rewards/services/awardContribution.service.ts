@@ -48,22 +48,18 @@ async function awardContribution(
     transaction,
     contribution.userId,
   );
-  const qualifyingAchievements =
-    await listQualifyingAchievementDefinitions(
-      transaction,
-      totalPoints,
-    );
+  const qualifyingAchievements = await listQualifyingAchievementDefinitions(
+    transaction,
+    totalPoints,
+  );
   const newAchievementIds: string[] = [];
 
   for (const achievement of qualifyingAchievements) {
-    const userAchievementId = await insertUserAchievementOnce(
-      transaction,
-      {
-        userId: contribution.userId,
-        achievementId: achievement.id,
-        contributionId: contribution.id,
-      },
-    );
+    const userAchievementId = await insertUserAchievementOnce(transaction, {
+      userId: contribution.userId,
+      achievementId: achievement.id,
+      contributionId: contribution.id,
+    });
 
     if (!userAchievementId) {
       continue;
@@ -117,27 +113,27 @@ export async function awardVerifiedIncidentReportContribution(
   });
 }
 
-export async function awardSessionAttendanceContribution(
+export async function awardEventAttendanceContribution(
   transaction: RewardTransaction,
-  sessionAllocationId: string,
+  eventParticipantId: string,
 ): Promise<AwardContributionResult> {
   const source = await findAttendanceRewardSource(
     transaction,
-    sessionAllocationId,
+    eventParticipantId,
   );
 
   if (!source) {
     throw new ApplicationError(
       409,
-      "SESSION_ATTENDANCE_NOT_CONFIRMED",
-      "Attendance points require an allocation marked ATTENDED by an authorized organization user.",
+      "EVENT_ATTENDANCE_NOT_CONFIRMED",
+      "Attendance points require an event participant marked ATTENDED by an authorized organization user.",
     );
   }
 
   return awardContribution(transaction, {
-    type: ContributionType.SESSION_ATTENDED,
-    userId: source.participant.userId,
-    sessionAllocationId,
+    type: ContributionType.EVENT_ATTENDED,
+    userId: source.userId,
+    eventParticipantId,
     recordedByUserId: source.attendanceMarkedBy?.userId ?? null,
   });
 }
@@ -159,7 +155,7 @@ export async function awardCompletedEventContribution(
     throw new ApplicationError(
       409,
       "EVENT_COMPLETION_NOT_CONFIRMED",
-      "Event-completion points require a completed event and confirmed session attendance.",
+      "Event-completion points require a completed event and confirmed attendance.",
     );
   }
 

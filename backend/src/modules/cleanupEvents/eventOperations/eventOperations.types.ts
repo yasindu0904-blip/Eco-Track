@@ -2,11 +2,12 @@ import type {
   CleanupLifecycleStatus,
   EvidenceType,
   NoteVisibility,
-  SessionStatus,
 } from "../../../generated/prisma/enums.js";
 
 export type EventEvidenceStorage = {
-  createUploadIntent(storagePath: string): Promise<{ token: string; signedUrl: string }>;
+  createUploadIntent(
+    storagePath: string,
+  ): Promise<{ token: string; signedUrl: string }>;
   objectExists(storagePath: string): Promise<boolean>;
   createDownloadUrl(storagePath: string): Promise<string>;
 };
@@ -21,7 +22,6 @@ export type EventOperationNoteDto = {
 
 export type EventOperationEvidenceDto = {
   id: string;
-  sessionId: string | null;
   type: EvidenceType;
   caption: string | null;
   url: string;
@@ -29,19 +29,18 @@ export type EventOperationEvidenceDto = {
   uploadedAt: string;
 };
 
-export type EventOperationSessionDto = {
-  id: string;
-  sessionDate: string;
-  startTime: string;
-  endTime: string;
-  status: SessionStatus;
-  updatedAt: string;
-};
-
 export type EventOperationHistoryDto = {
   id: string;
-  fromStatus: { id: string; label: string; lifecycleStatus: CleanupLifecycleStatus } | null;
-  toStatus: { id: string; label: string; lifecycleStatus: CleanupLifecycleStatus };
+  fromStatus: {
+    id: string;
+    label: string;
+    lifecycleStatus: CleanupLifecycleStatus;
+  } | null;
+  toStatus: {
+    id: string;
+    label: string;
+    lifecycleStatus: CleanupLifecycleStatus;
+  };
   changedBy: { id: string; fullName: string | null };
   notes: string | null;
   changedAt: string;
@@ -54,6 +53,7 @@ export type EventOperationsDto = {
     incidentId: string | null;
     title: string;
     lifecycleStatus: CleanupLifecycleStatus;
+    startsAt: string | null;
     updatedAt: string;
     completedAt: string | null;
     cancelledAt: string | null;
@@ -65,16 +65,9 @@ export type EventOperationsDto = {
       lifecycleStatus: CleanupLifecycleStatus;
     };
   };
-  sessions: EventOperationSessionDto[];
   notes: EventOperationNoteDto[];
   evidence: EventOperationEvidenceDto[];
   history: EventOperationHistoryDto[];
-  availableTransitions: Array<{
-    id: string;
-    code: string;
-    label: string;
-    lifecycleStatus: CleanupLifecycleStatus;
-  }>;
 };
 
 export type ParticipantEventUpdatesDto = {
@@ -108,7 +101,13 @@ export type EventLifecycleMutationDto = {
   eventId: string;
   lifecycleStatus: CleanupLifecycleStatus;
   updatedAt: string;
-  incidentStatus: "ACTIVE" | "CLEANUP_ORGANIZED" | "RESOLVED" | "EXPIRED" | "ARCHIVED" | null;
+  incidentStatus:
+    | "ACTIVE"
+    | "CLEANUP_ORGANIZED"
+    | "RESOLVED"
+    | "EXPIRED"
+    | "ARCHIVED"
+    | null;
   rewardsAwarded: number;
   idempotentReplay: boolean;
 };

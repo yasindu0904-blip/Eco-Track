@@ -8,10 +8,7 @@ import express from "express";
 
 import { authorizationDependencies } from "../../authorization/authorization.dependencies.js";
 import { prisma } from "../../database/prisma.js";
-import {
-  AccountStatus,
-  PlatformRole,
-} from "../../generated/prisma/enums.js";
+import { AccountStatus, PlatformRole } from "../../generated/prisma/enums.js";
 import { errorMiddleware } from "../../middleware/error.middleware.js";
 import type { AuthenticationDependencies } from "../auth/auth.types.js";
 import { createDashboardRouter } from "./dashboard.routes.js";
@@ -267,7 +264,8 @@ before(async () => {
   const initialWorkflowStatuses = await prisma.cleanupWorkflowStatus.findMany({
     where: {
       organizationId: { in: [organizationAId, organizationBId] },
-      isInitial: true,
+      mappedLifecycleStatus: "PUBLISHED",
+      isActive: true,
     },
     select: { id: true, organizationId: true },
   });
@@ -278,52 +276,34 @@ before(async () => {
     (status) => status.organizationId === organizationBId,
   )!.id;
 
+  const futureStartsAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1_000);
   await prisma.cleanupEvent.createMany({
     data: [
       {
         id: eventAId,
         organizationId: organizationAId,
         currentWorkflowStatusId: workflowStatusAId,
-        lifecycleStatus: "DRAFT",
+        lifecycleStatus: "PUBLISHED",
         createdByMembershipId: membershipAId,
         title: "Organization A dashboard event",
         description: "Organization A event summary fixture.",
         eventLatitude: 6.9271,
         eventLongitude: 79.8612,
+        startsAt: futureStartsAt,
+        publishedAt: new Date(),
       },
       {
         id: eventBId,
         organizationId: organizationBId,
         currentWorkflowStatusId: workflowStatusBId,
-        lifecycleStatus: "DRAFT",
+        lifecycleStatus: "PUBLISHED",
         createdByMembershipId: membershipBId,
         title: "Organization B dashboard event",
         description: "Organization B event summary fixture.",
         eventLatitude: 6.0535,
         eventLongitude: 80.221,
-      },
-    ],
-  });
-
-  const futureSessionDate = new Date();
-  futureSessionDate.setUTCDate(futureSessionDate.getUTCDate() + 5);
-  futureSessionDate.setUTCHours(0, 0, 0, 0);
-
-  await prisma.eventSession.createMany({
-    data: [
-      {
-        cleanupEventId: eventAId,
-        sessionDate: futureSessionDate,
-        startTime: new Date("1970-01-01T08:00:00.000Z"),
-        endTime: new Date("1970-01-01T10:00:00.000Z"),
-        status: "SCHEDULED",
-      },
-      {
-        cleanupEventId: eventBId,
-        sessionDate: futureSessionDate,
-        startTime: new Date("1970-01-01T11:00:00.000Z"),
-        endTime: new Date("1970-01-01T13:00:00.000Z"),
-        status: "SCHEDULED",
+        startsAt: futureStartsAt,
+        publishedAt: new Date(),
       },
     ],
   });
@@ -430,9 +410,6 @@ after(async () => {
   await prisma.eventParticipant.deleteMany({
     where: { cleanupEventId: { in: [eventAId, eventBId] } },
   });
-  await prisma.eventSession.deleteMany({
-    where: { cleanupEventId: { in: [eventAId, eventBId] } },
-  });
   await prisma.cleanupEvent.deleteMany({
     where: { id: { in: [eventAId, eventBId] } },
   });
@@ -494,7 +471,7 @@ test("organization summaries remain isolated across service areas and tenant dat
       coveringIncidentsByState: Record<string, number>;
       reviewsByState: Record<string, number>;
       eventsByLifecycle: Record<string, number>;
-      upcomingSessions: number;
+      upcomingEvents: number;
       joinedParticipants: number;
       pendingMembershipRequests: number;
     };
@@ -505,8 +482,10 @@ test("organization summaries remain isolated across service areas and tenant dat
     ACTIVE: 1,
   });
   assert.deepEqual(organizationASummary.data.reviewsByState, { VIEWED: 1 });
-  assert.deepEqual(organizationASummary.data.eventsByLifecycle, { DRAFT: 1 });
-  assert.equal(organizationASummary.data.upcomingSessions, 1);
+  assert.deepEqual(organizationASummary.data.eventsByLifecycle, {
+    PUBLISHED: 1,
+  });
+  assert.equal(organizationASummary.data.upcomingEvents, 1);
   assert.equal(organizationASummary.data.joinedParticipants, 1);
   assert.equal(organizationASummary.data.pendingMembershipRequests, 1);
 

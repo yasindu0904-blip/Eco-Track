@@ -1,60 +1,48 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ComponentProps } from "react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { CleanupEventDraftEditor } from "./CleanupEventDraftEditor";
-import { addSession, createDraft, getDraft, listDrafts } from "./cleanupEvent.api";
 import { listOrganizationMembers } from "../memberships/administration/membershipAdministration.api";
 import { getOrganizationIncidentDetail } from "../organizations/workspace/organizationIncidentDiscovery.api";
+import { CleanupEventDraftEditor } from "./CleanupEventDraftEditor";
+import { createDraft, listDrafts } from "./cleanupEvent.api";
 
-vi.mock("../maps", async () => {
-  const actual = await vi.importActual<typeof import("../maps")>("../maps");
-  return {
-    ...actual,
-    LocationPicker: (props: ComponentProps<typeof actual.LocationPicker>) => (
-      <div aria-label="Mock location picker">
-        <output data-testid="reference-marker">
-          {props.referenceMarker?.properties.id ?? "none"}
-        </output>
-        <output data-testid="picker-location">
-          {props.value ? `${props.value.latitude},${props.value.longitude}` : "none"}
-        </output>
-        <button
-          type="button"
-          onClick={() => props.onChange?.({ latitude: 6.81, longitude: 79.92 })}
-        >
-          Choose map point
-        </button>
-        <button
-          type="button"
-          onClick={() => props.onConfirm({ latitude: 6.81, longitude: 79.92 })}
-        >
-          Confirm event location
-        </button>
-      </div>
-    ),
-  };
-});
+vi.mock("../maps", () => ({
+  COLOMBO_MAP_CENTER: { latitude: 6.9271, longitude: 79.8612 },
+  AdministrativeAreaMapSearch: () => null,
+  LocationPicker: ({
+    referenceMarker,
+  }: {
+    referenceMarker?: { properties: { id: string } };
+  }) => (
+    <output data-testid="incident-marker">
+      {referenceMarker?.properties.id ?? "none"}
+    </output>
+  ),
+}));
 
+vi.mock("./CleanupEventPublishPanel", () => ({
+  CleanupEventPublishPanel: () => null,
+}));
 vi.mock("./cleanupEvent.api", () => ({
-  addSession: vi.fn(),
   assignCoordinator: vi.fn(),
   createDraft: vi.fn(),
   discardDraft: vi.fn(),
   getDraft: vi.fn(),
   listDrafts: vi.fn(),
   removeCoordinator: vi.fn(),
-  removeSession: vi.fn(),
   updateDraft: vi.fn(),
-  updateSession: vi.fn(),
 }));
-
 vi.mock("../memberships/administration/membershipAdministration.api", () => ({
   listOrganizationMembers: vi.fn(),
 }));
-
 vi.mock("../organizations/workspace/organizationIncidentDiscovery.api", () => ({
   getOrganizationIncidentDetail: vi.fn(),
 }));
@@ -62,6 +50,7 @@ vi.mock("../organizations/workspace/organizationIncidentDiscovery.api", () => ({
 const incident = {
   id: "incident-1",
   title: "Blocked canal",
+  description: "Waste is blocking the canal.",
   category: { id: "category-1", name: "Water pollution", description: null },
   severity: "HIGH" as const,
   status: "ACTIVE" as const,
@@ -71,7 +60,6 @@ const incident = {
   reportedAt: "2026-08-20T10:00:00.000Z",
   falseReviewCount: 0,
   currentReviewStatus: "VALID" as const,
-  description: "Waste is blocking the canal.",
   highlightUntil: "2026-09-20T10:00:00.000Z",
   archiveAfter: "2027-08-20T10:00:00.000Z",
   resolvedAt: null,
@@ -83,36 +71,37 @@ const incident = {
   currentReview: null,
 };
 
-const createdDirectDraft = {
+const savedDraft = {
   id: "draft-1",
   organizationId: "organization-1",
-  incidentId: null,
-  title: "Direct cleanup",
-  description: "A directly planned cleanup event.",
+  incidentId: "incident-1",
+  title: "Canal cleanup",
+  description: "Remove litter beside the canal.",
   publicInstructions: null,
-  eventLatitude: 6.81,
-  eventLongitude: 79.92,
+  eventLatitude: 6.92,
+  eventLongitude: 79.86,
   eventAddress: null,
-  meetingLatitude: null,
-  meetingLongitude: null,
+  meetingLatitude: 6.92,
+  meetingLongitude: 79.86,
   meetingAddress: null,
+  startsAt: "2099-09-01T03:30:00.000Z",
+  capacity: null,
+  locationLockedToIncident: true,
   lifecycleStatus: "DRAFT" as const,
-  workflowStatusId: "workflow-1",
+  displayStatus: "DRAFT" as const,
   createdAt: "2026-08-21T10:00:00.000Z",
   updatedAt: "2026-08-21T10:00:00.000Z",
-  sessions: [],
   coordinators: [],
-  publishReadiness: {
-    ready: false,
-    checks: [],
-  },
 };
 
 beforeEach(() => {
   vi.mocked(listDrafts).mockResolvedValue({ items: [], nextCursor: null });
-  vi.mocked(listOrganizationMembers).mockResolvedValue({ items: [], nextCursor: null });
+  vi.mocked(listOrganizationMembers).mockResolvedValue({
+    items: [],
+    nextCursor: null,
+  });
   vi.mocked(getOrganizationIncidentDetail).mockResolvedValue(incident);
-  vi.mocked(createDraft).mockResolvedValue(createdDirectDraft);
+  vi.mocked(createDraft).mockResolvedValue(savedDraft);
 });
 
 afterEach(() => {
@@ -120,8 +109,8 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("CleanupEventDraftEditor linked incident flow", () => {
-  test("loads the incident map context and clears it for a new direct draft", async () => {
+describe("CleanupEventDraftEditor simplified linked-event flow", () => {
+  test("locks the incident marker and submits one event time without client coordinates", async () => {
     render(
       <CleanupEventDraftEditor
         accessToken="token"
@@ -130,78 +119,23 @@ describe("CleanupEventDraftEditor linked incident flow", () => {
       />,
     );
 
-    expect(await screen.findByText("Blocked canal")).toBeTruthy();
-    expect(screen.getByTestId("reference-marker").textContent).toBe("incident-1");
-    await waitFor(() => {
-      expect(screen.getByTestId("picker-location").textContent).toBe("6.92,79.86");
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    fireEvent.click(screen.getByRole("button", { name: "New draft" }));
-
-    expect(screen.queryByText("Blocked canal")).toBeNull();
-    expect(screen.getByTestId("reference-marker").textContent).toBe("none");
-
+    expect(await screen.findByText(/Location locked to:/)).toBeTruthy();
+    expect(screen.getByTestId("incident-marker").textContent).toBe(
+      "incident-1",
+    );
     fireEvent.change(screen.getByLabelText("Title"), {
-      target: { value: "Direct cleanup" },
+      target: { value: "Canal cleanup" },
     });
     fireEvent.change(screen.getByLabelText("Description"), {
-      target: { value: "A directly planned cleanup event." },
+      target: { value: "Remove litter beside the canal." },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Choose map point" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm event location" }));
-    fireEvent.click(screen.getByRole("button", { name: "Save private draft" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create draft" }));
 
     await waitFor(() => expect(createDraft).toHaveBeenCalledOnce());
-    expect(vi.mocked(createDraft).mock.calls[0][2]).toMatchObject({
-      incidentId: null,
-      eventLatitude: 6.81,
-      eventLongitude: 79.92,
-    });
-  });
-
-  test("adds multiple sessions by preparing the next unique time at the event location", async () => {
-    const firstSession = {
-      id: "session-1",
-      sessionDate: "2026-08-22",
-      startTime: "09:00:00",
-      endTime: "11:00:00",
-      capacity: 25,
-      locationLatitude: 6.81,
-      locationLongitude: 79.92,
-      locationAddress: null,
-      notes: null,
-    };
-    vi.mocked(getDraft)
-      .mockResolvedValueOnce(createdDirectDraft)
-      .mockResolvedValueOnce({ ...createdDirectDraft, sessions: [firstSession] });
-    vi.mocked(addSession).mockResolvedValue(firstSession);
-
-    render(
-      <CleanupEventDraftEditor
-        accessToken="token"
-        organizationId="organization-1"
-        initialDraftId="draft-1"
-      />,
-    );
-
-    expect(await screen.findByRole("heading", { name: "Edit draft" })).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-08-22" } });
-    fireEvent.click(screen.getByRole("button", { name: "Add session" }));
-
-    await waitFor(() => expect(addSession).toHaveBeenCalledOnce());
-    expect(vi.mocked(addSession).mock.calls[0]?.[3]).toMatchObject({
-      sessionDate: "2026-08-22",
-      startTime: "09:00:00",
-      endTime: "11:00:00",
-      locationLatitude: 6.81,
-      locationLongitude: 79.92,
-      locationAddress: null,
-    });
-    await waitFor(() => {
-      expect((screen.getByLabelText("Starts") as HTMLInputElement).value).toBe("11:00");
-      expect((screen.getByLabelText("Ends") as HTMLInputElement).value).toBe("13:00");
-    });
-    expect(screen.queryByLabelText("Session address")).toBeNull();
+    const input = vi.mocked(createDraft).mock.calls[0]![2];
+    expect(input.incidentId).toBe("incident-1");
+    expect(input.startsAt).toBeTruthy();
+    expect("eventLatitude" in input).toBe(false);
+    expect("eventLongitude" in input).toBe(false);
   });
 });

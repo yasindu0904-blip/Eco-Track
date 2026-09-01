@@ -24,13 +24,6 @@ type ReadinessAssessment = CleanupEventPublishReadinessDto & {
   claimingEventId: string | null;
 };
 
-function scheduledInstant(session: CleanupEventPublishCandidate["sessions"][number]): Date {
-  const date = session.sessionDate.toISOString().slice(0, 10);
-  const time = session.startTime.toISOString().slice(11, 19);
-  // Event session date/time fields are Sri Lankan local civil time, not UTC.
-  return new Date(`${date}T${time}+05:30`);
-}
-
 function check(
   code: CleanupEventPublishCheckCode,
   ready: boolean,
@@ -62,10 +55,11 @@ async function assessPublishReadiness(
   );
   const activeCoordinators = candidate.coordinators.filter(
     ({ membership }) =>
-      membership.organizationId === organizationId && membership.status === "ACTIVE",
+      membership.organizationId === organizationId &&
+      membership.status === "ACTIVE",
   );
-  const hasFutureSession = candidate.sessions.some(
-    (session) => session.status === "SCHEDULED" && scheduledInstant(session) > now,
+  const hasFutureEventTime = Boolean(
+    candidate.startsAt && candidate.startsAt > now,
   );
   const publicDetailsReady = Boolean(
     candidate.title.trim().length >= 3 &&
@@ -76,17 +70,25 @@ async function assessPublishReadiness(
   const organizationReview = candidate.incident?.reviews.find(
     (review) => review.organizationId === organizationId,
   );
-  const incidentReviewReady = !candidate.incidentId || organizationReview?.status === "VALID";
-  const incidentFromStatus = candidate.incident?.status === "ACTIVE" ||
-      candidate.incident?.status === "EXPIRED"
-    ? candidate.incident.status
-    : null;
+  const incidentReviewReady =
+    !candidate.incidentId || organizationReview?.status === "VALID";
+  const incidentFromStatus =
+    candidate.incident?.status === "ACTIVE" ||
+    candidate.incident?.status === "EXPIRED"
+      ? candidate.incident.status
+      : null;
   const claimingEvent = candidate.incidentId
-    ? await findClaimingEventForIncident(prisma, candidate.incidentId, candidate.id)
+    ? await findClaimingEventForIncident(
+        prisma,
+        candidate.incidentId,
+        candidate.id,
+      )
     : null;
-  const incidentAvailable = !candidate.incidentId ||
+  const incidentAvailable =
+    !candidate.incidentId ||
     (incidentFromStatus !== null && claimingEvent === null);
-  const workflowReady = candidate.lifecycleStatus === "DRAFT" && Boolean(transition);
+  const workflowReady =
+    candidate.lifecycleStatus === "DRAFT" && Boolean(transition);
 
   const checks = [
     check(
@@ -96,10 +98,10 @@ async function assessPublishReadiness(
       "Add public instructions and a clear event address before publishing.",
     ),
     check(
-      "FUTURE_SESSION",
-      hasFutureSession,
-      "At least one future session is ready.",
-      "Add at least one scheduled session with a future start time.",
+      "EVENT_TIME",
+      hasFutureEventTime,
+      "The event has one future starting date and time.",
+      "Choose a future event date and time before publishing.",
     ),
     check(
       "ACTIVE_COORDINATOR",
@@ -133,7 +135,9 @@ async function assessPublishReadiness(
 
   return {
     eventId,
-    ready: candidate.organization.status === "ACTIVE" && checks.every((item) => item.ready),
+    ready:
+      candidate.organization.status === "ACTIVE" &&
+      checks.every((item) => item.ready),
     checks,
     candidate,
     publishedWorkflowStatusId: transition?.toStatusId ?? null,
@@ -147,18 +151,30 @@ export async function getCleanupEventPublishReadiness(
   organizationId: string,
   eventId: string,
 ): Promise<CleanupEventPublishReadinessDto> {
-  const { candidate: _candidate, publishedWorkflowStatusId: _statusId,
-    incidentFromStatus: _incidentStatus, claimingEventId: _claimingEventId, ...readiness } =
-    await assessPublishReadiness(dependencies.prisma, organizationId, eventId, new Date());
+  const {
+    candidate: _candidate,
+    publishedWorkflowStatusId: _statusId,
+    incidentFromStatus: _incidentStatus,
+    claimingEventId: _claimingEventId,
+    ...readiness
+  } = await assessPublishReadiness(
+    dependencies.prisma,
+    organizationId,
+    eventId,
+    new Date(),
+  );
   return readiness;
 }
 
 function isClaimConflict(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
-  if ("code" in error && (error.code === "P2002" || error.code === "23505")) return true;
-  return "message" in error &&
+  if ("code" in error && (error.code === "P2002" || error.code === "23505"))
+    return true;
+  return (
+    "message" in error &&
     typeof error.message === "string" &&
-    error.message.includes("cleanup_events_one_active_incident_claim_idx");
+    error.message.includes("cleanup_events_one_active_incident_claim_idx")
+  );
 }
 
 export async function publishCleanupEvent(
@@ -176,86 +192,112 @@ export async function publishCleanupEvent(
     command.eventId,
   );
   if (existing?.lifecycleStatus === "PUBLISHED") {
-    return { eventId: existing.id, incidentUpdated: Boolean(existing.incidentId) };
+    return {
+      eventId: existing.id,
+      incidentUpdated: Boolean(existing.incidentId),
+    };
   }
 
   try {
-    return await dependencies.prisma.$transaction(async (transaction) => {
-      await transaction.$executeRaw`
+    return await dependencies.prisma.$transaction(
+      async (transaction) => {
+        await transaction.$executeRaw`
         SELECT pg_advisory_xact_lock(hashtext(${`cleanup-event:${command.eventId}`}))
       `;
-      const readiness = await assessPublishReadiness(
-        transaction,
-        command.organizationId,
-        command.eventId,
-        new Date(),
-      );
-      if (!readiness.ready || !readiness.publishedWorkflowStatusId) {
-        const failed = readiness.checks.filter((item) => !item.ready);
-        if (readiness.claimingEventId) {
+        const readiness = await assessPublishReadiness(
+          transaction,
+          command.organizationId,
+          command.eventId,
+          new Date(),
+        );
+        if (!readiness.ready || !readiness.publishedWorkflowStatusId) {
+          const failed = readiness.checks.filter((item) => !item.ready);
+          if (readiness.claimingEventId) {
+            throw new ApplicationError(
+              409,
+              "INCIDENT_ALREADY_CLAIMED",
+              "Another cleanup event has already been published for this incident.",
+              { eventId: readiness.claimingEventId },
+            );
+          }
           throw new ApplicationError(
             409,
-            "INCIDENT_ALREADY_CLAIMED",
-            "Another cleanup event has already been published for this incident.",
-            { eventId: readiness.claimingEventId },
+            "CLEANUP_EVENT_NOT_READY",
+            failed[0]?.message ?? "The cleanup event is not ready to publish.",
+            { failedChecks: failed.map(({ code }) => code) },
           );
         }
-        throw new ApplicationError(
-          409,
-          "CLEANUP_EVENT_NOT_READY",
-          failed[0]?.message ?? "The cleanup event is not ready to publish.",
-          { failedChecks: failed.map(({ code }) => code) },
-        );
-      }
 
-      const publishedAt = new Date();
-      const updated = await publishCleanupEventRecord(transaction, {
-        ...command,
-        fromWorkflowStatusId: readiness.candidate.currentWorkflowStatusId,
-        toWorkflowStatusId: readiness.publishedWorkflowStatusId,
-        incidentId: readiness.candidate.incidentId,
-        incidentFromStatus: readiness.incidentFromStatus,
-        publishedAt,
-      });
-      if (!updated) {
-        throw new ApplicationError(
-          409,
-          "CLEANUP_EVENT_STATE_CHANGED",
-          "The cleanup event or linked incident changed while it was being published.",
-        );
-      }
+        const publishedAt = new Date();
+        const updated = await publishCleanupEventRecord(transaction, {
+          ...command,
+          fromWorkflowStatusId: readiness.candidate.currentWorkflowStatusId,
+          toWorkflowStatusId: readiness.publishedWorkflowStatusId,
+          incidentId: readiness.candidate.incidentId,
+          incidentFromStatus: readiness.incidentFromStatus,
+          publishedAt,
+        });
+        if (!updated) {
+          throw new ApplicationError(
+            409,
+            "CLEANUP_EVENT_STATE_CHANGED",
+            "The cleanup event or linked incident changed while it was being published.",
+          );
+        }
 
-      const recipientUserIds = new Set(
-        readiness.candidate.coordinators
-          .filter(({ membership }) => membership.status === "ACTIVE")
-          .map(({ membership }) => membership.userId),
-      );
-      if (readiness.candidate.incident) {
-        recipientUserIds.add(readiness.candidate.incident.reporterUserId);
-      }
-      for (const userId of recipientUserIds) {
-        await createNotificationRecord(transaction, {
-          userId,
-          organizationId: command.organizationId,
-          type: NotificationType.EVENT_PUBLISHED,
-          title: "Cleanup event published",
-          message: `${readiness.candidate.organization.name} published ${readiness.candidate.title}.`,
-          data: {
-            eventId: command.eventId,
+        const recipientUserIds = new Set(
+          readiness.candidate.coordinators
+            .filter(({ membership }) => membership.status === "ACTIVE")
+            .map(({ membership }) => membership.userId),
+        );
+        for (const membership of readiness.candidate.organization.memberships) {
+          recipientUserIds.add(membership.userId);
+        }
+        if (readiness.candidate.incident) {
+          recipientUserIds.add(readiness.candidate.incident.reporterUserId);
+        }
+        for (const userId of recipientUserIds) {
+          await createNotificationRecord(transaction, {
+            userId,
             organizationId: command.organizationId,
-            ...(readiness.candidate.incidentId
-              ? { incidentId: readiness.candidate.incidentId }
-              : {}),
-            status: "PUBLISHED",
+            type: NotificationType.EVENT_PUBLISHED,
+            title: "Cleanup event published",
+            message: `${readiness.candidate.organization.name} published ${readiness.candidate.title}.`,
+            data: {
+              eventId: command.eventId,
+              organizationId: command.organizationId,
+              ...(readiness.candidate.incidentId
+                ? { incidentId: readiness.candidate.incidentId }
+                : {}),
+              status: "PUBLISHED",
+            },
+          });
+        }
+
+        await transaction.cleanupEventReminder.upsert({
+          where: { cleanupEventId: command.eventId },
+          create: {
+            cleanupEventId: command.eventId,
+            scheduledFor: new Date(
+              readiness.candidate.startsAt!.getTime() - 30 * 60 * 1000,
+            ),
+          },
+          update: {
+            scheduledFor: new Date(
+              readiness.candidate.startsAt!.getTime() - 30 * 60 * 1000,
+            ),
+            processedAt: null,
+            cancelledAt: null,
           },
         });
-      }
 
-      return {
-        eventId: command.eventId,
-        incidentUpdated: Boolean(readiness.candidate.incidentId),
-      };
-    }, { timeout: 30_000 });
+        return {
+          eventId: command.eventId,
+          incidentUpdated: Boolean(readiness.candidate.incidentId),
+        };
+      },
+      { timeout: 30_000 },
+    );
   } catch (error) {
     if (error instanceof ApplicationError) throw error;
     if (existing?.incidentId && isClaimConflict(error)) {

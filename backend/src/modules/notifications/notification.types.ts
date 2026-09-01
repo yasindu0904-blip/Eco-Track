@@ -6,7 +6,7 @@ export type SafeNotificationData = {
   incidentId?: string;
   membershipRequestId?: string;
   organizationId?: string;
-  sessionId?: string;
+  startsAt?: string;
   status?: string;
 };
 
@@ -50,4 +50,5 @@ export type CreateNotificationCommand = {
   title: string;
   message: string;
   data?: SafeNotificationData;
+  deduplicationKey?: string;
 };

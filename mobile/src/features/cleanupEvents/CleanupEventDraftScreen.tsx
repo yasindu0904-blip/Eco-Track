@@ -1,14 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { describeApiFailure } from "../../api/apiError";
-import { Button, Field, Notice, PageHeader, sharedStyles } from "../../components/ui";
+import {
+  Button,
+  Field,
+  Notice,
+  PageHeader,
+  sharedStyles,
+} from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import { listOrganizationMembers } from "../memberships/administration/membershipAdministration.api";
 import type { OrganizationMember } from "../memberships/administration/membershipAdministration.types";
 import {
+  AdministrativeAreaMapSearch,
   COLOMBO_MAP_CENTER,
   LocationPicker,
+  type MapBoundaryFeatureCollection,
   type MapLocation,
   type MapMarkerFeature,
 } from "../map";
@@ -21,17 +28,10 @@ import {
   getDraft,
   listDrafts,
   removeCoordinator,
-  removeSession,
-  saveSession,
   updateDraft,
 } from "./cleanupEvent.api";
-import type {
-  CleanupEventDraft,
-  CleanupEventSessionInput,
-  EventSession,
-} from "./cleanupEvent.types";
+import type { CleanupEventDraft } from "./cleanupEvent.types";
 import { CleanupEventPublishPanel } from "./CleanupEventPublishPanel";
-
 type Props = {
   accessToken: string;
   organizationId: string;
@@ -40,39 +40,11 @@ type Props = {
   onBack: () => void;
   onMapInteractionChange?: (interacting: boolean) => void;
 };
-
-function tomorrow(): string {
-  const value = new Date();
-  value.setDate(value.getDate() + 1);
-  return value.toISOString().slice(0, 10);
+function tomorrow() {
+  const date = new Date(Date.now() + 86_400_000);
+  return date.toISOString().slice(0, 10);
 }
-
-function displayName(member: OrganizationMember): string {
-  return member.user.fullName?.trim() || member.user.email;
-}
-
-function nextSessionSlot(sessionDate: string, startTime: string, endTime: string): {
-  sessionDate: string;
-  startTime: string;
-  endTime: string;
-} {
-  const toMinutes = (value: string) => {
-    const [hours = 0, minutes = 0] = value.split(":").map(Number);
-    return hours * 60 + minutes;
-  };
-  const formatTime = (value: number) => `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
-  const start = toMinutes(startTime);
-  const end = toMinutes(endTime);
-  const duration = Math.max(end - start, 60);
-  if (end + duration < 24 * 60) {
-    return { sessionDate, startTime: formatTime(end), endTime: formatTime(end + duration) };
-  }
-  const followingDate = new Date(`${sessionDate}T00:00:00.000Z`);
-  followingDate.setUTCDate(followingDate.getUTCDate() + 1);
-  return { sessionDate: followingDate.toISOString().slice(0, 10), startTime: "09:00", endTime: "11:00" };
-}
-
-function incidentMarker(incident: OrganizationIncidentDetail): MapMarkerFeature {
+function marker(incident: OrganizationIncidentDetail): MapMarkerFeature {
   return {
     type: "Feature",
     geometry: {
@@ -88,7 +60,15 @@ function incidentMarker(incident: OrganizationIncidentDetail): MapMarkerFeature 
     },
   };
 }
-
+function dateParts(value?: string | null) {
+  const date = value
+    ? new Date(value)
+    : new Date(`${tomorrow()}T09:00:00+05:30`);
+  const local = new Date(
+    date.getTime() - date.getTimezoneOffset() * 60_000,
+  ).toISOString();
+  return { day: local.slice(0, 10), time: local.slice(11, 16) };
+}
 export function CleanupEventDraftScreen({
   accessToken,
   organizationId,
@@ -97,447 +77,424 @@ export function CleanupEventDraftScreen({
   onBack,
   onMapInteractionChange,
 }: Props) {
-  const [mode, setMode] = useState<"list" | "create" | "edit">(
-    incidentId ? "create" : "list",
-  );
-  const [createIncidentId, setCreateIncidentId] = useState<string | null>(
-    incidentId ?? null,
-  );
-  const [loadedLinkedIncident, setLinkedIncident] = useState<OrganizationIncidentDetail>();
-  const [linkedIncidentLoading, setLinkedIncidentLoading] = useState(false);
-  const [linkedIncidentError, setLinkedIncidentError] = useState<string>();
-  const [linkedIncidentReload, setLinkedIncidentReload] = useState(0);
+  const initial = dateParts();
   const [drafts, setDrafts] = useState<CleanupEventDraft[]>([]);
-  const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [selected, setSelected] = useState<CleanupEventDraft>();
+  const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [linkedIncident, setLinkedIncident] =
+    useState<OrganizationIncidentDetail>();
+  const [creating, setCreating] = useState(Boolean(incidentId));
   const [busy, setBusy] = useState(false);
-  const mutationInFlight = useRef(false);
-  const [notice, setNotice] = useState<{ tone: "success" | "error"; message: string }>();
-
+  const [error, setError] = useState<string>();
+  const [message, setMessage] = useState<string>();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [instructions, setInstructions] = useState("");
   const [address, setAddress] = useState("");
-  const [meetingAddress, setMeetingAddress] = useState("");
-  const [meetingAtEvent, setMeetingAtEvent] = useState(false);
+  const [date, setDate] = useState(initial.day);
+  const [time, setTime] = useState(initial.time);
+  const [capacity, setCapacity] = useState("");
   const [location, setLocation] = useState<MapLocation>(COLOMBO_MAP_CENTER);
-  const [locationConfirmed, setLocationConfirmed] = useState(false);
-
-  const [editingSessionId, setEditingSessionId] = useState<string>();
-  const [sessionDate, setSessionDate] = useState(tomorrow());
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("11:00");
-  const [capacity, setCapacity] = useState("25");
-  const [sessionNotes, setSessionNotes] = useState("");
-
-  const activeIncidentId = mode === "create"
-    ? createIncidentId
-    : selected?.incidentId ?? null;
-  const linkedIncident =
-    activeIncidentId && loadedLinkedIncident?.id === activeIncidentId
-      ? loadedLinkedIncident
-      : undefined;
-  const linkedIncidentReady = !activeIncidentId || Boolean(linkedIncident);
-  const linkedMarker = linkedIncident
-    ? incidentMarker(linkedIncident)
-    : undefined;
-
-  function openDraft(draft: CleanupEventDraft): void {
-    setSelected(draft);
-    setTitle(draft.title);
-    setDescription(draft.description);
-    setInstructions(draft.publicInstructions ?? "");
-    setAddress(draft.eventAddress ?? "");
-    setMeetingAddress(draft.meetingAddress ?? "");
-    setMeetingAtEvent(
-      draft.meetingLatitude === draft.eventLatitude &&
-      draft.meetingLongitude === draft.eventLongitude,
-    );
-    setLocation({ latitude: draft.eventLatitude, longitude: draft.eventLongitude });
-    setLocationConfirmed(true);
-    setEditingSessionId(undefined);
-    setMode("edit");
-  }
-
-  async function reloadDraft(draftId: string): Promise<void> {
-    const refreshed = await getDraft(accessToken, organizationId, draftId);
-    setSelected(refreshed);
-    setDrafts((current) => current.map((draft) => draft.id === refreshed.id ? refreshed : draft));
-  }
-
-  useEffect(() => {
-    let active = true;
-    const timeout = setTimeout(() => {
-      void Promise.all([
+  const [confirmed, setConfirmed] = useState(false);
+  const [boundary, setBoundary] = useState<MapBoundaryFeatureCollection>();
+  const [coordinatorId, setCoordinatorId] = useState("");
+  const load = useCallback(async () => {
+    try {
+      const [page, memberPage] = await Promise.all([
         listDrafts(accessToken, organizationId),
-        initialDraftId ? getDraft(accessToken, organizationId, initialDraftId) : Promise.resolve(undefined),
-        (async () => {
-          const loaded: OrganizationMember[] = [];
-          let cursor: string | undefined;
-          do {
-            const page = await listOrganizationMembers(accessToken, organizationId, cursor);
-            loaded.push(...page.items.filter((member) => member.status === "ACTIVE"));
-            cursor = page.nextCursor ?? undefined;
-          } while (cursor);
-          return loaded;
-        })(),
-      ])
-        .then(([draftPage, initialDraft, loadedMembers]) => {
-          if (!active) return;
-          setDrafts(draftPage.items);
-          setMembers(loadedMembers);
-          if (initialDraft) openDraft(initialDraft);
-        })
-        .catch((reason: unknown) => {
-          if (active) {
-            setNotice({
-              tone: "error",
-              message: describeApiFailure(reason, "Unable to load cleanup-event drafts.").message,
-            });
-          }
-        });
-    }, 0);
-    return () => {
-      active = false;
-      clearTimeout(timeout);
-    };
+        listOrganizationMembers(accessToken, organizationId),
+      ]);
+      setDrafts(page.items);
+      setMembers(memberPage.items);
+      if (initialDraftId)
+        open(await getDraft(accessToken, organizationId, initialDraftId));
+    } catch (reason) {
+      setError(
+        describeApiFailure(reason, "Unable to load cleanup drafts.").message,
+      );
+    }
   }, [accessToken, initialDraftId, organizationId]);
-
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const activeIncidentId = incidentId ?? selected?.incidentId ?? null;
   useEffect(() => {
     if (!activeIncidentId) {
       setLinkedIncident(undefined);
-      setLinkedIncidentError(undefined);
-      setLinkedIncidentLoading(false);
       return;
     }
-
-    const controller = new AbortController();
-    setLinkedIncident(undefined);
-    setLinkedIncidentError(undefined);
-    setLinkedIncidentLoading(true);
+    let active = true;
     void getOrganizationIncidentDetail(
       accessToken,
       organizationId,
       activeIncidentId,
-      controller.signal,
     )
-      .then(setLinkedIncident)
-      .catch((reason: unknown) => {
-        if (controller.signal.aborted) return;
-        setLinkedIncidentError(
-          describeApiFailure(
-            reason,
-            "Unable to load the linked incident location.",
-          ).message,
-        );
+      .then((value) => {
+        if (active) {
+          setLinkedIncident(value);
+          setLocation({ latitude: value.latitude, longitude: value.longitude });
+          setConfirmed(true);
+        }
       })
-      .finally(() => {
-        if (!controller.signal.aborted) setLinkedIncidentLoading(false);
+      .catch((reason) => {
+        if (active)
+          setError(
+            describeApiFailure(reason, "Unable to load linked incident.")
+              .message,
+          );
       });
-
-    return () => controller.abort();
-  }, [accessToken, activeIncidentId, linkedIncidentReload, organizationId]);
-
-  useEffect(() => {
-    if (
-      mode === "create" &&
-      createIncidentId &&
-      linkedIncident?.id === createIncidentId
-    ) {
-      setLocation({
-        latitude: linkedIncident.latitude,
-        longitude: linkedIncident.longitude,
-      });
-      setLocationConfirmed(false);
-    }
-  }, [createIncidentId, linkedIncident, mode]);
-
-  const availableMembers = useMemo(
-    () => members.filter(
-      (member) => !selected?.coordinators.some(
-        (coordinator) => coordinator.membershipId === member.id,
-      ),
-    ),
-    [members, selected?.coordinators],
-  );
-
-  async function run(action: () => Promise<void>, fallback: string): Promise<void> {
-    if (mutationInFlight.current) return;
-    mutationInFlight.current = true;
-    setBusy(true);
-    setNotice(undefined);
-    try {
-      await action();
-    } catch (reason) {
-      setNotice({ tone: "error", message: describeApiFailure(reason, fallback).message });
-    } finally {
-      mutationInFlight.current = false;
-      setBusy(false);
-    }
+    return () => {
+      active = false;
+    };
+  }, [accessToken, activeIncidentId, organizationId]);
+  function open(draft: CleanupEventDraft) {
+    const parts = dateParts(draft.startsAt);
+    setSelected(draft);
+    setCreating(false);
+    setTitle(draft.title);
+    setDescription(draft.description);
+    setInstructions(draft.publicInstructions ?? "");
+    setAddress(draft.eventAddress ?? "");
+    setDate(parts.day);
+    setTime(parts.time);
+    setCapacity(draft.capacity?.toString() ?? "");
+    setLocation({
+      latitude: draft.eventLatitude,
+      longitude: draft.eventLongitude,
+    });
+    setConfirmed(true);
+    setBoundary(undefined);
   }
-
-  function resetDraftForm(nextIncidentId: string | null): void {
-    setCreateIncidentId(nextIncidentId);
+  function reset() {
+    const parts = dateParts();
+    setSelected(undefined);
     setTitle("");
     setDescription("");
     setInstructions("");
     setAddress("");
-    setMeetingAddress("");
-    setMeetingAtEvent(false);
+    setDate(parts.day);
+    setTime(parts.time);
+    setCapacity("");
     setLocation(COLOMBO_MAP_CENTER);
-    setLocationConfirmed(false);
+    setConfirmed(Boolean(incidentId));
+    setBoundary(undefined);
+    setCreating(true);
   }
-
-  function saveDraftDetails(): void {
-    void run(async () => {
-      if (mode === "create") {
-        const created = await createDraft(accessToken, organizationId, {
-          incidentId: createIncidentId,
-          title: title.trim(),
-          description: description.trim(),
-          publicInstructions: instructions.trim() || null,
-          eventLatitude: location.latitude,
-          eventLongitude: location.longitude,
-          eventAddress: address.trim() || null,
-          meetingLatitude: meetingAtEvent ? location.latitude : null,
-          meetingLongitude: meetingAtEvent ? location.longitude : null,
-          meetingAddress: meetingAddress.trim() || null,
-        });
-        setDrafts((current) => [created, ...current]);
-        openDraft(created);
-        setCreateIncidentId(null);
-        setNotice({ tone: "success", message: "Private cleanup-event draft saved." });
-      } else if (selected) {
-        const updated = await updateDraft(accessToken, organizationId, selected.id, {
-          title: title.trim(),
-          description: description.trim(),
-          publicInstructions: instructions.trim() || null,
-          eventLatitude: location.latitude,
-          eventLongitude: location.longitude,
-          eventAddress: address.trim() || null,
-          meetingLatitude: meetingAtEvent ? location.latitude : null,
-          meetingLongitude: meetingAtEvent ? location.longitude : null,
-          meetingAddress: meetingAddress.trim() || null,
-        });
-        openDraft(updated);
-        setDrafts((current) => current.map((draft) => draft.id === updated.id ? updated : draft));
-        setNotice({ tone: "success", message: "Draft details updated." });
-      }
-    }, "Unable to save the cleanup-event draft.");
+  async function save() {
+    const linked = Boolean(incidentId ?? selected?.incidentId);
+    if (!title.trim() || description.trim().length < 10) {
+      setError("Add a title and a clear description.");
+      return;
+    }
+    if (!linked && !confirmed) {
+      setError("Confirm the event location first.");
+      return;
+    }
+    const startsAt = new Date(`${date}T${time}:00+05:30`);
+    if (Number.isNaN(startsAt.getTime())) {
+      setError("Enter a valid date and time.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const input = {
+        title: title.trim(),
+        description: description.trim(),
+        publicInstructions: instructions.trim() || null,
+        eventAddress: address.trim() || null,
+        startsAt: startsAt.toISOString(),
+        capacity: capacity ? Number(capacity) : null,
+        ...(!linked
+          ? {
+              eventLatitude: location.latitude,
+              eventLongitude: location.longitude,
+            }
+          : {}),
+      };
+      const saved = selected
+        ? await updateDraft(accessToken, organizationId, selected.id, input)
+        : await createDraft(accessToken, organizationId, {
+            ...input,
+            incidentId: incidentId ?? null,
+          });
+      setDrafts((items) => [
+        saved,
+        ...items.filter(({ id }) => id !== saved.id),
+      ]);
+      open(saved);
+      setMessage("Private draft saved.");
+      setError(undefined);
+    } catch (reason) {
+      setError(
+        describeApiFailure(reason, "Unable to save this event.").message,
+      );
+    } finally {
+      setBusy(false);
+    }
   }
-
-  function resetSessionForm(): void {
-    setEditingSessionId(undefined);
-    setSessionDate(tomorrow());
-    setStartTime("09:00");
-    setEndTime("11:00");
-    setCapacity("25");
-    setSessionNotes("");
+  async function refresh(id: string) {
+    const draft = await getDraft(accessToken, organizationId, id);
+    setDrafts((items) => items.map((item) => (item.id === id ? draft : item)));
+    open(draft);
   }
-
-  function prepareNextSession(date: string, starts: string, ends: string): void {
-    const next = nextSessionSlot(date, starts, ends);
-    setEditingSessionId(undefined);
-    setSessionDate(next.sessionDate);
-    setStartTime(next.startTime);
-    setEndTime(next.endTime);
-    setSessionNotes("");
-  }
-
-  function editSession(session: EventSession): void {
-    setEditingSessionId(session.id);
-    setSessionDate(session.sessionDate);
-    setStartTime(session.startTime.slice(0, 5));
-    setEndTime(session.endTime.slice(0, 5));
-    setCapacity(session.capacity?.toString() ?? "");
-    setSessionNotes(session.notes ?? "");
-  }
-
-  function sessionInput(): CleanupEventSessionInput {
-    return {
-      sessionDate,
-      startTime: `${startTime}:00`,
-      endTime: `${endTime}:00`,
-      capacity: capacity ? Number(capacity) : null,
-      locationLatitude: selected!.eventLatitude,
-      locationLongitude: selected!.eventLongitude,
-      locationAddress: null,
-      notes: sessionNotes.trim() || null,
-    };
-  }
-
-  if (mode === "list") {
-    return (
-      <View style={styles.container}>
-        <PageHeader
-          eyebrow="Private planning"
-          title="Cleanup-event drafts"
-          subtitle="Drafts do not claim incidents or appear publicly."
-          onBack={onBack}
-          backLabel="Overview"
-        />
-        {notice ? <Notice tone={notice.tone} message={notice.message} /> : null}
-        <Button label="New direct draft" onPress={() => { resetDraftForm(null); setMode("create"); }} />
-        {drafts.length === 0 ? <Text style={styles.empty}>No private drafts yet.</Text> : drafts.map((draft) => (
-          <Pressable key={draft.id} onPress={() => openDraft(draft)} style={sharedStyles.card}>
-            <Text style={styles.title}>{draft.title}</Text>
-            <Text style={styles.muted}>{draft.incidentId ? "Incident-linked" : "Direct"} · {draft.sessions.length} sessions · {draft.coordinators.length} coordinators</Text>
-          </Pressable>
-        ))}
-      </View>
-    );
-  }
-
+  const available = useMemo(
+    () =>
+      members.filter(
+        (member) =>
+          !selected?.coordinators.some(
+            ({ membershipId }) => membershipId === member.id,
+          ),
+      ),
+    [members, selected],
+  );
   return (
-    <View style={styles.container}>
+    <View style={styles.screen}>
       <PageHeader
-        eyebrow={mode === "create" ? "New private draft" : "Edit private draft"}
-        title={mode === "create" ? "Plan cleanup activity" : selected?.title ?? "Cleanup-event draft"}
-        subtitle="Set the event location, sessions, and coordinators before publishing."
-        onBack={() => setMode("list")}
-        backLabel="Drafts"
+        eyebrow="Organization cleanup"
+        title={
+          selected
+            ? "Edit cleanup event"
+            : creating
+              ? "New cleanup event"
+              : "Cleanup drafts"
+        }
+        subtitle="One event, one start time, one volunteer list."
+        onBack={onBack}
+        backLabel="Workspace"
+        action={<Button label="New" variant="secondary" onPress={reset} />}
       />
-      {activeIncidentId && linkedIncidentLoading ? (
-        <Notice message="Loading linked incident…" />
-      ) : null}
-      {activeIncidentId && linkedIncidentError ? (
-        <View style={styles.linkedIncidentError}>
-          <Notice tone="error" message={linkedIncidentError} />
-          <Button
-            compact
-            label="Retry linked incident"
-            variant="secondary"
-            onPress={() => setLinkedIncidentReload((value) => value + 1)}
-          />
+      {error ? <Notice tone="error" message={error} /> : null}
+      {message ? <Notice tone="success" message={message} /> : null}
+      {!creating && !selected ? (
+        <View style={sharedStyles.card}>
+          {drafts.length === 0 ? (
+            <Notice message="No private drafts yet." />
+          ) : (
+            drafts.map((draft) => (
+              <Pressable
+                style={styles.item}
+                key={draft.id}
+                onPress={() => open(draft)}
+              >
+                <Text style={styles.title}>{draft.title}</Text>
+                <Text style={styles.copy}>
+                  {draft.startsAt
+                    ? new Date(draft.startsAt).toLocaleString()
+                    : "Time not set"}
+                </Text>
+              </Pressable>
+            ))
+          )}
         </View>
-      ) : null}
-      {linkedIncidentReady && linkedIncident ? (
-        <View style={styles.linkedIncident}>
-          <Text style={styles.linkedIncidentEyebrow}>LINKED INCIDENT</Text>
-          <Text style={styles.linkedIncidentTitle}>{linkedIncident.title}</Text>
-          <Text style={styles.muted}>
-            {linkedIncident.category.name} · {linkedIncident.status}
-            {linkedIncident.addressText ? ` · ${linkedIncident.addressText}` : ""}
-          </Text>
-        </View>
-      ) : null}
-      {notice ? <Notice tone={notice.tone} message={notice.message} /> : null}
-
-      <View style={sharedStyles.card}>
-        <Field label="Title" value={title} onChangeText={setTitle} required />
-        <Field label="Description" value={description} onChangeText={setDescription} multiline required />
-        <Field label="Public instructions" value={instructions} onChangeText={setInstructions} multiline />
-        <Field label="Event address" value={address} onChangeText={setAddress} />
-        <Field label="Meeting address" value={meetingAddress} onChangeText={setMeetingAddress} />
-        <LocationPicker
-          value={location}
-          disabled={busy || Boolean(activeIncidentId && !linkedIncidentReady)}
-          confirmed={locationConfirmed}
-          confirmLabel="Confirm event location"
-          referenceMarker={linkedMarker}
-          focusReferenceLabel="Focus incident"
-          onMapInteractionChange={onMapInteractionChange}
-          onChange={(value) => { setLocation(value); setLocationConfirmed(false); }}
-          onConfirm={(value) => { setLocation(value); setLocationConfirmed(true); }}
-        />
-        <Pressable onPress={() => setMeetingAtEvent((current) => !current)} style={styles.toggle}>
-          <Text style={styles.toggleMark}>{meetingAtEvent ? "✓" : "○"}</Text>
-          <Text style={styles.toggleText}>Use event location as meeting point</Text>
-        </Pressable>
-        <Button
-          label={busy ? "Saving…" : mode === "create" ? "Save private draft" : "Save changes"}
-          loading={busy}
-          disabled={!locationConfirmed || title.trim().length < 3 || description.trim().length < 10 || Boolean(activeIncidentId && !linkedIncidentReady)}
-          onPress={saveDraftDetails}
-        />
-      </View>
-
-      {mode === "edit" && selected ? (
+      ) : (
         <>
           <View style={sharedStyles.card}>
-            <Text style={sharedStyles.sectionTitle}>Sessions</Text>
-            <TextInput style={styles.input} value={sessionDate} onChangeText={setSessionDate} placeholder="YYYY-MM-DD" />
-            <View style={styles.row}><TextInput style={[styles.input, styles.flex]} value={startTime} onChangeText={setStartTime} placeholder="09:00" /><TextInput style={[styles.input, styles.flex]} value={endTime} onChangeText={setEndTime} placeholder="11:00" /></View>
-            <TextInput style={styles.input} value={capacity} onChangeText={setCapacity} keyboardType="number-pad" placeholder="Capacity" />
-            <TextInput style={[styles.input, styles.multiline]} value={sessionNotes} onChangeText={setSessionNotes} multiline placeholder="Session notes" />
-            <Button label={editingSessionId ? "Update session" : "Add session"} loading={busy} onPress={() => {
-              if (startTime >= endTime) { setNotice({ tone: "error", message: "The session end time must be later than its start time." }); return; }
-              const duplicate = selected.sessions.some((session) => session.id !== editingSessionId && session.sessionDate === sessionDate && session.startTime.slice(0, 5) === startTime);
-              if (duplicate) { setNotice({ tone: "error", message: "This event already has a session at that date and start time. Choose another time." }); return; }
-              const wasEditing = Boolean(editingSessionId);
-              const savedDate = sessionDate;
-              const savedStart = startTime;
-              const savedEnd = endTime;
-              void run(async () => { await saveSession(accessToken, organizationId, selected.id, sessionInput(), editingSessionId); await reloadDraft(selected.id); if (wasEditing) resetSessionForm(); else prepareNextSession(savedDate, savedStart, savedEnd); setNotice({ tone: "success", message: wasEditing ? "Draft session updated." : "Session added. The next available time is ready below." }); }, "Unable to save the session.");
-            }} />
-            {editingSessionId ? <Button label="Cancel session edit" variant="secondary" disabled={busy} onPress={resetSessionForm} /> : null}
-            {selected.sessions.map((session) => <View key={session.id} style={styles.item}><View style={styles.flex}><Text style={styles.itemTitle}>{session.sessionDate} · {session.startTime.slice(0, 5)}–{session.endTime.slice(0, 5)}</Text><Text style={styles.muted}>{session.capacity ?? "Open"} capacity</Text></View><Button label="Edit" variant="secondary" disabled={busy} onPress={() => editSession(session)} /><Button label="Remove" variant="danger" disabled={busy} onPress={() => Alert.alert("Remove session?", "This session will be removed from the private draft.", [{ text: "Keep session", style: "cancel" }, { text: "Remove", style: "destructive", onPress: () => void run(async () => { await removeSession(accessToken, organizationId, selected.id, session.id); await reloadDraft(selected.id); setNotice({ tone: "success", message: "Session removed." }); }, "Unable to remove the session.") }])} /></View>)}
+            <Text style={styles.eyebrow}>01 · EVENT DETAILS</Text>
+            <Field
+              label="Title"
+              value={title}
+              onChangeText={setTitle}
+              required
+            />
+            <Field
+              label="Description"
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              required
+            />
+            <Field
+              label="Public instructions"
+              value={instructions}
+              onChangeText={setInstructions}
+              multiline
+            />
+            <Field
+              label="Date (YYYY-MM-DD)"
+              value={date}
+              onChangeText={setDate}
+              required
+            />
+            <Field
+              label="Start time (HH:MM)"
+              value={time}
+              onChangeText={setTime}
+              required
+            />
+            <Field
+              label="Volunteer capacity (optional)"
+              value={capacity}
+              onChangeText={setCapacity}
+              keyboardType="number-pad"
+            />
+            <Field
+              label="Address or meeting note"
+              value={address}
+              onChangeText={setAddress}
+            />
+            {linkedIncident ? (
+              <>
+                <Notice
+                  tone="info"
+                  message={`Location locked to incident: ${linkedIncident.title}`}
+                />
+                <LocationPicker
+                  value={location}
+                  disabled
+                  confirmed
+                  referenceMarker={marker(linkedIncident)}
+                  focusReferenceLabel="Focus incident"
+                  onConfirm={() => undefined}
+                  onMapInteractionChange={onMapInteractionChange}
+                />
+              </>
+            ) : (
+              <>
+                <AdministrativeAreaMapSearch
+                  accessToken={accessToken}
+                  onBoundaryChange={setBoundary}
+                />
+                <LocationPicker
+                  value={location}
+                  boundaries={boundary}
+                  confirmed={confirmed}
+                  onChange={(value) => {
+                    setLocation(value);
+                    setConfirmed(false);
+                  }}
+                  onConfirm={(value) => {
+                    setLocation(value);
+                    setConfirmed(true);
+                  }}
+                  onMapInteractionChange={onMapInteractionChange}
+                />
+              </>
+            )}
+            <Button
+              label={selected ? "Save changes" : "Create draft"}
+              loading={busy}
+              onPress={() => void save()}
+            />
+            {selected ? (
+              <Button
+                label="Discard draft"
+                variant="danger"
+                disabled={busy}
+                onPress={() =>
+                  Alert.alert("Discard draft?", "This cannot be undone.", [
+                    { text: "Keep", style: "cancel" },
+                    {
+                      text: "Discard",
+                      style: "destructive",
+                      onPress: () =>
+                        void (async () => {
+                          await discardDraft(
+                            accessToken,
+                            organizationId,
+                            selected.id,
+                          );
+                          setDrafts((items) =>
+                            items.filter(({ id }) => id !== selected.id),
+                          );
+                          reset();
+                        })(),
+                    },
+                  ])
+                }
+              />
+            ) : null}
           </View>
-
-          <View style={sharedStyles.card}>
-            <Text style={sharedStyles.sectionTitle}>Coordinators</Text>
-            <Text style={sharedStyles.sectionSubtitle}>Assignment does not change an organization role.</Text>
-            {selected.coordinators.map((coordinator) => <View key={coordinator.id} style={styles.item}><View style={styles.flex}><Text style={styles.itemTitle}>{coordinator.member.fullName || coordinator.member.email}</Text><Text style={styles.muted}>{coordinator.member.role}</Text></View><Button label="Remove" variant="danger" onPress={() => void run(async () => { await removeCoordinator(accessToken, organizationId, selected.id, coordinator.membershipId); await reloadDraft(selected.id); }, "Unable to remove the coordinator.")} /></View>)}
-            {availableMembers.length > 0 ? <Text style={styles.label}>ASSIGN ACTIVE MEMBER</Text> : null}
-            {availableMembers.map((member) => <Button key={member.id} label={`Assign ${displayName(member)}`} variant="secondary" onPress={() => void run(async () => { await assignCoordinator(accessToken, organizationId, selected.id, member.id); await reloadDraft(selected.id); setNotice({ tone: "success", message: "Coordinator assigned." }); }, "Unable to assign the coordinator.")} />)}
-          </View>
-
-          <CleanupEventPublishPanel
-            accessToken={accessToken}
-            organizationId={organizationId}
-            eventId={selected.id}
-            onPublished={(result) => {
-              setDrafts((current) => current.filter((draft) => draft.id !== selected.id));
-              setSelected(undefined);
-              setMode("list");
-              setNotice({
-                tone: "success",
-                message: result.incidentUpdated
-                  ? "Event published and the linked incident was claimed."
-                  : "Direct cleanup event published.",
-              });
-            }}
-          />
-
-          <Button label="Discard private draft" variant="danger" onPress={() => Alert.alert("Discard draft?", "All draft sessions and coordinator assignments will be removed.", [{ text: "Keep draft", style: "cancel" }, { text: "Discard", style: "destructive", onPress: () => void run(async () => { await discardDraft(accessToken, organizationId, selected.id); setDrafts((current) => current.filter((draft) => draft.id !== selected.id)); setSelected(undefined); setMode("list"); setNotice({ tone: "success", message: "Private draft discarded." }); }, "Unable to discard the draft.") }])} />
+          {selected ? (
+            <>
+              <View style={sharedStyles.card}>
+                <Text style={styles.eyebrow}>02 · COORDINATORS</Text>
+                <Text style={styles.copy}>
+                  Assign an active member to manage updates and attendance.
+                </Text>
+                {available.map((member) => (
+                  <Button
+                    key={member.id}
+                    variant="secondary"
+                    label={`Assign ${member.user.fullName || member.user.email}`}
+                    disabled={busy}
+                    onPress={() =>
+                      void (async () => {
+                        setCoordinatorId(member.id);
+                        await assignCoordinator(
+                          accessToken,
+                          organizationId,
+                          selected.id,
+                          member.id,
+                        );
+                        await refresh(selected.id);
+                        setCoordinatorId("");
+                      })()
+                    }
+                    loading={coordinatorId === member.id}
+                  />
+                ))}
+                {selected.coordinators.map((coordinator) => (
+                  <View style={styles.row} key={coordinator.id}>
+                    <Text style={styles.title}>
+                      {coordinator.member.fullName || coordinator.member.email}
+                    </Text>
+                    <Button
+                      label="Remove"
+                      variant="danger"
+                      onPress={() =>
+                        void (async () => {
+                          await removeCoordinator(
+                            accessToken,
+                            organizationId,
+                            selected.id,
+                            coordinator.membershipId,
+                          );
+                          await refresh(selected.id);
+                        })()
+                      }
+                    />
+                  </View>
+                ))}
+              </View>
+              <CleanupEventPublishPanel
+                accessToken={accessToken}
+                organizationId={organizationId}
+                eventId={selected.id}
+                onPublished={() => {
+                  setDrafts((items) =>
+                    items.filter(({ id }) => id !== selected.id),
+                  );
+                  setSelected(undefined);
+                  setCreating(false);
+                  setMessage("Cleanup event published.");
+                }}
+              />
+            </>
+          ) : null}
         </>
-      ) : null}
-
-      <Button label={mode === "edit" ? "All drafts" : "Cancel"} variant="secondary" onPress={() => { setMode("list"); setSelected(undefined); onMapInteractionChange?.(false); }} />
+      )}
     </View>
   );
 }
-
 const styles = StyleSheet.create({
-  container: { gap: spacing.md },
-  eyebrow: { color: colors.primary, fontSize: 11, fontWeight: "900", letterSpacing: 1 },
-  title: { color: colors.text, fontSize: 18, fontWeight: "900" },
-  muted: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
-  empty: { padding: spacing.lg, color: colors.textMuted, textAlign: "center" },
-  input: { minHeight: 46, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: 10, backgroundColor: colors.surface, color: colors.text },
-  multiline: { minHeight: 90, paddingTop: spacing.sm, textAlignVertical: "top" },
-  row: { flexDirection: "row", gap: spacing.sm },
-  flex: { flex: 1 },
-  toggle: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: 10 },
-  toggleMark: { color: colors.primary, fontSize: 20, fontWeight: "900" },
-  toggleText: { flex: 1, color: colors.text, fontWeight: "700" },
-  item: { flexDirection: "row", alignItems: "center", gap: spacing.xs, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
-  itemTitle: { color: colors.text, fontSize: 14, fontWeight: "800" },
-  label: { color: colors.textMuted, fontSize: 11, fontWeight: "900", letterSpacing: 1 },
-  linkedIncident: {
-    gap: 5,
-    padding: spacing.md,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
-    borderRadius: 10,
-    backgroundColor: colors.primarySoft,
-  },
-  linkedIncidentError: { gap: spacing.sm },
-  linkedIncidentEyebrow: {
+  screen: { gap: spacing.md },
+  eyebrow: {
     color: colors.primary,
     fontSize: 11,
     fontWeight: "900",
     letterSpacing: 1,
   },
-  linkedIncidentTitle: { color: colors.text, fontSize: 16, fontWeight: "900" },
+  item: {
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  title: { color: colors.text, fontWeight: "900" },
+  copy: { color: colors.textMuted },
+  row: {
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
 });
