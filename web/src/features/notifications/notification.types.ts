@@ -18,7 +18,6 @@ export type NotificationData = {
   incidentId?: string;
   membershipRequestId?: string;
   organizationId?: string;
-  sessionId?: string;
   status?: string;
 };
 

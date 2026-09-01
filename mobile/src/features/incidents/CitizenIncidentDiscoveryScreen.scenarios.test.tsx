@@ -36,30 +36,57 @@ vi.mock("react-native", () => ({
 vi.mock("../../components/ui", async () => {
   const React = await import("react");
   return {
-    Button: ({ label, onPress, disabled, loading }: {
+    Button: ({
+      label,
+      onPress,
+      disabled,
+      loading,
+    }: {
       label: string;
       onPress: () => void;
       disabled?: boolean;
       loading?: boolean;
-    }) => React.createElement("Button", {
-      accessibilityLabel: label,
-      accessibilityRole: "button",
-      disabled: Boolean(disabled || loading),
-      onPress,
-    }, label),
-    Notice: ({ message }: { message: string }) => React.createElement("Text", null, message),
+    }) =>
+      React.createElement(
+        "Button",
+        {
+          accessibilityLabel: label,
+          accessibilityRole: "button",
+          disabled: Boolean(disabled || loading),
+          onPress,
+        },
+        label,
+      ),
+    Notice: ({ message }: { message: string }) =>
+      React.createElement("Text", null, message),
     PageHeader: ({ title, subtitle }: { title: string; subtitle?: string }) =>
-      React.createElement("View", null,
+      React.createElement(
+        "View",
+        null,
         React.createElement("Text", null, title),
         subtitle ? React.createElement("Text", null, subtitle) : null,
       ),
-    Screen: ({ children }: { children: React.ReactNode }) => React.createElement("View", null, children),
-    sharedStyles: { card: {}, divider: {}, sectionSubtitle: {}, sectionTitle: {}, spacedRow: {} },
+    Screen: ({ children }: { children: React.ReactNode }) =>
+      React.createElement("View", null, children),
+    sharedStyles: {
+      card: {},
+      divider: {},
+      sectionSubtitle: {},
+      sectionTitle: {},
+      spacedRow: {},
+    },
   };
 });
 
 vi.mock("../../components/theme", () => ({
-  colors: { primary: "green", primarySoft: "lightgreen", surface: "white", text: "black", textMuted: "gray", border: "gray" },
+  colors: {
+    primary: "green",
+    primarySoft: "lightgreen",
+    surface: "white",
+    text: "black",
+    textMuted: "gray",
+    border: "gray",
+  },
 }));
 
 vi.mock("../../api/apiError", () => ({
@@ -71,7 +98,9 @@ vi.mock("../../api/apiError", () => ({
 vi.mock("../map", async () => {
   const React = await import("react");
   return {
-    EcoMap: (props: Record<string, unknown>) => React.createElement("EcoMap", props),
+    AdministrativeAreaMapSearch: () => null,
+    EcoMap: (props: Record<string, unknown>) =>
+      React.createElement("EcoMap", props),
     COLOMBO_MAP_CENTER: { latitude: 6.9271, longitude: 79.8612 },
     SRI_LANKA_MAP_BOUNDS: { west: 79.5, south: 5.8, east: 82, north: 10 },
     useRefreshOnForeground: (refresh: () => void) => {
@@ -92,10 +121,17 @@ vi.mock("../cleanupEvents/cleanupEvent.api", () => ({
   listNearbyCleanupEventMap: vi.fn(),
 }));
 
-const emptyEventPage = { type: "FeatureCollection" as const, features: [], nextCursor: null };
+const emptyEventPage = {
+  type: "FeatureCollection" as const,
+  features: [],
+  nextCursor: null,
+};
 const event = {
   type: "Feature" as const,
-  geometry: { type: "Point" as const, coordinates: [79.8601, 6.9101] as [number, number] },
+  geometry: {
+    type: "Point" as const,
+    coordinates: [79.8601, 6.9101] as [number, number],
+  },
   properties: {
     id: "event-mobile",
     kind: "CLEANUP_EVENT" as const,
@@ -205,7 +241,9 @@ describe("mobile citizen cleanup-event discovery", () => {
     await act(async () => {
       await button(renderer!, "Refresh events").props.onPress();
     });
-    expect(textContent(renderer!)).toContain("No published cleanup events found");
+    expect(textContent(renderer!)).toContain(
+      "No published cleanup events found",
+    );
     expect(listPublicIncidents).not.toHaveBeenCalled();
     expect(listIncidentCategories).not.toHaveBeenCalled();
   });
@@ -244,7 +282,12 @@ describe("mobile citizen cleanup-event discovery", () => {
     expect(listNearbyCleanupEventMap).toHaveBeenCalledTimes(1);
     expect(listNearbyCleanupEventMap).toHaveBeenCalledWith(
       "token",
-      expect.objectContaining({ latitude: 6.9271, longitude: 79.8612, radiusMeters: 2_000, limit: 50 }),
+      expect.objectContaining({
+        latitude: 6.9271,
+        longitude: 79.8612,
+        radiusMeters: 2_000,
+        limit: 50,
+      }),
       expect.any(AbortSignal),
     );
     await act(async () => {
@@ -304,6 +347,7 @@ describe("mobile citizen cleanup-event discovery", () => {
       description: "Remove litter from the cleanup area.",
       publicInstructions: "Wear closed shoes.",
       lifecycleStatus: "PUBLISHED",
+      displayStatus: "UPCOMING",
       eventLatitude: 6.9101,
       eventLongitude: 79.8601,
       eventAddress: "Cleanup area",
@@ -311,17 +355,9 @@ describe("mobile citizen cleanup-event discovery", () => {
       meetingLongitude: 79.8601,
       meetingAddress: "Community entrance",
       publishedAt: "2026-08-21T00:00:00.000Z",
-      firstSessionAt: "2026-08-23T08:00:00.000Z",
-      sessions: [{
-        id: "session-mobile",
-        sessionDate: "2026-08-23",
-        startTime: "08:00:00",
-        endTime: "10:00:00",
-        capacity: 20,
-        locationLatitude: 6.9101,
-        locationLongitude: 79.8601,
-        locationAddress: "Community entrance",
-      }],
+      startsAt: "2026-08-23T08:00:00.000Z",
+      capacity: 20,
+      joinedVolunteerCount: 0,
     });
     const onOpenEvent = vi.fn();
     let renderer: TestRenderer.ReactTestRenderer;
@@ -342,9 +378,17 @@ describe("mobile citizen cleanup-event discovery", () => {
       await Promise.resolve();
     });
 
-    expect(getPublicCleanupEvent).toHaveBeenCalledWith("token", "event-mobile", expect.any(AbortSignal));
-    expect(textContent(renderer!)).toContain("Remove litter from the cleanup area.");
-    expect(map(renderer!).props.markerActionLabel(event)).toBe("Join event: Mobile cleanup");
+    expect(getPublicCleanupEvent).toHaveBeenCalledWith(
+      "token",
+      "event-mobile",
+      expect.any(AbortSignal),
+    );
+    expect(textContent(renderer!)).toContain(
+      "Remove litter from the cleanup area.",
+    );
+    expect(map(renderer!).props.markerActionLabel(event)).toBe(
+      "Join event: Mobile cleanup",
+    );
     await act(async () => {
       button(renderer!, "Join event").props.onPress();
     });

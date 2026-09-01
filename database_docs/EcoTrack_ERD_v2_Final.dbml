@@ -10,14 +10,15 @@ Project EcoTrack_ERD_v2_Simplified {
   - Each organization reviews an incident independently as VIEWED, VALID, or FALSE.
   - Cleanup events belong to one organization and may optionally link to one incident.
   - Only one active cleanup event may exist for an incident at a time.
-  - Volunteers join immediately; availability and actual session allocation are separate.
+  - Each cleanup event has one start date/time. Volunteers join immediately and attendance is recorded directly on the event participation.
   - Audit logs replace several separate status-history tables that were not needed for the MVP.
   - Cleanup workflow configuration is simplified to organization-specific statuses and transitions.
   - Incident highlight/archive durations come from permanent platform settings.
-  - PostgreSQL real-moment timestamps use TIMESTAMPTZ; DATE/TIME remain for local session scheduling fields.
+  - PostgreSQL real-moment timestamps use TIMESTAMPTZ, including the single cleanup-event start time.
   - PostGIS uses geography(Point, 4326) for points and geography(MultiPolygon, 4326) for official administrative-area boundaries.
   - New organization service areas reference official GN Divisions instead of duplicating their large boundary values.
-  - DRAFT cleanup events do not claim incidents. PUBLISHED, SCHEDULED, IN_PROGRESS, and COMPLETION_SUBMITTED are the incident-claiming lifecycle states.
+  - DRAFT cleanup events do not claim incidents. PUBLISHED is the only active incident-claiming lifecycle state; UPCOMING and ONGOING are display states derived from starts_at.
+  - The database enum retains three legacy lifecycle values only so historical upgraded rows remain readable. New workflow configuration uses DRAFT, PUBLISHED, COMPLETED, and CANCELLED.
   - Supabase auth.users remains externally owned. user_profiles.auth_user_id is a unique logical identity link and must not become a normal Prisma-managed cross-schema foreign key unless deliberately implemented later with reviewed Supabase SQL.
   - Every public application table must receive the project's backend-only RLS / privilege-revocation treatment in migrations.
   - Cross-organization and cross-event relationships must be protected by database constraints where practical and by transactional service validation plus Organization A / Organization B tests where a direct FK cannot express the rule.
@@ -120,24 +121,16 @@ Enum cleanup_lifecycle_status {
   CANCELLED
 }
 
-Enum session_status {
-  SCHEDULED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
 Enum participant_status {
   JOINED
   WITHDRAWN
   REMOVED
 }
 
-Enum allocation_status {
-  PLANNED
+Enum attendance_status {
+  UNMARKED
   ATTENDED
   ABSENT
-  REMOVED
 }
 
 Enum note_visibility {
@@ -160,6 +153,7 @@ Enum notification_type {
   EVENT_UPDATED
   EVENT_CANCELLED
   EVENT_COMPLETED
+  EVENT_REMINDER
   MEMBERSHIP_UPDATED
   ORGANIZATION_REVIEW_UPDATED
   ACHIEVEMENT_AWARDED
@@ -175,7 +169,7 @@ Enum issue_status {
 
 Enum contribution_type {
   VERIFIED_INCIDENT_REPORT
-  SESSION_ATTENDED
+  EVENT_ATTENDED
   EVENT_COMPLETED
   SPECIAL_CONTRIBUTION
 }
@@ -500,6 +494,8 @@ Table public.cleanup_events [headerColor: #E15759] {
   meeting_longitude decimal(9,6)
   meeting_geo_point geography(Point,4326) [note: 'If present, keep synchronized with meeting_longitude/meeting_latitude.']
   meeting_address text
+  starts_at timestamptz [note: 'Required before publication. One real start date/time replaces the former session schedule.']
+  capacity int [note: 'Optional positive volunteer capacity for the whole event.']
   published_at timestamptz
   completed_at timestamptz
   cancelled_at timestamptz
@@ -508,34 +504,12 @@ Table public.cleanup_events [headerColor: #E15759] {
   updated_at timestamptz [not null, default: `now()`]
 
   indexes {
-    incident_id [note: 'Migration SQL must add a partial UNIQUE index on incident_id for lifecycle_status IN (PUBLISHED, SCHEDULED, IN_PROGRESS, COMPLETION_SUBMITTED). DRAFT, COMPLETED, and CANCELLED do not claim/block an incident.']
+    incident_id [note: 'Migration SQL adds a partial UNIQUE index on incident_id where lifecycle_status = PUBLISHED. DRAFT, COMPLETED, and CANCELLED do not claim/block an incident.']
     (organization_id, lifecycle_status, created_at)
+    (lifecycle_status, starts_at) [name: 'cleanup_events_lifecycle_starts_at_idx']
   }
 
   Note: 'Belongs to exactly one organization. It may be linked to one incident or be created directly with incident_id NULL. A DRAFT linked event does not claim the incident; the claim is acquired atomically when entering a claiming lifecycle state. current_workflow_status_id and created_by_membership_id must belong to the owning organization.'
-}
-
-Table public.event_sessions [headerColor: #E15759] {
-  id uuid [pk]
-  cleanup_event_id uuid [not null]
-  session_date date [not null]
-  start_time time [not null]
-  end_time time [not null]
-  capacity int
-  status session_status [not null, default: 'SCHEDULED']
-  location_latitude decimal(9,6)
-  location_longitude decimal(9,6)
-  location_geo_point geography(Point,4326) [note: 'If present, keep synchronized with location_longitude/location_latitude.']
-  location_address text
-  notes text
-  created_at timestamptz [not null, default: `now()`]
-  updated_at timestamptz [not null, default: `now()`]
-
-  indexes {
-    (cleanup_event_id, session_date, start_time) [unique]
-  }
-
-  Note: 'One row per real date/time period. Multi-day events therefore use several rows rather than a date list in cleanup_events.'
 }
 
 Table public.event_coordinators [headerColor: #E15759] {
@@ -563,45 +537,18 @@ Table public.event_participants [headerColor: #E15759] {
   removed_at timestamptz
   removed_by_membership_id uuid
   removal_reason text
+  attendance_status attendance_status [not null, default: 'UNMARKED']
+  attendance_marked_at timestamptz
+  attendance_marked_by_membership_id uuid
 
   indexes {
     (cleanup_event_id, user_id) [unique]
     (cleanup_event_id, status, joined_at, id) [name: 'event_participants_event_status_joined_id_idx']
     (user_id, status, joined_at) [name: 'event_participants_user_status_joined_idx']
+    (cleanup_event_id, attendance_status) [name: 'event_participants_event_attendance_idx']
   }
 
-  Note: 'Created immediately when a citizen presses Join. There is no volunteer application or approval table.'
-}
-
-Table public.participant_session_availability [headerColor: #E15759] {
-  participant_id uuid [not null]
-  session_id uuid [not null]
-  marked_at timestamptz [not null, default: `now()`]
-
-  indexes {
-    (participant_id, session_id) [pk]
-  }
-
-  Note: 'A row means the volunteer selected that session as available. The participant and session must belong to the same cleanup event; enforce in transactional service validation and preferably a database trigger/constraint where practical.'
-}
-
-Table public.session_allocations [headerColor: #E15759] {
-  id uuid [pk]
-  participant_id uuid [not null]
-  session_id uuid [not null]
-  allocated_by_membership_id uuid [not null]
-  status allocation_status [not null, default: 'PLANNED']
-  allocated_at timestamptz [not null, default: `now()`]
-  attendance_marked_by_membership_id uuid
-  attendance_marked_at timestamptz
-  notes text
-
-  indexes {
-    (participant_id, session_id) [unique]
-    (session_id, status) [name: 'session_allocations_session_status_idx']
-  }
-
-  Note: 'Stores the organization\'s actual scheduling decision and later attendance. This is separate from volunteer-selected availability. participant_id and session_id must belong to the same cleanup event, and allocator/attendance memberships must belong to the event-owning organization.'
+  Note: 'Created immediately when a citizen presses Volunteer. There is no volunteer application, session selection, or allocation table. Attendance is UNMARKED until an authorized coordinator or Org Admin records ATTENDED or ABSENT after starts_at.'
 }
 
 Table public.event_notes [headerColor: #E15759] {
@@ -619,7 +566,6 @@ Table public.event_notes [headerColor: #E15759] {
 Table public.event_evidence [headerColor: #E15759] {
   id uuid [pk]
   cleanup_event_id uuid [not null]
-  session_id uuid
   uploaded_by_user_id uuid [not null]
   type evidence_type [not null]
   storage_path varchar [not null]
@@ -649,7 +595,7 @@ Table public.contribution_events [headerColor: #EDC948] {
   user_id uuid [not null]
   type contribution_type [not null]
   incident_id uuid
-  session_allocation_id uuid
+  event_participant_id uuid
   cleanup_event_id uuid
   source_key varchar [note: 'Required stable backend-generated approval key only for SPECIAL_CONTRIBUTION. It makes retries idempotent and is never accepted from an ordinary frontend request.']
   points int [not null]
@@ -703,6 +649,7 @@ Table public.notifications [headerColor: #76B7B2] {
   title varchar [not null]
   message text [not null]
   data jsonb
+  deduplication_key varchar [unique, note: 'Backend-generated idempotency key used by reminder and other retryable producers.']
   read_at timestamptz
   created_at timestamptz [not null, default: `now()`]
 
@@ -711,6 +658,22 @@ Table public.notifications [headerColor: #76B7B2] {
   }
 
   Note: 'Permanent in-app notification record. Expo push is only a delivery mechanism. Custom migration notifications_unread_user_created_at_idx indexes (user_id, created_at DESC) only where read_at IS NULL for unread inbox and badge queries.'
+}
+
+Table public.cleanup_event_reminders [headerColor: #76B7B2] {
+  id uuid [pk]
+  cleanup_event_id uuid [not null, unique]
+  scheduled_for timestamptz [not null, note: 'Normally cleanup_events.starts_at minus 30 minutes.']
+  processed_at timestamptz
+  cancelled_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (processed_at, cancelled_at, scheduled_for) [name: 'cleanup_event_reminders_due_idx']
+  }
+
+  Note: 'Durable outbox-style schedule for in-app reminders. A worker creates permanent notification rows for joined volunteers, active coordinators, and active Org Admins. Later Expo push delivery can consume the same notification records.'
 }
 
 Table public.issue_reports [headerColor: #76B7B2] {
@@ -756,12 +719,12 @@ Table public.audit_logs [headerColor: #76B7B2] {
 // DBML cannot fully express all PostgreSQL/Supabase rules below. Codex must implement and review them in migration SQL:
 // - Enable RLS and apply the project's backend-only access policy / privilege revocation to EVERY public application table.
 // - Add GiST indexes for all PostGIS geography columns used in spatial lookup, especially administrative_areas.boundary and incident/event points.
-// - Add CHECK constraints for valid latitude [-90,90], longitude [-180,180], positive capacities/durations, and end_time > start_time.
+// - Add CHECK constraints for valid latitude [-90,90], longitude [-180,180], positive event capacity, and consistent attendance marker fields.
 // - Keep latitude/longitude and geography point columns synchronized using one controlled database mechanism; application code must not be able to leave them inconsistent.
-// - Add the exact partial UNIQUE incident-claim index for PUBLISHED/SCHEDULED/IN_PROGRESS/COMPLETION_SUBMITTED events.
+// - Add the exact partial UNIQUE incident-claim index for PUBLISHED events.
 // - Prevent more than one PENDING membership request for the same organization/user with a partial UNIQUE index.
 // - Enforce workflow transition organization consistency with composite foreign keys.
-// - Protect event/workflow/member and participant/session consistency with composite FKs, triggers, or transactional validation where direct FKs are impractical.
+// - Protect event/workflow/member and attendance-marker consistency with composite FKs, triggers, or transactional validation where direct FKs are impractical.
 // - Test all tenant-owned paths with Organization A and Organization B to prove direct-ID manipulation cannot cross tenants.
 
 // ============================================================
@@ -806,23 +769,16 @@ Ref: public.cleanup_events.incident_id > public.incidents.id [delete: set null]
 Ref: public.cleanup_events.(organization_id, current_workflow_status_id) > public.cleanup_workflow_statuses.(organization_id, id) [delete: restrict]
 Ref: public.cleanup_events.created_by_membership_id > public.organization_memberships.id [delete: restrict]
 Ref: public.incident_status_history.related_cleanup_event_id > public.cleanup_events.id [delete: set null]
-Ref: public.event_sessions.cleanup_event_id > public.cleanup_events.id [delete: cascade]
 Ref: public.event_coordinators.cleanup_event_id > public.cleanup_events.id [delete: cascade]
 Ref: public.event_coordinators.membership_id > public.organization_memberships.id [delete: restrict]
 Ref: public.event_coordinators.assigned_by_membership_id > public.organization_memberships.id [delete: restrict]
 Ref: public.event_participants.cleanup_event_id > public.cleanup_events.id [delete: cascade]
 Ref: public.event_participants.user_id > public.user_profiles.id [delete: restrict]
 Ref: public.event_participants.removed_by_membership_id > public.organization_memberships.id [delete: set null]
-Ref: public.participant_session_availability.participant_id > public.event_participants.id [delete: cascade]
-Ref: public.participant_session_availability.session_id > public.event_sessions.id [delete: cascade]
-Ref: public.session_allocations.participant_id > public.event_participants.id [delete: cascade]
-Ref: public.session_allocations.session_id > public.event_sessions.id [delete: cascade]
-Ref: public.session_allocations.allocated_by_membership_id > public.organization_memberships.id [delete: restrict]
-Ref: public.session_allocations.attendance_marked_by_membership_id > public.organization_memberships.id [delete: set null]
+Ref: public.event_participants.attendance_marked_by_membership_id > public.organization_memberships.id [delete: restrict]
 Ref: public.event_notes.cleanup_event_id > public.cleanup_events.id [delete: cascade]
 Ref: public.event_notes.author_membership_id > public.organization_memberships.id [delete: restrict]
 Ref: public.event_evidence.cleanup_event_id > public.cleanup_events.id [delete: cascade]
-Ref: public.event_evidence.session_id > public.event_sessions.id [delete: set null]
 Ref: public.event_evidence.uploaded_by_user_id > public.user_profiles.id [delete: restrict]
 Ref: public.event_status_history.cleanup_event_id > public.cleanup_events.id [delete: cascade]
 Ref: public.event_status_history.from_workflow_status_id > public.cleanup_workflow_statuses.id [delete: set null]
@@ -831,7 +787,7 @@ Ref: public.event_status_history.changed_by_membership_id > public.organization_
 
 Ref: public.contribution_events.user_id > public.user_profiles.id [delete: cascade]
 Ref: public.contribution_events.incident_id > public.incidents.id [delete: restrict]
-Ref: public.contribution_events.session_allocation_id > public.session_allocations.id [delete: restrict]
+Ref: public.contribution_events.event_participant_id > public.event_participants.id [delete: restrict]
 Ref: public.contribution_events.cleanup_event_id > public.cleanup_events.id [delete: restrict]
 Ref: public.contribution_events.recorded_by_user_id > public.user_profiles.id [delete: set null]
 Ref: public.user_achievements.user_id > public.user_profiles.id [delete: cascade]
@@ -840,6 +796,7 @@ Ref: public.user_achievements.awarded_from_contribution_id > public.contribution
 Ref: public.user_devices.user_id > public.user_profiles.id [delete: cascade]
 Ref: public.notifications.user_id > public.user_profiles.id [delete: cascade]
 Ref: public.notifications.organization_id > public.organizations.id [delete: set null]
+Ref: public.cleanup_event_reminders.cleanup_event_id > public.cleanup_events.id [delete: cascade]
 Ref: public.issue_reports.reporter_user_id > public.user_profiles.id [delete: restrict]
 Ref: public.issue_reports.organization_id > public.organizations.id [delete: set null]
 Ref: public.issue_reports.handled_by_user_id > public.user_profiles.id [delete: set null]

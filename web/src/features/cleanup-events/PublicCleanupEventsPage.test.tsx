@@ -3,7 +3,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { getPublicCleanupEvent, listPublicCleanupEvents } from "./cleanupEvent.api";
+import {
+  getPublicCleanupEvent,
+  listPublicCleanupEvents,
+} from "./cleanupEvent.api";
 import type { EventParticipation } from "./cleanupEvent.types";
 import { PublicCleanupEventsPage } from "./PublicCleanupEventsPage";
 
@@ -13,10 +16,21 @@ vi.mock("./cleanupEvent.api", () => ({
 }));
 
 vi.mock("./EventParticipationPanel", () => ({
-  EventParticipationPanel: ({ onChanged }: { onChanged?: (value: EventParticipation | null) => void }) => <div>
-    <span>Participation options</span>
-    <button type="button" onClick={() => onChanged?.({ status: "JOINED" } as EventParticipation)}>Mock joined</button>
-  </div>,
+  EventParticipationPanel: ({
+    onChanged,
+  }: {
+    onChanged?: (value: EventParticipation | null) => void;
+  }) => (
+    <div>
+      <span>Participation options</span>
+      <button
+        type="button"
+        onClick={() => onChanged?.({ status: "JOINED" } as EventParticipation)}
+      >
+        Mock joined
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("./ParticipantEventUpdates", () => ({
@@ -36,6 +50,7 @@ test("a map-selected event opens in a focused detail view and returns through it
     description: "Remove litter beside the canal.",
     publicInstructions: "Bring drinking water.",
     lifecycleStatus: "PUBLISHED",
+    displayStatus: "UPCOMING",
     eventLatitude: 6.9271,
     eventLongitude: 79.8612,
     eventAddress: "Canal road",
@@ -43,8 +58,9 @@ test("a map-selected event opens in a focused detail view and returns through it
     meetingLongitude: 79.8612,
     meetingAddress: "Community hall",
     publishedAt: "2026-08-21T08:00:00.000Z",
-    firstSessionAt: "2026-08-23T08:00:00.000Z",
-    sessions: [],
+    startsAt: "2026-08-23T08:00:00.000Z",
+    capacity: 25,
+    joinedVolunteerCount: 0,
   });
   const onBack = vi.fn();
 
@@ -56,8 +72,12 @@ test("a map-selected event opens in a focused detail view and returns through it
     />,
   );
 
-  await waitFor(() => expect(getPublicCleanupEvent).toHaveBeenCalledWith("token", "event-1"));
-  expect((await screen.findAllByText("Canal cleanup")).length).toBeGreaterThan(0);
+  await waitFor(() =>
+    expect(getPublicCleanupEvent).toHaveBeenCalledWith("token", "event-1"),
+  );
+  expect((await screen.findAllByText("Canal cleanup")).length).toBeGreaterThan(
+    0,
+  );
   expect(screen.queryByText("Upcoming and active events")).toBeNull();
   expect(screen.queryByText("No published events yet")).toBeNull();
   expect(listPublicCleanupEvents).not.toHaveBeenCalled();

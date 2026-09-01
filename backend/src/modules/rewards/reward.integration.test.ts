@@ -13,7 +13,7 @@ import { prisma } from "../../database/prisma.js";
 import { ApplicationError } from "../../errors/applicationError.js";
 import {
   AccountStatus,
-  AllocationStatus,
+  AttendanceStatus,
   CleanupLifecycleStatus,
   ContributionType,
   IncidentReviewStatus,
@@ -32,16 +32,13 @@ import type {
   AuthenticationDependencies,
 } from "../auth/auth.types.js";
 
-import type {
-  ContributionPageDto,
-  ImpactSummaryDto,
-} from "./reward.types.js";
+import type { ContributionPageDto, ImpactSummaryDto } from "./reward.types.js";
 import { rewardDependencies } from "./reward.dependencies.js";
 import { createRewardRouter } from "./reward.routes.js";
 import {
   awardApprovedSpecialContribution,
   awardCompletedEventContribution,
-  awardSessionAttendanceContribution,
+  awardEventAttendanceContribution,
   awardVerifiedIncidentReportContribution,
 } from "./services/awardContribution.service.js";
 
@@ -59,10 +56,7 @@ const unverifiedIncidentId = randomUUID();
 const workflowStatusId = randomUUID();
 const cleanupEventId = randomUUID();
 const participantId = randomUUID();
-const attendedSessionId = randomUUID();
-const plannedSessionId = randomUUID();
-const attendedAllocationId = randomUUID();
-const plannedAllocationId = randomUUID();
+const unmarkedParticipantId = randomUUID();
 const userAToken = `reward-a-${userAId}`;
 const userBToken = `reward-b-${userBId}`;
 const incompleteToken = `reward-incomplete-${incompleteUserId}`;
@@ -93,10 +87,15 @@ const incompleteProfile = profile(
 
 const authenticationDependencies: AuthenticationDependencies = {
   async verifyAccessToken(token) {
-    if (token === userAToken) return { authUserId: userAAuthId, email: profileA.email };
-    if (token === userBToken) return { authUserId: userBAuthId, email: profileB.email };
+    if (token === userAToken)
+      return { authUserId: userAAuthId, email: profileA.email };
+    if (token === userBToken)
+      return { authUserId: userBAuthId, email: profileB.email };
     if (token === incompleteToken) {
-      return { authUserId: incompleteUserAuthId, email: incompleteProfile.email };
+      return {
+        authUserId: incompleteUserAuthId,
+        email: incompleteProfile.email,
+      };
     }
     return null;
   },
@@ -124,9 +123,27 @@ function request(token: string, path: string, options: RequestInit = {}) {
 before(async () => {
   await prisma.userProfile.createMany({
     data: [
-      { id: userAId, authUserId: userAAuthId, email: profileA.email, fullName: profileA.fullName, phoneNumber: profileA.phoneNumber, profileCompletedAt: profileA.profileCompletedAt },
-      { id: userBId, authUserId: userBAuthId, email: profileB.email, fullName: profileB.fullName, phoneNumber: profileB.phoneNumber, profileCompletedAt: profileB.profileCompletedAt },
-      { id: incompleteUserId, authUserId: incompleteUserAuthId, email: incompleteProfile.email },
+      {
+        id: userAId,
+        authUserId: userAAuthId,
+        email: profileA.email,
+        fullName: profileA.fullName,
+        phoneNumber: profileA.phoneNumber,
+        profileCompletedAt: profileA.profileCompletedAt,
+      },
+      {
+        id: userBId,
+        authUserId: userBAuthId,
+        email: profileB.email,
+        fullName: profileB.fullName,
+        phoneNumber: profileB.phoneNumber,
+        profileCompletedAt: profileB.profileCompletedAt,
+      },
+      {
+        id: incompleteUserId,
+        authUserId: incompleteUserAuthId,
+        email: incompleteProfile.email,
+      },
     ],
   });
   await prisma.organization.create({
@@ -152,7 +169,11 @@ before(async () => {
     },
   });
   await prisma.incidentCategory.create({
-    data: { id: categoryId, name: `Reward Category ${categoryId}`, isActive: true },
+    data: {
+      id: categoryId,
+      name: `Reward Category ${categoryId}`,
+      isActive: true,
+    },
   });
   const incidentNow = Date.now();
   const incidentTimes = {
@@ -167,7 +188,8 @@ before(async () => {
         submissionId: randomUUID(),
         categoryId,
         title: "Verified reward test incident",
-        description: "A verified incident used only by the rewards integration test.",
+        description:
+          "A verified incident used only by the rewards integration test.",
         severity: IncidentSeverity.MEDIUM,
         latitude: 6.9271,
         longitude: 79.8612,
@@ -220,58 +242,35 @@ before(async () => {
       eventLongitude: 79.8612,
       publishedAt: new Date("2026-08-16T00:00:00Z"),
       completedAt: new Date(),
+      startsAt: new Date("2026-08-17T08:00:00Z"),
     },
   });
-  await prisma.eventParticipant.create({
-    data: {
-      id: participantId,
-      cleanupEventId,
-      userId: userAId,
-      status: ParticipantStatus.JOINED,
-    },
-  });
-  await prisma.eventSession.createMany({
+  await prisma.eventParticipant.createMany({
     data: [
       {
-        id: attendedSessionId,
+        id: participantId,
         cleanupEventId,
-        sessionDate: new Date("2026-08-17T00:00:00Z"),
-        startTime: new Date("1970-01-01T08:00:00Z"),
-        endTime: new Date("1970-01-01T10:00:00Z"),
-      },
-      {
-        id: plannedSessionId,
-        cleanupEventId,
-        sessionDate: new Date("2026-08-18T00:00:00Z"),
-        startTime: new Date("1970-01-01T08:00:00Z"),
-        endTime: new Date("1970-01-01T10:00:00Z"),
-      },
-    ],
-  });
-  await prisma.sessionAllocation.createMany({
-    data: [
-      {
-        id: attendedAllocationId,
-        participantId,
-        sessionId: attendedSessionId,
-        allocatedByMembershipId: membershipId,
-        status: AllocationStatus.ATTENDED,
-        attendanceMarkedByMembershipId: membershipId,
+        userId: userAId,
+        status: ParticipantStatus.JOINED,
+        attendanceStatus: AttendanceStatus.ATTENDED,
         attendanceMarkedAt: new Date(),
+        attendanceMarkedByMembershipId: membershipId,
       },
       {
-        id: plannedAllocationId,
-        participantId,
-        sessionId: plannedSessionId,
-        allocatedByMembershipId: membershipId,
-        status: AllocationStatus.PLANNED,
+        id: unmarkedParticipantId,
+        cleanupEventId,
+        userId: userBId,
+        status: ParticipantStatus.JOINED,
       },
     ],
   });
 
   const app = express();
   app.use(express.json());
-  app.use("/api/v1", createRewardRouter(authenticationDependencies, rewardDependencies));
+  app.use(
+    "/api/v1",
+    createRewardRouter(authenticationDependencies, rewardDependencies),
+  );
   app.use(errorMiddleware);
   await new Promise<void>((resolve) => {
     server = app.listen(0, "127.0.0.1", () => resolve());
@@ -280,58 +279,101 @@ before(async () => {
 });
 
 beforeEach(async () => {
-  await prisma.notification.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
-  await prisma.userAchievement.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
-  await prisma.contributionEvent.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
+  await prisma.notification.deleteMany({
+    where: { userId: { in: [userAId, userBId] } },
+  });
+  await prisma.userAchievement.deleteMany({
+    where: { userId: { in: [userAId, userBId] } },
+  });
+  await prisma.contributionEvent.deleteMany({
+    where: { userId: { in: [userAId, userBId] } },
+  });
 });
 
 after(async () => {
   if (server) {
     await new Promise<void>((resolve, reject) => {
-      server?.close((error) => error ? reject(error) : resolve());
+      server?.close((error) => (error ? reject(error) : resolve()));
     });
   }
-  await prisma.notification.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
-  await prisma.userAchievement.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
-  await prisma.contributionEvent.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
-  await prisma.sessionAllocation.deleteMany({ where: { id: { in: [attendedAllocationId, plannedAllocationId] } } });
-  await prisma.eventSession.deleteMany({ where: { id: { in: [attendedSessionId, plannedSessionId] } } });
-  await prisma.eventParticipant.deleteMany({ where: { id: participantId } });
+  await prisma.notification.deleteMany({
+    where: { userId: { in: [userAId, userBId] } },
+  });
+  await prisma.userAchievement.deleteMany({
+    where: { userId: { in: [userAId, userBId] } },
+  });
+  await prisma.contributionEvent.deleteMany({
+    where: { userId: { in: [userAId, userBId] } },
+  });
+  await prisma.eventParticipant.deleteMany({
+    where: { id: { in: [participantId, unmarkedParticipantId] } },
+  });
   await prisma.cleanupEvent.deleteMany({ where: { id: cleanupEventId } });
-  await prisma.cleanupWorkflowStatus.deleteMany({ where: { id: workflowStatusId } });
-  await prisma.incidentReview.deleteMany({ where: { incidentId: { in: [verifiedIncidentId, unverifiedIncidentId] } } });
-  await prisma.incident.deleteMany({ where: { id: { in: [verifiedIncidentId, unverifiedIncidentId] } } });
+  await prisma.cleanupWorkflowStatus.deleteMany({
+    where: { id: workflowStatusId },
+  });
+  await prisma.incidentReview.deleteMany({
+    where: { incidentId: { in: [verifiedIncidentId, unverifiedIncidentId] } },
+  });
+  await prisma.incident.deleteMany({
+    where: { id: { in: [verifiedIncidentId, unverifiedIncidentId] } },
+  });
   await prisma.incidentCategory.deleteMany({ where: { id: categoryId } });
-  await prisma.organizationMembership.deleteMany({ where: { id: membershipId } });
+  await prisma.organizationMembership.deleteMany({
+    where: { id: membershipId },
+  });
   await prisma.organization.deleteMany({ where: { id: organizationId } });
-  await prisma.userProfile.deleteMany({ where: { id: { in: [userAId, userBId, incompleteUserId] } } });
+  await prisma.userProfile.deleteMany({
+    where: { id: { in: [userAId, userBId, incompleteUserId] } },
+  });
   await prisma.$disconnect();
 });
 
 test("reward routes require authentication and a completed profile", async () => {
-  assert.equal((await fetch(`${baseUrl}/api/v1/rewards/me/summary`)).status, 401);
-  assert.equal((await request("invalid", "/api/v1/rewards/me/summary")).status, 401);
-  assert.equal((await request(incompleteToken, "/api/v1/rewards/me/summary")).status, 403);
+  assert.equal(
+    (await fetch(`${baseUrl}/api/v1/rewards/me/summary`)).status,
+    401,
+  );
+  assert.equal(
+    (await request("invalid", "/api/v1/rewards/me/summary")).status,
+    401,
+  );
+  assert.equal(
+    (await request(incompleteToken, "/api/v1/rewards/me/summary")).status,
+    403,
+  );
 });
 
 test("a VALID incident awards once, earns an achievement once, and notifies once", async () => {
   const [first, retry] = await prisma.$transaction(async (transaction) => {
-    const created = await awardVerifiedIncidentReportContribution(transaction, verifiedIncidentId);
-    const duplicate = await awardVerifiedIncidentReportContribution(transaction, verifiedIncidentId);
+    const created = await awardVerifiedIncidentReportContribution(
+      transaction,
+      verifiedIncidentId,
+    );
+    const duplicate = await awardVerifiedIncidentReportContribution(
+      transaction,
+      verifiedIncidentId,
+    );
     return [created, duplicate];
   });
 
   assert.equal(first.created, true);
   assert.equal(first.points, 20);
   assert.equal(retry.created, false);
-  assert.equal(await prisma.contributionEvent.count({ where: { userId: userAId } }), 1);
+  assert.equal(
+    await prisma.contributionEvent.count({ where: { userId: userAId } }),
+    1,
+  );
   assert.equal(retry.newAchievementIds.length, 0);
-  assert.equal(await prisma.userAchievement.count({
-    where: {
-      userId: userAId,
-      achievement: { code: "GREEN_STARTER" },
-    },
-  }), 1);
+  assert.equal(
+    await prisma.userAchievement.count({
+      where: {
+        userId: userAId,
+        achievement: { code: "GREEN_STARTER" },
+      },
+    }),
+    1,
+  );
   assert.equal(
     await prisma.notification.count({
       where: { userId: userAId, type: NotificationType.ACHIEVEMENT_AWARDED },
@@ -343,35 +385,61 @@ test("a VALID incident awards once, earns an achievement once, and notifies once
 test("report submission without a VALID review cannot award points", async () => {
   await assert.rejects(
     prisma.$transaction((transaction) =>
-      awardVerifiedIncidentReportContribution(transaction, unverifiedIncidentId),
+      awardVerifiedIncidentReportContribution(
+        transaction,
+        unverifiedIncidentId,
+      ),
     ),
-    (error: unknown) => error instanceof ApplicationError && error.code === "INCIDENT_NOT_VERIFIED",
+    (error: unknown) =>
+      error instanceof ApplicationError &&
+      error.code === "INCIDENT_NOT_VERIFIED",
   );
-  assert.equal(await prisma.contributionEvent.count({ where: { incidentId: unverifiedIncidentId } }), 0);
+  assert.equal(
+    await prisma.contributionEvent.count({
+      where: { incidentId: unverifiedIncidentId },
+    }),
+    0,
+  );
 });
 
 test("attendance rewards require ATTENDED state and remain idempotent", async () => {
   await assert.rejects(
     prisma.$transaction((transaction) =>
-      awardSessionAttendanceContribution(transaction, plannedAllocationId),
+      awardEventAttendanceContribution(transaction, unmarkedParticipantId),
     ),
-    (error: unknown) => error instanceof ApplicationError && error.code === "SESSION_ATTENDANCE_NOT_CONFIRMED",
+    (error: unknown) =>
+      error instanceof ApplicationError &&
+      error.code === "EVENT_ATTENDANCE_NOT_CONFIRMED",
   );
 
   const [first, retry] = await prisma.$transaction(async (transaction) => {
-    const created = await awardSessionAttendanceContribution(transaction, attendedAllocationId);
-    const duplicate = await awardSessionAttendanceContribution(transaction, attendedAllocationId);
+    const created = await awardEventAttendanceContribution(
+      transaction,
+      participantId,
+    );
+    const duplicate = await awardEventAttendanceContribution(
+      transaction,
+      participantId,
+    );
     return [created, duplicate];
   });
   assert.equal(first.created, true);
   assert.equal(first.points, 10);
   assert.equal(retry.created, false);
-  assert.equal(await prisma.contributionEvent.count({ where: { sessionAllocationId: attendedAllocationId } }), 1);
+  assert.equal(
+    await prisma.contributionEvent.count({
+      where: { eventParticipantId: participantId },
+    }),
+    1,
+  );
 });
 
 test("completed-event rewards derive the volunteer from an eligible participant", async () => {
   const result = await prisma.$transaction((transaction) =>
-    awardCompletedEventContribution(transaction, { cleanupEventId, participantId }),
+    awardCompletedEventContribution(transaction, {
+      cleanupEventId,
+      participantId,
+    }),
   );
   assert.equal(result.userId, userAId);
   assert.equal(result.points, 30);
@@ -392,10 +460,7 @@ test("approved special contributions use a stable source key for retries", async
       awardApprovedSpecialContribution(transaction, input),
     ),
   ]);
-  assert.deepEqual(
-    [first.created, retry.created].sort(),
-    [false, true],
-  );
+  assert.deepEqual([first.created, retry.created].sort(), [false, true]);
   assert.equal(first.contributionId, retry.contributionId);
 });
 
@@ -413,21 +478,38 @@ test("users receive only their own privacy-safe summary and history", async () =
     });
   });
 
-  const summaryResponse = await request(userAToken, "/api/v1/rewards/me/summary");
+  const summaryResponse = await request(
+    userAToken,
+    "/api/v1/rewards/me/summary",
+  );
   assert.equal(summaryResponse.status, 200);
-  const summary = (await summaryResponse.json() as { data: ImpactSummaryDto }).data;
+  const summary = ((await summaryResponse.json()) as { data: ImpactSummaryDto })
+    .data;
   assert.equal(summary.totalPoints, 25);
   assert.equal(summary.contributionCount, 1);
 
-  const historyResponse = await request(userAToken, "/api/v1/rewards/me/contributions?limit=1");
+  const historyResponse = await request(
+    userAToken,
+    "/api/v1/rewards/me/contributions?limit=1",
+  );
   assert.equal(historyResponse.status, 200);
-  const history = (await historyResponse.json() as { data: ContributionPageDto }).data;
+  const history = (
+    (await historyResponse.json()) as { data: ContributionPageDto }
+  ).data;
   assert.equal(history.items.length, 1);
   assert.equal(history.items[0]?.type, ContributionType.SPECIAL_CONTRIBUTION);
   assert.equal("userId" in (history.items[0] ?? {}), false);
   assert.equal("sourceKey" in (history.items[0] ?? {}), false);
   assert.equal("recordedByUserId" in (history.items[0] ?? {}), false);
-  assert.equal((await request(userAToken, "/api/v1/rewards/me/contributions?cursor=invalid")).status, 400);
+  assert.equal(
+    (
+      await request(
+        userAToken,
+        "/api/v1/rewards/me/contributions?cursor=invalid",
+      )
+    ).status,
+    400,
+  );
 });
 
 test("earning points never changes CASL permissions", async () => {
@@ -443,6 +525,12 @@ test("earning points never changes CASL permissions", async () => {
 
   assert.equal(beforeAbility.can(Actions.ReadOwn, Subjects.Contribution), true);
   assert.equal(afterAbility.can(Actions.ReadOwn, Subjects.Contribution), true);
-  assert.equal(beforeAbility.can(Actions.Review, Subjects.IncidentReview), false);
-  assert.equal(afterAbility.can(Actions.Review, Subjects.IncidentReview), false);
+  assert.equal(
+    beforeAbility.can(Actions.Review, Subjects.IncidentReview),
+    false,
+  );
+  assert.equal(
+    afterAbility.can(Actions.Review, Subjects.IncidentReview),
+    false,
+  );
 });

@@ -93,7 +93,9 @@ function assertProjectionExcludesPrivateFields(
   forbiddenFields = PUBLIC_FORBIDDEN_FIELDS,
 ): void {
   if (Array.isArray(value)) {
-    value.forEach((nested) => assertProjectionExcludesPrivateFields(nested, forbiddenFields));
+    value.forEach((nested) =>
+      assertProjectionExcludesPrivateFields(nested, forbiddenFields),
+    );
     return;
   }
   if (!value || typeof value !== "object") return;
@@ -149,10 +151,14 @@ const profiles = {
 const authenticationDependencies: AuthenticationDependencies = {
   async verifyAccessToken(token) {
     const profile = profiles[token as keyof typeof profiles];
-    return profile ? { authUserId: profile.authUserId, email: profile.email } : null;
+    return profile
+      ? { authUserId: profile.authUserId, email: profile.email }
+      : null;
   },
   async provisionOrSynchronizeProfile(identity) {
-    const profile = Object.values(profiles).find((item) => item.authUserId === identity.authUserId);
+    const profile = Object.values(profiles).find(
+      (item) => item.authUserId === identity.authUserId,
+    );
     if (!profile) throw new Error("Test profile not found.");
     return {
       id: profile.id,
@@ -160,9 +166,10 @@ const authenticationDependencies: AuthenticationDependencies = {
       fullName: profile.fullName,
       phoneNumber: profile.phoneNumber,
       profileCompletedAt: new Date(),
-      platformRole: profile.id === superAdminId
-        ? PlatformRole.SUPER_ADMIN
-        : PlatformRole.USER,
+      platformRole:
+        profile.id === superAdminId
+          ? PlatformRole.SUPER_ADMIN
+          : PlatformRole.USER,
       accountStatus: AccountStatus.ACTIVE,
     };
   },
@@ -175,10 +182,17 @@ const dependencies: IncidentDependencies = {
   storage: {
     async createUploadIntent(storagePath) {
       uploadedPaths.add(storagePath);
-      return { token: `token-${storagePath}`, signedUrl: `https://storage.test/${storagePath}` };
+      return {
+        token: `token-${storagePath}`,
+        signedUrl: `https://storage.test/${storagePath}`,
+      };
     },
-    async objectExists(storagePath) { return uploadedPaths.has(storagePath); },
-    async createDownloadUrl(storagePath) { return `https://download.test/${storagePath}`; },
+    async objectExists(storagePath) {
+      return uploadedPaths.has(storagePath);
+    },
+    async createDownloadUrl(storagePath) {
+      return `https://download.test/${storagePath}`;
+    },
   },
 };
 
@@ -187,10 +201,17 @@ const cleanupDependencies: CleanupEventDependencies = {
   eventEvidenceStorage: {
     async createUploadIntent(storagePath) {
       eventUploadedPaths.add(storagePath);
-      return { token: `event-token-${storagePath}`, signedUrl: `https://storage.test/${storagePath}` };
+      return {
+        token: `event-token-${storagePath}`,
+        signedUrl: `https://storage.test/${storagePath}`,
+      };
     },
-    async objectExists(storagePath) { return eventUploadedPaths.has(storagePath); },
-    async createDownloadUrl(storagePath) { return `https://download.test/${storagePath}`; },
+    async objectExists(storagePath) {
+      return eventUploadedPaths.has(storagePath);
+    },
+    async createDownloadUrl(storagePath) {
+      return `https://download.test/${storagePath}`;
+    },
   },
 };
 
@@ -245,9 +266,10 @@ before(async () => {
       fullName: profile.fullName,
       phoneNumber: profile.phoneNumber,
       profileCompletedAt: new Date(),
-      platformRole: profile.id === superAdminId
-        ? PlatformRole.SUPER_ADMIN
-        : PlatformRole.USER,
+      platformRole:
+        profile.id === superAdminId
+          ? PlatformRole.SUPER_ADMIN
+          : PlatformRole.USER,
     })),
   });
   await prisma.platformSettings.upsert({
@@ -256,10 +278,18 @@ before(async () => {
     create: { id: 1, incidentHighlightHours: 48, incidentUnaddressedDays: 7 },
   });
   await prisma.incidentCategory.create({
-    data: { id: categoryId, name: `Integration category ${categoryId}`, isActive: true },
+    data: {
+      id: categoryId,
+      name: `Integration category ${categoryId}`,
+      isActive: true,
+    },
   });
   await prisma.incidentCategory.create({
-    data: { id: alternateCategoryId, name: `Alternate category ${alternateCategoryId}`, isActive: true },
+    data: {
+      id: alternateCategoryId,
+      name: `Alternate category ${alternateCategoryId}`,
+      isActive: true,
+    },
   });
   await prisma.organization.create({
     data: {
@@ -396,14 +426,20 @@ before(async () => {
 
   const app = express();
   app.use(express.json());
-  app.use("/api/v1", createIncidentRouter(authenticationDependencies, dependencies));
+  app.use(
+    "/api/v1",
+    createIncidentRouter(authenticationDependencies, dependencies),
+  );
   app.use(
     "/api/v1",
     createCleanupEventRouter(authenticationDependencies, cleanupDependencies),
   );
   app.use(
     "/api/v1",
-    createNotificationRouter(authenticationDependencies, notificationDependencies),
+    createNotificationRouter(
+      authenticationDependencies,
+      notificationDependencies,
+    ),
   );
   app.use(
     "/api/v1",
@@ -421,7 +457,10 @@ before(async () => {
 });
 
 after(async () => {
-  if (server) await new Promise<void>((resolve, reject) => server?.close((error) => error ? reject(error) : resolve()));
+  if (server)
+    await new Promise<void>((resolve, reject) =>
+      server?.close((error) => (error ? reject(error) : resolve())),
+    );
   const organizationIds = [organizationId, organizationBId];
   const profileIds = [
     reporterId,
@@ -457,35 +496,65 @@ after(async () => {
       action: "INCIDENT_REVIEW_UPDATED",
     },
   });
-  await prisma.cleanupEvent.deleteMany({ where: { organizationId: { in: organizationIds } } });
-  await prisma.incidentReview.deleteMany({ where: { organizationId: { in: organizationIds } } });
-  await prisma.incident.deleteMany({ where: { reporterUserId: { in: profileIds } } });
-  await prisma.cleanupWorkflowStatus.deleteMany({ where: { organizationId: { in: organizationIds } } });
-  await prisma.organizationMembership.deleteMany({ where: { organizationId: { in: organizationIds } } });
-  await prisma.organizationServiceArea.deleteMany({ where: { organizationId: { in: organizationIds } } });
-  await prisma.administrativeArea.deleteMany({ where: { id: inactiveAdministrativeAreaId } });
-  await prisma.organization.deleteMany({ where: { id: { in: organizationIds } } });
-  await prisma.incidentCategory.deleteMany({ where: { id: { in: [categoryId, alternateCategoryId] } } });
+  await prisma.cleanupEvent.deleteMany({
+    where: { organizationId: { in: organizationIds } },
+  });
+  await prisma.incidentReview.deleteMany({
+    where: { organizationId: { in: organizationIds } },
+  });
+  await prisma.incident.deleteMany({
+    where: { reporterUserId: { in: profileIds } },
+  });
+  await prisma.cleanupWorkflowStatus.deleteMany({
+    where: { organizationId: { in: organizationIds } },
+  });
+  await prisma.organizationMembership.deleteMany({
+    where: { organizationId: { in: organizationIds } },
+  });
+  await prisma.organizationServiceArea.deleteMany({
+    where: { organizationId: { in: organizationIds } },
+  });
+  await prisma.administrativeArea.deleteMany({
+    where: { id: inactiveAdministrativeAreaId },
+  });
+  await prisma.organization.deleteMany({
+    where: { id: { in: organizationIds } },
+  });
+  await prisma.incidentCategory.deleteMany({
+    where: { id: { in: [categoryId, alternateCategoryId] } },
+  });
   await prisma.userProfile.deleteMany({ where: { id: { in: profileIds } } });
 });
 
 test("lists active categories", async () => {
   const response = await request("/incident-categories", reporterToken);
   assert.equal(response.status, 200);
-  const body = await response.json() as { data: Array<{ id: string }> };
+  const body = (await response.json()) as { data: Array<{ id: string }> };
   assert.ok(body.data.some((category) => category.id === categoryId));
 });
 
 test("creates evidence intent and one incident/history record", async () => {
-  const intentResponse = await request("/incidents/evidence/upload-intents", reporterToken, {
-    method: "POST",
-    body: JSON.stringify({
-      submissionId,
-      files: [{ originalFileName: "evidence.jpg", contentType: "image/jpeg", sizeBytes: 1200 }],
-    }),
-  });
+  const intentResponse = await request(
+    "/incidents/evidence/upload-intents",
+    reporterToken,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        submissionId,
+        files: [
+          {
+            originalFileName: "evidence.jpg",
+            contentType: "image/jpeg",
+            sizeBytes: 1200,
+          },
+        ],
+      }),
+    },
+  );
   assert.equal(intentResponse.status, 201);
-  const intentBody = await intentResponse.json() as { data: Array<{ storagePath: string }> };
+  const intentBody = (await intentResponse.json()) as {
+    data: Array<{ storagePath: string }>;
+  };
   const storagePath = intentBody.data[0]?.storagePath;
   assert.ok(storagePath);
 
@@ -493,34 +562,48 @@ test("creates evidence intent and one incident/history record", async () => {
     submissionId,
     categoryId,
     title: "Waste blocking a test canal",
-    description: "A large pile of plastic waste is blocking water flow in the canal.",
+    description:
+      "A large pile of plastic waste is blocking water flow in the canal.",
     severity: "HIGH",
     latitude: 6.9271,
     longitude: 79.8612,
     addressText: "Integration test canal",
-    evidence: [{
-      storagePath,
-      originalFileName: "evidence.jpg",
-      contentType: "image/jpeg",
-      sizeBytes: 1200,
-      sortOrder: 0,
-    }],
+    evidence: [
+      {
+        storagePath,
+        originalFileName: "evidence.jpg",
+        contentType: "image/jpeg",
+        sizeBytes: 1200,
+        sortOrder: 0,
+      },
+    ],
   };
   const response = await request("/incidents", reporterToken, {
     method: "POST",
     body: JSON.stringify(createBody),
   });
   assert.equal(response.status, 201);
-  const body = await response.json() as { data: { id: string; status: string; statusHistory: unknown[]; reportedAt: string; highlightUntil: string; archiveAfter: string } };
+  const body = (await response.json()) as {
+    data: {
+      id: string;
+      status: string;
+      statusHistory: unknown[];
+      reportedAt: string;
+      highlightUntil: string;
+      archiveAfter: string;
+    };
+  };
   createdIncidentId = body.data.id;
   assert.equal(body.data.status, "ACTIVE");
   assert.equal(body.data.statusHistory.length, 1);
   assert.equal(
-    new Date(body.data.highlightUntil).getTime() - new Date(body.data.reportedAt).getTime(),
+    new Date(body.data.highlightUntil).getTime() -
+      new Date(body.data.reportedAt).getTime(),
     48 * 60 * 60 * 1000,
   );
   assert.equal(
-    new Date(body.data.archiveAfter).getTime() - new Date(body.data.highlightUntil).getTime(),
+    new Date(body.data.archiveAfter).getTime() -
+      new Date(body.data.highlightUntil).getTime(),
     7 * 24 * 60 * 60 * 1000,
   );
 
@@ -529,24 +612,40 @@ test("creates evidence intent and one incident/history record", async () => {
     body: JSON.stringify(createBody),
   });
   assert.equal(replay.status, 200);
-  const replayBody = await replay.json() as { data: { id: string }; meta: { idempotentReplay: boolean } };
+  const replayBody = (await replay.json()) as {
+    data: { id: string };
+    meta: { idempotentReplay: boolean };
+  };
   assert.equal(replayBody.data.id, createdIncidentId);
   assert.equal(replayBody.meta.idempotentReplay, true);
-  assert.equal(await prisma.incident.count({ where: { reporterUserId: reporterId } }), 1);
+  assert.equal(
+    await prisma.incident.count({ where: { reporterUserId: reporterId } }),
+    1,
+  );
 });
 
 test("lists own reports and protects the own-detail route", async () => {
   const mine = await request("/incidents/me?limit=20", reporterToken);
   assert.equal(mine.status, 200);
-  const mineBody = await mine.json() as { data: { items: Array<{ id: string }> } };
+  const mineBody = (await mine.json()) as {
+    data: { items: Array<{ id: string }> };
+  };
   assert.ok(mineBody.data.items.some((item) => item.id === createdIncidentId));
 
-  const forbiddenOwnProjection = await request(`/incidents/me/${createdIncidentId}`, otherToken);
+  const forbiddenOwnProjection = await request(
+    `/incidents/me/${createdIncidentId}`,
+    otherToken,
+  );
   assert.equal(forbiddenOwnProjection.status, 404);
 
-  const publicSafe = await request(`/incidents/${createdIncidentId}`, otherToken);
+  const publicSafe = await request(
+    `/incidents/${createdIncidentId}`,
+    otherToken,
+  );
   assert.equal(publicSafe.status, 200);
-  const publicBody = await publicSafe.json() as { data: Record<string, unknown> };
+  const publicBody = (await publicSafe.json()) as {
+    data: Record<string, unknown>;
+  };
   assert.equal("reporterUserId" in publicBody.data, false);
   assert.equal("submissionId" in publicBody.data, false);
 });
@@ -567,12 +666,10 @@ test("public viewport and nearby discovery are bounded, private-safe, and pagina
     }),
   });
   assert.equal(secondResponse.status, 201);
-  secondIncidentId = (
-    await secondResponse.json() as { data: { id: string } }
-  ).data.id;
+  secondIncidentId = ((await secondResponse.json()) as { data: { id: string } })
+    .data.id;
 
-  const viewportQuery =
-    `west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=1&categoryId=${categoryId}`;
+  const viewportQuery = `west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=1&categoryId=${categoryId}`;
   const unauthenticated = await fetch(
     `${baseUrl}/api/v1/incidents?${viewportQuery}`,
   );
@@ -583,7 +680,7 @@ test("public viewport and nearby discovery are bounded, private-safe, and pagina
     otherToken,
   );
   assert.equal(firstPageResponse.status, 200);
-  const firstPage = await firstPageResponse.json() as {
+  const firstPage = (await firstPageResponse.json()) as {
     data: {
       items: Array<Record<string, unknown> & { id: string }>;
       nextCursor: string | null;
@@ -608,7 +705,7 @@ test("public viewport and nearby discovery are bounded, private-safe, and pagina
     otherToken,
   );
   assert.equal(secondPageResponse.status, 200);
-  const secondPage = await secondPageResponse.json() as {
+  const secondPage = (await secondPageResponse.json()) as {
     data: { items: Array<{ id: string }> };
   };
   assert.equal(secondPage.data.items.length, 1);
@@ -623,24 +720,30 @@ test("public viewport and nearby discovery are bounded, private-safe, and pagina
     otherToken,
   );
   assert.equal(nearbyResponse.status, 200);
-  const nearby = await nearbyResponse.json() as {
+  const nearby = (await nearbyResponse.json()) as {
     data: { items: Array<{ id: string }> };
   };
   assert.ok(nearby.data.items.some((item) => item.id === createdIncidentId));
   assert.ok(nearby.data.items.some((item) => item.id === secondIncidentId));
-  const publicMetrics = spatialMetrics.filter((metric) => metric.operation === "incidents.public");
+  const publicMetrics = spatialMetrics.filter(
+    (metric) => metric.operation === "incidents.public",
+  );
   assert.ok(publicMetrics.some((metric) => metric.mode === "VIEWPORT"));
   assert.ok(publicMetrics.some((metric) => metric.mode === "RADIUS"));
-  assert.ok(publicMetrics.every(
-    (metric) => metric.durationMs >= 0 && metric.resultCount <= MAP_LIMITS.maxPageSize + 1,
-  ));
+  assert.ok(
+    publicMetrics.every(
+      (metric) =>
+        metric.durationMs >= 0 &&
+        metric.resultCount <= MAP_LIMITS.maxPageSize + 1,
+    ),
+  );
 
   const filteredResponse = await request(
     `/incidents?west=79.8&south=6.8&east=80&north=7.1&zoom=12&status=RESOLVED&categoryId=${categoryId}`,
     otherToken,
   );
   assert.equal(filteredResponse.status, 200);
-  const filtered = await filteredResponse.json() as {
+  const filtered = (await filteredResponse.json()) as {
     data: { items: unknown[] };
   };
   assert.deepEqual(filtered.data.items, []);
@@ -653,32 +756,37 @@ test("public viewport and nearby discovery are bounded, private-safe, and pagina
     `/incidents?west=79.8&south=6.8&east=80&north=7.1&zoom=12&categoryId=${categoryId}`,
     otherToken,
   );
-  const activeDefaultItems = (await activeDefault.json() as {
-    data: { items: Array<{ id: string }> };
-  }).data.items;
-  assert.equal(activeDefaultItems.some(({ id }) => id === secondIncidentId), false);
+  const activeDefaultItems = (
+    (await activeDefault.json()) as {
+      data: { items: Array<{ id: string }> };
+    }
+  ).data.items;
+  assert.equal(
+    activeDefaultItems.some(({ id }) => id === secondIncidentId),
+    false,
+  );
   const explicitResolved = await request(
     `/incidents?west=79.8&south=6.8&east=80&north=7.1&zoom=12&status=RESOLVED&categoryId=${categoryId}`,
     otherToken,
   );
-  assert.equal((await explicitResolved.json()).data.items.some(
-    (item: { id: string }) => item.id === secondIncidentId,
-  ), true);
+  assert.equal(
+    (await explicitResolved.json()).data.items.some(
+      (item: { id: string }) => item.id === secondIncidentId,
+    ),
+    true,
+  );
 
   const outsideResponse = await request(
     "/incidents?west=80.5&south=7.5&east=80.6&north=7.6&zoom=12",
     otherToken,
   );
   assert.equal(outsideResponse.status, 200);
-  const outside = await outsideResponse.json() as {
+  const outside = (await outsideResponse.json()) as {
     data: { items: unknown[] };
   };
   assert.deepEqual(outside.data.items, []);
 
-  assert.equal(
-    (await request("/incidents?scope=all", otherToken)).status,
-    400,
-  );
+  assert.equal((await request("/incidents?scope=all", otherToken)).status, 400);
   assert.equal(
     (
       await request(
@@ -706,10 +814,12 @@ test("organization discovery includes covered boundary incidents and active area
     otherToken,
   );
   assert.equal(response.status, 200);
-  const body = await response.json() as {
+  const body = (await response.json()) as {
     data: { items: Array<Record<string, unknown>>; nextCursor: string | null };
   };
-  const incident = body.data.items.find((item) => item.id === createdIncidentId);
+  const incident = body.data.items.find(
+    (item) => item.id === createdIncidentId,
+  );
   assert.ok(incident);
   assert.equal(
     body.data.items.filter((item) => item.id === createdIncidentId).length,
@@ -719,7 +829,10 @@ test("organization discovery includes covered boundary incidents and active area
   assert.equal("description" in incident, false);
   assert.equal("privateNotes" in incident, false);
   assert.equal(incident.falseReviewCount, 0);
-  assertProjectionExcludesPrivateFields(body.data, ORGANIZATION_LIST_FORBIDDEN_FIELDS);
+  assertProjectionExcludesPrivateFields(
+    body.data,
+    ORGANIZATION_LIST_FORBIDDEN_FIELDS,
+  );
 
   const allCoveredResponse = await request(
     `/organizations/${organizationId}/incidents?scope=all`,
@@ -732,7 +845,7 @@ test("organization discovery includes covered boundary incidents and active area
     otherToken,
   );
   assert.equal(boundaries.status, 200);
-  const boundaryBody = await boundaries.json() as {
+  const boundaryBody = (await boundaries.json()) as {
     data: {
       type: string;
       features: Array<{ properties: { id: string } }>;
@@ -749,15 +862,22 @@ test("organization discovery includes covered boundary incidents and active area
     otherToken,
   );
   assert.equal(allBoundaries.status, 200);
-  const allBoundaryBody = await allBoundaries.json() as {
-    data: { features: Array<{ properties: { id: string } }>; truncated: boolean };
+  const allBoundaryBody = (await allBoundaries.json()) as {
+    data: {
+      features: Array<{ properties: { id: string } }>;
+      truncated: boolean;
+    };
   };
-  assert.ok(allBoundaryBody.data.features.some(
-    (feature) => feature.properties.id === serviceAreaId,
-  ));
-  assert.ok(allBoundaryBody.data.features.some(
-    (feature) => feature.properties.id === overlappingServiceAreaId,
-  ));
+  assert.ok(
+    allBoundaryBody.data.features.some(
+      (feature) => feature.properties.id === serviceAreaId,
+    ),
+  );
+  assert.ok(
+    allBoundaryBody.data.features.some(
+      (feature) => feature.properties.id === overlappingServiceAreaId,
+    ),
+  );
   assert.equal(allBoundaryBody.data.truncated, false);
 
   const outsideBoundaries = await request(
@@ -766,7 +886,8 @@ test("organization discovery includes covered boundary incidents and active area
   );
   assert.equal(outsideBoundaries.status, 200);
   assert.deepEqual(
-    (await outsideBoundaries.json() as { data: { features: unknown[] } }).data.features,
+    ((await outsideBoundaries.json()) as { data: { features: unknown[] } }).data
+      .features,
     [],
   );
 
@@ -818,7 +939,7 @@ test("organization discovery includes covered boundary incidents and active area
     `/organizations/${organizationId}/incidents?${query}`,
     otherToken,
   );
-  const inactiveAreaBody = await inactiveAreaResponse.json() as {
+  const inactiveAreaBody = (await inactiveAreaResponse.json()) as {
     data: { items: unknown[] };
   };
   assert.equal(inactiveAreaResponse.status, 200);
@@ -844,7 +965,7 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
   const boundaryIncidentId = await createSpatialIncident({
     title: "Organization B boundary incident",
     latitude: 6.97,
-    longitude: 79.90,
+    longitude: 79.9,
   });
   const outsideIncidentId = await createSpatialIncident({
     title: "Outside active service areas incident",
@@ -911,14 +1032,26 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
   );
   assert.equal(organizationAResponse.status, 200);
   const organizationAItems = (
-    await organizationAResponse.json() as {
+    (await organizationAResponse.json()) as {
       data: { items: Array<Record<string, unknown> & { id: string }> };
     }
   ).data.items;
-  assert.equal(organizationAItems.some(({ id }) => id === overlapIncidentId), true);
-  assert.equal(organizationAItems.some(({ id }) => id === boundaryIncidentId), true);
-  assert.equal(organizationAItems.some(({ id }) => id === organizationBOnlyIncidentId), false);
-  assert.equal(organizationAItems.some(({ id }) => id === outsideIncidentId), false);
+  assert.equal(
+    organizationAItems.some(({ id }) => id === overlapIncidentId),
+    true,
+  );
+  assert.equal(
+    organizationAItems.some(({ id }) => id === boundaryIncidentId),
+    true,
+  );
+  assert.equal(
+    organizationAItems.some(({ id }) => id === organizationBOnlyIncidentId),
+    false,
+  );
+  assert.equal(
+    organizationAItems.some(({ id }) => id === outsideIncidentId),
+    false,
+  );
   assert.equal(
     organizationAItems.filter(({ id }) => id === overlapIncidentId).length,
     1,
@@ -930,15 +1063,30 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
   );
   assert.equal(organizationBResponse.status, 200);
   const organizationBItems = (
-    await organizationBResponse.json() as {
+    (await organizationBResponse.json()) as {
       data: { items: Array<{ id: string }> };
     }
   ).data.items;
-  assert.equal(organizationBItems.some(({ id }) => id === overlapIncidentId), true);
-  assert.equal(organizationBItems.some(({ id }) => id === organizationBOnlyIncidentId), true);
-  assert.equal(organizationBItems.some(({ id }) => id === boundaryIncidentId), true);
-  assert.equal(organizationBItems.some(({ id }) => id === createdIncidentId), false);
-  assert.equal(organizationBItems.some(({ id }) => id === outsideIncidentId), false);
+  assert.equal(
+    organizationBItems.some(({ id }) => id === overlapIncidentId),
+    true,
+  );
+  assert.equal(
+    organizationBItems.some(({ id }) => id === organizationBOnlyIncidentId),
+    true,
+  );
+  assert.equal(
+    organizationBItems.some(({ id }) => id === boundaryIncidentId),
+    true,
+  );
+  assert.equal(
+    organizationBItems.some(({ id }) => id === createdIncidentId),
+    false,
+  );
+  assert.equal(
+    organizationBItems.some(({ id }) => id === outsideIncidentId),
+    false,
+  );
   assert.equal(
     organizationBItems.filter(({ id }) => id === overlapIncidentId).length,
     1,
@@ -968,33 +1116,42 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
     otherToken,
   );
   const alternateItems = (
-    await alternateCategoryResponse.json() as {
+    (await alternateCategoryResponse.json()) as {
       data: { items: Array<{ id: string }> };
     }
   ).data.items;
-  assert.deepEqual(alternateItems.map(({ id }) => id), [overlapIncidentId]);
+  assert.deepEqual(
+    alternateItems.map(({ id }) => id),
+    [overlapIncidentId],
+  );
 
   const resolvedResponse = await request(
     `/organizations/${organizationBId}/incidents?${query}&status=RESOLVED&categoryId=${categoryId}`,
     organizationBToken,
   );
   const resolvedItems = (
-    await resolvedResponse.json() as {
+    (await resolvedResponse.json()) as {
       data: { items: Array<{ id: string }> };
     }
   ).data.items;
-  assert.deepEqual(resolvedItems.map(({ id }) => id), [organizationBOnlyIncidentId]);
+  assert.deepEqual(
+    resolvedItems.map(({ id }) => id),
+    [organizationBOnlyIncidentId],
+  );
 
   const recentResponse = await request(
     `/incidents?${query}&reportedAfter=${encodeURIComponent(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())}`,
     reporterToken,
   );
   const recentItems = (
-    await recentResponse.json() as {
+    (await recentResponse.json()) as {
       data: { items: Array<{ id: string }> };
     }
   ).data.items;
-  assert.equal(recentItems.some(({ id }) => id === outsideIncidentId), false);
+  assert.equal(
+    recentItems.some(({ id }) => id === outsideIncidentId),
+    false,
+  );
 
   const pagedIds: string[] = [];
   let cursor: string | null = null;
@@ -1005,7 +1162,7 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
     );
     assert.equal(pageResponse.status, 200);
     const page = (
-      await pageResponse.json() as {
+      (await pageResponse.json()) as {
         data: { items: Array<{ id: string }>; nextCursor: string | null };
       }
     ).data;
@@ -1065,7 +1222,7 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
     reporterToken,
   );
   const publicOverlap = (
-    await publicOverlapResponse.json() as {
+    (await publicOverlapResponse.json()) as {
       data: { items: Array<Record<string, unknown> & { id: string }> };
     }
   ).data.items.find(({ id }) => id === overlapIncidentId);
@@ -1081,11 +1238,14 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
   );
   assert.equal(organizationAOverlapDetail.status, 200);
   const organizationAOverlapReview = (
-    await organizationAOverlapDetail.json() as {
+    (await organizationAOverlapDetail.json()) as {
       data: { currentReview: { privateNotes: string } };
     }
   ).data.currentReview;
-  assert.equal(organizationAOverlapReview.privateNotes, "Organization A private overlap note");
+  assert.equal(
+    organizationAOverlapReview.privateNotes,
+    "Organization A private overlap note",
+  );
 
   const organizationBOverlapDetail = await request(
     `/organizations/${organizationBId}/incidents/${overlapIncidentId}`,
@@ -1093,11 +1253,14 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
   );
   assert.equal(organizationBOverlapDetail.status, 200);
   const organizationBOverlapReview = (
-    await organizationBOverlapDetail.json() as {
+    (await organizationBOverlapDetail.json()) as {
       data: { currentReview: { privateNotes: string } };
     }
   ).data.currentReview;
-  assert.equal(organizationBOverlapReview.privateNotes, "Organization B private overlap note");
+  assert.equal(
+    organizationBOverlapReview.privateNotes,
+    "Organization B private overlap note",
+  );
   assert.equal(
     (
       await request(
@@ -1127,15 +1290,21 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
     otherToken,
   );
   const retainedItems = (
-    await retainedResponse.json() as {
+    (await retainedResponse.json()) as {
       data: { items: Array<Record<string, unknown> & { id: string }> };
     }
   ).data.items;
   assert.deepEqual(
     new Set(retainedItems.map(({ id }) => id)),
-    new Set([overlapIncidentId, organizationBOnlyIncidentId, outsideIncidentId]),
+    new Set([
+      overlapIncidentId,
+      organizationBOnlyIncidentId,
+      outsideIncidentId,
+    ]),
   );
-  const retainedReview = retainedItems.find(({ id }) => id === outsideIncidentId);
+  const retainedReview = retainedItems.find(
+    ({ id }) => id === outsideIncidentId,
+  );
   assert.equal(retainedReview?.currentReviewStatus, "VALID");
   assert.equal("privateNotes" in (retainedReview ?? {}), false);
 
@@ -1169,7 +1338,7 @@ test("organization review detail and mutation remain tenant-private and idempote
   );
   assert.equal(detailResponse.status, 200);
   const initialDetail = (
-    await detailResponse.json() as {
+    (await detailResponse.json()) as {
       data: Record<string, unknown> & {
         accessSource: string;
         currentReview: unknown;
@@ -1245,11 +1414,14 @@ test("organization review detail and mutation remain tenant-private and idempote
   );
   assert.equal(viewedResponse.status, 200);
   const viewed = (
-    await viewedResponse.json() as { data: { review: { id: string; status: string } } }
+    (await viewedResponse.json()) as {
+      data: { review: { id: string; status: string } };
+    }
   ).data.review;
   assert.equal(viewed.status, "VIEWED");
 
-  const privateNote = "Internal verification note that must never reach the reporter.";
+  const privateNote =
+    "Internal verification note that must never reach the reporter.";
   const falseResponse = await request(
     `/organizations/${organizationId}/incidents/${createdIncidentId}/review`,
     otherToken,
@@ -1264,7 +1436,7 @@ test("organization review detail and mutation remain tenant-private and idempote
   );
   assert.equal(falseResponse.status, 200);
   const falseReview = (
-    await falseResponse.json() as {
+    (await falseResponse.json()) as {
       data: { review: { id: string; status: string; privateNotes: string } };
     }
   ).data.review;
@@ -1290,7 +1462,7 @@ test("organization review detail and mutation remain tenant-private and idempote
   );
   assert.equal(validResponse.status, 200);
   const validResult = (
-    await validResponse.json() as {
+    (await validResponse.json()) as {
       data: {
         review: { id: string; status: string };
         rewardAwarded: boolean;
@@ -1310,7 +1482,7 @@ test("organization review detail and mutation remain tenant-private and idempote
   );
   assert.equal(replayResponse.status, 200);
   const replay = (
-    await replayResponse.json() as {
+    (await replayResponse.json()) as {
       data: { rewardAwarded: boolean; idempotentReplay: boolean };
     }
   ).data;
@@ -1333,10 +1505,12 @@ test("organization review detail and mutation remain tenant-private and idempote
     1,
   );
   assert.equal(
-    (await prisma.incident.findUniqueOrThrow({
-      where: { id: createdIncidentId },
-      select: { status: true },
-    })).status,
+    (
+      await prisma.incident.findUniqueOrThrow({
+        where: { id: createdIncidentId },
+        select: { status: true },
+      })
+    ).status,
     "ACTIVE",
   );
 
@@ -1350,7 +1524,10 @@ test("organization review detail and mutation remain tenant-private and idempote
   assert.equal(reporterNotifications.length, 2);
   for (const notification of reporterNotifications) {
     assert.equal(notification.message.includes(privateNote), false);
-    assert.equal(JSON.stringify(notification.data).includes(privateNote), false);
+    assert.equal(
+      JSON.stringify(notification.data).includes(privateNote),
+      false,
+    );
   }
 });
 
@@ -1360,7 +1537,8 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
     submissionId: workflowSubmissionId,
     categoryId,
     title: "INC-04 overlapping cleanup workflow",
-    description: "A shared incident used to verify the complete report, review, and publish handoff.",
+    description:
+      "A shared incident used to verify the complete report, review, and publish handoff.",
     severity: "HIGH",
     latitude: 6.96,
     longitude: 79.92,
@@ -1373,15 +1551,20 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
     body: JSON.stringify(createBody),
   });
   assert.equal(createResponse.status, 201);
-  const created = (await createResponse.json() as {
-    data: {
-      id: string;
-      status: string;
-      statusHistory: Array<{ toStatus: string }>;
-    };
-  }).data;
+  const created = (
+    (await createResponse.json()) as {
+      data: {
+        id: string;
+        status: string;
+        statusHistory: Array<{ toStatus: string }>;
+      };
+    }
+  ).data;
   assert.equal(created.status, "ACTIVE");
-  assert.deepEqual(created.statusHistory.map(({ toStatus }) => toStatus), ["ACTIVE"]);
+  assert.deepEqual(
+    created.statusHistory.map(({ toStatus }) => toStatus),
+    ["ACTIVE"],
+  );
 
   const createReplay = await request("/incidents", reporterToken, {
     method: "POST",
@@ -1396,7 +1579,9 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
     1,
   );
   assert.equal(
-    await prisma.incidentStatusHistory.count({ where: { incidentId: created.id } }),
+    await prisma.incidentStatusHistory.count({
+      where: { incidentId: created.id },
+    }),
     1,
   );
 
@@ -1439,27 +1624,31 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
     },
   );
   assert.equal(organizationBFalse.status, 200);
-  const organizationBFalseReview = (await organizationBFalse.json()).data.review as {
+  const organizationBFalseReview = (await organizationBFalse.json()).data
+    .review as {
     id: string;
   };
 
-  const discoveryPath =
-    `/incidents?west=79.8&south=6.85&east=80.05&north=7.1&zoom=12&limit=50`;
+  const discoveryPath = `/incidents?west=79.8&south=6.85&east=80.05&north=7.1&zoom=12&limit=50`;
   const falseDiscovery = await request(discoveryPath, reporterToken);
   assert.equal(falseDiscovery.status, 200);
-  const falseSummary = (await falseDiscovery.json() as {
-    data: { items: Array<Record<string, unknown> & { id: string }> };
-  }).data.items.find(({ id }) => id === created.id);
+  const falseSummary = (
+    (await falseDiscovery.json()) as {
+      data: { items: Array<Record<string, unknown> & { id: string }> };
+    }
+  ).data.items.find(({ id }) => id === created.id);
   assert.ok(falseSummary);
   assert.equal(falseSummary.falseReviewCount, 2);
   assert.equal(
-    (await prisma.incident.findUniqueOrThrow({ where: { id: created.id } })).status,
+    (await prisma.incident.findUniqueOrThrow({ where: { id: created.id } }))
+      .status,
     "ACTIVE",
   );
 
   const organizationBValidBody = {
     status: "VALID",
-    privateNotes: "Organization B validated the report after a site inspection.",
+    privateNotes:
+      "Organization B validated the report after a site inspection.",
   };
   const organizationBValid = await request(
     `/organizations/${organizationBId}/incidents/${created.id}/review`,
@@ -1506,9 +1695,11 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
   );
 
   const updatedDiscovery = await request(discoveryPath, reporterToken);
-  const updatedSummary = (await updatedDiscovery.json() as {
-    data: { items: Array<Record<string, unknown> & { id: string }> };
-  }).data.items.find(({ id }) => id === created.id);
+  const updatedSummary = (
+    (await updatedDiscovery.json()) as {
+      data: { items: Array<Record<string, unknown> & { id: string }> };
+    }
+  ).data.items.find(({ id }) => id === created.id);
   assert.ok(updatedSummary);
   assert.equal(updatedSummary.falseReviewCount, 1);
 
@@ -1546,7 +1737,9 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
       body: JSON.stringify({
         incidentId: created.id,
         title: "INC-04 linked cleanup event",
-        description: "A linked cleanup event created after an independent VALID review.",
+        description:
+          "A linked cleanup event created after an independent VALID review.",
+        startsAt: "2099-10-01T09:00:00+05:30",
         eventLatitude: 6.96,
         eventLongitude: 79.92,
       }),
@@ -1565,29 +1758,13 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
           body: JSON.stringify({
             publicInstructions: "Wear closed shoes and bring drinking water.",
             eventAddress: "INC-04 community meeting point",
-          }),
-        },
-      )
-    ).status,
-    200,
-  );
-  assert.equal(
-    (
-      await request(
-        `/organizations/${organizationBId}/events/${eventId}/sessions`,
-        organizationBToken,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            sessionDate: "2099-10-01",
-            startTime: "09:00:00",
-            endTime: "12:00:00",
+            startsAt: "2099-10-01T09:00:00+05:30",
             capacity: 25,
           }),
         },
       )
     ).status,
-    201,
+    200,
   );
   assert.equal(
     (
@@ -1604,16 +1781,19 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
   );
 
   const publishPath = `/organizations/${organizationBId}/events/${eventId}/publish`;
-  const published = await request(publishPath, organizationBToken, { method: "POST" });
+  const published = await request(publishPath, organizationBToken, {
+    method: "POST",
+  });
   assert.equal(published.status, 200);
   const publishedBody = (await published.json()).data as {
     incidentUpdated: boolean;
-    event: { sessions: Array<{ id: string }> };
+    event: { startsAt: string };
   };
   assert.equal(publishedBody.incidentUpdated, true);
-  const firstSessionId = publishedBody.event.sessions[0]?.id;
-  assert.ok(firstSessionId);
-  const publishReplay = await request(publishPath, organizationBToken, { method: "POST" });
+  assert.equal(publishedBody.event.startsAt, "2099-10-01T03:30:00.000Z");
+  const publishReplay = await request(publishPath, organizationBToken, {
+    method: "POST",
+  });
   assert.equal(publishReplay.status, 200);
 
   const storedIncident = await prisma.incident.findUniqueOrThrow({
@@ -1631,7 +1811,9 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
     1,
   );
   assert.equal(
-    await prisma.eventStatusHistory.count({ where: { cleanupEventId: eventId } }),
+    await prisma.eventStatusHistory.count({
+      where: { cleanupEventId: eventId },
+    }),
     1,
   );
   assert.equal(
@@ -1652,20 +1834,22 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
     (
       await request(`/events/${eventId}/participation`, reporterToken, {
         method: "POST",
-        body: JSON.stringify({ sessionIds: [firstSessionId] }),
       })
     ).status,
     201,
   );
-  const initialOperations = (await (
-    await request(
-      `/organizations/${organizationBId}/events/${eventId}/operations`,
-      organizationBToken,
-    )
-  ).json()).data as { event: { updatedAt: string } };
+  const initialOperations = (
+    await (
+      await request(
+        `/organizations/${organizationBId}/events/${eventId}/operations`,
+        organizationBToken,
+      )
+    ).json()
+  ).data as { event: { updatedAt: string } };
   const cancellationBody = {
     expectedUpdatedAt: initialOperations.event.updatedAt,
-    reason: "Unsafe weather conditions require this cleanup event to be replaced.",
+    reason:
+      "Unsafe weather conditions require this cleanup event to be replaced.",
   };
   const cancellation = await request(
     `/organizations/${organizationBId}/events/${eventId}/cancel`,
@@ -1695,7 +1879,10 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
   );
   assert.equal(
     await prisma.eventStatusHistory.count({
-      where: { cleanupEventId: eventId, toStatus: { mappedLifecycleStatus: "CANCELLED" } },
+      where: {
+        cleanupEventId: eventId,
+        toStatus: { mappedLifecycleStatus: "CANCELLED" },
+      },
     }),
     1,
   );
@@ -1713,7 +1900,7 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
     await prisma.cleanupEvent.count({
       where: {
         incidentId: created.id,
-        lifecycleStatus: { in: ["PUBLISHED", "SCHEDULED", "IN_PROGRESS", "COMPLETION_SUBMITTED"] },
+        lifecycleStatus: "PUBLISHED",
       },
     }),
     0,
@@ -1727,7 +1914,9 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
       body: JSON.stringify({
         incidentId: created.id,
         title: "INC-04 replacement cleanup event",
-        description: "The replacement event completes the incident regression lifecycle.",
+        description:
+          "The replacement event completes the incident regression lifecycle.",
+        startsAt: "2099-10-02T09:00:00+05:30",
         eventLatitude: 6.96,
         eventLongitude: 79.92,
       }),
@@ -1743,29 +1932,17 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
         {
           method: "PATCH",
           body: JSON.stringify({
-            publicInstructions: "Wear closed shoes and follow coordinator instructions.",
+            publicInstructions:
+              "Wear closed shoes and follow coordinator instructions.",
             eventAddress: "INC-04 replacement meeting point",
+            startsAt: "2099-10-02T09:00:00+05:30",
+            capacity: 25,
           }),
         },
       )
     ).status,
     200,
   );
-  const replacementSessionResponse = await request(
-    `/organizations/${organizationBId}/events/${replacementEventId}/sessions`,
-    organizationBToken,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        sessionDate: "2099-10-02",
-        startTime: "09:00:00",
-        endTime: "12:00:00",
-        capacity: 25,
-      }),
-    },
-  );
-  assert.equal(replacementSessionResponse.status, 201);
-  const replacementSessionId = (await replacementSessionResponse.json()).data.id as string;
   assert.equal(
     (
       await request(
@@ -1779,49 +1956,38 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
     ).status,
     201,
   );
-  const replacementPublishPath =
-    `/organizations/${organizationBId}/events/${replacementEventId}/publish`;
+  const replacementPublishPath = `/organizations/${organizationBId}/events/${replacementEventId}/publish`;
   assert.equal(
-    (await request(replacementPublishPath, organizationBToken, { method: "POST" })).status,
+    (
+      await request(replacementPublishPath, organizationBToken, {
+        method: "POST",
+      })
+    ).status,
     200,
   );
   assert.equal(
     (
-      await request(`/events/${replacementEventId}/participation`, reporterToken, {
-        method: "POST",
-        body: JSON.stringify({ sessionIds: [replacementSessionId] }),
-      })
+      await request(
+        `/events/${replacementEventId}/participation`,
+        reporterToken,
+        {
+          method: "POST",
+        },
+      )
     ).status,
     201,
   );
   const participant = await prisma.eventParticipant.findFirstOrThrow({
     where: { cleanupEventId: replacementEventId, userId: reporterId },
   });
-  const allocationResponse = await request(
-    `/organizations/${organizationBId}/events/${replacementEventId}/allocations`,
-    organizationBToken,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        participantId: participant.id,
-        sessionId: replacementSessionId,
-      }),
-    },
-  );
-  assert.equal(allocationResponse.status, 201);
-  const allocationId = (await allocationResponse.json()).data.id as string;
-
-  await prisma.eventSession.update({
-    where: { id: replacementSessionId },
-    data: {
-      sessionDate: new Date("2020-01-01T00:00:00.000Z"),
-      startTime: new Date("1970-01-01T09:00:00.000Z"),
-    },
+  await prisma.cleanupEvent.update({
+    where: { id: replacementEventId },
+    data: { startsAt: new Date("2020-01-01T00:00:00.000Z") },
   });
   assert.equal(
     (
       await request(
-        `/organizations/${organizationBId}/events/${replacementEventId}/allocations/${allocationId}/attendance`,
+        `/organizations/${organizationBId}/events/${replacementEventId}/participants/${participant.id}/attendance`,
         organizationBToken,
         { method: "PATCH", body: JSON.stringify({ status: "ATTENDED" }) },
       )
@@ -1835,12 +2001,19 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
     {
       method: "POST",
       body: JSON.stringify({
-        files: [{ originalFileName: "inc-04-after.jpg", contentType: "image/jpeg", sizeBytes: 2048 }],
+        files: [
+          {
+            originalFileName: "inc-04-after.jpg",
+            contentType: "image/jpeg",
+            sizeBytes: 2048,
+          },
+        ],
       }),
     },
   );
   assert.equal(evidenceIntent.status, 201);
-  const evidenceStoragePath = (await evidenceIntent.json()).data[0].storagePath as string;
+  const evidenceStoragePath = (await evidenceIntent.json()).data[0]
+    .storagePath as string;
   assert.equal(
     (
       await request(
@@ -1854,7 +2027,6 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
             contentType: "image/jpeg",
             sizeBytes: 2048,
             type: "AFTER",
-            sessionId: replacementSessionId,
             caption: "The verified area after cleanup completion.",
           }),
         },
@@ -1863,100 +2035,14 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
     201,
   );
 
-  let replacementOperations = (await (
-    await request(
-      `/organizations/${organizationBId}/events/${replacementEventId}/operations`,
-      organizationBToken,
-    )
-  ).json()).data as {
-    event: { updatedAt: string };
-    sessions: Array<{ id: string; updatedAt: string }>;
-    availableTransitions: Array<{ id: string; lifecycleStatus: string }>;
-  };
-  const inProgressTarget = replacementOperations.availableTransitions.find(
-    ({ lifecycleStatus }) => lifecycleStatus === "IN_PROGRESS",
-  );
-  assert.ok(inProgressTarget);
-  assert.equal(
-    (
+  let replacementOperations = (
+    await (
       await request(
-        `/organizations/${organizationBId}/events/${replacementEventId}/transitions`,
+        `/organizations/${organizationBId}/events/${replacementEventId}/operations`,
         organizationBToken,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            targetWorkflowStatusId: inProgressTarget.id,
-            expectedUpdatedAt: replacementOperations.event.updatedAt,
-          }),
-        },
       )
-    ).status,
-    200,
-  );
-  let replacementSession = replacementOperations.sessions.find(
-    ({ id }) => id === replacementSessionId,
-  );
-  assert.ok(replacementSession);
-  const startedSession = await request(
-    `/organizations/${organizationBId}/events/${replacementEventId}/sessions/${replacementSessionId}/status`,
-    organizationBToken,
-    {
-      method: "PATCH",
-      body: JSON.stringify({
-        status: "IN_PROGRESS",
-        expectedUpdatedAt: replacementSession.updatedAt,
-      }),
-    },
-  );
-  assert.equal(startedSession.status, 200);
-  replacementSession = (await startedSession.json()).data as {
-    id: string;
-    updatedAt: string;
-  };
-  assert.equal(
-    (
-      await request(
-        `/organizations/${organizationBId}/events/${replacementEventId}/sessions/${replacementSessionId}/status`,
-        organizationBToken,
-        {
-          method: "PATCH",
-          body: JSON.stringify({
-            status: "COMPLETED",
-            expectedUpdatedAt: replacementSession.updatedAt,
-          }),
-        },
-      )
-    ).status,
-    200,
-  );
-
-  replacementOperations = (await (
-    await request(
-      `/organizations/${organizationBId}/events/${replacementEventId}/operations`,
-      organizationBToken,
-    )
-  ).json()).data;
-  const completionSubmittedTarget = replacementOperations.availableTransitions.find(
-    ({ lifecycleStatus }) => lifecycleStatus === "COMPLETION_SUBMITTED",
-  );
-  assert.ok(completionSubmittedTarget);
-  assert.equal(
-    (
-      await request(
-        `/organizations/${organizationBId}/events/${replacementEventId}/transitions`,
-        organizationBToken,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            targetWorkflowStatusId: completionSubmittedTarget.id,
-            expectedUpdatedAt: replacementOperations.event.updatedAt,
-            notes: "The INC-04 cleanup work and evidence are ready for completion.",
-          }),
-        },
-      )
-    ).status,
-    200,
-  );
+    ).json()
+  ).data as { event: { updatedAt: string } };
   const readiness = await request(
     `/organizations/${organizationBId}/events/${replacementEventId}/completion-readiness`,
     organizationBToken,
@@ -1964,12 +2050,14 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
   assert.equal(readiness.status, 200);
   assert.equal((await readiness.json()).data.ready, true);
 
-  replacementOperations = (await (
-    await request(
-      `/organizations/${organizationBId}/events/${replacementEventId}/operations`,
-      organizationBToken,
-    )
-  ).json()).data;
+  replacementOperations = (
+    await (
+      await request(
+        `/organizations/${organizationBId}/events/${replacementEventId}/operations`,
+        organizationBToken,
+      )
+    ).json()
+  ).data;
   const completionBody = {
     expectedUpdatedAt: replacementOperations.event.updatedAt,
     notes: "INC-04 completion evidence reviewed.",
@@ -2015,7 +2103,10 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
   );
   assert.equal(
     await prisma.auditLog.count({
-      where: { action: "CLEANUP_EVENT_COMPLETED", entityId: replacementEventId },
+      where: {
+        action: "CLEANUP_EVENT_COMPLETED",
+        entityId: replacementEventId,
+      },
     }),
     1,
   );
@@ -2053,29 +2144,52 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
     reporterToken,
   );
   assert.equal(notificationsResponse.status, 200);
-  const notifications = (await notificationsResponse.json()).data.items as Array<{
+  const notifications = (await notificationsResponse.json()).data
+    .items as Array<{
     type: string;
     data: Record<string, string> | null;
   }>;
-  assert.ok(notifications.some(({ type, data }) =>
-    type === "EVENT_CANCELLED" && data?.eventId === eventId));
-  assert.ok(notifications.some(({ type, data }) =>
-    type === "EVENT_COMPLETED" && data?.eventId === replacementEventId));
+  assert.ok(
+    notifications.some(
+      ({ type, data }) =>
+        type === "EVENT_CANCELLED" && data?.eventId === eventId,
+    ),
+  );
+  assert.ok(
+    notifications.some(
+      ({ type, data }) =>
+        type === "EVENT_COMPLETED" && data?.eventId === replacementEventId,
+    ),
+  );
   assertProjectionExcludesPrivateFields(notifications);
 
-  const rewardsResponse = await request("/rewards/me/contributions?limit=50", reporterToken);
+  const rewardsResponse = await request(
+    "/rewards/me/contributions?limit=50",
+    reporterToken,
+  );
   assert.equal(rewardsResponse.status, 200);
   const contributions = (await rewardsResponse.json()).data.items as Array<{
     type: string;
     incidentId: string | null;
     cleanupEventId: string | null;
   }>;
-  assert.ok(contributions.some(({ type, incidentId }) =>
-    type === "VERIFIED_INCIDENT_REPORT" && incidentId === created.id));
-  assert.ok(contributions.some(({ type, cleanupEventId }) =>
-    type === "EVENT_COMPLETED" && cleanupEventId === replacementEventId));
+  assert.ok(
+    contributions.some(
+      ({ type, incidentId }) =>
+        type === "VERIFIED_INCIDENT_REPORT" && incidentId === created.id,
+    ),
+  );
+  assert.ok(
+    contributions.some(
+      ({ type, cleanupEventId }) =>
+        type === "EVENT_COMPLETED" && cleanupEventId === replacementEventId,
+    ),
+  );
 
-  const citizenDashboardResponse = await request("/dashboards/citizen", reporterToken);
+  const citizenDashboardResponse = await request(
+    "/dashboards/citizen",
+    reporterToken,
+  );
   assert.equal(citizenDashboardResponse.status, 200);
   const citizenDashboard = (await citizenDashboardResponse.json()).data as {
     reportsByState: Record<string, number>;
@@ -2092,14 +2206,17 @@ test("INT-02 full workflow preserves tenant isolation and updates notifications,
     organizationBToken,
   );
   assert.equal(organizationDashboardResponse.status, 200);
-  const organizationDashboard = (await organizationDashboardResponse.json()).data as {
+  const organizationDashboard = (await organizationDashboardResponse.json())
+    .data as {
     organizationId: string;
     coveringIncidentsByState: Record<string, number>;
     reviewsByState: Record<string, number>;
     eventsByLifecycle: Record<string, number>;
   };
   assert.equal(organizationDashboard.organizationId, organizationBId);
-  assert.ok((organizationDashboard.coveringIncidentsByState.RESOLVED ?? 0) >= 1);
+  assert.ok(
+    (organizationDashboard.coveringIncidentsByState.RESOLVED ?? 0) >= 1,
+  );
   assert.ok((organizationDashboard.reviewsByState.VALID ?? 0) >= 1);
   assert.ok((organizationDashboard.eventsByLifecycle.CANCELLED ?? 0) >= 1);
   assert.ok((organizationDashboard.eventsByLifecycle.COMPLETED ?? 0) >= 1);
@@ -2123,7 +2240,8 @@ test("cancelling an elapsed linked event restores the incident from stored deadl
       submissionId: randomUUID(),
       categoryId,
       title: "INC-04 elapsed cancellation incident",
-      description: "An elapsed incident verifies deadline-aware claim release after cancellation.",
+      description:
+        "An elapsed incident verifies deadline-aware claim release after cancellation.",
       severity: "MEDIUM",
       status: "CLEANUP_ORGANIZED",
       latitude: 6.96,
@@ -2143,7 +2261,10 @@ test("cancelling an elapsed linked event restores the incident from stored deadl
     },
   });
   const publishedStatus = await prisma.cleanupWorkflowStatus.findFirstOrThrow({
-    where: { organizationId: organizationBId, mappedLifecycleStatus: "PUBLISHED" },
+    where: {
+      organizationId: organizationBId,
+      mappedLifecycleStatus: "PUBLISHED",
+    },
   });
   const elapsedEvent = await prisma.cleanupEvent.create({
     data: {
@@ -2153,7 +2274,8 @@ test("cancelling an elapsed linked event restores the incident from stored deadl
       lifecycleStatus: "PUBLISHED",
       createdByMembershipId: organizationBMembershipId,
       title: "INC-04 elapsed linked event",
-      description: "This event is cancelled after the incident highlight deadline.",
+      description:
+        "This event is cancelled after the incident highlight deadline.",
       publicInstructions: "Follow the event coordinator's safety instructions.",
       eventLatitude: 6.96,
       eventLongitude: 79.92,
@@ -2165,7 +2287,8 @@ test("cancelling an elapsed linked event restores the incident from stored deadl
     organizationBToken,
   );
   assert.equal(operations.status, 200);
-  const expectedUpdatedAt = (await operations.json()).data.event.updatedAt as string;
+  const expectedUpdatedAt = (await operations.json()).data.event
+    .updatedAt as string;
   const cancelled = await request(
     `/organizations/${organizationBId}/events/${elapsedEvent.id}/cancel`,
     organizationBToken,
@@ -2201,20 +2324,35 @@ test("rejects invalid coordinates and inactive categories", async () => {
   const invalidCoordinates = await request("/incidents", reporterToken, {
     method: "POST",
     body: JSON.stringify({
-      submissionId: randomUUID(), categoryId, title: "Invalid location",
-      description: "This location is deliberately outside the supported region.",
-      severity: "LOW", latitude: 51.5, longitude: -0.1, evidence: [],
+      submissionId: randomUUID(),
+      categoryId,
+      title: "Invalid location",
+      description:
+        "This location is deliberately outside the supported region.",
+      severity: "LOW",
+      latitude: 51.5,
+      longitude: -0.1,
+      evidence: [],
     }),
   });
   assert.equal(invalidCoordinates.status, 400);
 
-  await prisma.incidentCategory.update({ where: { id: categoryId }, data: { isActive: false } });
+  await prisma.incidentCategory.update({
+    where: { id: categoryId },
+    data: { isActive: false },
+  });
   const inactiveCategory = await request("/incidents", reporterToken, {
     method: "POST",
     body: JSON.stringify({
-      submissionId: randomUUID(), categoryId, title: "Inactive category",
-      description: "This report uses a category that has just been deactivated.",
-      severity: "LOW", latitude: 6.9271, longitude: 79.8612, evidence: [],
+      submissionId: randomUUID(),
+      categoryId,
+      title: "Inactive category",
+      description:
+        "This report uses a category that has just been deactivated.",
+      severity: "LOW",
+      latitude: 6.9271,
+      longitude: 79.8612,
+      evidence: [],
     }),
   });
   assert.equal(inactiveCategory.status, 422);

@@ -65,45 +65,60 @@ function OrganizationBoundaryLayer({
 }) {
   const map = useMap();
   const [activeAreaIndex, setActiveAreaIndex] = useState(0);
-  const hasFocusedInitialBoundaries = useRef(false);
+  const lastFocusedBoundarySet = useRef("");
+  const boundarySetKey = boundaries.features
+    .map((feature) => feature.properties.id)
+    .join(":");
 
-  const focusArea = useCallback((area: MapBoundaryFeature) => {
-    const bounds = geoJSON(
-      area as GeoJsonObject,
-    ).getBounds();
+  const focusArea = useCallback(
+    (area: MapBoundaryFeature) => {
+      const bounds = geoJSON(area as GeoJsonObject).getBounds();
 
-    if (bounds.isValid()) {
-      map.fitBounds(bounds, {
-        padding: [42, 42],
-        maxZoom: 16,
-      });
-    }
-  }, [map]);
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, {
+          padding: [42, 42],
+          maxZoom: 16,
+        });
+      }
+    },
+    [map],
+  );
 
   useEffect(() => {
-    if (hasFocusedInitialBoundaries.current || boundaries.features.length === 0) {
+    if (
+      lastFocusedBoundarySet.current === boundarySetKey ||
+      boundaries.features.length === 0
+    ) {
       return;
     }
 
     const bounds = geoJSON(boundaries as GeoJsonObject).getBounds();
     if (bounds.isValid()) {
-      hasFocusedInitialBoundaries.current = true;
+      lastFocusedBoundarySet.current = boundarySetKey;
       map.fitBounds(bounds, {
         padding: [42, 42],
         maxZoom: 16,
       });
     }
-  }, [boundaries, map]);
+  }, [boundaries, boundarySetKey, map]);
+
+  const normalizedActiveAreaIndex =
+    boundaries.features.length === 0
+      ? 0
+      : activeAreaIndex % boundaries.features.length;
 
   const focusNextArea = () => {
-    const nextIndex = (activeAreaIndex + 1) % boundaries.features.length;
+    const nextIndex =
+      (normalizedActiveAreaIndex + 1) % boundaries.features.length;
     setActiveAreaIndex(nextIndex);
     focusArea(boundaries.features[nextIndex]);
   };
 
-  const activeArea = boundaries.features[activeAreaIndex];
+  const activeArea = boundaries.features[normalizedActiveAreaIndex];
   const nextArea =
-    boundaries.features[(activeAreaIndex + 1) % boundaries.features.length];
+    boundaries.features[
+      (normalizedActiveAreaIndex + 1) % boundaries.features.length
+    ];
 
   return (
     <>
@@ -141,10 +156,14 @@ function OrganizationBoundaryLayer({
         className="eco-map-boundary-control"
         onClick={focusNextArea}
         aria-label={`Focus next service area${nextArea ? `: ${nextArea.properties.name}` : ""}`}
-        title={nextArea ? `Next: ${nextArea.properties.name}` : "Focus service area"}
+        title={
+          nextArea ? `Next: ${nextArea.properties.name}` : "Focus service area"
+        }
       >
         <span aria-hidden="true">→</span>
-        <span>{boundaries.features.length > 1 ? "Next area" : "Focus area"}</span>
+        <span>
+          {boundaries.features.length > 1 ? "Next area" : "Focus area"}
+        </span>
       </button>
     </>
   );
@@ -154,8 +173,7 @@ function isViewportBounded(viewport: MapViewport): boolean {
   return (
     viewport.east - viewport.west <=
       MAP_REQUEST_LIMITS.maxLongitudeSpanDegrees &&
-    viewport.north - viewport.south <=
-      MAP_REQUEST_LIMITS.maxLatitudeSpanDegrees
+    viewport.north - viewport.south <= MAP_REQUEST_LIMITS.maxLatitudeSpanDegrees
   );
 }
 
@@ -259,12 +277,23 @@ function MapCenterSynchronizer({
 
     if (radiusMeters) {
       const latitudeDelta = radiusMeters / 111_320;
-      const longitudeDelta = radiusMeters /
-        (111_320 * Math.max(Math.cos(location.latitude * Math.PI / 180), 0.01));
-      map.fitBounds([
-        [location.latitude - latitudeDelta, location.longitude - longitudeDelta],
-        [location.latitude + latitudeDelta, location.longitude + longitudeDelta],
-      ], { padding: [36, 36] });
+      const longitudeDelta =
+        radiusMeters /
+        (111_320 *
+          Math.max(Math.cos((location.latitude * Math.PI) / 180), 0.01));
+      map.fitBounds(
+        [
+          [
+            location.latitude - latitudeDelta,
+            location.longitude - longitudeDelta,
+          ],
+          [
+            location.latitude + latitudeDelta,
+            location.longitude + longitudeDelta,
+          ],
+        ],
+        { padding: [36, 36] },
+      );
     } else if (map.distance(map.getCenter(), nextCenter) > 1) {
       map.panTo(nextCenter);
     }
@@ -286,7 +315,9 @@ function CurrentLocationControl({
 
   const locate = () => {
     if (!("geolocation" in navigator)) {
-      onError("This browser does not provide location access. Select a point manually.");
+      onError(
+        "This browser does not provide location access. Select a point manually.",
+      );
       return;
     }
 
@@ -301,7 +332,9 @@ function CurrentLocationControl({
         onLocationSelect?.(location);
       },
       () => {
-        onError("Location permission was denied or unavailable. You can still select a point manually.");
+        onError(
+          "Location permission was denied or unavailable. You can still select a point manually.",
+        );
       },
       {
         enableHighAccuracy: false,
@@ -372,7 +405,8 @@ function ClusteredMarkerLayer({
         >
           <Popup>
             <strong>{cluster.markers.length} nearby locations</strong>
-            <br />Zoom in to explore them individually.
+            <br />
+            Zoom in to explore them individually.
           </Popup>
         </CircleMarker>
       );
@@ -518,10 +552,7 @@ export function EcoMap({
           )}
           {selectedLocation && selectionMode === "point" && (
             <CircleMarker
-              center={[
-                selectedLocation.latitude,
-                selectedLocation.longitude,
-              ]}
+              center={[selectedLocation.latitude, selectedLocation.longitude]}
               radius={12}
               pathOptions={{
                 color: "#163f2b",
@@ -597,7 +628,9 @@ export function EcoMap({
                     <span>
                       <strong>{marker.properties.title}</strong>
                       <small>
-                        {marker.properties.status} · {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                        {marker.properties.status} ·{" "}
+                        {location.latitude.toFixed(4)},{" "}
+                        {location.longitude.toFixed(4)}
                       </small>
                     </span>
                   </button>

@@ -5,6 +5,7 @@ import { requireCompletedProfile } from "../../middleware/requireCompletedProfil
 import type { AuthenticationDependencies } from "../auth/auth.types.js";
 import type { OrganizationApplicationDependencies } from "../organizations/application/application.dependencies.js";
 import { listAdministrativeAreasController } from "./controllers/listAdministrativeAreas.controller.js";
+import { getAdministrativeAreaBoundaryController } from "./controllers/getAdministrativeAreaBoundary.controller.js";
 
 export function createAdministrativeAreaRouter(
   authenticationDependencies: AuthenticationDependencies,
@@ -17,6 +18,13 @@ export function createAdministrativeAreaRouter(
     createAuthenticationMiddleware(authenticationDependencies),
     requireCompletedProfile,
     listAdministrativeAreasController(dependencies),
+  );
+
+  router.get(
+    "/administrative-areas/:areaId/boundary",
+    createAuthenticationMiddleware(authenticationDependencies),
+    requireCompletedProfile,
+    getAdministrativeAreaBoundaryController(dependencies),
   );
 
   return router;

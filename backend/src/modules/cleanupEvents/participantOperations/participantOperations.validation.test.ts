@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { randomUUID } from "node:crypto";
-
 import {
-  allocateParticipantSchema,
   listEventParticipantsQuerySchema,
   recordAttendanceSchema,
   removeParticipantSchema,
@@ -14,21 +11,43 @@ test("participant operation validation applies bounded paging", () => {
     status: "JOINED",
     limit: 50,
   });
-  assert.equal(listEventParticipantsQuerySchema.safeParse({ limit: 101 }).success, false);
+  assert.equal(
+    listEventParticipantsQuerySchema.safeParse({ limit: 101 }).success,
+    false,
+  );
 });
 
-test("allocation and attendance validation reject unsafe fields", () => {
-  const allocation = allocateParticipantSchema.safeParse({
-    participantId: randomUUID(),
-    sessionId: randomUUID(),
-    allocatedByMembershipId: randomUUID(),
-  });
-  assert.equal(allocation.success, false);
-  assert.equal(recordAttendanceSchema.safeParse({ status: "PLANNED" }).success, false);
+test("event attendance accepts only final event-level states", () => {
+  assert.equal(
+    recordAttendanceSchema.safeParse({ status: "PLANNED" }).success,
+    false,
+  );
+  assert.equal(
+    recordAttendanceSchema.safeParse({ status: "ATTENDED" }).success,
+    true,
+  );
+  assert.equal(
+    recordAttendanceSchema.safeParse({ status: "ABSENT" }).success,
+    true,
+  );
+  assert.equal(
+    recordAttendanceSchema.safeParse({
+      status: "ATTENDED",
+      sessionId: "obsolete",
+    }).success,
+    false,
+  );
 });
 
 test("participant removal requires a useful reason", () => {
-  assert.equal(removeParticipantSchema.safeParse({ reason: "short" }).success, false);
-  assert.equal(removeParticipantSchema.safeParse({ reason: "The volunteer cannot safely participate." }).success, true);
+  assert.equal(
+    removeParticipantSchema.safeParse({ reason: "short" }).success,
+    false,
+  );
+  assert.equal(
+    removeParticipantSchema.safeParse({
+      reason: "The volunteer cannot safely participate.",
+    }).success,
+    true,
+  );
 });
-

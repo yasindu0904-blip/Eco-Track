@@ -1,25 +1,25 @@
 import { ApplicationError } from "../../../errors/applicationError.js";
+import { observeSpatialQuery } from "../../maps/map.telemetry.js";
 import type { CleanupEventDependencies } from "../cleanupEvent.dependencies.js";
 import type {
+  CleanupEventDisplayStatus,
   CleanupEventDraftDto,
   CleanupEventDraftPageDto,
+  CleanupEventLifecycleStatus,
   CleanupEventMapFeatureCollectionDto,
   CleanupEventOwnedPageDto,
   CleanupEventOwnedSummaryDto,
   CleanupEventPublicDetailDto,
-  CleanupEventPublicLifecycleStatus,
   CleanupEventPublicPageDto,
   CleanupEventPublicSummaryDto,
   CleanupEventPublishReadinessDto,
   CleanupEventPublishResultDto,
-  CleanupEventSessionDto,
 } from "../cleanupEvent.types.js";
 import type {
   ValidatedCleanupEventListQuery,
   ValidatedCleanupEventMapQuery,
   ValidatedCleanupEventNearbyMapQuery,
   ValidatedCreateDraft,
-  ValidatedCreateSession,
   ValidatedDraftListQuery,
   ValidatedUpdateDraft,
 } from "../cleanupEvent.validation.js";
@@ -27,7 +27,6 @@ import { uuidSchema } from "../cleanupEvent.validation.js";
 import {
   assignCoordinatorRecord,
   createDraftRecord,
-  createEventSessionRecord,
   discardDraftRecord,
   findActiveOrganizationMembership,
   findDraftEventById,
@@ -36,62 +35,47 @@ import {
   findOrganizationDrafts,
   findOwnedCleanupEventById,
   findPublicCleanupEventById,
-  listOwnedCleanupEventRecords,
-  listPublicCleanupEventMapRecords,
+  findVisibleIncidentLocation,
   listNearbyPublicCleanupEventMapRecords,
   listOrganizationCleanupEventMapRecords,
+  listOwnedCleanupEventRecords,
+  listPublicCleanupEventMapRecords,
   listPublicCleanupEventRecords,
-  isIncidentVisibleToOrganization,
   removeCoordinatorRecord,
-  removeEventSessionRecord,
   updateDraftRecord,
-  updateEventSessionRecord,
   type CleanupEventDraftCursor,
   type CleanupEventDraftRecord,
+  type CleanupEventMapCursor,
   type CleanupEventOwnedCursor,
   type CleanupEventPublicCursor,
   type CleanupEventPublicRecord,
-  type CleanupEventMapCursor,
 } from "../repositories/cleanupEvent.repository.js";
-import { observeSpatialQuery } from "../../maps/map.telemetry.js";
 import {
   getCleanupEventPublishReadiness,
   publishCleanupEvent,
 } from "../use-cases/publishCleanupEvent.useCase.js";
 
-function isUniqueConstraintError(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === "P2002"
+function normalizedLifecycle(status: string): CleanupEventLifecycleStatus {
+  if (["SCHEDULED", "IN_PROGRESS", "COMPLETION_SUBMITTED"].includes(status))
+    return "PUBLISHED";
+  if (["DRAFT", "PUBLISHED", "COMPLETED", "CANCELLED"].includes(status))
+    return status as CleanupEventLifecycleStatus;
+  throw new ApplicationError(
+    500,
+    "EVENT_STATE_INVALID",
+    "The cleanup event has an unsupported lifecycle state.",
   );
 }
 
-function formatDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function formatTime(date: Date): string {
-  return date.toISOString().slice(11, 19);
-}
-
-function toSessionDto(session: CleanupEventDraftRecord["sessions"][number]): CleanupEventSessionDto {
-  return {
-    id: session.id,
-    sessionDate: formatDate(session.sessionDate),
-    startTime: formatTime(session.startTime),
-    endTime: formatTime(session.endTime),
-    capacity: session.capacity,
-    locationLatitude: session.locationLatitude === null
-      ? null
-      : Number(session.locationLatitude),
-    locationLongitude: session.locationLongitude === null
-      ? null
-      : Number(session.locationLongitude),
-    locationAddress: session.locationAddress,
-    notes: session.notes,
-  };
+export function cleanupEventDisplayStatus(
+  lifecycleStatus: CleanupEventLifecycleStatus,
+  startsAt: Date | null,
+  now = new Date(),
+): CleanupEventDisplayStatus {
+  if (lifecycleStatus !== "PUBLISHED") return lifecycleStatus;
+  return startsAt && startsAt.getTime() > now.getTime()
+    ? "UPCOMING"
+    : "ONGOING";
 }
 
 function toDraftDto(record: CleanupEventDraftRecord): CleanupEventDraftDto {
@@ -100,22 +84,23 @@ function toDraftDto(record: CleanupEventDraftRecord): CleanupEventDraftDto {
     organizationId: record.organizationId,
     incidentId: record.incidentId,
     lifecycleStatus: "DRAFT",
+    displayStatus: "DRAFT",
     title: record.title,
     description: record.description,
     publicInstructions: record.publicInstructions,
     eventLatitude: Number(record.eventLatitude),
     eventLongitude: Number(record.eventLongitude),
     eventAddress: record.eventAddress,
-    meetingLatitude: record.meetingLatitude === null
-      ? null
-      : Number(record.meetingLatitude),
-    meetingLongitude: record.meetingLongitude === null
-      ? null
-      : Number(record.meetingLongitude),
+    meetingLatitude:
+      record.meetingLatitude === null ? null : Number(record.meetingLatitude),
+    meetingLongitude:
+      record.meetingLongitude === null ? null : Number(record.meetingLongitude),
     meetingAddress: record.meetingAddress,
+    startsAt: record.startsAt?.toISOString() ?? null,
+    capacity: record.capacity,
+    locationLockedToIncident: record.incidentId !== null,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
-    sessions: record.sessions.map(toSessionDto),
     coordinators: record.coordinators.map((coordinator) => ({
       id: coordinator.id,
       membershipId: coordinator.membershipId,
@@ -130,9 +115,70 @@ function toDraftDto(record: CleanupEventDraftRecord): CleanupEventDraftDto {
   };
 }
 
-function encodeCursor(record: CleanupEventDraftRecord): string {
+function requirePublicDates(record: CleanupEventPublicRecord): {
+  publishedAt: Date;
+  startsAt: Date;
+} {
+  if (!record.publishedAt || !record.startsAt) {
+    throw new ApplicationError(
+      500,
+      "PUBLIC_EVENT_DATE_MISSING",
+      "The published event schedule is unavailable.",
+    );
+  }
+  return { publishedAt: record.publishedAt, startsAt: record.startsAt };
+}
+
+function toPublicSummary(
+  record: CleanupEventPublicRecord,
+): CleanupEventPublicSummaryDto {
+  const dates = requirePublicDates(record);
+  const lifecycleStatus = normalizedLifecycle(record.lifecycleStatus);
+  if (lifecycleStatus === "DRAFT") {
+    throw new ApplicationError(
+      500,
+      "PUBLIC_EVENT_STATE_INVALID",
+      "A private event cannot be returned publicly.",
+    );
+  }
+  return {
+    id: record.id,
+    organization: record.organization,
+    incidentId: record.incidentId,
+    title: record.title,
+    description: record.description,
+    lifecycleStatus,
+    displayStatus: cleanupEventDisplayStatus(
+      lifecycleStatus,
+      dates.startsAt,
+    ) as Exclude<CleanupEventDisplayStatus, "DRAFT">,
+    eventLatitude: Number(record.eventLatitude),
+    eventLongitude: Number(record.eventLongitude),
+    eventAddress: record.eventAddress,
+    startsAt: dates.startsAt.toISOString(),
+    capacity: record.capacity,
+    publishedAt: dates.publishedAt.toISOString(),
+  };
+}
+
+function toPublicDetail(
+  record: CleanupEventPublicRecord,
+): CleanupEventPublicDetailDto {
+  return {
+    ...toPublicSummary(record),
+    publicInstructions: record.publicInstructions ?? "",
+    meetingLatitude:
+      record.meetingLatitude === null ? null : Number(record.meetingLatitude),
+    meetingLongitude:
+      record.meetingLongitude === null ? null : Number(record.meetingLongitude),
+    meetingAddress: record.meetingAddress,
+    joinedVolunteerCount: record._count.participants,
+  };
+}
+
+function encodeCursor(value: { createdAt: Date; id: string }): string {
   return Buffer.from(
-    JSON.stringify({ createdAt: record.createdAt.toISOString(), id: record.id }),
+    JSON.stringify({ createdAt: value.createdAt.toISOString(), id: value.id }),
     "utf8",
   ).toString("base64url");
 }
@@ -142,18 +188,15 @@ function decodeCursor(cursor: string): CleanupEventDraftCursor {
     const parsed = JSON.parse(
       Buffer.from(cursor, "base64url").toString("utf8"),
     ) as { createdAt?: unknown; id?: unknown };
-    const parsedId = uuidSchema.safeParse(parsed.id);
-    if (typeof parsed.createdAt !== "string" || !parsedId.success) {
-      throw new Error();
-    }
-    const createdAt = new Date(parsed.createdAt);
-    if (Number.isNaN(createdAt.getTime())) throw new Error();
-    return { createdAt, id: parsedId.data };
+    const id = uuidSchema.safeParse(parsed.id);
+    const createdAt = new Date(String(parsed.createdAt));
+    if (!id.success || Number.isNaN(createdAt.getTime())) throw new Error();
+    return { createdAt, id: id.data };
   } catch {
     throw new ApplicationError(
       400,
       "CLEANUP_EVENT_CURSOR_INVALID",
-      "The cleanup-event draft cursor is invalid.",
+      "The cleanup-event cursor is invalid.",
     );
   }
 }
@@ -166,11 +209,12 @@ function decodeDatedCursor<T extends "publishedAt" | "updatedAt">(
     const parsed = JSON.parse(
       Buffer.from(cursor, "base64url").toString("utf8"),
     ) as Record<string, unknown>;
-    const parsedId = uuidSchema.safeParse(parsed.id);
-    if (typeof parsed[field] !== "string" || !parsedId.success) throw new Error();
-    const date = new Date(parsed[field]);
-    if (Number.isNaN(date.getTime())) throw new Error();
-    return { [field]: date, id: parsedId.data } as { [K in T]: Date } & { id: string };
+    const id = uuidSchema.safeParse(parsed.id);
+    const date = new Date(String(parsed[field]));
+    if (!id.success || Number.isNaN(date.getTime())) throw new Error();
+    return { [field]: date, id: id.data } as { [K in T]: Date } & {
+      id: string;
+    };
   } catch {
     throw new ApplicationError(
       400,
@@ -191,96 +235,43 @@ function encodeDatedCursor(
   ).toString("base64url");
 }
 
-function firstSessionAt(record: CleanupEventPublicRecord): string | null {
-  const session = record.sessions[0];
-  if (!session) return null;
-  return `${formatDate(session.sessionDate)}T${formatTime(session.startTime)}+05:30`;
-}
-
-function publicLifecycleStatus(
-  record: CleanupEventPublicRecord,
-): CleanupEventPublicLifecycleStatus {
-  if (record.lifecycleStatus === "DRAFT") {
-    throw new ApplicationError(500, "PUBLIC_EVENT_STATE_INVALID", "A private event cannot be returned publicly.");
-  }
-  return record.lifecycleStatus;
-}
-
-function toPublicSummary(record: CleanupEventPublicRecord): CleanupEventPublicSummaryDto {
-  if (!record.publishedAt) {
-    throw new ApplicationError(500, "PUBLIC_EVENT_DATE_MISSING", "The published event date is unavailable.");
-  }
-  return {
-    id: record.id,
-    organization: record.organization,
-    incidentId: record.incidentId,
-    title: record.title,
-    description: record.description,
-    lifecycleStatus: publicLifecycleStatus(record),
-    eventLatitude: Number(record.eventLatitude),
-    eventLongitude: Number(record.eventLongitude),
-    eventAddress: record.eventAddress,
-    publishedAt: record.publishedAt.toISOString(),
-    firstSessionAt: firstSessionAt(record),
-  };
-}
-
-function toPublicDetail(record: CleanupEventPublicRecord): CleanupEventPublicDetailDto {
-  return {
-    ...toPublicSummary(record),
-    publicInstructions: record.publicInstructions ?? "",
-    meetingLatitude: record.meetingLatitude === null ? null : Number(record.meetingLatitude),
-    meetingLongitude: record.meetingLongitude === null ? null : Number(record.meetingLongitude),
-    meetingAddress: record.meetingAddress,
-    sessions: record.sessions.map((session) => ({
-      id: session.id,
-      sessionDate: formatDate(session.sessionDate),
-      startTime: formatTime(session.startTime),
-      endTime: formatTime(session.endTime),
-      capacity: session.capacity,
-      locationLatitude: session.locationLatitude === null ? null : Number(session.locationLatitude),
-      locationLongitude: session.locationLongitude === null ? null : Number(session.locationLongitude),
-      locationAddress: session.locationAddress,
-    })),
-  };
-}
-
-async function requireVisibleIncident(
+async function resolveIncidentLocation(
   dependencies: CleanupEventDependencies,
   organizationId: string,
   incidentId: string,
-): Promise<void> {
-  const visible = await isIncidentVisibleToOrganization(
+) {
+  const location = await findVisibleIncidentLocation(
     dependencies.prisma,
     organizationId,
     incidentId,
   );
-  if (!visible) {
+  if (!location)
     throw new ApplicationError(
       404,
       "INCIDENT_NOT_VISIBLE",
       "The specified incident is not visible to this organization.",
     );
-  }
+  return location;
 }
 
-async function requireDraft(
+async function lockedDraftInput(
   dependencies: CleanupEventDependencies,
   organizationId: string,
-  eventId: string,
-): Promise<void> {
-  const event = await findDraftEventById(
-    dependencies.prisma,
+  input: ValidatedCreateDraft,
+): Promise<ValidatedCreateDraft> {
+  if (!input.incidentId) return input;
+  const incident = await resolveIncidentLocation(
+    dependencies,
     organizationId,
-    eventId,
+    input.incidentId,
   );
-  if (!event) {
-    throw new ApplicationError(
-      404,
-      "CLEANUP_EVENT_DRAFT_NOT_FOUND",
-      "The cleanup-event draft was not found in this organization.",
-    );
-  }
+  return {
+    ...input,
+    eventLatitude: incident.latitude,
+    eventLongitude: incident.longitude,
+    meetingLatitude: incident.latitude,
+    meetingLongitude: incident.longitude,
+  };
 }
 
 export async function createDraft(
@@ -293,23 +284,19 @@ export async function createDraft(
     dependencies.prisma,
     organizationId,
   );
-  if (!workflowStatusId) {
+  if (!workflowStatusId)
     throw new ApplicationError(
       409,
       "DRAFT_WORKFLOW_UNAVAILABLE",
       "This organization does not have an active draft workflow status.",
     );
-  }
-  if (input.incidentId) {
-    await requireVisibleIncident(dependencies, organizationId, input.incidentId);
-  }
   return toDraftDto(
     await createDraftRecord(
       dependencies.prisma,
       organizationId,
       membershipId,
       workflowStatusId,
-      input,
+      await lockedDraftInput(dependencies, organizationId, input),
     ),
   );
 }
@@ -320,22 +307,58 @@ export async function updateDraft(
   draftId: string,
   input: ValidatedUpdateDraft,
 ): Promise<CleanupEventDraftDto> {
-  if (input.incidentId) {
-    await requireVisibleIncident(dependencies, organizationId, input.incidentId);
-  }
-  const updated = await updateDraftRecord(
+  const current = await findOrganizationDraftById(
     dependencies.prisma,
     organizationId,
     draftId,
-    input,
   );
-  if (!updated) {
+  if (!current)
     throw new ApplicationError(
       404,
       "DRAFT_NOT_FOUND",
       "The draft was not found or is no longer editable.",
     );
+  let safeInput = input;
+  const targetIncidentId = current.incidentId ?? input.incidentId;
+  if (current.incidentId) {
+    if (
+      input.incidentId !== undefined &&
+      input.incidentId !== current.incidentId
+    ) {
+      throw new ApplicationError(
+        409,
+        "INCIDENT_LINK_LOCKED",
+        "A linked incident cannot be changed after the draft is created.",
+      );
+    }
   }
+  if (targetIncidentId) {
+    const incident = await resolveIncidentLocation(
+      dependencies,
+      organizationId,
+      targetIncidentId,
+    );
+    safeInput = {
+      ...input,
+      incidentId: targetIncidentId,
+      eventLatitude: incident.latitude,
+      eventLongitude: incident.longitude,
+      meetingLatitude: incident.latitude,
+      meetingLongitude: incident.longitude,
+    };
+  }
+  const updated = await updateDraftRecord(
+    dependencies.prisma,
+    organizationId,
+    draftId,
+    safeInput,
+  );
+  if (!updated)
+    throw new ApplicationError(
+      404,
+      "DRAFT_NOT_FOUND",
+      "The draft was not found or is no longer editable.",
+    );
   return toDraftDto(updated);
 }
 
@@ -367,9 +390,12 @@ export async function getOrganizationDraft(
     organizationId,
     id,
   );
-  if (!draft) {
-    throw new ApplicationError(404, "DRAFT_NOT_FOUND", "The draft was not found.");
-  }
+  if (!draft)
+    throw new ApplicationError(
+      404,
+      "DRAFT_NOT_FOUND",
+      "The draft was not found.",
+    );
   return toDraftDto(draft);
 }
 
@@ -378,119 +404,42 @@ export async function discardDraft(
   organizationId: string,
   draftId: string,
 ): Promise<void> {
-  if (!(await discardDraftRecord(dependencies.prisma, organizationId, draftId))) {
+  if (!(await discardDraftRecord(dependencies.prisma, organizationId, draftId)))
     throw new ApplicationError(
       404,
       "DRAFT_NOT_FOUND",
       "The draft was not found or is no longer editable.",
     );
-  }
-}
-
-export async function createSession(
-  dependencies: CleanupEventDependencies,
-  organizationId: string,
-  cleanupEventId: string,
-  input: ValidatedCreateSession,
-) {
-  await requireDraft(dependencies, organizationId, cleanupEventId);
-  try {
-    return await createEventSessionRecord(
-      dependencies.prisma,
-      cleanupEventId,
-      input,
-    );
-  } catch (error) {
-    if (isUniqueConstraintError(error)) {
-      throw new ApplicationError(
-        409,
-        "SESSION_DUPLICATE",
-        "A session already exists for this date and start time.",
-      );
-    }
-    throw error;
-  }
-}
-
-export async function updateSession(
-  dependencies: CleanupEventDependencies,
-  organizationId: string,
-  eventId: string,
-  sessionId: string,
-  input: ValidatedCreateSession,
-) {
-  try {
-    const updated = await updateEventSessionRecord(
-      dependencies.prisma,
-      organizationId,
-      eventId,
-      sessionId,
-      input,
-    );
-    if (!updated) {
-      throw new ApplicationError(
-        404,
-        "SESSION_NOT_FOUND",
-        "The session was not found in this draft.",
-      );
-    }
-    return updated;
-  } catch (error) {
-    if (isUniqueConstraintError(error)) {
-      throw new ApplicationError(
-        409,
-        "SESSION_DUPLICATE",
-        "A session already exists for this date and start time.",
-      );
-    }
-    throw error;
-  }
-}
-
-export async function removeSession(
-  dependencies: CleanupEventDependencies,
-  organizationId: string,
-  eventId: string,
-  sessionId: string,
-): Promise<void> {
-  const removed = await removeEventSessionRecord(
-    dependencies.prisma,
-    organizationId,
-    eventId,
-    sessionId,
-  );
-  if (!removed) {
-    throw new ApplicationError(
-      404,
-      "SESSION_NOT_FOUND",
-      "The session was not found in this draft.",
-    );
-  }
 }
 
 export async function assignCoordinator(
   dependencies: CleanupEventDependencies,
   organizationId: string,
-  cleanupEventId: string,
+  eventId: string,
   membershipId: string,
   assignedByMembershipId: string,
 ) {
-  await requireDraft(dependencies, organizationId, cleanupEventId);
-  const membership = await findActiveOrganizationMembership(
-    dependencies.prisma,
-    organizationId,
-    membershipId,
-  );
-  if (!membership) {
+  if (!(await findDraftEventById(dependencies.prisma, organizationId, eventId)))
+    throw new ApplicationError(
+      404,
+      "CLEANUP_EVENT_DRAFT_NOT_FOUND",
+      "The cleanup-event draft was not found in this organization.",
+    );
+  if (
+    !(await findActiveOrganizationMembership(
+      dependencies.prisma,
+      organizationId,
+      membershipId,
+    ))
+  )
     throw new ApplicationError(
       400,
       "MEMBERSHIP_INVALID",
       "The coordinator must be an active member of this organization.",
     );
-  }
   return assignCoordinatorRecord(
     dependencies.prisma,
-    cleanupEventId,
+    eventId,
     membershipId,
     assignedByMembershipId,
   );
@@ -499,22 +448,23 @@ export async function assignCoordinator(
 export async function removeCoordinator(
   dependencies: CleanupEventDependencies,
   organizationId: string,
-  cleanupEventId: string,
+  eventId: string,
   membershipId: string,
 ): Promise<void> {
-  await requireDraft(dependencies, organizationId, cleanupEventId);
-  const removed = await removeCoordinatorRecord(
-    dependencies.prisma,
-    cleanupEventId,
-    membershipId,
-  );
-  if (!removed) {
+  if (!(await findDraftEventById(dependencies.prisma, organizationId, eventId)))
+    throw new ApplicationError(
+      404,
+      "CLEANUP_EVENT_DRAFT_NOT_FOUND",
+      "The cleanup-event draft was not found in this organization.",
+    );
+  if (
+    !(await removeCoordinatorRecord(dependencies.prisma, eventId, membershipId))
+  )
     throw new ApplicationError(
       404,
       "COORDINATOR_NOT_FOUND",
       "The active coordinator assignment was not found in this draft.",
     );
-  }
 }
 
 export function getPublishReadiness(
@@ -535,11 +485,20 @@ export async function publishEvent(
   },
 ): Promise<CleanupEventPublishResultDto> {
   const result = await publishCleanupEvent(dependencies, command);
-  const event = await findPublicCleanupEventById(dependencies.prisma, result.eventId);
-  if (!event) {
-    throw new ApplicationError(500, "PUBLISHED_EVENT_NOT_FOUND", "The published cleanup event could not be loaded.");
-  }
-  return { event: toPublicDetail(event), incidentUpdated: result.incidentUpdated };
+  const event = await findPublicCleanupEventById(
+    dependencies.prisma,
+    result.eventId,
+  );
+  if (!event)
+    throw new ApplicationError(
+      500,
+      "PUBLISHED_EVENT_NOT_FOUND",
+      "The published cleanup event could not be loaded.",
+    );
+  return {
+    event: toPublicDetail(event),
+    incidentUpdated: result.incidentUpdated,
+  };
 }
 
 export async function listPublicCleanupEvents(
@@ -547,7 +506,10 @@ export async function listPublicCleanupEvents(
   query: ValidatedCleanupEventListQuery,
 ): Promise<CleanupEventPublicPageDto> {
   const cursor = query.cursor
-    ? decodeDatedCursor(query.cursor, "publishedAt") as CleanupEventPublicCursor
+    ? (decodeDatedCursor(
+        query.cursor,
+        "publishedAt",
+      ) as CleanupEventPublicCursor)
     : null;
   const records = await listPublicCleanupEventRecords(dependencies.prisma, {
     cursor,
@@ -558,9 +520,10 @@ export async function listPublicCleanupEvents(
   const last = page.at(-1);
   return {
     items: page.map(toPublicSummary),
-    nextCursor: hasMore && last?.publishedAt
-      ? encodeDatedCursor("publishedAt", last.publishedAt, last.id)
-      : null,
+    nextCursor:
+      hasMore && last?.publishedAt
+        ? encodeDatedCursor("publishedAt", last.publishedAt, last.id)
+        : null,
   };
 }
 
@@ -569,25 +532,33 @@ export async function getPublicCleanupEvent(
   eventId: string,
 ): Promise<CleanupEventPublicDetailDto> {
   const record = await findPublicCleanupEventById(dependencies.prisma, eventId);
-  if (!record) {
-    throw new ApplicationError(404, "CLEANUP_EVENT_NOT_FOUND", "The public cleanup event was not found.");
-  }
+  if (!record)
+    throw new ApplicationError(
+      404,
+      "CLEANUP_EVENT_NOT_FOUND",
+      "The public cleanup event was not found.",
+    );
   return toPublicDetail(record);
 }
 
-function toOwnedSummary(record: CleanupEventPublicRecord): CleanupEventOwnedSummaryDto {
+function toOwnedSummary(
+  record: CleanupEventPublicRecord,
+): CleanupEventOwnedSummaryDto {
+  const lifecycleStatus = normalizedLifecycle(record.lifecycleStatus);
   return {
     id: record.id,
     organization: record.organization,
     incidentId: record.incidentId,
     title: record.title,
     description: record.description,
-    lifecycleStatus: record.lifecycleStatus,
+    lifecycleStatus,
+    displayStatus: cleanupEventDisplayStatus(lifecycleStatus, record.startsAt),
     eventLatitude: Number(record.eventLatitude),
     eventLongitude: Number(record.eventLongitude),
     eventAddress: record.eventAddress,
+    startsAt: record.startsAt?.toISOString() ?? null,
+    capacity: record.capacity,
     publishedAt: record.publishedAt?.toISOString() ?? null,
-    firstSessionAt: firstSessionAt(record),
     updatedAt: record.updatedAt.toISOString(),
   };
 }
@@ -602,9 +573,12 @@ export async function getOwnedCleanupEvent(
     organizationId,
     eventId,
   );
-  if (!record) {
-    throw new ApplicationError(404, "CLEANUP_EVENT_NOT_FOUND", "The organization cleanup event was not found.");
-  }
+  if (!record)
+    throw new ApplicationError(
+      404,
+      "CLEANUP_EVENT_NOT_FOUND",
+      "The organization cleanup event was not found.",
+    );
   return toOwnedSummary(record);
 }
 
@@ -615,12 +589,14 @@ export async function listOwnedCleanupEvents(
   query: ValidatedCleanupEventListQuery,
 ): Promise<CleanupEventOwnedPageDto> {
   const cursor = query.cursor
-    ? decodeDatedCursor(query.cursor, "updatedAt") as CleanupEventOwnedCursor
+    ? (decodeDatedCursor(query.cursor, "updatedAt") as CleanupEventOwnedCursor)
     : null;
-    const records = await listOwnedCleanupEventRecords(dependencies.prisma, {
-      organizationId,
-      ...(membership.role === "ORG_MEMBER" ? { coordinatorMembershipId: membership.id } : {}),
-      cursor,
+  const records = await listOwnedCleanupEventRecords(dependencies.prisma, {
+    organizationId,
+    ...(membership.role === "ORG_MEMBER"
+      ? { coordinatorMembershipId: membership.id }
+      : {}),
+    cursor,
     limit: query.limit,
   });
   const hasMore = records.length > query.limit;
@@ -628,9 +604,10 @@ export async function listOwnedCleanupEvents(
   const last = page.at(-1);
   return {
     items: page.map(toOwnedSummary),
-    nextCursor: hasMore && last
-      ? encodeDatedCursor("updatedAt", last.updatedAt, last.id)
-      : null,
+    nextCursor:
+      hasMore && last
+        ? encodeDatedCursor("updatedAt", last.updatedAt, last.id)
+        : null,
   };
 }
 
@@ -639,13 +616,29 @@ export async function listPublicCleanupEventMap(
   query: ValidatedCleanupEventMapQuery,
   userId: string,
 ): Promise<CleanupEventMapFeatureCollectionDto> {
-  const decoded = query.cursor ? decodeDatedCursor(query.cursor, "publishedAt") : null;
-  const cursor = decoded
-    ? ({ sortAt: decoded.publishedAt, id: decoded.id } satisfies CleanupEventMapCursor)
+  const decoded = query.cursor
+    ? decodeDatedCursor(query.cursor, "publishedAt")
     : null;
-  const records = await observeSpatialQuery(dependencies.spatialQueryObserver, {
-    operation: "cleanup_events.public", projection: "PUBLIC", mode: "VIEWPORT",
-  }, () => listPublicCleanupEventMapRecords(dependencies.prisma, { ...query, cursor, userId }));
+  const cursor = decoded
+    ? ({
+        sortAt: decoded.publishedAt,
+        id: decoded.id,
+      } satisfies CleanupEventMapCursor)
+    : null;
+  const records = await observeSpatialQuery(
+    dependencies.spatialQueryObserver,
+    {
+      operation: "cleanup_events.public",
+      projection: "PUBLIC",
+      mode: "VIEWPORT",
+    },
+    () =>
+      listPublicCleanupEventMapRecords(dependencies.prisma, {
+        ...query,
+        cursor,
+        userId,
+      }),
+  );
   return toMapPage(records, query.limit, "publishedAt", false);
 }
 
@@ -654,11 +647,26 @@ export async function listNearbyPublicCleanupEventMap(
   query: ValidatedCleanupEventNearbyMapQuery,
   userId: string,
 ): Promise<CleanupEventMapFeatureCollectionDto> {
-  const decoded = query.cursor ? decodeDatedCursor(query.cursor, "publishedAt") : null;
-  const cursor = decoded ? { sortAt: decoded.publishedAt, id: decoded.id } : null;
-  const records = await observeSpatialQuery(dependencies.spatialQueryObserver, {
-    operation: "cleanup_events.public", projection: "PUBLIC", mode: "RADIUS",
-  }, () => listNearbyPublicCleanupEventMapRecords(dependencies.prisma, { ...query, cursor, userId }));
+  const decoded = query.cursor
+    ? decodeDatedCursor(query.cursor, "publishedAt")
+    : null;
+  const cursor = decoded
+    ? { sortAt: decoded.publishedAt, id: decoded.id }
+    : null;
+  const records = await observeSpatialQuery(
+    dependencies.spatialQueryObserver,
+    {
+      operation: "cleanup_events.public",
+      projection: "PUBLIC",
+      mode: "RADIUS",
+    },
+    () =>
+      listNearbyPublicCleanupEventMapRecords(dependencies.prisma, {
+        ...query,
+        cursor,
+        userId,
+      }),
+  );
   return toMapPage(records, query.limit, "publishedAt", false);
 }
 
@@ -667,11 +675,24 @@ export async function listOrganizationCleanupEventMap(
   organizationId: string,
   query: ValidatedCleanupEventMapQuery,
 ): Promise<CleanupEventMapFeatureCollectionDto> {
-  const decoded = query.cursor ? decodeDatedCursor(query.cursor, "updatedAt") : null;
+  const decoded = query.cursor
+    ? decodeDatedCursor(query.cursor, "updatedAt")
+    : null;
   const cursor = decoded ? { sortAt: decoded.updatedAt, id: decoded.id } : null;
-  const records = await observeSpatialQuery(dependencies.spatialQueryObserver, {
-    operation: "cleanup_events.organization", projection: "ORGANIZATION", mode: "VIEWPORT",
-  }, () => listOrganizationCleanupEventMapRecords(dependencies.prisma, { ...query, organizationId, cursor }));
+  const records = await observeSpatialQuery(
+    dependencies.spatialQueryObserver,
+    {
+      operation: "cleanup_events.organization",
+      projection: "ORGANIZATION",
+      mode: "VIEWPORT",
+    },
+    () =>
+      listOrganizationCleanupEventMapRecords(dependencies.prisma, {
+        ...query,
+        organizationId,
+        cursor,
+      }),
+  );
   return toMapPage(records, query.limit, "updatedAt", true);
 }
 
@@ -696,7 +717,10 @@ function toMapPage(
         id: record.id,
         kind: "CLEANUP_EVENT",
         title: record.title,
-        status: record.lifecycleStatus,
+        status: cleanupEventDisplayStatus(
+          normalizedLifecycle(record.lifecycleStatus),
+          record.startsAt,
+        ),
         occurredAt: (record.publishedAt ?? record.updatedAt).toISOString(),
         organizationId: record.organizationId,
         organizationName: record.organizationName,
@@ -705,8 +729,13 @@ function toMapPage(
         isOwned,
       },
     })),
-    nextCursor: hasMore && last
-      ? encodeDatedCursor(cursorField, cursorField === "publishedAt" ? last.publishedAt! : last.updatedAt, last.id)
-      : null,
+    nextCursor:
+      hasMore && last
+        ? encodeDatedCursor(
+            cursorField,
+            cursorField === "publishedAt" ? last.publishedAt! : last.updatedAt,
+            last.id,
+          )
+        : null,
   };
 }

@@ -77,6 +77,7 @@ enum NotificationType {
   EVENT_UPDATED
   EVENT_CANCELLED
   EVENT_COMPLETED
+  EVENT_REMINDER
   MEMBERSHIP_UPDATED
   ORGANIZATION_REVIEW_UPDATED
   ACHIEVEMENT_AWARDED
@@ -114,24 +115,16 @@ enum CleanupLifecycleStatus {
   CANCELLED
 }
 
-enum SessionStatus {
-  SCHEDULED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
 enum ParticipantStatus {
   JOINED
   WITHDRAWN
   REMOVED
 }
 
-enum AllocationStatus {
-  PLANNED
+enum AttendanceStatus {
+  UNMARKED
   ATTENDED
   ABSENT
-  REMOVED
 }
 
 enum NoteVisibility {
@@ -147,7 +140,7 @@ enum EvidenceType {
 
 enum ContributionType {
   VERIFIED_INCIDENT_REPORT
-  SESSION_ATTENDED
+  EVENT_ATTENDED
   EVENT_COMPLETED
   SPECIAL_CONTRIBUTION
 }
@@ -302,8 +295,7 @@ model OrganizationMembership {
   coordinatorAssignments         EventCoordinator[]              @relation("EventCoordinatorMembership")
   assignedCoordinatorAssignments EventCoordinator[]              @relation("EventCoordinatorAssigner")
   participantRemovals            EventParticipant[]              @relation("EventParticipantRemover")
-  allocatedSessions              SessionAllocation[]             @relation("SessionAllocator")
-  attendanceMarkedAllocations    SessionAllocation[]             @relation("AttendanceMarker")
+  attendanceMarkedParticipants   EventParticipant[]              @relation("ParticipantAttendanceMarker")
   authoredEventNotes             EventNote[]                     @relation("EventNoteAuthor")
   eventStatusChanges             EventStatusHistory[]            @relation("EventStatusChanger")
 
@@ -368,10 +360,11 @@ model Notification {
   userId         String  @map("user_id") @db.Uuid
   organizationId String? @map("organization_id") @db.Uuid
 
-  type    NotificationType
-  title   String
-  message String
-  data    Json?
+  type             NotificationType
+  title            String
+  message          String
+  data             Json?
+  deduplicationKey String?          @unique @map("deduplication_key")
 
   readAt    DateTime? @map("read_at") @db.Timestamptz(6)
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -604,6 +597,8 @@ model CleanupEvent {
   meetingLongitude        Decimal?                              @map("meeting_longitude") @db.Decimal(9, 6)
   meetingGeoPoint         Unsupported("geography(Point,4326)")? @map("meeting_geo_point")
   meetingAddress          String?                               @map("meeting_address")
+  startsAt                DateTime?                             @map("starts_at") @db.Timestamptz(6)
+  capacity                Int?
   publishedAt             DateTime?                             @map("published_at") @db.Timestamptz(6)
   completedAt             DateTime?                             @map("completed_at") @db.Timestamptz(6)
   cancelledAt             DateTime?                             @map("cancelled_at") @db.Timestamptz(6)
@@ -617,47 +612,20 @@ model CleanupEvent {
   createdByMembership   OrganizationMembership @relation("CleanupEventCreator", fields: [organizationId, createdByMembershipId], references: [organizationId, id], onDelete: Restrict, map: "cleanup_events_created_by_membership_fkey")
 
   incidentStatusHistory IncidentStatusHistory[] @relation("RelatedCleanupEvent")
-  sessions              EventSession[]
   coordinators          EventCoordinator[]
   participants          EventParticipant[]
   notes                 EventNote[]
   evidence              EventEvidence[]
   statusHistory         EventStatusHistory[]
   contributionEvents    ContributionEvent[]
+  reminder              CleanupEventReminder?
 
   @@unique([organizationId, id])
   @@index([incidentId])
   @@index([organizationId, lifecycleStatus, createdAt], map: "cleanup_events_organization_lifecycle_created_idx")
   @@index([organizationId, updatedAt(sort: Desc), id(sort: Desc)], map: "cleanup_events_organization_updated_id_idx")
+  @@index([lifecycleStatus, startsAt], map: "cleanup_events_lifecycle_starts_at_idx")
   @@map("cleanup_events")
-}
-
-model EventSession {
-  id                String                                @id @default(uuid()) @db.Uuid
-  cleanupEventId    String                                @map("cleanup_event_id") @db.Uuid
-  sessionDate       DateTime                              @map("session_date") @db.Date
-  startTime         DateTime                              @map("start_time") @db.Time(6)
-  endTime           DateTime                              @map("end_time") @db.Time(6)
-  capacity          Int?
-  status            SessionStatus                         @default(SCHEDULED)
-  locationLatitude  Decimal?                              @map("location_latitude") @db.Decimal(9, 6)
-  locationLongitude Decimal?                              @map("location_longitude") @db.Decimal(9, 6)
-  locationGeoPoint  Unsupported("geography(Point,4326)")? @map("location_geo_point")
-  locationAddress   String?                               @map("location_address")
-  notes             String?
-  createdAt         DateTime                              @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime                              @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  cleanupEvent CleanupEvent @relation(fields: [cleanupEventId], references: [id], onDelete: Cascade)
-
-  availabilities ParticipantSessionAvailability[]
-  allocations    SessionAllocation[]
-  evidence       EventEvidence[]
-
-  @@unique([cleanupEventId, sessionDate, startTime], map: "event_sessions_event_date_start_key")
-  @@unique([cleanupEventId, id], map: "event_sessions_event_id_key")
-  @@index([sessionDate, status], map: "event_sessions_date_status_idx")
-  @@map("event_sessions")
 }
 
 model EventCoordinator {
@@ -678,62 +646,32 @@ model EventCoordinator {
 }
 
 model EventParticipant {
-  id                    String            @id @default(uuid()) @db.Uuid
-  cleanupEventId        String            @map("cleanup_event_id") @db.Uuid
-  userId                String            @map("user_id") @db.Uuid
-  status                ParticipantStatus @default(JOINED)
-  joinedAt              DateTime          @default(now()) @map("joined_at") @db.Timestamptz(6)
-  withdrawnAt           DateTime?         @map("withdrawn_at") @db.Timestamptz(6)
-  removedAt             DateTime?         @map("removed_at") @db.Timestamptz(6)
-  removedByMembershipId String?           @map("removed_by_membership_id") @db.Uuid
-  removalReason         String?           @map("removal_reason")
+  id                             String            @id @default(uuid()) @db.Uuid
+  cleanupEventId                 String            @map("cleanup_event_id") @db.Uuid
+  userId                         String            @map("user_id") @db.Uuid
+  status                         ParticipantStatus @default(JOINED)
+  joinedAt                       DateTime          @default(now()) @map("joined_at") @db.Timestamptz(6)
+  withdrawnAt                    DateTime?         @map("withdrawn_at") @db.Timestamptz(6)
+  removedAt                      DateTime?         @map("removed_at") @db.Timestamptz(6)
+  removedByMembershipId          String?           @map("removed_by_membership_id") @db.Uuid
+  removalReason                  String?           @map("removal_reason")
+  attendanceStatus               AttendanceStatus  @default(UNMARKED) @map("attendance_status")
+  attendanceMarkedAt             DateTime?         @map("attendance_marked_at") @db.Timestamptz(6)
+  attendanceMarkedByMembershipId String?           @map("attendance_marked_by_membership_id") @db.Uuid
 
-  cleanupEvent CleanupEvent            @relation(fields: [cleanupEventId], references: [id], onDelete: Cascade)
-  user         UserProfile             @relation(fields: [userId], references: [id], onDelete: Restrict)
-  removedBy    OrganizationMembership? @relation("EventParticipantRemover", fields: [removedByMembershipId], references: [id], onDelete: SetNull)
+  cleanupEvent       CleanupEvent            @relation(fields: [cleanupEventId], references: [id], onDelete: Cascade)
+  user               UserProfile             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  removedBy          OrganizationMembership? @relation("EventParticipantRemover", fields: [removedByMembershipId], references: [id], onDelete: SetNull)
+  attendanceMarkedBy OrganizationMembership? @relation("ParticipantAttendanceMarker", fields: [attendanceMarkedByMembershipId], references: [id], onDelete: Restrict)
 
-  availabilities ParticipantSessionAvailability[]
-  allocations    SessionAllocation[]
+  contributionEvents ContributionEvent[]
 
   @@unique([cleanupEventId, userId], map: "event_participants_event_user_key")
   @@unique([cleanupEventId, id], map: "event_participants_event_id_key")
   @@index([cleanupEventId, status, joinedAt(sort: Desc), id(sort: Desc)], map: "event_participants_event_status_joined_id_idx")
   @@index([userId, status, joinedAt], map: "event_participants_user_status_joined_idx")
+  @@index([cleanupEventId, attendanceStatus], map: "event_participants_event_attendance_idx")
   @@map("event_participants")
-}
-
-model ParticipantSessionAvailability {
-  participantId String   @map("participant_id") @db.Uuid
-  sessionId     String   @map("session_id") @db.Uuid
-  markedAt      DateTime @default(now()) @map("marked_at") @db.Timestamptz(6)
-
-  participant EventParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
-  session     EventSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@id([participantId, sessionId])
-  @@map("participant_session_availability")
-}
-
-model SessionAllocation {
-  id                             String           @id @default(uuid()) @db.Uuid
-  participantId                  String           @map("participant_id") @db.Uuid
-  sessionId                      String           @map("session_id") @db.Uuid
-  allocatedByMembershipId        String           @map("allocated_by_membership_id") @db.Uuid
-  status                         AllocationStatus @default(PLANNED)
-  allocatedAt                    DateTime         @default(now()) @map("allocated_at") @db.Timestamptz(6)
-  attendanceMarkedByMembershipId String?          @map("attendance_marked_by_membership_id") @db.Uuid
-  attendanceMarkedAt             DateTime?        @map("attendance_marked_at") @db.Timestamptz(6)
-  notes                          String?
-
-  participant        EventParticipant        @relation(fields: [participantId], references: [id], onDelete: Cascade)
-  session            EventSession            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  allocatedBy        OrganizationMembership  @relation("SessionAllocator", fields: [allocatedByMembershipId], references: [id], onDelete: Restrict)
-  attendanceMarkedBy OrganizationMembership? @relation("AttendanceMarker", fields: [attendanceMarkedByMembershipId], references: [id], onDelete: SetNull)
-  contributionEvents ContributionEvent[]
-
-  @@unique([participantId, sessionId], map: "session_allocations_participant_session_key")
-  @@index([sessionId, status], map: "session_allocations_session_status_idx")
-  @@map("session_allocations")
 }
 
 model EventNote {
@@ -755,7 +693,6 @@ model EventNote {
 model EventEvidence {
   id               String       @id @default(uuid()) @db.Uuid
   cleanupEventId   String       @map("cleanup_event_id") @db.Uuid
-  sessionId        String?      @map("session_id") @db.Uuid
   uploadedByUserId String       @map("uploaded_by_user_id") @db.Uuid
   type             EvidenceType
   storagePath      String       @map("storage_path")
@@ -763,9 +700,8 @@ model EventEvidence {
   caption          String?
   uploadedAt       DateTime     @default(now()) @map("uploaded_at") @db.Timestamptz(6)
 
-  cleanupEvent CleanupEvent  @relation(fields: [cleanupEventId], references: [id], onDelete: Cascade)
-  session      EventSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
-  uploadedBy   UserProfile   @relation("EventEvidenceUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+  cleanupEvent CleanupEvent @relation(fields: [cleanupEventId], references: [id], onDelete: Cascade)
+  uploadedBy   UserProfile  @relation("EventEvidenceUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
 
   @@index([cleanupEventId, uploadedAt], map: "event_evidence_event_uploaded_at_idx")
   @@map("event_evidence")
@@ -790,26 +726,41 @@ model EventStatusHistory {
 }
 
 model ContributionEvent {
-  id                  String           @id @default(uuid()) @db.Uuid
-  userId              String           @map("user_id") @db.Uuid
-  type                ContributionType
-  incidentId          String?          @map("incident_id") @db.Uuid
-  sessionAllocationId String?          @map("session_allocation_id") @db.Uuid
-  cleanupEventId      String?          @map("cleanup_event_id") @db.Uuid
-  sourceKey           String?          @map("source_key")
-  points              Int
-  recordedByUserId    String?          @map("recorded_by_user_id") @db.Uuid
-  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  id                 String           @id @default(uuid()) @db.Uuid
+  userId             String           @map("user_id") @db.Uuid
+  type               ContributionType
+  incidentId         String?          @map("incident_id") @db.Uuid
+  eventParticipantId String?          @map("event_participant_id") @db.Uuid
+  cleanupEventId     String?          @map("cleanup_event_id") @db.Uuid
+  sourceKey          String?          @map("source_key")
+  points             Int
+  recordedByUserId   String?          @map("recorded_by_user_id") @db.Uuid
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  user                UserProfile        @relation("ContributionRecipient", fields: [userId], references: [id], onDelete: Cascade)
-  incident            Incident?          @relation(fields: [incidentId], references: [id], onDelete: Restrict)
-  sessionAllocation   SessionAllocation? @relation(fields: [sessionAllocationId], references: [id], onDelete: Restrict)
-  cleanupEvent        CleanupEvent?      @relation(fields: [cleanupEventId], references: [id], onDelete: Restrict)
-  recordedBy          UserProfile?       @relation("ContributionRecorder", fields: [recordedByUserId], references: [id], onDelete: SetNull)
+  user                UserProfile       @relation("ContributionRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  incident            Incident?         @relation(fields: [incidentId], references: [id], onDelete: Restrict)
+  eventParticipant    EventParticipant? @relation(fields: [eventParticipantId], references: [id], onDelete: Restrict)
+  cleanupEvent        CleanupEvent?     @relation(fields: [cleanupEventId], references: [id], onDelete: Restrict)
+  recordedBy          UserProfile?      @relation("ContributionRecorder", fields: [recordedByUserId], references: [id], onDelete: SetNull)
   awardedAchievements UserAchievement[]
 
   @@index([userId, createdAt], map: "contribution_events_user_created_at_idx")
   @@map("contribution_events")
+}
+
+model CleanupEventReminder {
+  id             String    @id @default(uuid()) @db.Uuid
+  cleanupEventId String    @unique @map("cleanup_event_id") @db.Uuid
+  scheduledFor   DateTime  @map("scheduled_for") @db.Timestamptz(6)
+  processedAt    DateTime? @map("processed_at") @db.Timestamptz(6)
+  cancelledAt    DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  cleanupEvent CleanupEvent @relation(fields: [cleanupEventId], references: [id], onDelete: Cascade)
+
+  @@index([processedAt, cancelledAt, scheduledFor], map: "cleanup_event_reminders_due_idx")
+  @@map("cleanup_event_reminders")
 }
 
 model AchievementDefinition {

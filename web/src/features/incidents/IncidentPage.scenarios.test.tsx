@@ -12,6 +12,7 @@ import { IncidentPage } from "./IncidentPage";
 
 vi.mock("../maps", () => ({
   COLOMBO_MAP_CENTER: { latitude: 6.9271, longitude: 79.8612 },
+  AdministrativeAreaMapSearch: () => <div aria-label="Area search" />,
   LocationPicker: () => <div aria-label="Location picker" />,
 }));
 
@@ -90,7 +91,8 @@ const completedDetail = {
       id: "history-resolved",
       fromStatus: "CLEANUP_ORGANIZED" as const,
       toStatus: "RESOLVED" as const,
-      reason: "The linked cleanup event was completed with recorded attendance and evidence.",
+      reason:
+        "The linked cleanup event was completed with recorded attendance and evidence.",
       changedAt: "2026-08-20T14:00:00.000Z",
     },
   ],
@@ -118,6 +120,31 @@ afterEach(() => {
 });
 
 describe("web incident workflow scenarios", () => {
+  test("web evidence selection accepts multiple library photos and removes either photo", async () => {
+    const { container } = render(
+      <IncidentPage
+        accessToken="token"
+        profile={profile}
+        onBackToDashboard={vi.fn()}
+      />,
+    );
+    const input = container.querySelector<HTMLInputElement>(
+      'input[type="file"][multiple]',
+    );
+    expect(input).not.toBeNull();
+    expect(container.querySelector('input[capture="environment"]')).toBeNull();
+
+    const first = new File(["first"], "canal.jpg", { type: "image/jpeg" });
+    const second = new File(["second"], "waste.png", { type: "image/png" });
+    fireEvent.change(input!, { target: { files: [first, second] } });
+
+    expect(screen.getByText("canal.jpg")).toBeTruthy();
+    expect(screen.getByText("waste.png")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Remove canal.jpg" }));
+    expect(screen.queryByText("canal.jpg")).toBeNull();
+    expect(screen.getByText("waste.png")).toBeTruthy();
+  });
+
   test("My Reports reloads the linked-event state and complete reporter-visible history", async () => {
     render(
       <IncidentPage
@@ -128,9 +155,15 @@ describe("web incident workflow scenarios", () => {
       />,
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: /view report/i }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /view report/i }),
+    );
 
-    expect(await screen.findByText("A cleanup event was published for this incident.")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        "A cleanup event was published for this incident.",
+      ),
+    ).toBeTruthy();
     expect(screen.getAllByText("Cleanup Organized").length).toBeGreaterThan(0);
     expect(screen.getByText("Incident report submitted.")).toBeTruthy();
     expect(getMyIncident).toHaveBeenCalledWith("token", report.id);
@@ -152,13 +185,17 @@ describe("web incident workflow scenarios", () => {
       />,
     );
 
-    expect((await screen.findByRole("alert")).textContent).toContain("weak network");
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "weak network",
+    );
     expect(onSignOut).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
   });
 
   test("My Reports shows cancellation, replacement, and final resolution history", async () => {
-    vi.mocked(listMyIncidents).mockResolvedValueOnce([{ ...report, status: "RESOLVED" }]);
+    vi.mocked(listMyIncidents).mockResolvedValueOnce([
+      { ...report, status: "RESOLVED" },
+    ]);
     vi.mocked(getMyIncident).mockResolvedValueOnce(completedDetail);
 
     render(
@@ -169,12 +206,24 @@ describe("web incident workflow scenarios", () => {
         onBackToDashboard={vi.fn()}
       />,
     );
-    fireEvent.click(await screen.findByRole("button", { name: /view report/i }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /view report/i }),
+    );
 
     expect((await screen.findAllByText("Resolved")).length).toBeGreaterThan(0);
-    expect(screen.getByText("Cleanup event cancelled: unsafe weather conditions.")).toBeTruthy();
-    expect(screen.getByText("A replacement cleanup event was published for this incident.")).toBeTruthy();
-    expect(screen.getByText("The linked cleanup event was completed with recorded attendance and evidence.")).toBeTruthy();
+    expect(
+      screen.getByText("Cleanup event cancelled: unsafe weather conditions."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "A replacement cleanup event was published for this incident.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "The linked cleanup event was completed with recorded attendance and evidence.",
+      ),
+    ).toBeTruthy();
     expect(document.body.textContent).not.toContain("privateNotes");
   });
 });

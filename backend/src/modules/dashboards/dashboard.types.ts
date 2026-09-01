@@ -21,7 +21,7 @@ export interface OrganizationDashboardSummary {
   coveringIncidentsByState: CountByState;
   reviewsByState: CountByState;
   eventsByLifecycle: CountByState;
-  upcomingSessions: number;
+  upcomingEvents: number;
   joinedParticipants: number;
   pendingMembershipRequests: number;
 }

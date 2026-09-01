@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import type { PrismaClient } from "../../../generated/prisma/client.js";
 import {
-  AllocationStatus,
+  AttendanceStatus,
   CleanupLifecycleStatus,
   ContributionType,
   IncidentReviewStatus,
@@ -20,7 +20,7 @@ const contributionSelect = {
   userId: true,
   type: true,
   incidentId: true,
-  sessionAllocationId: true,
+  eventParticipantId: true,
   cleanupEventId: true,
   sourceKey: true,
   points: true,
@@ -55,16 +55,16 @@ export async function findVerifiedIncidentRewardSource(
 
 export async function findAttendanceRewardSource(
   database: RewardTransaction,
-  sessionAllocationId: string,
+  eventParticipantId: string,
 ) {
-  return database.sessionAllocation.findFirst({
+  return database.eventParticipant.findFirst({
     where: {
-      id: sessionAllocationId,
-      status: AllocationStatus.ATTENDED,
+      id: eventParticipantId,
+      attendanceStatus: AttendanceStatus.ATTENDED,
       attendanceMarkedAt: { not: null },
     },
     select: {
-      participant: { select: { userId: true } },
+      userId: true,
       attendanceMarkedBy: { select: { userId: true } },
     },
   });
@@ -84,12 +84,8 @@ export async function findCompletedEventRewardSource(
         lifecycleStatus: CleanupLifecycleStatus.COMPLETED,
         completedAt: { not: null },
       },
-      allocations: {
-        some: {
-          status: AllocationStatus.ATTENDED,
-          session: { cleanupEventId },
-        },
-      },
+      attendanceStatus: AttendanceStatus.ATTENDED,
+      attendanceMarkedAt: { not: null },
     },
     select: {
       userId: true,
@@ -112,11 +108,11 @@ function contributionSourceWhere(source: ContributionSource) {
         type: source.type,
         incidentId: source.incidentId,
       } as const;
-    case ContributionType.SESSION_ATTENDED:
+    case ContributionType.EVENT_ATTENDED:
       return {
         userId: source.userId,
         type: source.type,
-        sessionAllocationId: source.sessionAllocationId,
+        eventParticipantId: source.eventParticipantId,
       } as const;
     case ContributionType.EVENT_COMPLETED:
       return {
@@ -151,12 +147,12 @@ export async function insertContributionOnce(
         ON CONFLICT DO NOTHING
       `;
       break;
-    case ContributionType.SESSION_ATTENDED:
+    case ContributionType.EVENT_ATTENDED:
       insertedCount = await database.$executeRaw`
         INSERT INTO "public"."contribution_events"
-          ("id", "user_id", "type", "session_allocation_id", "points", "recorded_by_user_id")
+          ("id", "user_id", "type", "event_participant_id", "points", "recorded_by_user_id")
         VALUES
-          (${id}::uuid, ${source.userId}::uuid, ${source.type}::"ContributionType", ${source.sessionAllocationId}::uuid, ${points}, ${source.recordedByUserId}::uuid)
+          (${id}::uuid, ${source.userId}::uuid, ${source.type}::"ContributionType", ${source.eventParticipantId}::uuid, ${points}, ${source.recordedByUserId}::uuid)
         ON CONFLICT DO NOTHING
       `;
       break;
@@ -186,7 +182,9 @@ export async function insertContributionOnce(
   });
 
   if (!contribution) {
-    throw new Error("The contribution could not be loaded after its idempotent insert.");
+    throw new Error(
+      "The contribution could not be loaded after its idempotent insert.",
+    );
   }
 
   return {
@@ -311,14 +309,9 @@ export async function listContributionRecords(
       cleanupEventId: true,
       createdAt: true,
       incident: { select: { title: true } },
-      sessionAllocation: {
+      eventParticipant: {
         select: {
-          session: {
-            select: {
-              sessionDate: true,
-              cleanupEvent: { select: { id: true, title: true } },
-            },
-          },
+          cleanupEvent: { select: { id: true, title: true, startsAt: true } },
         },
       },
       cleanupEvent: { select: { title: true } },

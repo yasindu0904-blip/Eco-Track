@@ -10,15 +10,12 @@ import type {
   EventEvidence,
   EventNote,
   EventParticipant,
-  EventSession,
   Incident,
   IncidentReview,
   Notification,
   Organization,
   OrganizationMembership,
   OrganizationServiceArea,
-  ParticipantSessionAvailability,
-  SessionAllocation,
   UserProfile,
   UserAchievement,
 } from "../generated/prisma/client.js";
@@ -28,24 +25,17 @@ import type { PrismaSubjects } from "./caslPrisma.js";
 export const Subjects = {
   Platform: "Platform",
   UserProfile: "UserProfile",
-  OrganizationApplication:
-    "OrganizationApplication",
+  OrganizationApplication: "OrganizationApplication",
   Organization: "Organization",
-  OrganizationServiceArea:
-    "OrganizationServiceArea",
-  OrganizationMembership:
-    "OrganizationMembership",
+  OrganizationServiceArea: "OrganizationServiceArea",
+  OrganizationMembership: "OrganizationMembership",
   Notification: "Notification",
   Incident: "Incident",
   IncidentReview: "IncidentReview",
   CleanupWorkflow: "CleanupWorkflow",
   CleanupEvent: "CleanupEvent",
-  EventSession: "EventSession",
   EventCoordinator: "EventCoordinator",
   EventParticipant: "EventParticipant",
-  ParticipantAvailability:
-    "ParticipantAvailability",
-  SessionAllocation: "SessionAllocation",
   EventNote: "EventNote",
   EventEvidence: "EventEvidence",
   Contribution: "Contribution",
@@ -53,8 +43,7 @@ export const Subjects = {
   Dashboard: "Dashboard",
 } as const;
 
-export type SubjectName =
-  (typeof Subjects)[keyof typeof Subjects];
+export type SubjectName = (typeof Subjects)[keyof typeof Subjects];
 
 type DatabaseSubject = PrismaSubjects<{
   UserProfile: UserProfile;
@@ -64,21 +53,14 @@ type DatabaseSubject = PrismaSubjects<{
   Notification: Notification;
   Incident: Incident;
   IncidentReview: IncidentReview;
-  CleanupWorkflow:
-    | CleanupWorkflowStatus
-    | CleanupWorkflowTransition;
+  CleanupWorkflow: CleanupWorkflowStatus | CleanupWorkflowTransition;
   CleanupEvent: CleanupEvent;
-  EventSession: EventSession;
   EventCoordinator: EventCoordinator;
   EventParticipant: EventParticipant;
-  ParticipantAvailability: ParticipantSessionAvailability;
-  SessionAllocation: SessionAllocation;
   EventNote: EventNote;
   EventEvidence: EventEvidence;
   Contribution: ContributionEvent;
-  Achievement:
-    | AchievementDefinition
-    | UserAchievement;
+  Achievement: AchievementDefinition | UserAchievement;
 }>;
 
 export type Subject =
@@ -93,11 +75,8 @@ export type Subject =
       | typeof Subjects.IncidentReview
       | typeof Subjects.CleanupWorkflow
       | typeof Subjects.CleanupEvent
-      | typeof Subjects.EventSession
       | typeof Subjects.EventCoordinator
       | typeof Subjects.EventParticipant
-      | typeof Subjects.ParticipantAvailability
-      | typeof Subjects.SessionAllocation
       | typeof Subjects.EventNote
       | typeof Subjects.EventEvidence
       | typeof Subjects.Contribution
@@ -109,8 +88,5 @@ export function createAuthorizationSubject(
   subjectName: SubjectName,
   resource: Record<string, unknown>,
 ): Subject {
-  return createCaslSubject(
-    subjectName,
-    resource,
-  ) as unknown as Subject;
+  return createCaslSubject(subjectName, resource) as unknown as Subject;
 }

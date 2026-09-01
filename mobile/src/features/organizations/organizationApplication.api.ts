@@ -3,6 +3,7 @@ import { apiRequest } from "../../api/apiClient";
 import type {
   AdministrativeArea,
   AdministrativeAreaListResponse,
+  AdministrativeAreaBoundaryResponse,
   CreateOrganizationApplicationInput,
   OrganizationApplication,
   OrganizationApplicationListResponse,
@@ -25,6 +26,18 @@ export async function listAdministrativeAreas(
   );
 
   return response.data;
+}
+
+export async function getAdministrativeAreaBoundary(
+  accessToken: string,
+  areaId: string,
+) {
+  return (
+    await apiRequest<AdministrativeAreaBoundaryResponse>(
+      `/administrative-areas/${encodeURIComponent(areaId)}/boundary`,
+      { accessToken },
+    )
+  ).data;
 }
 
 export async function createOrganizationApplication(

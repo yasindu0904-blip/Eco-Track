@@ -17,19 +17,18 @@ type CoveringIncidentCount = {
   count: bigint;
 };
 
-function countByState(
-  rows: CountRow[],
-  stateField: string,
-): CountByState {
+function countByState(rows: CountRow[], stateField: string): CountByState {
   return Object.fromEntries(
     rows.map((row) => [String(row[stateField]), row._count]),
   );
 }
 
-function dateRangeFilter(range: DashboardRange): {
-  gte: Date;
-  lt: Date;
-} | undefined {
+function dateRangeFilter(range: DashboardRange):
+  | {
+      gte: Date;
+      lt: Date;
+    }
+  | undefined {
   if (!range.from || !range.to) {
     return undefined;
   }
@@ -74,15 +73,8 @@ export async function getCitizenDashboardSummaryRecords(
         userId,
         status: "JOINED",
         cleanupEvent: {
-          lifecycleStatus: {
-            in: ["PUBLISHED", "SCHEDULED", "IN_PROGRESS"],
-          },
-          sessions: {
-            some: {
-              sessionDate: { gte: now },
-              status: "SCHEDULED",
-            },
-          },
+          lifecycleStatus: "PUBLISHED",
+          startsAt: { gte: now },
         },
       },
     }),
@@ -126,7 +118,7 @@ export async function getOrganizationDashboardSummaryRecords(
     coveringIncidents,
     reviews,
     events,
-    upcomingSessions,
+    upcomingEvents,
     joinedParticipants,
     pendingMembershipRequests,
   ] = await Promise.all([
@@ -177,11 +169,11 @@ export async function getOrganizationDashboardSummaryRecords(
       },
       _count: true,
     }),
-    prisma.eventSession.count({
+    prisma.cleanupEvent.count({
       where: {
-        cleanupEvent: { organizationId },
-        sessionDate: { gte: now },
-        status: "SCHEDULED",
+        organizationId,
+        lifecycleStatus: "PUBLISHED",
+        startsAt: { gte: now },
       },
     }),
     prisma.eventParticipant.count({
@@ -205,7 +197,7 @@ export async function getOrganizationDashboardSummaryRecords(
     ),
     reviewsByState: countByState(reviews, "status"),
     eventsByLifecycle: countByState(events, "lifecycleStatus"),
-    upcomingSessions,
+    upcomingEvents,
     joinedParticipants,
     pendingMembershipRequests,
   };

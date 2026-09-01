@@ -12,7 +12,10 @@ import {
 } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
-import { CleanupEventDraftScreen, OrganizationCleanupEventListScreen } from "../cleanupEvents";
+import {
+  CleanupEventDraftScreen,
+  OrganizationCleanupEventListScreen,
+} from "../cleanupEvents";
 import { MembershipAdministrationScreen } from "../memberships/administration/MembershipAdministrationScreen";
 import { OrganizationIncidentDiscovery } from "./OrganizationIncidentDiscovery";
 import { getOrganizationSummary } from "../dashboards/dashboard.api";
@@ -27,7 +30,12 @@ type OrganizationWorkspaceScreenProps = {
   onBack: () => void;
   onViewApplications: () => void;
   onSignOut: () => void;
-  initialTab?: "overview" | "incidentDiscovery" | "eventDrafts" | "events" | "members";
+  initialTab?:
+    | "overview"
+    | "incidentDiscovery"
+    | "eventDrafts"
+    | "events"
+    | "members";
   initialIncidentId?: string;
   initialEventId?: string;
 };
@@ -45,25 +53,38 @@ export function OrganizationWorkspaceScreen({
   initialIncidentId,
   initialEventId,
 }: OrganizationWorkspaceScreenProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "incidentDiscovery" | "eventDrafts" | "events" | "members">(initialTab);
-  const [linkedIncidentId, setLinkedIncidentId] = useState<string | undefined>(initialIncidentId);
-  const [selectedOwnedEventId, setSelectedOwnedEventId] = useState<string | undefined>(initialEventId);
-  const [selectedDraftId, setSelectedDraftId] = useState<string | undefined>(initialTab === "eventDrafts" ? initialEventId : undefined);
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "incidentDiscovery" | "eventDrafts" | "events" | "members"
+  >(initialTab);
+  const [linkedIncidentId, setLinkedIncidentId] = useState<string | undefined>(
+    initialIncidentId,
+  );
+  const [selectedOwnedEventId, setSelectedOwnedEventId] = useState<
+    string | undefined
+  >(initialEventId);
+  const [selectedDraftId, setSelectedDraftId] = useState<string | undefined>(
+    initialTab === "eventDrafts" ? initialEventId : undefined,
+  );
   const [mapInteracting, setMapInteracting] = useState(false);
-  const membership =
-    memberships.find(
-      (item) => item.organization.id === selectedOrganizationId,
-    );
+  const membership = memberships.find(
+    (item) => item.organization.id === selectedOrganizationId,
+  );
   const organizationId = membership?.organization.id ?? "";
-  const loadSummary = useCallback(() => getOrganizationSummary(accessToken, organizationId), [accessToken, organizationId]);
+  const loadSummary = useCallback(
+    () => getOrganizationSummary(accessToken, organizationId),
+    [accessToken, organizationId],
+  );
 
   useEffect(() => {
     if (activeTab === "overview") return;
-    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      setMapInteracting(false);
-      setActiveTab("overview");
-      return true;
-    });
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        setMapInteracting(false);
+        setActiveTab("overview");
+        return true;
+      },
+    );
     return () => subscription.remove();
   }, [activeTab]);
 
@@ -95,7 +116,8 @@ export function OrganizationWorkspaceScreen({
       {memberships.length > 1 ? (
         <View style={styles.organizationSwitcher}>
           {memberships.map((item) => {
-            const selected = item.organization.id === membership.organization.id;
+            const selected =
+              item.organization.id === membership.organization.id;
 
             return (
               <Pressable
@@ -138,7 +160,12 @@ export function OrganizationWorkspaceScreen({
           }}
           style={[styles.tab, activeTab === "overview" && styles.tabSelected]}
         >
-          <Text style={[styles.tabText, activeTab === "overview" && styles.tabTextSelected]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === "overview" && styles.tabTextSelected,
+            ]}
+          >
             Overview
           </Text>
         </Pressable>
@@ -148,8 +175,12 @@ export function OrganizationWorkspaceScreen({
         {activeTab === "eventDrafts" ? (
           <Text style={styles.breadcrumb}>/ Cleanup-event drafts</Text>
         ) : null}
-        {activeTab === "events" ? <Text style={styles.breadcrumb}>/ Organization events</Text> : null}
-        {activeTab === "members" ? <Text style={styles.breadcrumb}>/ Membership administration</Text> : null}
+        {activeTab === "events" ? (
+          <Text style={styles.breadcrumb}>/ Organization events</Text>
+        ) : null}
+        {activeTab === "members" ? (
+          <Text style={styles.breadcrumb}>/ Membership administration</Text>
+        ) : null}
       </View>
 
       {activeTab === "eventDrafts" ? (
@@ -177,7 +208,32 @@ export function OrganizationWorkspaceScreen({
         />
       ) : activeTab === "overview" ? (
         <>
-          <SummaryCards compact load={loadSummary} label="Organization summary">{(summary) => <><Metric compact label="Covered incidents" value={total(summary.coveringIncidentsByState)} /><Metric compact label="Upcoming sessions" value={summary.upcomingSessions} /><Metric compact label="Joined participants" value={summary.joinedParticipants} /><Metric compact label="Pending requests" value={summary.pendingMembershipRequests} /></>}</SummaryCards>
+          <SummaryCards compact load={loadSummary} label="Organization summary">
+            {(summary) => (
+              <>
+                <Metric
+                  compact
+                  label="Covered incidents"
+                  value={total(summary.coveringIncidentsByState)}
+                />
+                <Metric
+                  compact
+                  label="Upcoming events"
+                  value={summary.upcomingEvents}
+                />
+                <Metric
+                  compact
+                  label="Joined volunteers"
+                  value={summary.joinedParticipants}
+                />
+                <Metric
+                  compact
+                  label="Pending requests"
+                  value={summary.pendingMembershipRequests}
+                />
+              </>
+            )}
+          </SummaryCards>
           <View style={sharedStyles.card}>
             <View style={sharedStyles.spacedRow}>
               <View style={styles.accessValue}>
@@ -202,14 +258,14 @@ export function OrganizationWorkspaceScreen({
           <SectionHeader
             title="Manage local action"
             subtitle="Workspace tools"
-            action={(
+            action={
               <Button
                 compact
                 label="Requests"
                 variant="ghost"
                 onPress={onViewApplications}
               />
-            )}
+            }
           />
           <View style={styles.toolList}>
             <ActionRow
@@ -229,7 +285,7 @@ export function OrganizationWorkspaceScreen({
             {membership.role === "ORG_ADMIN" ? (
               <ActionRow
                 title="Plan a cleanup event"
-                description="Create drafts, sessions, and coordinator assignments."
+                description="Create one-date event plans and assign coordinators."
                 symbol="+"
                 onPress={() => {
                   setLinkedIncidentId(undefined);
@@ -255,7 +311,10 @@ export function OrganizationWorkspaceScreen({
           onOpenEvent={(eventId, lifecycleStatus) => {
             setMapInteracting(false);
             setSelectedOwnedEventId(eventId);
-            if (lifecycleStatus === "DRAFT" && membership.role === "ORG_ADMIN") {
+            if (
+              lifecycleStatus === "DRAFT" &&
+              membership.role === "ORG_ADMIN"
+            ) {
               setSelectedDraftId(eventId);
               setActiveTab("eventDrafts");
             } else {
@@ -263,11 +322,15 @@ export function OrganizationWorkspaceScreen({
               setActiveTab("events");
             }
           }}
-          onCreateDraftFromIncident={membership.role === "ORG_ADMIN" ? (incidentId) => {
-            setMapInteracting(false);
-            setLinkedIncidentId(incidentId);
-            setActiveTab("eventDrafts");
-          } : undefined}
+          onCreateDraftFromIncident={
+            membership.role === "ORG_ADMIN"
+              ? (incidentId) => {
+                  setMapInteracting(false);
+                  setLinkedIncidentId(incidentId);
+                  setActiveTab("eventDrafts");
+                }
+              : undefined
+          }
         />
       )}
 

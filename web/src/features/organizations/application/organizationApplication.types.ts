@@ -69,3 +69,20 @@ export interface AdministrativeArea {
 export interface AdministrativeAreaListResponse {
   data: AdministrativeArea[];
 }
+
+export interface AdministrativeAreaBoundaryResponse {
+  data: {
+    type: "FeatureCollection";
+    features: Array<{
+      type: "Feature";
+      geometry: { type: "Polygon" | "MultiPolygon"; coordinates: unknown[] };
+      properties: {
+        id: string;
+        officialCode: string;
+        name: string;
+        divisionalSecretariatName: string | null;
+        districtName: string | null;
+      };
+    }>;
+  };
+}

@@ -8,6 +8,7 @@ const eventOperationsSelect = {
   incidentId: true,
   title: true,
   lifecycleStatus: true,
+  startsAt: true,
   updatedAt: true,
   completedAt: true,
   cancelledAt: true,
@@ -44,17 +45,6 @@ const eventOperationsSelect = {
       archiveAfter: true,
     },
   },
-  sessions: {
-    orderBy: [{ sessionDate: "asc" as const }, { startTime: "asc" as const }],
-    select: {
-      id: true,
-      sessionDate: true,
-      startTime: true,
-      endTime: true,
-      status: true,
-      updatedAt: true,
-    },
-  },
   notes: {
     orderBy: [{ createdAt: "desc" as const }, { id: "desc" as const }],
     take: 100,
@@ -71,7 +61,6 @@ const eventOperationsSelect = {
     take: 100,
     select: {
       id: true,
-      sessionId: true,
       type: true,
       storagePath: true,
       caption: true,
@@ -86,8 +75,12 @@ const eventOperationsSelect = {
       id: true,
       notes: true,
       changedAt: true,
-      fromStatus: { select: { id: true, label: true, mappedLifecycleStatus: true } },
-      toStatus: { select: { id: true, label: true, mappedLifecycleStatus: true } },
+      fromStatus: {
+        select: { id: true, label: true, mappedLifecycleStatus: true },
+      },
+      toStatus: {
+        select: { id: true, label: true, mappedLifecycleStatus: true },
+      },
       changedBy: { select: { id: true, user: { select: { fullName: true } } } },
     },
   },
@@ -96,7 +89,8 @@ const eventOperationsSelect = {
       id: true,
       userId: true,
       status: true,
-      allocations: { select: { id: true, status: true } },
+      attendanceStatus: true,
+      attendanceMarkedAt: true,
     },
   },
 } satisfies Prisma.CleanupEventSelect;
@@ -145,7 +139,9 @@ export function findParticipantUpdatesRecord(
           visibility: true,
           noteText: true,
           createdAt: true,
-          author: { select: { id: true, user: { select: { fullName: true } } } },
+          author: {
+            select: { id: true, user: { select: { fullName: true } } },
+          },
         },
       },
     },
@@ -182,7 +178,6 @@ export function createEventEvidenceRecord(
   database: EventOperationsDatabase,
   input: {
     eventId: string;
-    sessionId: string | null;
     uploadedByUserId: string;
     type: "BEFORE" | "PROGRESS" | "AFTER";
     storagePath: string;
@@ -192,7 +187,6 @@ export function createEventEvidenceRecord(
   return database.eventEvidence.create({
     data: {
       cleanupEventId: input.eventId,
-      sessionId: input.sessionId,
       uploadedByUserId: input.uploadedByUserId,
       type: input.type,
       storagePath: input.storagePath,
@@ -200,7 +194,6 @@ export function createEventEvidenceRecord(
     },
     select: {
       id: true,
-      sessionId: true,
       type: true,
       storagePath: true,
       caption: true,

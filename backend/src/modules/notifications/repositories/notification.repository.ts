@@ -1,7 +1,4 @@
-import type {
-  Prisma,
-  PrismaClient,
-} from "../../../generated/prisma/client.js";
+import type { Prisma, PrismaClient } from "../../../generated/prisma/client.js";
 
 import type {
   CreateNotificationCommand,
@@ -19,9 +16,7 @@ const notificationSelect = {
   createdAt: true,
 } as const;
 
-type NotificationDatabase =
-  | PrismaClient
-  | Prisma.TransactionClient;
+type NotificationDatabase = PrismaClient | Prisma.TransactionClient;
 
 export async function listNotificationRecords(
   prisma: PrismaClient,
@@ -30,9 +25,7 @@ export async function listNotificationRecords(
   return prisma.notification.findMany({
     where: {
       userId: command.userId,
-      ...(command.unreadOnly
-        ? { readAt: null }
-        : {}),
+      ...(command.unreadOnly ? { readAt: null } : {}),
       ...(command.cursor
         ? {
             OR: [
@@ -51,10 +44,7 @@ export async function listNotificationRecords(
           }
         : {}),
     },
-    orderBy: [
-      { createdAt: "desc" },
-      { id: "desc" },
-    ],
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: command.limit + 1,
     select: notificationSelect,
   });
@@ -120,11 +110,27 @@ export async function createNotificationRecord(
   prisma: NotificationDatabase,
   command: CreateNotificationCommand,
 ) {
+  if (command.deduplicationKey) {
+    return prisma.notification.upsert({
+      where: { deduplicationKey: command.deduplicationKey },
+      create: {
+        userId: command.userId,
+        organizationId: command.organizationId ?? null,
+        type: command.type,
+        title: command.title,
+        message: command.message,
+        data: command.data,
+        deduplicationKey: command.deduplicationKey,
+      },
+      update: {},
+      select: notificationSelect,
+    });
+  }
+
   return prisma.notification.create({
     data: {
       userId: command.userId,
-      organizationId:
-        command.organizationId ?? null,
+      organizationId: command.organizationId ?? null,
       type: command.type,
       title: command.title,
       message: command.message,

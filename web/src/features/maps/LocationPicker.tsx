@@ -1,10 +1,11 @@
 import { useState } from "react";
 
-import {
-  COLOMBO_MAP_CENTER,
-  isWithinSriLankaBounds,
-} from "./map.constants";
-import type { MapLocation, MapMarkerFeature } from "./map.types";
+import { COLOMBO_MAP_CENTER, isWithinSriLankaBounds } from "./map.constants";
+import type {
+  MapBoundaryFeatureCollection,
+  MapLocation,
+  MapMarkerFeature,
+} from "./map.types";
 import { EcoMap } from "./EcoMap";
 
 export interface LocationPickerProps {
@@ -15,6 +16,7 @@ export interface LocationPickerProps {
   confirmLabel?: string;
   referenceMarker?: MapMarkerFeature;
   focusReferenceLabel?: string;
+  boundaries?: MapBoundaryFeatureCollection;
   onChange?: (location: MapLocation) => void;
   onConfirm: (location: MapLocation) => void;
 }
@@ -27,6 +29,7 @@ export function LocationPicker({
   confirmLabel = "Confirm this location",
   referenceMarker,
   focusReferenceLabel = "Focus reference location",
+  boundaries,
   onChange,
   onConfirm,
 }: LocationPickerProps) {
@@ -50,7 +53,8 @@ export function LocationPicker({
       }
     : null;
   const activeFocusLocation =
-    referenceMarker && focusRequest?.referenceId === referenceMarker.properties.id
+    referenceMarker &&
+    focusRequest?.referenceId === referenceMarker.properties.id
       ? focusRequest.location
       : null;
 
@@ -88,12 +92,14 @@ export function LocationPicker({
     <section className="eco-location-picker">
       <EcoMap
         markers={referenceMarker ? [referenceMarker] : []}
+        boundaries={boundaries}
         initialCenter={referenceLocation ?? selectedLocation}
         initialZoom={14}
         focusLocation={activeFocusLocation}
         selectedMarkerId={referenceMarker?.properties.id}
         selectedLocation={
-          referenceMarker && selectedReferenceId !== referenceMarker.properties.id
+          referenceMarker &&
+          selectedReferenceId !== referenceMarker.properties.id
             ? null
             : selectedLocation
         }
@@ -107,7 +113,13 @@ export function LocationPicker({
       />
 
       <div className="eco-location-picker-controls">
-        <div className={confirmed ? "eco-location-picker-status is-confirmed" : "eco-location-picker-status"}>
+        <div
+          className={
+            confirmed
+              ? "eco-location-picker-status is-confirmed"
+              : "eco-location-picker-status"
+          }
+        >
           <span className="eco-location-picker-label">
             {confirmed ? "Location confirmed" : "Location selection"}
           </span>
@@ -126,10 +138,12 @@ export function LocationPicker({
             type="button"
             className="eco-location-focus-reference"
             disabled={disabled}
-            onClick={() => setFocusRequest({
-              referenceId: referenceMarker.properties.id,
-              location: { ...referenceLocation },
-            })}
+            onClick={() =>
+              setFocusRequest({
+                referenceId: referenceMarker.properties.id,
+                location: { ...referenceLocation },
+              })
+            }
           >
             {focusReferenceLabel}
           </button>

@@ -39,10 +39,7 @@ import { markerLocation } from "../map.types";
 import { useDebouncedViewport } from "../hooks/useDebouncedViewport";
 
 const clusterFilter: FilterSpecification = ["has", "point_count"];
-const unclusteredFilter: FilterSpecification = [
-  "!",
-  ["has", "point_count"],
-];
+const unclusteredFilter: FilterSpecification = ["!", ["has", "point_count"]];
 const incidentFilter: FilterSpecification = [
   "all",
   unclusteredFilter,
@@ -116,8 +113,7 @@ function viewportIsBounded(viewport: MapViewport): boolean {
   return (
     viewport.east - viewport.west <=
       MAP_REQUEST_LIMITS.maxLongitudeSpanDegrees &&
-    viewport.north - viewport.south <=
-      MAP_REQUEST_LIMITS.maxLatitudeSpanDegrees
+    viewport.north - viewport.south <= MAP_REQUEST_LIMITS.maxLatitudeSpanDegrees
   );
 }
 
@@ -140,8 +136,9 @@ function radiusBounds(
   radiusMeters: number,
 ): [number, number, number, number] {
   const latitudeDelta = radiusMeters / 111_320;
-  const longitudeDelta = radiusMeters /
-    (111_320 * Math.max(Math.cos(center.latitude * Math.PI / 180), 0.01));
+  const longitudeDelta =
+    radiusMeters /
+    (111_320 * Math.max(Math.cos((center.latitude * Math.PI) / 180), 0.01));
   return [
     center.longitude - longitudeDelta,
     center.latitude - latitudeDelta,
@@ -155,15 +152,19 @@ function radiusCircle(
   radiusMeters: number,
 ): GeoJSON.Feature<GeoJSON.Polygon> {
   const latitudeRadius = radiusMeters / 111_320;
-  const longitudeRadius = radiusMeters /
-    (111_320 * Math.max(Math.cos(center.latitude * Math.PI / 180), 0.01));
-  const coordinates: [number, number][] = Array.from({ length: 65 }, (_, index) => {
-    const angle = index / 64 * Math.PI * 2;
-    return [
-      center.longitude + Math.cos(angle) * longitudeRadius,
-      center.latitude + Math.sin(angle) * latitudeRadius,
-    ];
-  });
+  const longitudeRadius =
+    radiusMeters /
+    (111_320 * Math.max(Math.cos((center.latitude * Math.PI) / 180), 0.01));
+  const coordinates: [number, number][] = Array.from(
+    { length: 65 },
+    (_, index) => {
+      const angle = (index / 64) * Math.PI * 2;
+      return [
+        center.longitude + Math.cos(angle) * longitudeRadius,
+        center.latitude + Math.sin(angle) * latitudeRadius,
+      ];
+    },
+  );
 
   return {
     type: "Feature",
@@ -198,7 +199,7 @@ export function EcoMap({
   const cameraRef = useRef<CameraRef>(null);
   const markerSourceRef = useRef<GeoJSONSourceRef>(null);
   const lastMapCenterRef = useRef<MapLocation | null>(initialCenter);
-  const hasFocusedInitialBoundaries = useRef(false);
+  const lastFocusedBoundarySet = useRef("");
   const [locationBusy, setLocationBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [viewportTooWide, setViewportTooWide] = useState(false);
@@ -215,15 +216,17 @@ export function EcoMap({
     [markers],
   );
   const searchBounds = useMemo(
-    () => selectedLocation && searchRadiusMeters
-      ? radiusBounds(selectedLocation, searchRadiusMeters)
-      : null,
+    () =>
+      selectedLocation && searchRadiusMeters
+        ? radiusBounds(selectedLocation, searchRadiusMeters)
+        : null,
     [searchRadiusMeters, selectedLocation],
   );
   const searchRadius = useMemo(
-    () => selectedLocation && searchRadiusMeters
-      ? radiusCircle(selectedLocation, searchRadiusMeters)
-      : null,
+    () =>
+      selectedLocation && searchRadiusMeters
+        ? radiusCircle(selectedLocation, searchRadiusMeters)
+        : null,
     [searchRadiusMeters, selectedLocation],
   );
   const selectedMarker = markers.find(
@@ -232,32 +235,46 @@ export function EcoMap({
   const selectedMarkerActionLabel = selectedMarker
     ? markerActionLabel?.(selectedMarker)
     : undefined;
-  const activeArea = boundaries?.features[activeAreaIndex] ?? boundaries?.features[0];
+  const activeArea =
+    boundaries?.features[activeAreaIndex] ?? boundaries?.features[0];
   const activeAreaBounds = useMemo(
-    () => activeArea ? getGeometryBounds(activeArea.geometry.coordinates) : null,
+    () =>
+      activeArea ? getGeometryBounds(activeArea.geometry.coordinates) : null,
     [activeArea],
   );
   const allBoundaryBounds = useMemo(
-    () => boundaries
-      ? getGeometryBounds(
-          boundaries.features.map((feature) => feature.geometry.coordinates),
-        )
-      : null,
+    () =>
+      boundaries
+        ? getGeometryBounds(
+            boundaries.features.map((feature) => feature.geometry.coordinates),
+          )
+        : null,
+    [boundaries],
+  );
+  const boundarySetKey = useMemo(
+    () =>
+      boundaries?.features.map((feature) => feature.properties.id).join(":") ??
+      "",
     [boundaries],
   );
 
-  const focusBounds = useCallback((bounds: [number, number, number, number]) => {
-    cameraRef.current?.fitBounds(bounds, {
-      padding: { top: 42, right: 42, bottom: 42, left: 42 },
-      duration: 400,
-    });
-  }, []);
+  const focusBounds = useCallback(
+    (bounds: [number, number, number, number]) => {
+      cameraRef.current?.fitBounds(bounds, {
+        padding: { top: 42, right: 42, bottom: 42, left: 42 },
+        duration: 400,
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
-    if (hasFocusedInitialBoundaries.current || !allBoundaryBounds) return;
-    hasFocusedInitialBoundaries.current = true;
+    if (!allBoundaryBounds || lastFocusedBoundarySet.current === boundarySetKey)
+      return;
+    lastFocusedBoundarySet.current = boundarySetKey;
+    setActiveAreaIndex(0);
     focusBounds(allBoundaryBounds);
-  }, [allBoundaryBounds, focusBounds]);
+  }, [allBoundaryBounds, boundarySetKey, focusBounds]);
 
   useEffect(() => {
     const location = focusLocation ?? selectedLocation;
@@ -265,28 +282,35 @@ export function EcoMap({
       location &&
       (Boolean(focusLocation) ||
         (selectionEnabled && selectionMode === "center")) &&
-      (Boolean(searchBounds) || locationsDiffer(lastMapCenterRef.current, location))
+      (Boolean(searchBounds) ||
+        locationsDiffer(lastMapCenterRef.current, location))
     ) {
       lastMapCenterRef.current = location;
       if (searchBounds) {
         focusBounds(searchBounds);
       } else {
         cameraRef.current?.easeTo({
-          center: [
-            location.longitude,
-            location.latitude,
-          ],
+          center: [location.longitude, location.latitude],
           zoom: focusLocation ? 14 : undefined,
           duration: 250,
         });
       }
     }
-  }, [focusBounds, focusLocation, searchBounds, selectedLocation, selectionEnabled, selectionMode]);
+  }, [
+    focusBounds,
+    focusLocation,
+    searchBounds,
+    selectedLocation,
+    selectionEnabled,
+    selectionMode,
+  ]);
 
   const selectLocation = useCallback(
     (location: MapLocation) => {
       if (!isWithinSriLankaBounds(location)) {
-        setMessage("Select a location inside the supported Sri Lanka map area.");
+        setMessage(
+          "Select a location inside the supported Sri Lanka map area.",
+        );
         return;
       }
 
@@ -344,8 +368,7 @@ export function EcoMap({
     setMessage(null);
 
     try {
-      const permission =
-        await Location.requestForegroundPermissionsAsync();
+      const permission = await Location.requestForegroundPermissionsAsync();
 
       if (!permission.granted) {
         setMessage(
@@ -386,7 +409,9 @@ export function EcoMap({
   };
 
   const handleMarkerPress = async (
-    event: Parameters<NonNullable<React.ComponentProps<typeof GeoJSONSource>["onPress"]>>[0],
+    event: Parameters<
+      NonNullable<React.ComponentProps<typeof GeoJSONSource>["onPress"]>
+    >[0],
   ) => {
     const feature = event.nativeEvent.features[0];
 
@@ -421,12 +446,17 @@ export function EcoMap({
   };
 
   const handleBoundaryPress = (
-    event: Parameters<NonNullable<React.ComponentProps<typeof GeoJSONSource>["onPress"]>>[0],
+    event: Parameters<
+      NonNullable<React.ComponentProps<typeof GeoJSONSource>["onPress"]>
+    >[0],
   ) => {
-    const boundaryId = String(event.nativeEvent.features[0]?.properties?.id ?? "");
-    const nextIndex = boundaries?.features.findIndex(
-      (feature) => feature.properties.id === boundaryId,
-    ) ?? -1;
+    const boundaryId = String(
+      event.nativeEvent.features[0]?.properties?.id ?? "",
+    );
+    const nextIndex =
+      boundaries?.features.findIndex(
+        (feature) => feature.properties.id === boundaryId,
+      ) ?? -1;
     if (nextIndex >= 0 && boundaries) {
       const area = boundaries.features[nextIndex];
       if (!area) return;
@@ -457,10 +487,7 @@ export function EcoMap({
   };
 
   return (
-    <View
-      style={styles.shell}
-      accessibilityLabel={accessibleLabel}
-    >
+    <View style={styles.shell} accessibilityLabel={accessibleLabel}>
       <View style={[styles.mapFrame, { height }]}>
         <Map
           style={StyleSheet.absoluteFill}
@@ -535,7 +562,11 @@ export function EcoMap({
               <Layer
                 id="eco-map-active-organization-boundary-fill"
                 type="fill"
-                filter={["==", ["get", "id"], activeArea?.properties.id ?? "__none__"]}
+                filter={[
+                  "==",
+                  ["get", "id"],
+                  activeArea?.properties.id ?? "__none__",
+                ]}
                 paint={{
                   "fill-color": "#3f8a5f",
                   "fill-opacity": 0.18,
@@ -553,7 +584,11 @@ export function EcoMap({
               <Layer
                 id="eco-map-active-organization-boundary-line"
                 type="line"
-                filter={["==", ["get", "id"], activeArea?.properties.id ?? "__none__"]}
+                filter={[
+                  "==",
+                  ["get", "id"],
+                  activeArea?.properties.id ?? "__none__",
+                ]}
                 paint={{
                   "line-color": "#174c33",
                   "line-opacity": 1,
@@ -573,7 +608,11 @@ export function EcoMap({
               <Layer
                 id="eco-map-search-radius-line"
                 type="line"
-                paint={{ "line-color": "#176c2c", "line-opacity": 0.8, "line-width": 2 }}
+                paint={{
+                  "line-color": "#176c2c",
+                  "line-opacity": 0.8,
+                  "line-width": 2,
+                }}
               />
             </GeoJSONSource>
           )}
@@ -634,11 +673,7 @@ export function EcoMap({
               <Layer
                 id="eco-map-selected-marker"
                 type="circle"
-                filter={[
-                  "==",
-                  ["get", "id"],
-                  selectedMarkerId ?? "__none__",
-                ]}
+                filter={["==", ["get", "id"], selectedMarkerId ?? "__none__"]}
                 paint={{
                   "circle-color": "rgba(255,255,255,0)",
                   "circle-radius": 15,
@@ -674,23 +709,25 @@ export function EcoMap({
           )}
         </Map>
 
-        {showCurrentLocation && <Pressable
-          style={({ pressed }) => [
-            styles.locationButton,
-            pressed && styles.buttonPressed,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Use my current location"
-          disabled={locationBusy}
-          onPress={() => void useCurrentLocation()}
-        >
-          {locationBusy ? (
-            <ActivityIndicator color={colors.primaryDark} size="small" />
-          ) : (
-            <Text style={styles.locationButtonIcon}>◎</Text>
-          )}
-          <Text style={styles.locationButtonText}>My location</Text>
-        </Pressable>}
+        {showCurrentLocation && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.locationButton,
+              pressed && styles.buttonPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Use my current location"
+            disabled={locationBusy}
+            onPress={() => void useCurrentLocation()}
+          >
+            {locationBusy ? (
+              <ActivityIndicator color={colors.primaryDark} size="small" />
+            ) : (
+              <Text style={styles.locationButtonIcon}>◎</Text>
+            )}
+            <Text style={styles.locationButtonText}>My location</Text>
+          </Pressable>
+        )}
 
         {activeAreaBounds && (
           <Pressable
@@ -747,7 +784,7 @@ export function EcoMap({
             <Text style={styles.markerCalloutKind}>
               {selectedMarker.properties.kind === "CLEANUP_EVENT"
                 ? "CLEANUP EVENT"
-                : selectedMarker.properties.category ?? "INCIDENT"}
+                : (selectedMarker.properties.category ?? "INCIDENT")}
             </Text>
             <Text style={styles.markerCalloutTitle} numberOfLines={1}>
               {selectedMarker.properties.title}
@@ -759,10 +796,15 @@ export function EcoMap({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={selectedMarkerActionLabel}
-                style={({ pressed }) => [styles.markerCalloutAction, pressed && styles.buttonPressed]}
+                style={({ pressed }) => [
+                  styles.markerCalloutAction,
+                  pressed && styles.buttonPressed,
+                ]}
                 onPress={() => onMarkerAction(selectedMarker)}
               >
-                <Text style={styles.markerCalloutActionText}>{selectedMarkerActionLabel}</Text>
+                <Text style={styles.markerCalloutActionText}>
+                  {selectedMarkerActionLabel}
+                </Text>
               </Pressable>
             ) : null}
           </View>
@@ -815,7 +857,8 @@ export function EcoMap({
                       {marker.properties.title}
                     </Text>
                     <Text style={styles.listItemMeta} numberOfLines={1}>
-                      {marker.properties.status} · {location.latitude.toFixed(4)},{" "}
+                      {marker.properties.status} ·{" "}
+                      {location.latitude.toFixed(4)},{" "}
                       {location.longitude.toFixed(4)}
                     </Text>
                   </View>
