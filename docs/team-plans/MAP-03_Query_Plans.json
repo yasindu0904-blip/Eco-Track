@@ -355,7 +355,7 @@
     "mapSpatialRepository": "e773240cc5580a3f912b224e737ba23eb65ea37dbb4e2e28d616f3da7cb1eca6",
     "mapValidation": "c6a6991fead95abab0707157b1d9a3e62ebdfea2c62f7446f6f30996c50b2da9",
     "mapConstants": "ca049fa8216652549fe57af869620c1b8de9b46a790a224bb87f230fedde33a0",
-    "prismaSchema": "69cd83b47ab1a880e550d4102ad5173b5ed1c051cf4a76f70ef5cb1b7602e21a",
+    "prismaSchema": "96ff0ff37c22baf6a9ef257ff37b06ed4f03b4b19f91aad102c93834be36be50",
     "eventIndexMigration": "97b165a7546980ce8abd7421716d3511928fb9256f0923ec8b84306bd1afc6fb",
     "serviceAreaIndexMigration": "8f5ce78cd8eee5561548a915112cead9c904b2edf22841a2c6f8526d67bc65a8",
     "planCapture": "37324f542806b33d7f4cfb01d806946405ec439da26fdc75a52324a5d40a6085"

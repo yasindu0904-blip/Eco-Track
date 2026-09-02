@@ -84,6 +84,20 @@ enum NotificationType {
   GENERAL
 }
 
+enum PushDevicePlatform {
+  ANDROID
+  IOS
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  QUEUED
+  RECEIPT_PENDING
+  PROVIDER_ACCEPTED
+  RETRY_PENDING
+  FAILED
+}
+
 enum IncidentSeverity {
   LOW
   MEDIUM
@@ -166,6 +180,7 @@ model UserProfile {
   settingsUpdates               PlatformSettings[]
   auditLogs                     AuditLog[]                         @relation("AuditActor")
   notifications                 Notification[]
+  pushDevices                   UserDevice[]
   reportedIncidents             Incident[]                         @relation("IncidentReporter")
   incidentStatusChanges         IncidentStatusHistory[]            @relation("IncidentStatusChanger")
   eventParticipations           EventParticipant[]
@@ -369,13 +384,67 @@ model Notification {
   readAt    DateTime? @map("read_at") @db.Timestamptz(6)
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  user         UserProfile   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  user         UserProfile            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization?          @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  deliveries   NotificationDelivery[]
 
   // A custom SQL migration adds the partial unread index because Prisma schema
   // syntax does not describe: (user_id, created_at DESC) WHERE read_at IS NULL.
+  @@unique([userId, id])
   @@index([userId, readAt, createdAt])
   @@map("notifications")
+}
+
+model UserDevice {
+  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  installationId String             @unique @map("installation_id")
+  expoPushToken  String?            @unique @map("expo_push_token")
+  platform       PushDevicePlatform
+  deviceName     String?            @map("device_name")
+  appVersion     String?            @map("app_version")
+  isActive       Boolean            @default(true) @map("is_active")
+
+  registeredAt  DateTime  @default(now()) @map("registered_at") @db.Timestamptz(6)
+  lastSeenAt    DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  deactivatedAt DateTime? @map("deactivated_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user       UserProfile            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
+
+  @@unique([userId, id])
+  @@index([userId, isActive, lastSeenAt(sort: Desc)])
+  @@map("user_devices")
+}
+
+model NotificationDelivery {
+  id             String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String @map("user_id") @db.Uuid
+  notificationId String @map("notification_id") @db.Uuid
+  deviceId       String @map("device_id") @db.Uuid
+
+  status           NotificationDeliveryStatus @default(PENDING)
+  attemptCount     Int                        @default(0) @map("attempt_count")
+  nextRetryAt      DateTime?                  @map("next_retry_at") @db.Timestamptz(6)
+  expoTicketId     String?                    @map("expo_ticket_id")
+  lastErrorCode    String?                    @map("last_error_code")
+  lastErrorMessage String?                    @map("last_error_message")
+  sentAt           DateTime?                  @map("sent_at") @db.Timestamptz(6)
+  receiptCheckedAt DateTime?                  @map("receipt_checked_at") @db.Timestamptz(6)
+  createdAt        DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  notification Notification @relation(fields: [userId, notificationId], references: [userId, id], onDelete: Cascade)
+  device       UserDevice   @relation(fields: [userId, deviceId], references: [userId, id], onDelete: Restrict)
+
+  @@unique([notificationId, deviceId])
+  @@index([notificationId, createdAt])
+  @@index([deviceId, createdAt])
+  // A custom SQL migration adds the partial retryable-delivery index because
+  // Prisma schema syntax cannot describe its status predicate.
+  @@map("notification_deliveries")
 }
 
 model OrganizationServiceArea {
