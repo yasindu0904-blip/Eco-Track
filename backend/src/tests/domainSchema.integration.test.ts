@@ -24,6 +24,11 @@ const incidentId = randomUUID();
 const eventAId = randomUUID();
 const eventBId = randomUUID();
 const participantId = randomUUID();
+const pushNotificationAId = randomUUID();
+const pushNotificationBId = randomUUID();
+const pushDeviceAId = randomUUID();
+const pushDeviceBId = randomUUID();
+const pushDeliveryId = randomUUID();
 
 type WorkflowStatusIds = {
   draft: string;
@@ -242,6 +247,15 @@ before(async () => {
 });
 
 after(async () => {
+  await prisma.notificationDelivery.deleteMany({
+    where: { id: pushDeliveryId },
+  });
+  await prisma.userDevice.deleteMany({
+    where: { id: { in: [pushDeviceAId, pushDeviceBId] } },
+  });
+  await prisma.notification.deleteMany({
+    where: { id: { in: [pushNotificationAId, pushNotificationBId] } },
+  });
   await prisma.eventParticipant.deleteMany({
     where: { id: participantId },
   });
@@ -486,6 +500,8 @@ test("every new domain table has RLS and no frontend-role table privileges", asy
     "contribution_events",
     "achievement_definitions",
     "user_achievements",
+    "user_devices",
+    "notification_deliveries",
   ] as const;
 
   const security = await prisma.$queryRaw<
@@ -520,7 +536,9 @@ test("every new domain table has RLS and no frontend-role table privileges", asy
         'event_status_history',
         'contribution_events',
         'achievement_definitions',
-        'user_achievements'
+        'user_achievements',
+        'user_devices',
+        'notification_deliveries'
       )
     ORDER BY class.relname
   `;
@@ -546,4 +564,143 @@ test("notification unread lookups use a dedicated partial index", async () => {
   assert.equal(indexes.length, 1);
   assert.match(indexes[0]?.definition ?? "", /\(user_id, created_at DESC\)/);
   assert.match(indexes[0]?.definition ?? "", /WHERE \(read_at IS NULL\)/);
+});
+
+test("push devices and deliveries enforce durable ownership and idempotency", async () => {
+  await prisma.notification.createMany({
+    data: [
+      {
+        id: pushNotificationAId,
+        userId: profileAId,
+        type: "GENERAL",
+        title: "Push foundation A",
+        message: "Belongs to profile A.",
+      },
+      {
+        id: pushNotificationBId,
+        userId: profileBId,
+        type: "GENERAL",
+        title: "Push foundation B",
+        message: "Belongs to profile B.",
+      },
+    ],
+  });
+
+  await prisma.userDevice.createMany({
+    data: [
+      {
+        id: pushDeviceAId,
+        userId: profileAId,
+        installationId: `installation-${pushDeviceAId}`,
+        expoPushToken: `ExponentPushToken[${pushDeviceAId}]`,
+        platform: "ANDROID",
+      },
+      {
+        id: pushDeviceBId,
+        userId: profileBId,
+        installationId: `installation-${pushDeviceBId}`,
+        expoPushToken: `ExponentPushToken[${pushDeviceBId}]`,
+        platform: "ANDROID",
+      },
+    ],
+  });
+
+  const delivery = await prisma.notificationDelivery.create({
+    data: {
+      id: pushDeliveryId,
+      userId: profileAId,
+      notificationId: pushNotificationAId,
+      deviceId: pushDeviceAId,
+    },
+  });
+
+  assert.equal(delivery.status, "PENDING");
+  assert.equal(delivery.attemptCount, 0);
+
+  await assert.rejects(
+    prisma.notificationDelivery.create({
+      data: {
+        userId: profileAId,
+        notificationId: pushNotificationAId,
+        deviceId: pushDeviceAId,
+      },
+    }),
+  );
+
+  await assert.rejects(
+    prisma.notificationDelivery.create({
+      data: {
+        userId: profileAId,
+        notificationId: pushNotificationAId,
+        deviceId: pushDeviceBId,
+      },
+    }),
+  );
+
+  await assert.rejects(
+    prisma.userDevice.create({
+      data: {
+        userId: profileBId,
+        installationId: `installation-${pushDeviceAId}`,
+        expoPushToken: `ExponentPushToken[duplicate-installation-${pushDeviceAId}]`,
+        platform: "ANDROID",
+      },
+    }),
+  );
+
+  await assert.rejects(
+    prisma.userDevice.create({
+      data: {
+        userId: profileBId,
+        installationId: `different-installation-${pushDeviceAId}`,
+        expoPushToken: `ExponentPushToken[${pushDeviceAId}]`,
+        platform: "ANDROID",
+      },
+    }),
+  );
+
+  await assert.rejects(prisma.$executeRaw`
+    INSERT INTO "user_devices" (
+      "user_id", "installation_id", "platform", "is_active", "registered_at", "last_seen_at", "updated_at"
+    ) VALUES (
+      ${profileAId}::uuid,
+      ${`missing-token-${pushDeviceAId}`},
+      'ANDROID'::"PushDevicePlatform",
+      true,
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP
+    )
+  `);
+
+  await assert.rejects(prisma.$executeRaw`
+    UPDATE "notification_deliveries"
+    SET "attempt_count" = -1
+    WHERE "id" = ${pushDeliveryId}::uuid
+  `);
+
+  await assert.rejects(prisma.$executeRaw`
+    UPDATE "notification_deliveries"
+    SET "status" = 'RETRY_PENDING'::"NotificationDeliveryStatus",
+        "next_retry_at" = NULL
+    WHERE "id" = ${pushDeliveryId}::uuid
+  `);
+});
+
+test("push-delivery retry work uses a dedicated partial index", async () => {
+  const indexes = await prisma.$queryRaw<Array<{ definition: string }>>`
+    SELECT indexdef AS definition
+    FROM pg_indexes
+    WHERE schemaname = 'public'
+      AND tablename = 'notification_deliveries'
+      AND indexname = 'notification_deliveries_retryable_idx'
+  `;
+
+  assert.equal(indexes.length, 1);
+  assert.match(
+    indexes[0]?.definition ?? "",
+    /\(status, next_retry_at, created_at\)/,
+  );
+  assert.match(indexes[0]?.definition ?? "", /PENDING/);
+  assert.match(indexes[0]?.definition ?? "", /RETRY_PENDING/);
 });

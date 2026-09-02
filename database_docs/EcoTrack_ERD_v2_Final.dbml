@@ -22,6 +22,7 @@ Project EcoTrack_ERD_v2_Simplified {
   - Supabase auth.users remains externally owned. user_profiles.auth_user_id is a unique logical identity link and must not become a normal Prisma-managed cross-schema foreign key unless deliberately implemented later with reviewed Supabase SQL.
   - Every public application table must receive the project's backend-only RLS / privilege-revocation treatment in migrations.
   - Cross-organization and cross-event relationships must be protected by database constraints where practical and by transactional service validation plus Organization A / Organization B tests where a direct FK cannot express the rule.
+  - PostgreSQL notifications are permanent truth. Expo is a delivery mechanism and Redis may later accelerate temporary queue work, but notification_deliveries remains the durable retry and provider-receipt record.
   '''
 }
 
@@ -158,6 +159,20 @@ Enum notification_type {
   ORGANIZATION_REVIEW_UPDATED
   ACHIEVEMENT_AWARDED
   GENERAL
+}
+
+Enum push_device_platform {
+  ANDROID
+  IOS
+}
+
+Enum notification_delivery_status {
+  PENDING
+  QUEUED
+  RECEIPT_PENDING
+  PROVIDER_ACCEPTED
+  RETRY_PENDING
+  FAILED
 }
 
 Enum issue_status {
@@ -634,11 +649,23 @@ Table public.user_achievements [headerColor: #EDC948] {
 Table public.user_devices [headerColor: #76B7B2] {
   id uuid [pk]
   user_id uuid [not null]
-  expo_push_token varchar [not null, unique]
-  platform varchar [not null]
+  installation_id varchar [not null, unique, note: 'Stable EcoTrack app-installation identifier.']
+  expo_push_token varchar [unique, note: 'Nullable so an invalid token can be cleared while retaining the installation record.']
+  platform push_device_platform [not null]
+  device_name varchar
+  app_version varchar
   is_active boolean [not null, default: true]
   registered_at timestamptz [not null, default: `now()`]
-  last_seen_at timestamptz
+  last_seen_at timestamptz [not null, default: `now()`]
+  deactivated_at timestamptz
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (user_id, id) [unique]
+    (user_id, is_active, last_seen_at) [name: 'user_devices_user_id_is_active_last_seen_at_idx']
+  }
+
+  Note: 'Active installations require a token and no deactivation timestamp. Inactive installations retain history and have a deactivation timestamp.'
 }
 
 Table public.notifications [headerColor: #76B7B2] {
@@ -654,10 +681,37 @@ Table public.notifications [headerColor: #76B7B2] {
   created_at timestamptz [not null, default: `now()`]
 
   indexes {
+    (user_id, id) [unique]
     (user_id, read_at, created_at)
   }
 
   Note: 'Permanent in-app notification record. Expo push is only a delivery mechanism. Custom migration notifications_unread_user_created_at_idx indexes (user_id, created_at DESC) only where read_at IS NULL for unread inbox and badge queries.'
+}
+
+Table public.notification_deliveries [headerColor: #76B7B2] {
+  id uuid [pk]
+  user_id uuid [not null, note: 'Redundant ownership key used by composite foreign keys to prevent cross-user notification/device deliveries.']
+  notification_id uuid [not null]
+  device_id uuid [not null]
+  status notification_delivery_status [not null, default: 'PENDING']
+  attempt_count int [not null, default: 0]
+  next_retry_at timestamptz
+  expo_ticket_id varchar
+  last_error_code varchar
+  last_error_message text
+  sent_at timestamptz
+  receipt_checked_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (notification_id, device_id) [unique]
+    (notification_id, created_at)
+    (device_id, created_at)
+    (status, next_retry_at, created_at) [name: 'notification_deliveries_retryable_idx', note: 'Partial index limited to PENDING and RETRY_PENDING rows.']
+  }
+
+  Note: 'One durable logical push delivery per notification/device pair. Retries update the same row. PROVIDER_ACCEPTED means FCM/APNs accepted the handoff; it does not prove that the user device displayed the notification.'
 }
 
 Table public.cleanup_event_reminders [headerColor: #76B7B2] {
@@ -796,6 +850,8 @@ Ref: public.user_achievements.awarded_from_contribution_id > public.contribution
 Ref: public.user_devices.user_id > public.user_profiles.id [delete: cascade]
 Ref: public.notifications.user_id > public.user_profiles.id [delete: cascade]
 Ref: public.notifications.organization_id > public.organizations.id [delete: set null]
+Ref: public.notification_deliveries.notification_id > public.notifications.id [delete: cascade]
+Ref: public.notification_deliveries.device_id > public.user_devices.id [delete: restrict]
 Ref: public.cleanup_event_reminders.cleanup_event_id > public.cleanup_events.id [delete: cascade]
 Ref: public.issue_reports.reporter_user_id > public.user_profiles.id [delete: restrict]
 Ref: public.issue_reports.organization_id > public.organizations.id [delete: set null]
