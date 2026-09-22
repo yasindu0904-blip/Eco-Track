@@ -110,6 +110,19 @@ export async function createNotificationRecord(
   prisma: NotificationDatabase,
   command: CreateNotificationCommand,
 ) {
+  const activeDevices = await prisma.userDevice.findMany({
+    where: {
+      userId: command.userId,
+      isActive: true,
+      expoPushToken: { not: null },
+    },
+    select: { id: true },
+  });
+
+  const deliveries = activeDevices.map(({ id: deviceId }) => ({
+    deviceId,
+  }));
+
   if (command.deduplicationKey) {
     return prisma.notification.upsert({
       where: { deduplicationKey: command.deduplicationKey },
@@ -121,6 +134,9 @@ export async function createNotificationRecord(
         message: command.message,
         data: command.data,
         deduplicationKey: command.deduplicationKey,
+        deliveries: deliveries.length > 0
+          ? { createMany: { data: deliveries } }
+          : undefined,
       },
       update: {},
       select: notificationSelect,
@@ -135,6 +151,9 @@ export async function createNotificationRecord(
       title: command.title,
       message: command.message,
       data: command.data,
+      deliveries: deliveries.length > 0
+        ? { createMany: { data: deliveries } }
+        : undefined,
     },
     select: notificationSelect,
   });

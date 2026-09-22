@@ -11,6 +11,7 @@ import { MembershipSelfServiceScreen } from "../features/memberships/MembershipS
 import { listMyActiveOrganizationMemberships } from "../features/memberships/administration/membershipAdministration.api";
 import type { ActiveOrganizationMembership } from "../features/memberships/administration/membershipAdministration.types";
 import { NotificationInboxScreen } from "../features/notifications/NotificationInboxScreen";
+import type { NotificationItem } from "../features/notifications/notification.types";
 import { MyOrganizationApplicationsScreen } from "../features/organizations/MyOrganizationApplicationsScreen";
 import { OrganizationApplicationScreen } from "../features/organizations/OrganizationApplicationScreen";
 import { OrganizationWorkspaceScreen } from "../features/organizations/OrganizationWorkspaceScreen";
@@ -23,13 +24,16 @@ import { useAndroidBackNavigation } from "./useAndroidBackNavigation";
 type Props = {
   accessToken: string;
   profile: AuthenticatedUserProfile;
+  pushNotification: NotificationItem | null;
+  onPushNotificationHandled: () => void;
   onProfileUpdated: (profile: AuthenticatedUserProfile) => void;
   onSignOut: () => Promise<void>;
 };
 
-export function AuthenticatedUserApp({ accessToken, profile, onProfileUpdated, onSignOut }: Props) {
+export function AuthenticatedUserApp({ accessToken, profile, pushNotification, onPushNotificationHandled, onProfileUpdated, onSignOut }: Props) {
   const [destination, setDestination] = useState<MobileDestination>(mobileDashboard);
   const [activeMemberships, setActiveMemberships] = useState<ActiveOrganizationMembership[]>([]);
+  const [membershipsLoaded, setMembershipsLoaded] = useState(false);
   const [submittedApplication, setSubmittedApplication] = useState<OrganizationApplication | null>(null);
   const [submittedIncident, setSubmittedIncident] = useState<IncidentDetail | null>(null);
   const membershipRequestVersion = useRef(0);
@@ -50,6 +54,8 @@ export function AuthenticatedUserApp({ accessToken, profile, onProfileUpdated, o
       if (membershipRequestVersion.current === requestVersion) setActiveMemberships(memberships);
     } catch {
       if (membershipRequestVersion.current === requestVersion) setActiveMemberships([]);
+    } finally {
+      if (membershipRequestVersion.current === requestVersion) setMembershipsLoaded(true);
     }
   }, [accessToken]);
 
@@ -57,6 +63,23 @@ export function AuthenticatedUserApp({ accessToken, profile, onProfileUpdated, o
     void reloadActiveMemberships();
     return () => { membershipRequestVersion.current += 1; };
   }, [reloadActiveMemberships]);
+
+  useEffect(() => {
+    if (!pushNotification || !membershipsLoaded) return;
+
+    const next = resolveMobileNotificationDestination(
+      pushNotification,
+      activeMemberships,
+    );
+    navigate(next ?? { screen: "notifications" });
+    onPushNotificationHandled();
+  }, [
+    activeMemberships,
+    membershipsLoaded,
+    navigate,
+    onPushNotificationHandled,
+    pushNotification,
+  ]);
 
   const signOut = async () => {
     membershipRequestVersion.current += 1;

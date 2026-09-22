@@ -1,0 +1,47 @@
+# Dependencies and generated output
+node_modules/
+dist/
+build/
+coverage/
+.expo/
+.expo-shared/
+android/
+ios/
+
+# Local configuration and credentials
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env.*.local
+.env.docker
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Non-mobile projects and repository-only agent metadata
+backend/
+web/
+docs/
+database_docs/
+docker/
+ecotrack-srs-mockup/
+**/.agents/
+**/.claude/
+**/.codex/
+
+# Development artifacts
+.git/
+.github/
+.idea/
+.vscode/
+.vite/
+tmp/
+temp/
+learning/
+*.log
+Thumbs.db
+.DS_Store
