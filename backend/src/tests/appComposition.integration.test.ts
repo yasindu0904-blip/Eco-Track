@@ -1,3 +1,4 @@
+import { registerResourceCleanup } from "./closeTestResources.js";
 import assert from "node:assert/strict";
 import type { Server } from "node:http";
 import test, { after } from "node:test";
@@ -120,3 +121,5 @@ test("global middleware order preserves health, security, CORS, and final 404 ha
     },
   });
 });
+
+registerResourceCleanup();

@@ -96,6 +96,7 @@ jobs:
         run: npm run build
 
       - name: Run all backend tests
+        timeout-minutes: 10
         run: npm test
 
   web:

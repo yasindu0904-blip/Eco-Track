@@ -1,3 +1,4 @@
+import { registerResourceCleanup } from "../../tests/closeTestResources.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
@@ -534,3 +535,5 @@ test("earning points never changes CASL permissions", async () => {
     false,
   );
 });
+
+registerResourceCleanup();

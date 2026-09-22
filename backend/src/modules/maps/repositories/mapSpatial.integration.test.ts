@@ -1,3 +1,4 @@
+import { registerResourceCleanup } from "../../../tests/closeTestResources.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test, { after, before } from "node:test";
@@ -169,3 +170,5 @@ test("returns an organization-scoped GeoJSON service-area overlay", async () => 
     `MAP-${administrativeAreaId}`,
   );
 });
+
+registerResourceCleanup();

@@ -1,3 +1,4 @@
+import { registerResourceCleanup } from "../../tests/closeTestResources.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
@@ -1820,3 +1821,5 @@ test("EVT-06 cancellation preserves history and releases a linked incident claim
     0,
   );
 });
+
+registerResourceCleanup();

@@ -1,3 +1,4 @@
+import { registerResourceCleanup } from "./closeTestResources.js";
 import assert from "node:assert/strict";
 import type { Server } from "node:http";
 import { afterEach, test } from "node:test";
@@ -436,3 +437,5 @@ test(
     });
   },
 );
+
+registerResourceCleanup();

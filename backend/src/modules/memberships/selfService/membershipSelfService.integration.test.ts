@@ -1,3 +1,4 @@
+import { registerResourceCleanup } from "../../../tests/closeTestResources.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
@@ -271,3 +272,5 @@ test("request history is requester-owned and withdrawal is pending-only", async 
   const historyBody = (await history.json()) as { data: MembershipRequestPageDto };
   assert.equal(historyBody.data.items.some(({ id, status }) => id === ids.declinedRequest && status === MembershipRequestStatus.DECLINED), true);
 });
+
+registerResourceCleanup();
