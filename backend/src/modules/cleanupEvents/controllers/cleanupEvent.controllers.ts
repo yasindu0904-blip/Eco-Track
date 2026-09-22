@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { readCached } from "../../../config/redisRuntime.js";
 
 import { ApplicationError } from "../../../errors/applicationError.js";
 import type { CleanupEventDependencies } from "../cleanupEvent.dependencies.js";
@@ -376,11 +377,9 @@ export function listPublicEventMapController(
       const validation = cleanupEventMapQuerySchema.safeParse(request.query);
       if (!validation.success) throw validationError(validation);
       response.status(200).json({
-        data: await listPublicCleanupEventMap(
-          dependencies,
-          validation.data,
-          request.authentication.profile.id,
-        ),
+        data: await readCached(dependencies.cache, "map:events:public",
+          ["viewport", request.authentication.profile.id, validation.data], 15,
+          () => listPublicCleanupEventMap(dependencies, validation.data, request.authentication.profile.id)),
       });
     } catch (error) {
       next(error);
@@ -402,11 +401,9 @@ export function listNearbyPublicEventMapController(
       );
       if (!validation.success) throw validationError(validation);
       response.status(200).json({
-        data: await listNearbyPublicCleanupEventMap(
-          dependencies,
-          validation.data,
-          request.authentication.profile.id,
-        ),
+        data: await readCached(dependencies.cache, "map:events:public",
+          ["radius", request.authentication.profile.id, validation.data], 15,
+          () => listNearbyPublicCleanupEventMap(dependencies, validation.data, request.authentication.profile.id)),
       });
     } catch (error) {
       next(error);
@@ -426,11 +423,9 @@ export function listOrganizationEventMapController(
       const validation = cleanupEventMapQuerySchema.safeParse(request.query);
       if (!validation.success) throw validationError(validation);
       response.status(200).json({
-        data: await listOrganizationCleanupEventMap(
-          dependencies,
-          request.tenant!.organization.id,
-          validation.data,
-        ),
+        data: await readCached(dependencies.cache, "map:events:organization",
+          [request.tenant!.organization.id, validation.data], 15,
+          () => listOrganizationCleanupEventMap(dependencies, request.tenant!.organization.id, validation.data)),
       });
     } catch (error) {
       next(error);

@@ -34,6 +34,7 @@ const environmentSchema = z.object({
     .string()
     .url("REDIS_URL must be a valid Redis URL")
     .default("redis://localhost:6379"),
+  REDIS_KEY_PREFIX: z.string().trim().regex(/^[a-zA-Z0-9:_-]+$/).optional(),
 
   NOTIFICATION_DISPATCH_INTERVAL_MS: z.coerce
     .number()

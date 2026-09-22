@@ -1,6 +1,7 @@
 import { createApp } from "./app.js";
 
 import { env } from "./config/env.js";
+import { closeRedisRuntime, consumeRateLimit } from "./config/redisRuntime.js";
 import { prisma } from "./database/prisma.js";
 
 import { authorizationDependencies } from "./authorization/authorization.dependencies.js";
@@ -22,7 +23,7 @@ const app = createApp(authenticationDependencies, {
   cleanupWorkflowDependencies,
   cleanupEventDependencies,
   membershipAdministrationDependencies,
-  notificationDependencies,
+  notificationDependencies: { ...notificationDependencies, rateLimit: consumeRateLimit },
   membershipSelfServiceDependencies,
   incidentDependencies,
   organizationApplicationDependencies,
@@ -63,6 +64,7 @@ async function shutdown(signal: string): Promise<void> {
   server.close(async (serverError) => {
     try {
       await prisma.$disconnect();
+      await closeRedisRuntime();
     } catch (disconnectError) {
       console.error("Prisma disconnection failed:", disconnectError);
 

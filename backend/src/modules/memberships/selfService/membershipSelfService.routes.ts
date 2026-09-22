@@ -6,6 +6,7 @@ import { abilityMiddleware } from "../../../middleware/ability.middleware.js";
 import { createAuthenticationMiddleware } from "../../../middleware/auth.middleware.js";
 import { authorize } from "../../../middleware/authorize.middleware.js";
 import { requireCompletedProfile } from "../../../middleware/requireCompletedProfile.middleware.js";
+import { invalidateAfterSuccessfulWrite } from "../../../middleware/cacheInvalidation.middleware.js";
 import type { AuthenticationDependencies } from "../../auth/auth.types.js";
 
 import {
@@ -22,6 +23,7 @@ export function createMembershipSelfServiceRouter(
   membershipDependencies: MembershipSelfServiceDependencies,
 ): ExpressRouter {
   const router = Router();
+  router.use(invalidateAfterSuccessfulWrite(["dashboard:organization", "dashboard:platform"]));
   const authenticate = createAuthenticationMiddleware(authenticationDependencies);
   const protectedRoute = [
     authenticate,

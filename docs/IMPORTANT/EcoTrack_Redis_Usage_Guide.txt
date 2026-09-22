@@ -1,6 +1,36 @@
 EcoTrack Redis Usage Guide
 ==========================
 
+Current implementation (September 2026)
+---------------------------------------
+The sections below are historical ideas. The implemented behavior is:
+- PostgreSQL is the source of truth for incidents, events, memberships,
+  notifications, delivery retries, and submission idempotency.
+- BullMQ uses Redis for Expo push jobs; the notification worker regularly
+  recovers durable work from PostgreSQL.
+- Redis limits incident submissions to 5 per user per 10 minutes, evidence
+  upload-intent requests to 30 per user per 10 minutes, and push-device
+  registrations to 30 per user per hour. These counters are shared across
+  backend instances. When Redis cannot enforce a limit, the protected write
+  returns 503 rather than silently bypassing the limit.
+- Platform and organization dashboard summaries have a 30-second cache.
+  Active incident categories have a 5-minute cache; GN Division searches have
+  a 10-minute cache. Cache errors fall back to PostgreSQL.
+- Public and organization incident/event map queries have a 15-second cache.
+  Validated query filters, cursor, authenticated user, and organization are
+  included in keys where relevant. Authorization always runs before cache use.
+- Successful incident, cleanup event, organization, and membership mutations
+  advance the relevant cache generation. The TTL bounds staleness if an
+  invalidation call cannot reach Redis.
+- The notification worker writes a 45-second heartbeat every 15 seconds.
+  GET /api/v1/super-admin/notification-worker exposes its status and queue
+  counts to an active Super Admin.
+- REDIS_KEY_PREFIX separates cache, limit, and heartbeat keys by environment.
+  The local database Compose override uses ecotrack:local; the normal Compose
+  default is ecotrack:production. BullMQ retains its own bull: keys.
+- Redis remains backend infrastructure. No mobile Redis connection is needed.
+
+
 Purpose
 -------
 This file records the useful Redis features that can strengthen EcoTrack without turning the project into an unnecessarily complex system.

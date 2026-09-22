@@ -9,6 +9,8 @@ import { authorizeResource } from "../../middleware/authorize.middleware.js";
 import { createAuthorizationSubject } from "../../authorization/subjects.js";
 import { requireCompletedProfile } from "../../middleware/requireCompletedProfile.middleware.js";
 import { createTenantMiddleware } from "../../middleware/tenant.middleware.js";
+import { createRedisRateLimit } from "../../middleware/redisRateLimit.middleware.js";
+import { invalidateAfterSuccessfulWrite } from "../../middleware/cacheInvalidation.middleware.js";
 import type { AuthenticationDependencies } from "../auth/auth.types.js";
 import type { IncidentDependencies } from "./incident.dependencies.js";
 import {
@@ -31,6 +33,10 @@ export function createIncidentRouter(
   incidentDependencies: IncidentDependencies,
 ): ExpressRouter {
   const router = Router();
+  router.use(invalidateAfterSuccessfulWrite([
+    "dashboard:platform", "dashboard:organization",
+    "map:incidents:public", "map:incidents:organization",
+  ]));
   const authenticate = createAuthenticationMiddleware(authenticationDependencies);
   const protectedRoute = [authenticate, requireCompletedProfile, abilityMiddleware] as const;
   const tenantRoute = [
@@ -50,6 +56,7 @@ export function createIncidentRouter(
     "/incidents/evidence/upload-intents",
     ...protectedRoute,
     authorize(Actions.Create, Subjects.Incident),
+    ...(incidentDependencies.rateLimit ? [createRedisRateLimit(incidentDependencies.rateLimit, "incident-upload", 30, 10 * 60_000)] : []),
     createEvidenceUploadIntentsController(incidentDependencies),
   );
   router.post(

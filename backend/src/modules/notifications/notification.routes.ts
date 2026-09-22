@@ -9,6 +9,9 @@ import { abilityMiddleware } from "../../middleware/ability.middleware.js";
 import { createAuthenticationMiddleware } from "../../middleware/auth.middleware.js";
 import { authorize } from "../../middleware/authorize.middleware.js";
 import { requireCompletedProfile } from "../../middleware/requireCompletedProfile.middleware.js";
+import { createRedisRateLimit } from "../../middleware/redisRateLimit.middleware.js";
+import { requireActiveSuperAdmin } from "../../middleware/requireSuperAdmin.middleware.js";
+import { notificationWorkerHealth } from "../../config/redisRuntime.js";
 import type { AuthenticationDependencies } from "../auth/auth.types.js";
 
 import { getUnreadNotificationCountController } from "./controllers/getUnreadNotificationCount.controller.js";
@@ -36,10 +39,20 @@ export function createNotificationRouter(
     Subjects.Notification,
   );
 
+  router.get("/super-admin/notification-worker", authenticate, requireCompletedProfile,
+    requireActiveSuperAdmin, async (_request, response, next) => {
+      try {
+        response.status(200).json({ data: await notificationWorkerHealth() });
+      } catch (error) {
+        next(error);
+      }
+    });
+
   router.put(
     "/push-devices/:installationId",
     authenticate,
     requireCompletedProfile,
+    ...(notificationDependencies.rateLimit ? [createRedisRateLimit(notificationDependencies.rateLimit, "push-device-register", 30, 60 * 60_000)] : []),
     registerPushDeviceController(notificationDependencies),
   );
 
