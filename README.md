@@ -13,7 +13,7 @@ Eco-Track/
 `-- docker/    Local container infrastructure
 ```
 
-The Android/Expo development workflow runs directly on the host computer because it needs Metro, the Android SDK, Gradle and ADB. Docker runs the backend, web application and, when requested, a separate local PostGIS database.
+The Android/Expo development workflow runs directly on the host computer because it needs Metro, the Android SDK, Gradle and ADB. Docker runs the backend, web application, Redis-backed notification worker and, when requested, a separate local PostGIS database.
 
 ## Docker: backend and web with Supabase
 
@@ -36,6 +36,8 @@ Open:
 - Web application: http://localhost:8080
 - Backend health endpoint: http://localhost:5000/health
 
+Redis remains private inside the Compose network. The notification worker has no public port and records every Expo delivery attempt and receipt in PostgreSQL.
+
 This mode uses the hosted Supabase database in `DATABASE_URL`. It does not apply migrations automatically. Database migrations to Supabase remain an explicit deployment step.
 
 ## Docker: isolated local PostGIS database
@@ -46,11 +48,14 @@ To run the same backend and web containers with a separate local PostgreSQL/Post
 docker compose --env-file .env.docker -f compose.yaml -f compose.local-db.yaml up --build
 ```
 
+Always include `--env-file .env.docker` with this stack. Without it, Compose reads the root `.env` (used by the Vite development server), whose `WEB_ORIGIN` is `http://localhost:5173`; the Docker web app runs at `http://localhost:8080` and its API requests will fail CORS preflight.
+
 This mode:
 
 - starts PostgreSQL/PostGIS on host port `5433`;
 - prepares the Supabase-compatible `extensions` schema and database roles;
 - applies every committed Prisma migration before starting the backend;
+- starts Redis and the Expo push notification worker after the database is ready;
 - stores local database data in the `ecotrack-postgres-data` Docker volume;
 - does not modify the hosted Supabase database.
 

@@ -30,6 +30,7 @@ export function resolveMobileNotificationDestination(
     case "EVENT_UPDATED":
     case "EVENT_CANCELLED":
     case "EVENT_COMPLETED":
+    case "EVENT_REMINDER":
       return data?.eventId
         ? { screen: "cleanupEvents", eventId: data.eventId }
         : null;

@@ -12,9 +12,11 @@ import { requireCompletedProfile } from "../../middleware/requireCompletedProfil
 import type { AuthenticationDependencies } from "../auth/auth.types.js";
 
 import { getUnreadNotificationCountController } from "./controllers/getUnreadNotificationCount.controller.js";
+import { deactivatePushDeviceController } from "./controllers/deactivatePushDevice.controller.js";
 import { listNotificationsController } from "./controllers/listNotifications.controller.js";
 import { markAllNotificationsReadController } from "./controllers/markAllNotificationsRead.controller.js";
 import { markNotificationReadController } from "./controllers/markNotificationRead.controller.js";
+import { registerPushDeviceController } from "./controllers/registerPushDevice.controller.js";
 import type { NotificationDependencies } from "./notification.dependencies.js";
 
 export function createNotificationRouter(
@@ -32,6 +34,20 @@ export function createNotificationRouter(
   const markOwnNotificationRead = authorize(
     Actions.MarkRead,
     Subjects.Notification,
+  );
+
+  router.put(
+    "/push-devices/:installationId",
+    authenticate,
+    requireCompletedProfile,
+    registerPushDeviceController(notificationDependencies),
+  );
+
+  router.delete(
+    "/push-devices/:installationId",
+    authenticate,
+    requireCompletedProfile,
+    deactivatePushDeviceController(notificationDependencies),
   );
 
   router.get(
