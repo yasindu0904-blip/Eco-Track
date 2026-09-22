@@ -38,6 +38,7 @@ services:
   backend:
     environment:
       DATABASE_URL: "postgresql://postgres:postgres@database:5432/ecotrack_local?schema=public&options=-c%20search_path%3Dpublic%2Cextensions"
+      REDIS_KEY_PREFIX: ecotrack:local
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -45,6 +46,7 @@ services:
   notification-worker:
     environment:
       DATABASE_URL: "postgresql://postgres:postgres@database:5432/ecotrack_local?schema=public&options=-c%20search_path%3Dpublic%2Cextensions"
+      REDIS_KEY_PREFIX: ecotrack:local
     depends_on:
       migrate:
         condition: service_completed_successfully

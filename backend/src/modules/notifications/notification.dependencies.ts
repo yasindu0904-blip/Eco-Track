@@ -4,9 +4,11 @@ import type {
 } from "../../generated/prisma/client.js";
 
 import { prisma } from "../../database/prisma.js";
+import type { RateLimitConsumer } from "../../middleware/redisRateLimit.middleware.js";
 
 export type NotificationDependencies = {
   prisma: PrismaClient;
+  rateLimit?: RateLimitConsumer;
 };
 
 export type NotificationWriteDependencies = {

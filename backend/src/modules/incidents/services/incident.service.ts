@@ -5,9 +5,8 @@ import { ApplicationError } from "../../../errors/applicationError.js";
 import { NotificationType } from "../../../generated/prisma/enums.js";
 import { createNotification } from "../../notifications/services/createNotification.service.js";
 import { awardVerifiedIncidentReportContribution } from "../../rewards/services/awardContribution.service.js";
-import {
-  INCIDENT_SUBMISSION_RATE_LIMIT,
-} from "../incident.constants.js";
+import { INCIDENT_SUBMISSION_RATE_LIMIT } from "../incident.constants.js";
+import { readCached } from "../../../config/redisRuntime.js";
 import type { IncidentDependencies } from "../incident.dependencies.js";
 import { observeSpatialQuery } from "../../maps/map.telemetry.js";
 import type {
@@ -54,25 +53,6 @@ import {
   upsertOrganizationIncidentReview,
 } from "../repositories/incident.repository.js";
 import { listOrganizationServiceAreaBoundaryFeatures } from "../../maps/repositories/mapSpatial.repository.js";
-
-const recentSubmissionsByUser = new Map<string, number[]>();
-
-function assertRateLimit(userId: string): void {
-  const now = Date.now();
-  const windowStart = now - INCIDENT_SUBMISSION_RATE_LIMIT.windowMilliseconds;
-  const recent = (recentSubmissionsByUser.get(userId) ?? []).filter(
-    (timestamp) => timestamp >= windowStart,
-  );
-  if (recent.length >= INCIDENT_SUBMISSION_RATE_LIMIT.maximum) {
-    throw new ApplicationError(
-      429,
-      "INCIDENT_SUBMISSION_RATE_LIMITED",
-      "Too many incident reports were submitted recently. Please wait before trying again.",
-    );
-  }
-  recent.push(now);
-  recentSubmissionsByUser.set(userId, recent);
-}
 
 function storageExtension(contentType: string): string {
   if (contentType === "image/png") return "png";
@@ -160,7 +140,8 @@ async function toSummaryDto(
 }
 
 export async function getActiveIncidentCategories(dependencies: IncidentDependencies) {
-  return listActiveIncidentCategories(dependencies.prisma);
+  return readCached(dependencies.cache, "reference:incident-categories", [], 300,
+    () => listActiveIncidentCategories(dependencies.prisma));
 }
 
 export async function createEvidenceUploadIntents(
@@ -189,7 +170,22 @@ export async function createIncident(
     return { incident: await toDetailDto(dependencies, existing), created: false };
   }
 
-  assertRateLimit(userId);
+  if (dependencies.rateLimit) {
+    let limit: { allowed: boolean; retryAfterSeconds: number };
+    try {
+      limit = await dependencies.rateLimit(
+        "incident-submit", userId,
+        INCIDENT_SUBMISSION_RATE_LIMIT.maximum,
+        INCIDENT_SUBMISSION_RATE_LIMIT.windowMilliseconds,
+      );
+    } catch {
+      throw new ApplicationError(503, "RATE_LIMIT_UNAVAILABLE", "Report submission is temporarily unavailable. Please try again shortly.");
+    }
+    if (!limit.allowed) {
+      throw new ApplicationError(429, "INCIDENT_SUBMISSION_RATE_LIMITED", "Too many incident reports were submitted recently. Please wait before trying again.", { retryAfterSeconds: limit.retryAfterSeconds });
+    }
+  }
+
 
   if (!(await activeIncidentCategoryExists(dependencies.prisma, input.categoryId))) {
     throw new ApplicationError(422, "INCIDENT_CATEGORY_INACTIVE", "Select an active incident category.");

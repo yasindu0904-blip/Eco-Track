@@ -1,9 +1,11 @@
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import type { AuthorizationDependencies } from "../../authorization/authorization.types.js";
+import type { cachedValue } from "../../config/redisRuntime.js";
 
 export type DashboardDependencies = {
   prisma: PrismaClient;
   authorization: AuthorizationDependencies;
+  cache?: typeof cachedValue;
 };
 
 export type CountByState = Record<string, number>;

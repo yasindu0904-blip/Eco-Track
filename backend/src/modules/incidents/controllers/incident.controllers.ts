@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
 import { ApplicationError } from "../../../errors/applicationError.js";
+import { readCached } from "../../../config/redisRuntime.js";
 import type { IncidentDependencies } from "../incident.dependencies.js";
 import {
   createEvidenceUploadIntents,
@@ -180,11 +181,9 @@ export function listPublicIncidentsController(
       );
       if (!validation.success) throw validationError(validation);
       response.status(200).json({
-        data: await listPublicIncidentsByViewport(
-          dependencies,
-          validation.data,
-          request.authentication.profile.id,
-        ),
+        data: await readCached(dependencies.cache, "map:incidents:public",
+          ["viewport", request.authentication.profile.id, validation.data], 15,
+          () => listPublicIncidentsByViewport(dependencies, validation.data, request.authentication.profile.id)),
       });
     } catch (error) {
       next(error);
@@ -202,11 +201,9 @@ export function listNearbyPublicIncidentsController(
       );
       if (!validation.success) throw validationError(validation);
       response.status(200).json({
-        data: await listPublicIncidentsByRadius(
-          dependencies,
-          validation.data,
-          request.authentication.profile.id,
-        ),
+        data: await readCached(dependencies.cache, "map:incidents:public",
+          ["radius", request.authentication.profile.id, validation.data], 15,
+          () => listPublicIncidentsByRadius(dependencies, validation.data, request.authentication.profile.id)),
       });
     } catch (error) {
       next(error);
@@ -224,11 +221,9 @@ export function listOrganizationIncidentsController(
       );
       if (!validation.success) throw validationError(validation);
       response.status(200).json({
-        data: await listOrganizationIncidents(
-          dependencies,
-          request.tenant!.organization.id,
-          validation.data,
-        ),
+        data: await readCached(dependencies.cache, "map:incidents:organization",
+          [request.tenant!.organization.id, validation.data], 15,
+          () => listOrganizationIncidents(dependencies, request.tenant!.organization.id, validation.data)),
       });
     } catch (error) {
       next(error);

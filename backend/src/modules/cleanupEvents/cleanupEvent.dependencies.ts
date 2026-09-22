@@ -1,4 +1,5 @@
 import { prisma } from "../../database/prisma.js";
+import { cachedValue } from "../../config/redisRuntime.js";
 import type { PrismaClient } from "../../generated/prisma/client.js";
 import type { AuthorizationDependencies } from "../../authorization/authorization.types.js";
 import { authorizationDependencies } from "../../authorization/authorization.dependencies.js";
@@ -11,6 +12,7 @@ export type CleanupEventDependencies = {
   authorization: AuthorizationDependencies;
   spatialQueryObserver?: SpatialQueryObserver;
   eventEvidenceStorage: EventEvidenceStorage;
+  cache?: typeof cachedValue;
 };
 
 export const cleanupEventDependencies: CleanupEventDependencies = {
@@ -18,4 +20,5 @@ export const cleanupEventDependencies: CleanupEventDependencies = {
   authorization: authorizationDependencies,
   spatialQueryObserver: logSpatialQueryMetric,
   eventEvidenceStorage,
+  cache: cachedValue,
 };

@@ -14,6 +14,7 @@ import {
 import { createEventAuthorizationMiddleware } from "../../middleware/eventAuthorization.middleware.js";
 import { requireCompletedProfile } from "../../middleware/requireCompletedProfile.middleware.js";
 import { createTenantMiddleware } from "../../middleware/tenant.middleware.js";
+import { invalidateAfterSuccessfulWrite } from "../../middleware/cacheInvalidation.middleware.js";
 import type { AuthenticationDependencies } from "../auth/auth.types.js";
 import type { CleanupEventDependencies } from "./cleanupEvent.dependencies.js";
 import {
@@ -61,6 +62,11 @@ export function createCleanupEventRouter(
   deps: CleanupEventDependencies,
 ) {
   const router = Router();
+  router.use(invalidateAfterSuccessfulWrite([
+    "dashboard:platform", "dashboard:organization",
+    "map:events:public", "map:events:organization",
+    "map:incidents:public", "map:incidents:organization",
+  ]));
   const authenticate = createAuthenticationMiddleware(
     authenticationDependencies,
   );

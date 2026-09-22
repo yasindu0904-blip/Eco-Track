@@ -13,6 +13,9 @@ export function errorMiddleware(
   _next: NextFunction,
 ): void {
   if (error instanceof ApplicationError) {
+    if (error.statusCode === 429 && typeof error.details?.retryAfterSeconds === "number") {
+      response.setHeader("Retry-After", String(error.details.retryAfterSeconds));
+    }
     response.status(error.statusCode).json({
       error: {
         code: error.code,

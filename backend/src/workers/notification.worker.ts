@@ -3,6 +3,7 @@ import { Expo, type ExpoPushErrorReceipt } from "expo-server-sdk";
 
 import { env } from "../config/env.js";
 import { redisWorkerConnection } from "../config/redis.js";
+import { writeNotificationHeartbeat, closeRedisRuntime } from "../config/redisRuntime.js";
 import { prisma } from "../database/prisma.js";
 import { NotificationDeliveryStatus } from "../generated/prisma/enums.js";
 import {
@@ -374,16 +375,24 @@ void dispatchDurableWork().catch((error: unknown) => {
 
 console.log("EcoTrack notification worker started.");
 
+const heartbeatInterval = setInterval(() => {
+  void writeNotificationHeartbeat().catch(() => undefined);
+}, 15_000);
+heartbeatInterval.unref();
+void writeNotificationHeartbeat().catch(() => undefined);
+
 let shutdownStarted = false;
 async function shutdown(signal: string): Promise<void> {
   if (shutdownStarted) return;
   shutdownStarted = true;
   clearInterval(dispatchInterval);
+  clearInterval(heartbeatInterval);
   console.log(`${signal} received. Shutting down notification worker.`);
 
   try {
     await worker.close();
     await queue.close();
+    await closeRedisRuntime();
     await prisma.$disconnect();
   } catch (error) {
     console.error("Notification worker shutdown failed:", error);
