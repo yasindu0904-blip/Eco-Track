@@ -1,27 +1,19 @@
 {
   "expo": {
     "name": "EcoTrack",
-    "slug": "ecotrack",
-    "owner": "eco-tracks-team",
-    "extra": {
-      "eas": {
-        "projectId": "3e5113ca-1c37-4b7a-adae-3b1768f9c227"
-      }
-    },
+    "slug": "ecotrack-mobile",
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "scheme": "ecotrack",
     "android": {
       "package": "com.ecotrack.mobile",
-      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#f4f8f1"
       }
     },
     "plugins": [
       "expo-secure-store",
-      "expo-notifications",
       "@maplibre/maplibre-react-native",
       [
         "expo-location",

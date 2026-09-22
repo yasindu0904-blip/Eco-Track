@@ -1,5 +1,4 @@
 import type { NotificationType } from "../../generated/prisma/enums.js";
-import type { PushDevicePlatform } from "../../generated/prisma/enums.js";
 
 export type SafeNotificationData = {
   achievementId?: string;
@@ -52,23 +51,4 @@ export type CreateNotificationCommand = {
   message: string;
   data?: SafeNotificationData;
   deduplicationKey?: string;
-};
-
-export type RegisterPushDeviceCommand = {
-  userId: string;
-  installationId: string;
-  expoPushToken: string;
-  platform: PushDevicePlatform;
-  deviceName?: string;
-  appVersion?: string;
-};
-
-export type PushDeviceDto = {
-  installationId: string;
-  platform: PushDevicePlatform;
-  deviceName: string | null;
-  appVersion: string | null;
-  isActive: boolean;
-  registeredAt: string;
-  lastSeenAt: string;
 };

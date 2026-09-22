@@ -42,7 +42,7 @@ Core technology decisions
 - Prisma 7 + @prisma/adapter-pg + pg: ORM, migrations, and database access.
 - Zod: runtime validation.
 - CASL + @casl/prisma: authorization before main domain modules are implemented.
-- Redis now backs the Expo notification-delivery queue; short-lived authorization caching, additional rate limits, locks, and other queues remain later work.
+- Redis later: short-lived cache, rate limits, queues, locks, delayed/retryable work.
 - PostGIS later: geospatial queries.
 - Expo Push Notifications for MVP notifications.
 
@@ -149,7 +149,7 @@ Infrastructure placement
 Shared clients live outside domain modules:
 - backend/src/config/env.ts
 - backend/src/config/supabase.ts
-- backend/src/config/redis.ts
+- backend/src/config/redis.ts (later)
 - backend/src/database/prisma.ts
 - backend/src/queues/ (later)
 - backend/src/workers/ (later)

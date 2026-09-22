@@ -55,9 +55,3 @@ Analytics recalculation
 Scheduled reminders
 
 Workers do not normally require public HTTP ports.
-
-## Push Notification Delivery
-
-The mobile app registers an authenticated installation and Expo push token through the notifications API. Creating a permanent notification also creates one durable `notification_deliveries` row for each active device in the same PostgreSQL transaction.
-
-The separate BullMQ worker recovers pending rows into Redis, sends them through Expo, checks provider receipts after 15 minutes, retries temporary failures with backoff, and deactivates tokens reported as `DeviceNotRegistered`. PostgreSQL remains the recoverable source of truth when Redis or the worker is unavailable.

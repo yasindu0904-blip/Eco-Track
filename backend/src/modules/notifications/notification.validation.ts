@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { Expo } from "expo-server-sdk";
 
 export const listNotificationsQuerySchema = z.object({
   cursor: z.string().trim().min(1).max(500).optional(),
@@ -15,16 +14,4 @@ export const notificationIdSchema = z.uuid();
 export const notificationCursorPayloadSchema = z.object({
   createdAt: z.string().trim().min(1).max(50),
   id: z.uuid(),
-});
-
-export const installationIdSchema = z.uuid();
-
-export const registerPushDeviceBodySchema = z.object({
-  expoPushToken: z
-    .string()
-    .trim()
-    .refine(Expo.isExpoPushToken, "A valid Expo push token is required."),
-  platform: z.enum(["ANDROID", "IOS"]),
-  deviceName: z.string().trim().min(1).max(120).optional(),
-  appVersion: z.string().trim().min(1).max(50).optional(),
 });
