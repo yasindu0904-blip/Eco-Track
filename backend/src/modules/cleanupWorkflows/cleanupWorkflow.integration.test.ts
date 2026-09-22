@@ -1,3 +1,4 @@
+import { registerResourceCleanup } from "../../tests/closeTestResources.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
@@ -403,3 +404,5 @@ test("configured transitions are tenant-bound and direct cross-organization IDs 
       error.code === "CLEANUP_WORKFLOW_TRANSITION_NOT_ALLOWED",
   );
 });
+
+registerResourceCleanup();

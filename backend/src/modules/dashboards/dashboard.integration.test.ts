@@ -1,3 +1,4 @@
+import { registerResourceCleanup } from "../../tests/closeTestResources.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
@@ -530,3 +531,5 @@ test("platform summary exposes aggregates without tenant-private records", async
   assert.equal(serialized.includes("phoneNumber"), false);
   assert.equal(serialized.includes("officialEmail"), false);
 });
+
+registerResourceCleanup();

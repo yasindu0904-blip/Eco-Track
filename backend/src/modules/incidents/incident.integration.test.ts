@@ -1,3 +1,4 @@
+import { registerResourceCleanup } from "../../tests/closeTestResources.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
@@ -2357,3 +2358,5 @@ test("rejects invalid coordinates and inactive categories", async () => {
   });
   assert.equal(inactiveCategory.status, 422);
 });
+
+registerResourceCleanup();

@@ -1,3 +1,4 @@
+import { registerResourceCleanup } from "../../tests/closeTestResources.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
@@ -123,3 +124,5 @@ test("a first-time user completes name and phone only once", async () => {
     await prisma.userProfile.deleteMany({ where: { id } });
   }
 });
+
+registerResourceCleanup();

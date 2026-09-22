@@ -1,3 +1,4 @@
+import { registerResourceCleanup } from "../../../tests/closeTestResources.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
@@ -341,3 +342,5 @@ test("decline requires notes and creates no membership", async () => {
   assert.equal(declineNotification?.data?.status, "DECLINED");
   assert.equal(declineNotification?.readAt, null);
 });
+
+registerResourceCleanup();

@@ -1,3 +1,4 @@
+import { registerResourceCleanup } from "../../../tests/closeTestResources.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
@@ -379,3 +380,5 @@ test("reads an owned application and hides another requester's application", asy
 
   assert.equal(otherResponse.status, 404);
 });
+
+registerResourceCleanup();

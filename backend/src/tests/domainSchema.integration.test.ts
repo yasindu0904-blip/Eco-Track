@@ -1,3 +1,4 @@
+import { registerResourceCleanup } from "./closeTestResources.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test, { after, before } from "node:test";
@@ -704,3 +705,5 @@ test("push-delivery retry work uses a dedicated partial index", async () => {
   assert.match(indexes[0]?.definition ?? "", /PENDING/);
   assert.match(indexes[0]?.definition ?? "", /RETRY_PENDING/);
 });
+
+registerResourceCleanup();

@@ -1,3 +1,4 @@
+import { registerResourceCleanup } from "../../tests/closeTestResources.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
@@ -297,3 +298,5 @@ test("new notifications create durable deliveries without replaying old notifica
   assert.equal(delivery.userId, userAId);
   assert.equal(delivery.status, "PENDING");
 });
+
+registerResourceCleanup();

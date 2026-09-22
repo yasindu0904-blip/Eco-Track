@@ -1,3 +1,4 @@
+import { registerResourceCleanup } from "../../../tests/closeTestResources.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
@@ -332,3 +333,5 @@ test("concurrent admin demotions never leave an organization without an active a
   assert.deepEqual(responses.map(({ status }) => status).sort(), [200, 409]);
   assert.equal(await prisma.organizationMembership.count({ where: { organizationId: ids.organizationA, role: MembershipRole.ORG_ADMIN, status: MembershipStatus.ACTIVE } }), 1);
 });
+
+registerResourceCleanup();
