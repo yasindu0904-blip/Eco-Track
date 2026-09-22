@@ -11,12 +11,14 @@ type RegisterPushDeviceInput = {
 export async function registerPushDevice(
   accessToken: string,
   input: RegisterPushDeviceInput,
+  signal?: AbortSignal,
 ): Promise<void> {
   await apiRequest(
     `/push-devices/${encodeURIComponent(input.installationId)}`,
     {
       method: "PUT",
       accessToken,
+      signal,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         expoPushToken: input.expoPushToken,

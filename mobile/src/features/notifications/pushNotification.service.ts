@@ -59,8 +59,9 @@ export async function registerCurrentInstallationForPush(
   accessToken: string,
   userId: string,
   devicePushToken?: Notifications.DevicePushToken,
+  signal?: AbortSignal,
 ): Promise<void> {
-  if (!Device.isDevice || (Platform.OS !== "android" && Platform.OS !== "ios")) {
+  if (signal?.aborted || !Device.isDevice || (Platform.OS !== "android" && Platform.OS !== "ios")) {
     return;
   }
 
@@ -74,10 +75,13 @@ export async function registerCurrentInstallationForPush(
   }
 
   const installationId = await getOrCreateInstallationId(userId);
+  if (signal?.aborted) return;
   let permission = await Notifications.getPermissionsAsync();
+  if (signal?.aborted) return;
   if (permission.status !== "granted") {
     permission = await Notifications.requestPermissionsAsync();
   }
+  if (signal?.aborted) return;
 
   if (permission.status !== "granted") {
     await deactivatePushDevice(accessToken, installationId).catch(() => undefined);
@@ -88,6 +92,7 @@ export async function registerCurrentInstallationForPush(
     projectId: projectId(),
     ...(devicePushToken ? { devicePushToken } : {}),
   });
+  if (signal?.aborted) return;
 
   await registerPushDevice(accessToken, {
     installationId,
@@ -95,7 +100,7 @@ export async function registerCurrentInstallationForPush(
     platform: Platform.OS === "android" ? "ANDROID" : "IOS",
     deviceName: Device.deviceName ?? undefined,
     appVersion: Constants.expoConfig?.version,
-  });
+  }, signal);
 }
 
 export async function deactivateCurrentInstallationPush(
@@ -103,8 +108,16 @@ export async function deactivateCurrentInstallationPush(
   userId: string,
 ): Promise<void> {
   const installationId = await SecureStore.getItemAsync(installationKey(userId));
-  if (!installationId) return;
-  await deactivatePushDevice(accessToken, installationId);
+  const results = await Promise.allSettled([
+    Notifications.unregisterForNotificationsAsync(),
+    installationId ? deactivatePushDevice(accessToken, installationId) : Promise.resolve(),
+  ]);
+  if (results.every((result) => result.status === "rejected")) {
+    throw new Error("Could not disable push notifications on this phone or server. Check your connection and try again.");
+  }
+  if (results[1]?.status === "rejected") {
+    console.warn("Push device could not be deactivated on the server.", results[1].reason);
+  }
 }
 
 export function notificationItemFromResponse(

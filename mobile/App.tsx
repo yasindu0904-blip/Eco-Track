@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
-import { BackHandler, StyleSheet, Text, View } from "react-native";
+import { Alert, BackHandler, StyleSheet, Text, View } from "react-native";
 
 import { AuthenticatedUserApp } from "./src/app/AuthenticatedUserApp";
 import { hasCompletedProfile } from "./src/authorization/authorizationUi";
@@ -25,7 +25,7 @@ export default function App() {
     setPendingPushNotification(null);
   }, []);
 
-  usePushNotifications({
+  const stopPushRegistration = usePushNotifications({
     accessToken: authentication.accessToken,
     userId: authentication.profile?.id ?? null,
     enabled: authentication.status === "signedIn"
@@ -54,13 +54,19 @@ export default function App() {
   }, [showSuperAdminNotifications]);
 
   const signOut = async () => {
+    stopPushRegistration();
     setShowSuperAdminNotifications(false);
     setPendingPushNotification(null);
     if (authentication.accessToken && authentication.profile) {
-      await deactivateCurrentInstallationPush(
-        authentication.accessToken,
-        authentication.profile.id,
-      ).catch(() => undefined);
+      try {
+        await deactivateCurrentInstallationPush(
+          authentication.accessToken,
+          authentication.profile.id,
+        );
+      } catch (error) {
+        Alert.alert("Could not sign out safely", error instanceof Error ? error.message : "Please try again.");
+        return;
+      }
     }
     await authentication.signOut();
   };
