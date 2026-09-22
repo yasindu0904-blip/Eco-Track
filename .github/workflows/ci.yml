@@ -32,6 +32,15 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        image: redis:8.2-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     defaults:
       run:
         working-directory: backend
@@ -40,6 +49,9 @@ jobs:
       DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/ecotrack_ci?schema=public&options=-c%20search_path%3Dpublic%2Cextensions"
       SUPABASE_URL: https://ci-placeholder.supabase.co
       SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
+      REDIS_URL: redis://localhost:6379
+      TEST_REDIS_URL: redis://localhost:6379
+      REDIS_KEY_PREFIX: ecotrack:ci
       PGPASSWORD: postgres
 
     steps:
