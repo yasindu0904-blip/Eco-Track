@@ -99,7 +99,6 @@ before(async () => {
 
 beforeEach(async () => {
   await prisma.notification.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
-  await prisma.userDevice.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
   await prisma.notification.createMany({
     data: [
       { id: notificationIds[0], userId: userAId, type: NotificationType.ORGANIZATION_REVIEW_UPDATED, title: "Newest", message: "Newest unread", data: { organizationId: randomUUID(), status: "ACTIVE", privateNotes: "secret", phoneNumber: "+94779999999" }, createdAt: new Date("2026-08-15T10:05:00Z") },
@@ -116,7 +115,6 @@ after(async () => {
     await new Promise<void>((resolve, reject) => server?.close((error) => error ? reject(error) : resolve()));
   }
   await prisma.notification.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
-  await prisma.userDevice.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
   await prisma.userProfile.deleteMany({ where: { id: { in: [userAId, userBId, incompleteUserId] } } });
   await prisma.$disconnect();
 });
@@ -182,118 +180,4 @@ test("the reusable internal creation service creates normalized safe rows", asyn
   assert.equal(created.title, "Internal notification");
   assert.equal(created.message, "Created through the reusable service.");
   assert.equal(created.data?.status, "ACTIVE");
-});
-
-test("push device registration is user-owned and transfers a rotated token safely", async () => {
-  const installationA = randomUUID();
-  const installationB = randomUUID();
-  const sharedToken = "ExponentPushToken[notification-test-token]";
-
-  const registeredA = await request(
-    userAToken,
-    `/api/v1/push-devices/${installationA}`,
-    {
-      method: "PUT",
-      body: JSON.stringify({
-        expoPushToken: sharedToken,
-        platform: "ANDROID",
-        deviceName: "User A phone",
-        appVersion: "0.1.0",
-      }),
-    },
-  );
-  assert.equal(registeredA.status, 200);
-
-  const conflict = await request(
-    userBToken,
-    `/api/v1/push-devices/${installationA}`,
-    {
-      method: "PUT",
-      body: JSON.stringify({
-        expoPushToken: "ExponentPushToken[other-token]",
-        platform: "ANDROID",
-      }),
-    },
-  );
-  assert.equal(conflict.status, 409);
-
-  const registeredB = await request(
-    userBToken,
-    `/api/v1/push-devices/${installationB}`,
-    {
-      method: "PUT",
-      body: JSON.stringify({
-        expoPushToken: sharedToken,
-        platform: "ANDROID",
-      }),
-    },
-  );
-  assert.equal(registeredB.status, 200);
-
-  const deviceA = await prisma.userDevice.findUniqueOrThrow({
-    where: { installationId: installationA },
-  });
-  const deviceB = await prisma.userDevice.findUniqueOrThrow({
-    where: { installationId: installationB },
-  });
-  assert.equal(deviceA.isActive, false);
-  assert.equal(deviceA.expoPushToken, null);
-  assert.equal(deviceB.isActive, true);
-  assert.equal(deviceB.expoPushToken, sharedToken);
-
-  assert.equal((await request(
-    userBToken,
-    `/api/v1/push-devices/${installationB}`,
-    { method: "DELETE" },
-  )).status, 204);
-  assert.equal((await prisma.userDevice.findUniqueOrThrow({
-    where: { installationId: installationB },
-  })).isActive, false);
-});
-
-test("new notifications create durable deliveries without replaying old notifications", async () => {
-  const oldDeduplicationKey = `push-old-${randomUUID()}`;
-  const oldNotification = await createNotification(notificationDependencies, {
-    userId: userAId,
-    type: NotificationType.GENERAL,
-    title: "Old notification",
-    message: "Created before this phone registered.",
-    deduplicationKey: oldDeduplicationKey,
-  });
-
-  const installationId = randomUUID();
-  assert.equal((await request(
-    userAToken,
-    `/api/v1/push-devices/${installationId}`,
-    {
-      method: "PUT",
-      body: JSON.stringify({
-        expoPushToken: "ExponentPushToken[delivery-test-token]",
-        platform: "ANDROID",
-      }),
-    },
-  )).status, 200);
-
-  await createNotification(notificationDependencies, {
-    userId: userAId,
-    type: NotificationType.GENERAL,
-    title: "Old notification",
-    message: "Created before this phone registered.",
-    deduplicationKey: oldDeduplicationKey,
-  });
-  assert.equal(await prisma.notificationDelivery.count({
-    where: { notificationId: oldNotification.id },
-  }), 0);
-
-  const currentNotification = await createNotification(notificationDependencies, {
-    userId: userAId,
-    type: NotificationType.GENERAL,
-    title: "Current notification",
-    message: "Created after this phone registered.",
-  });
-  const delivery = await prisma.notificationDelivery.findFirstOrThrow({
-    where: { notificationId: currentNotification.id },
-  });
-  assert.equal(delivery.userId, userAId);
-  assert.equal(delivery.status, "PENDING");
 });

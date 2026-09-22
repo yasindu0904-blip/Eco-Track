@@ -30,30 +30,6 @@ const environmentSchema = z.object({
     .max(20)
     .default(5),
 
-  REDIS_URL: z
-    .string()
-    .url("REDIS_URL must be a valid Redis URL")
-    .default("redis://localhost:6379"),
-
-  NOTIFICATION_DISPATCH_INTERVAL_MS: z.coerce
-    .number()
-    .int()
-    .min(1_000)
-    .max(60_000)
-    .default(5_000),
-
-  NOTIFICATION_MAX_ATTEMPTS: z.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(10)
-    .default(5),
-
-  EXPO_ACCESS_TOKEN: z
-    .string()
-    .trim()
-    .default(""),
-
   SUPABASE_URL: z
     .string()
     .url("SUPABASE_URL must be a valid URL"),
