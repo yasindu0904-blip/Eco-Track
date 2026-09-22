@@ -48,6 +48,8 @@ To run the same backend and web containers with a separate local PostgreSQL/Post
 docker compose --env-file .env.docker -f compose.yaml -f compose.local-db.yaml up --build
 ```
 
+Always include `--env-file .env.docker` with this stack. Without it, Compose reads the root `.env` (used by the Vite development server), whose `WEB_ORIGIN` is `http://localhost:5173`; the Docker web app runs at `http://localhost:8080` and its API requests will fail CORS preflight.
+
 This mode:
 
 - starts PostgreSQL/PostGIS on host port `5433`;
