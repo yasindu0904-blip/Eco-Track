@@ -5,7 +5,7 @@ import { getCitizenSummary } from "../dashboards/dashboard.api";
 import { SummaryPanel } from "../dashboards/SummaryPanel";
 import { total } from "../dashboards/dashboard.utils";
 import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
-import { CitizenIcon, type CitizenIconName } from "./CitizenSidebar";
+import { CitizenIcon } from "./CitizenSidebar";
 import "./citizenDashboard.css";
 
 interface CitizenDashboardProps {
@@ -14,7 +14,6 @@ interface CitizenDashboardProps {
   onManageMembership: () => void;
   onOpenOrganizationWorkspaces: () => void;
   activeOrganization?: ActiveOrganizationMembership;
-  onOpenOrganizationWorkspace?: () => void;
   onStartOrganizationApplication: () => void;
   onViewOrganizationApplications: () => void;
   onReportIncident: () => void;
@@ -26,16 +25,12 @@ interface CitizenDashboardProps {
 
 type ActionProps = {
   title: string;
-  description: string;
-  icon: CitizenIconName;
   onClick: () => void;
   emphasis?: "primary" | "warm" | "plain";
 };
 
 function DashboardAction({
   title,
-  description,
-  icon,
   onClick,
   emphasis = "plain",
 }: ActionProps) {
@@ -45,12 +40,8 @@ function DashboardAction({
       type="button"
       onClick={onClick}
     >
-      <span className="citizen-dashboard-action-icon" aria-hidden="true">
-        <CitizenIcon name={icon} />
-      </span>
       <span className="citizen-dashboard-action-copy">
         <strong>{title}</strong>
-        <small>{description}</small>
       </span>
       <span className="citizen-dashboard-action-arrow" aria-hidden="true">
         <CitizenIcon name="arrow" />
@@ -65,7 +56,6 @@ export function CitizenDashboard({
   onManageMembership,
   onOpenOrganizationWorkspaces,
   activeOrganization,
-  onOpenOrganizationWorkspace,
   onStartOrganizationApplication,
   onViewOrganizationApplications,
   onReportIncident,
@@ -87,10 +77,6 @@ export function CitizenDashboard({
         <div>
           <span className="citizen-dashboard-eyebrow">Personal workspace</span>
           <h1>Welcome back, {firstName}</h1>
-          <p>
-            Report a local issue, find a cleanup nearby, or continue work with
-            your organization.
-          </p>
         </div>
         <div className="citizen-dashboard-account-context">
           <span className="citizen-dashboard-context-avatar" aria-hidden="true">
@@ -134,20 +120,16 @@ export function CitizenDashboard({
             <span className="citizen-dashboard-eyebrow">Community action</span>
             <h2>Start here</h2>
           </div>
-          <p>Choose one action to continue.</p>
+
         </div>
         <div className="citizen-dashboard-primary-actions">
           <DashboardAction
             title="Report an incident"
-            description="Pin the location and share what you found."
-            icon="report"
             emphasis="primary"
             onClick={onReportIncident}
           />
           <DashboardAction
             title="Find cleanup activity"
-            description="Use your location to find published cleanup events nearby."
-            icon="volunteer"
             emphasis="warm"
             onClick={onFindCleanupActivity}
           />
@@ -165,20 +147,14 @@ export function CitizenDashboard({
           <div className="citizen-dashboard-list-actions">
             <DashboardAction
               title="My reports"
-              description="Check report details and status history."
-              icon="report"
               onClick={onViewIncidentReports}
             />
             <DashboardAction
               title="My joined events"
-              description="View availability, assignments, and attendance."
-              icon="volunteer"
               onClick={onViewJoinedCleanupEvents}
             />
             <DashboardAction
               title="My impact"
-              description="See earned points and community achievements."
-              icon="volunteer"
               onClick={onOpenImpact}
             />
           </div>
@@ -190,57 +166,19 @@ export function CitizenDashboard({
               <span className="citizen-dashboard-eyebrow">Organizations</span>
               <h2>Your organization access</h2>
             </div>
-            {activeOrganization ? (
-              <span className="citizen-dashboard-role-label">
-                {activeOrganization.role === "ORG_ADMIN" ? "Admin" : "Member"}
-              </span>
-            ) : null}
           </div>
-
-          {activeOrganization && onOpenOrganizationWorkspace ? (
-            <button
-              className="citizen-dashboard-organization"
-              type="button"
-              onClick={onOpenOrganizationWorkspace}
-            >
-              <span className="citizen-dashboard-organization-mark" aria-hidden="true">
-                <CitizenIcon name="organization" />
-              </span>
-              <span>
-                <small>Current workspace</small>
-                <strong>{activeOrganization.organization.name}</strong>
-              </span>
-              <CitizenIcon name="arrow" />
-            </button>
-          ) : (
-            <div className="citizen-dashboard-organization-empty">
-              <span className="citizen-dashboard-organization-mark" aria-hidden="true">
-                <CitizenIcon name="organization" />
-              </span>
-              <span>
-                <strong>No active workspace yet</strong>
-                <small>You can join an approved organization or submit one for review.</small>
-              </span>
-            </div>
-          )}
 
           <div className="citizen-dashboard-list-actions">
             <DashboardAction
               title="Organization workspaces"
-              description="Choose from all of your active memberships."
-              icon="shield"
               onClick={onOpenOrganizationWorkspaces}
             />
             <DashboardAction
               title="Membership"
-              description="Find an organization or manage your request."
-              icon="organization"
               onClick={onManageMembership}
             />
             <DashboardAction
               title="Organization requests"
-              description="Submit a new request or follow an existing review."
-              icon="organization"
               onClick={activeOrganization
                 ? onViewOrganizationApplications
                 : onStartOrganizationApplication}

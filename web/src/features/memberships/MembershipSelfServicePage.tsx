@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { ListWindow } from "../../components/lists/ListControls";
+import { ListSections } from "../../components/lists/ListControls";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import type { AuthenticatedUserProfile } from "../auth/auth.types";
 import {
@@ -30,12 +32,7 @@ function statusLabel(status: MembershipRequestStatus): string {
   return status.charAt(0) + status.slice(1).toLowerCase();
 }
 
-export function MembershipSelfServicePage({
-  accessToken,
-  profile,
-  onProfileUpdated,
-  onBack,
-}: MembershipSelfServicePageProps) {
+export function MembershipSelfServicePage({ accessToken, profile, onProfileUpdated }: MembershipSelfServicePageProps) {
   const [fullName, setFullName] = useState(profile.fullName ?? "");
   const [phoneNumber, setPhoneNumber] = useState(profile.phoneNumber ?? "");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -46,6 +43,7 @@ export function MembershipSelfServicePage({
   const [organizationCursor, setOrganizationCursor] = useState<string | null>(null);
   const [searching, setSearching] = useState(true);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [requestSection, setRequestSection] = useState<MembershipRequestStatus | "ALL">("PENDING");
   const [requests, setRequests] = useState<MembershipRequest[]>([]);
   const [requestCursor, setRequestCursor] = useState<string | null>(null);
   const [loadingRequests, setLoadingRequests] = useState(true);
@@ -58,38 +56,28 @@ export function MembershipSelfServicePage({
     [requests],
   );
 
+  const requestGeneration = useRef(0);
   const loadRequests = useCallback(async (cursor?: string) => {
+    const generation = ++requestGeneration.current;
     setLoadingRequests(true);
     setRequestError(null);
     try {
-      const page = await listMyMembershipRequests(accessToken, cursor);
+      const page = await listMyMembershipRequests(accessToken, cursor, requestSection === "ALL" ? undefined : requestSection);
+      if (generation !== requestGeneration.current) return;
       setRequests((current) => cursor ? [...current, ...page.items] : page.items);
       setRequestCursor(page.nextCursor);
     } catch (error) {
+      if (generation !== requestGeneration.current) return;
       setRequestError(errorText(error, "Unable to load your membership requests."));
     } finally {
-      setLoadingRequests(false);
+      if (generation === requestGeneration.current) setLoadingRequests(false);
     }
-  }, [accessToken]);
+  }, [accessToken, requestSection]);
 
   useEffect(() => {
-    let active = true;
-    void listMyMembershipRequests(accessToken)
-      .then((page) => {
-        if (!active) return;
-        setRequests(page.items);
-        setRequestCursor(page.nextCursor);
-      })
-      .catch((error: unknown) => {
-        if (active) setRequestError(errorText(error, "Unable to load your membership requests."));
-      })
-      .finally(() => {
-        if (active) setLoadingRequests(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [accessToken]);
+    const timer = window.setTimeout(() => void loadRequests(), 0);
+    return () => { window.clearTimeout(timer); requestGeneration.current += 1; };
+  }, [loadRequests]);
 
   useEffect(() => {
     let active = true;
@@ -138,7 +126,8 @@ export function MembershipSelfServicePage({
     setRequestError(null);
     try {
       const created = await requestMembership(accessToken, organizationId);
-      setRequests((current) => [created, ...current]);
+      setRequests((current) => [created, ...current.filter(item => item.id !== created.id)]);
+      setRequestSection("PENDING");
     } catch (error) {
       setRequestError(errorText(error, "Unable to submit the membership request."));
       await loadRequests();
@@ -152,7 +141,7 @@ export function MembershipSelfServicePage({
     setRequestError(null);
     try {
       const updated = await withdrawMembershipRequest(accessToken, requestId);
-      setRequests((current) => current.map((item) => item.id === requestId ? updated : item));
+      setRequests((current) => current.map((item) => item.id === requestId ? updated : item).filter(item => requestSection === "ALL" || item.status === requestSection));
     } catch (error) {
       setRequestError(errorText(error, "Unable to withdraw the membership request."));
       await loadRequests();
@@ -181,15 +170,15 @@ export function MembershipSelfServicePage({
         <div>
           <span>EcoTrack account</span>
           <h1>Profile &amp; organization membership</h1>
-          <p>Manage your personal details and request member access to an active organization.</p>
+
         </div>
-        <button className="button button-secondary" type="button" onClick={onBack}>Back to dashboard</button>
+
       </header>
 
       <div className="membership-layout">
         <section className="membership-card" aria-labelledby="edit-profile-heading">
           <h2 id="edit-profile-heading">Edit profile</h2>
-          <p>Email, account status, role, and internal IDs cannot be changed here.</p>
+
           <form onSubmit={saveProfile} className="membership-form">
             <label>Verified email<input value={profile.email} disabled /></label>
             <label>Full name<input value={fullName} onChange={(event) => setFullName(event.target.value)} minLength={2} maxLength={120} disabled={savingProfile} required /></label>
@@ -202,12 +191,12 @@ export function MembershipSelfServicePage({
 
         <section className="membership-card membership-card-wide" aria-labelledby="find-organizations-heading">
           <div className="membership-section-heading">
-            <div><h2 id="find-organizations-heading">Find organizations</h2><p>Only active, approved EcoTrack organizations are shown.</p></div>
+            <div><h2 id="find-organizations-heading">Find organizations</h2></div>
             <label className="membership-search">Search<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Organization name" /></label>
           </div>
           {searchError && <p className="membership-error" role="alert">{searchError}</p>}
           <div className="organization-results" aria-busy={searching}>
-            {organizations.map((organization) => {
+            {<ListWindow items={organizations} key={query} hasMore={Boolean(organizationCursor)} busy={searching} loadMore={() => void loadMoreOrganizations()}>{visible => visible.map((organization) => {
               const pending = pendingOrganizationIds.has(organization.id);
               const busy = busyOrganizationId === organization.id;
               return (
@@ -218,25 +207,26 @@ export function MembershipSelfServicePage({
                   </button>
                 </article>
               );
-            })}
+            })}</ListWindow>}
             {!searching && organizations.length === 0 && <p>No active organizations match your search.</p>}
           </div>
-          {organizationCursor && <button className="button button-secondary" type="button" disabled={searching} onClick={() => void loadMoreOrganizations()}>{searching ? "Loading…" : "Load more organizations"}</button>}
+
         </section>
 
         <section className="membership-card membership-card-full" aria-labelledby="my-requests-heading">
-          <div className="membership-section-heading"><div><h2 id="my-requests-heading">My membership requests</h2><p>Request history remains visible after approval, decline, or withdrawal.</p></div><button className="button button-secondary" type="button" disabled={loadingRequests} onClick={() => void loadRequests()}>Refresh</button></div>
+          <div className="membership-section-heading"><div><h2 id="my-requests-heading">My membership requests</h2></div><button className="button button-secondary" type="button" disabled={loadingRequests} onClick={() => void loadRequests()}>Refresh</button></div>
+          <ListSections value={requestSection} options={[{ value: "PENDING", label: "Pending" }, { value: "APPROVED", label: "Approved" }, { value: "DECLINED", label: "Declined" }, { value: "WITHDRAWN", label: "Withdrawn" }, { value: "ALL", label: "All" }]} onChange={value => { if (value === requestSection) return; requestGeneration.current += 1; setRequests([]); setRequestCursor(null); setLoadingRequests(true); setRequestSection(value); }} />
           {requestError && <p className="membership-error" role="alert">{requestError}</p>}
           <div className="membership-request-list" aria-busy={loadingRequests}>
-            {requests.map((request) => (
+            {<ListWindow items={requests} key={requestSection} hasMore={Boolean(requestCursor)} busy={loadingRequests} loadMore={() => { if (requestCursor) void loadRequests(requestCursor); }}>{visible => visible.map((request) => (
               <article key={request.id}>
                 <div><h3>{request.organization.name}</h3><p>Submitted {new Date(request.createdAt).toLocaleDateString()}</p>{request.reviewNotes && <small>Review note: {request.reviewNotes}</small>}</div>
                 <div className="membership-request-actions"><span className={`membership-status membership-status-${request.status.toLowerCase()}`}>{statusLabel(request.status)}</span>{request.status === "PENDING" && <button className="button button-secondary" type="button" disabled={withdrawingId === request.id} onClick={() => void withdraw(request.id)}>{withdrawingId === request.id ? "Withdrawing…" : "Withdraw"}</button>}</div>
               </article>
-            ))}
+            ))}</ListWindow>}
             {!loadingRequests && requests.length === 0 && <p>You have not requested organization membership yet.</p>}
           </div>
-          {requestCursor && <button className="button button-secondary" type="button" disabled={loadingRequests} onClick={() => void loadRequests(requestCursor)}>Load older requests</button>}
+
         </section>
       </div>
     </main>

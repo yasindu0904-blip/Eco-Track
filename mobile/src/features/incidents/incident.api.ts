@@ -97,6 +97,7 @@ function appendDiscoveryFilters(
   if (filters.limit !== undefined) parameters.set("limit", String(filters.limit));
   if (filters.cursor) parameters.set("cursor", filters.cursor);
   if (filters.status) parameters.set("status", filters.status);
+  if (filters.awaitingCleanup !== undefined) parameters.set("awaitingCleanup", String(filters.awaitingCleanup));
   if (filters.categoryId) parameters.set("categoryId", filters.categoryId);
   if (filters.reportedAfter) parameters.set("reportedAfter", filters.reportedAfter);
 }
@@ -135,4 +136,10 @@ export async function listNearbyPublicIncidents(
     `/incidents/nearby?${parameters}`,
     { accessToken: token, signal },
   )).data;
+}
+
+export async function listMyIncidentPage(accessToken: string, section: "active" | "resolved" | "all", cursor?: string) {
+  const query = new URLSearchParams({ section, limit: "20" });
+  if (cursor) query.set("cursor", cursor);
+  return (await apiRequest<DataResponse<{ items: IncidentSummary[]; nextCursor: string | null }>>(`/incidents/me?${query}`, { accessToken })).data;
 }

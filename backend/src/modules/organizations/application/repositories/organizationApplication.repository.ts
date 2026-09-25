@@ -41,10 +41,15 @@ export async function findActiveAdministrativeAreasByIds(
 export async function listOrganizationApplicationRecordsByRequester(
   prisma: PrismaClient,
   requesterUserId: string,
+  page?: { section: "pending" | "approved" | "declined" | "all"; limit: number; cursor: { createdAt: Date; id: string } | null },
 ): Promise<OrganizationApplicationDto[]> {
   const organizations = await prisma.organization.findMany({
-    where: { requestedByUserId: requesterUserId },
-    orderBy: { createdAt: "desc" },
+    where: { requestedByUserId: requesterUserId,
+      ...(page?.section === "pending" ? { status: "PENDING_REVIEW" as const } : page?.section === "approved" ? { status: "ACTIVE" as const } : page?.section === "declined" ? { status: "DECLINED" as const } : {}),
+      ...(page?.cursor ? { OR: [{ createdAt: { lt: page.cursor.createdAt } }, { createdAt: page.cursor.createdAt, id: { lt: page.cursor.id } }] } : {}),
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    ...(page ? { take: page.limit + 1 } : {}),
     select: {
       id: true,
       name: true,

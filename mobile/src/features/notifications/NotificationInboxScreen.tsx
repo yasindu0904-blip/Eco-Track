@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
-import { AppState, Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { ListSections } from "../../components/lists/ListControls";
+import { listDateLabel } from "../../components/lists/usePagedList";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AppState, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { describeApiFailure } from "../../api/apiError";
 import { Button, Notice, PageHeader, Screen, sharedStyles } from "../../components/ui";
+import { NavigationIcon } from "../../components/NavigationIcon";
 import { colors, spacing } from "../../components/theme";
 import {
   getUnreadNotificationCount,
@@ -22,10 +25,12 @@ export function NotificationButton({
   accessToken,
   onOpen,
   compact = false,
+  inverse = false,
 }: {
   accessToken: string;
   onOpen: () => void;
   compact?: boolean;
+  inverse?: boolean;
 }) {
   const [count, setCount] = useState(0);
 
@@ -47,9 +52,10 @@ export function NotificationButton({
   }, [accessToken]);
 
   return (
-    <Pressable style={[styles.trigger, compact && styles.triggerCompact]} onPress={onOpen} accessibilityRole="button" accessibilityLabel="Notifications">
-      <Text style={[styles.triggerText, compact && styles.triggerIcon]}>{compact ? "●" : "Notifications"}</Text>
-      {count > 0 && <Text style={styles.badge}>{count > 99 ? "99+" : count}</Text>}
+    <Pressable style={[styles.trigger, compact && styles.triggerCompact, inverse && styles.triggerInverse]} onPress={onOpen} accessibilityRole="button" accessibilityLabel={`Notifications${count > 0 ? `, ${count} unread` : ""}`}>
+      <NavigationIcon name="bell" size={26} color={inverse ? colors.surface : colors.primary} />
+      {!compact && <Text style={styles.triggerText}>Notifications</Text>}
+      {count > 0 && <Text style={[styles.badge, compact && styles.compactBadge]}>{count > 99 ? "99+" : count}</Text>}
     </Pressable>
   );
 }
@@ -69,7 +75,10 @@ export function NotificationInboxScreen({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
+  const generation = useRef(0);
   const load = useCallback(async () => {
+    const request = ++generation.current;
+    setLoadingMore(false);
     setLoading(true);
     setError(null);
     try {
@@ -77,17 +86,19 @@ export function NotificationInboxScreen({
         listNotifications(accessToken, { unreadOnly }),
         getUnreadNotificationCount(accessToken),
       ]);
+      if (request !== generation.current) return;
       setItems(page.items);
       setNextCursor(page.nextCursor);
       setUnreadCount(count);
     } catch (caughtError) {
+      if (request !== generation.current) return;
       setError(describeApiFailure(caughtError, "Unable to load notifications.").message);
     } finally {
-      setLoading(false);
+      if (request === generation.current) setLoading(false);
     }
   }, [accessToken, unreadOnly]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); return () => { generation.current += 1; }; }, [load]);
 
   const openItem = async (item: NotificationItem) => {
     setError(null);
@@ -126,16 +137,19 @@ export function NotificationInboxScreen({
   };
 
   const loadMore = async () => {
-    if (!nextCursor) return;
+    if (!nextCursor || loadingMore || loading) return;
+    const request = generation.current;
     setLoadingMore(true);
     try {
       const page = await listNotifications(accessToken, { cursor: nextCursor, unreadOnly });
+      if (request !== generation.current) return;
       setItems((current) => [...current, ...page.items]);
       setNextCursor(page.nextCursor);
     } catch (caughtError) {
+      if (request !== generation.current) return;
       setError(describeApiFailure(caughtError).message);
     } finally {
-      setLoadingMore(false);
+      if (request === generation.current) setLoadingMore(false);
     }
   };
 
@@ -144,14 +158,11 @@ export function NotificationInboxScreen({
       <PageHeader
         eyebrow="Personal inbox"
         title="Notifications"
-        subtitle="Updates from your reports, memberships, events, and rewards."
+
         onBack={onBack}
         action={<Text style={styles.unread}>{unreadCount} unread</Text>}
       />
-      <View style={[sharedStyles.card, sharedStyles.spacedRow]}>
-        <Text style={styles.filterLabel}>Unread only</Text>
-        <Switch value={unreadOnly} onValueChange={setUnreadOnly} trackColor={{ true: colors.primary }} />
-      </View>
+      <ListSections value={unreadOnly ? "unread" : "all"} options={[{ value: "unread", label: "Unread" }, { value: "all", label: "All" }]} onChange={value => setUnreadOnly(value === "unread")} />
       {error && <Notice tone="error" message={error} />}
       {notice && <Notice message={notice} />}
       {loading ? (
@@ -159,18 +170,20 @@ export function NotificationInboxScreen({
       ) : items.length === 0 ? (
         <View style={sharedStyles.card}>
           <Text style={sharedStyles.sectionTitle}>{unreadOnly ? "No unread notifications" : "Your inbox is clear"}</Text>
-          <Text style={sharedStyles.sectionSubtitle}>New EcoTrack updates will appear here.</Text>
+
           <Button label="Refresh" variant="secondary" onPress={() => void load()} />
         </View>
-      ) : items.map((item) => (
+      ) : items.map((item, index) => (
+        <View key={item.id}>
+          {(index === 0 || listDateLabel(items[index - 1]!.createdAt) !== listDateLabel(item.createdAt)) && <Text style={sharedStyles.sectionTitle}>{listDateLabel(item.createdAt)}</Text>}
         <Pressable key={item.id} onPress={() => void openItem(item)} style={[styles.card, !item.readAt && styles.unreadCard]}>
           <View style={sharedStyles.spacedRow}>
             <Text style={styles.title}>{item.title}</Text>
-            {!item.readAt && <Text style={styles.newLabel}>NEW</Text>}
           </View>
           <Text style={styles.message}>{item.message}</Text>
           <Text style={styles.date}>{new Date(item.createdAt).toLocaleString()}</Text>
         </Pressable>
+        </View>
       ))}
       {nextCursor && <Button label={loadingMore ? "Loading…" : "Load more"} disabled={loadingMore} variant="secondary" onPress={() => void loadMore()} />}
       <Button label="Mark all as read" disabled={mutating || unreadCount === 0} loading={mutating} onPress={() => void markAll()} />
@@ -180,9 +193,10 @@ export function NotificationInboxScreen({
 
 const styles = StyleSheet.create({
   trigger: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.primary, borderRadius: 14, backgroundColor: colors.surface },
-  triggerCompact: { width: 42, minHeight: 42, justifyContent: "center", paddingHorizontal: 0, borderColor: colors.border, borderRadius: 12 },
+  triggerCompact: { width: 46, minHeight: 46, justifyContent: "center", paddingHorizontal: 0, borderColor: colors.border, borderRadius: 12 },
   triggerText: { color: colors.primary, fontWeight: "800" },
-  triggerIcon: { fontSize: 13 },
+  triggerInverse: { backgroundColor: "transparent", borderColor: "transparent" },
+  compactBadge: { position: "absolute", top: -5, right: -6, borderWidth: 2, borderColor: colors.surface, minWidth: 22, paddingVertical: 2, paddingHorizontal: 4, fontSize: 10 },
   badge: { minWidth: 24, paddingHorizontal: 6, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.danger, color: colors.surface, fontSize: 11, fontWeight: "900", textAlign: "center" },
   unread: { color: colors.primary, fontWeight: "900" },
   filterLabel: { color: colors.text, fontWeight: "800" },

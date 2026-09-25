@@ -122,12 +122,14 @@ export const updateOrganizationIncidentReviewSchema = z.object({
 });
 
 export const incidentListQuerySchema = z.object({
+  section: z.enum(["active", "resolved", "all"]).optional(),
   limit: z.coerce.number().int().min(1).max(INCIDENT_LIST_LIMITS.maxLimit)
     .default(INCIDENT_LIST_LIMITS.defaultLimit),
   cursor: z.string().trim().min(1).max(500).optional(),
 }).strict();
 
 const incidentDiscoveryFilters = {
+  awaitingCleanup: z.enum(["true", "false"]).transform(value => value === "true").optional(),
   status: z.enum([
     "ACTIVE",
     "CLEANUP_ORGANIZED",

@@ -1,3 +1,4 @@
+import { useInvalidateLists } from "../../components/lists/usePagedList";
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -44,6 +45,7 @@ export function OrganizationApplicationScreen({
   onBack,
   onSubmitted,
 }: OrganizationApplicationScreenProps) {
+  const invalidateLists = useInvalidateLists();
   const [form, setForm] = useState<FormState>({
     name: "",
     registrationNumber: "",
@@ -137,6 +139,7 @@ export function OrganizationApplicationScreen({
         accessToken,
         application,
       );
+      invalidateLists("applications:");
       onSubmitted(createdApplication);
     } catch (caughtError) {
       setError(errorMessage(caughtError));
@@ -150,11 +153,10 @@ export function OrganizationApplicationScreen({
       <PageHeader
         eyebrow="Organization onboarding"
         title="Request a workspace"
-        subtitle="Submit an existing environmental organization for platform review."
+
         onBack={onBack}
         backLabel="Dashboard"
       />
-      <Notice message="This request is for an existing real environmental organization. A Super Admin must review it before its workspace and service areas become active." />
 
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.sectionTitle}>Organization details</Text>
@@ -171,9 +173,7 @@ export function OrganizationApplicationScreen({
           <Text style={sharedStyles.sectionTitle}>GN service areas</Text>
           <Text style={styles.selectionCount}>{selectedAreas.length}/500</Text>
         </View>
-        <Text style={sharedStyles.sectionSubtitle}>
-          Search by GN Division, GN number, Divisional Secretariat, district, province, or official code.
-        </Text>
+
         <Field
           label="Search official areas"
           value={search}

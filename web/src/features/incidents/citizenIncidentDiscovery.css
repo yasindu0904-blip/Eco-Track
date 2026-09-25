@@ -31,3 +31,12 @@
 .citizen-discovery-detail-body dd { margin: 4px 0 0; font-weight: 900; }
 .citizen-discovery-detail-action { min-height: 44px; margin-top: 14px; padding: 10px 18px; border: 1px solid var(--incident-green); border-radius: 10px; background: var(--incident-green); color: #fff; font-weight: 800; }
 @media (max-width: 860px) { .citizen-discovery-intro { display: grid; } .citizen-discovery-actions { width: 100%; } .citizen-discovery-search-controls { align-items: stretch; flex-direction: column; } .citizen-discovery-search-controls span { margin-left: 0; } .citizen-discovery-detail { grid-template-columns: 1fr; } }
+
+.citizen-discovery-evidence { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.citizen-discovery-evidence figure { margin: 0; }
+.citizen-discovery-evidence img { display: block; width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px; }
+
+.incident-evidence-card { grid-template-columns: minmax(0, 1fr); gap: 8px; border-color: var(--incident-line, #dce4dc); }
+.incident-evidence-card p { margin: 0; color: var(--incident-muted, #52645c); }
+.incident-evidence-card > span { color: var(--incident-green-2, #195f38); }
+.incident-evidence-card .citizen-discovery-evidence { grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); }

@@ -1,3 +1,4 @@
+import type { EventSection } from "../../components/lists/usePagedList";
 import { apiRequest } from "../../api/apiClient";
 import { mobileEnv } from "../../config/env";
 import { supabase } from "../../config/supabase";
@@ -38,7 +39,7 @@ export async function listDrafts(
   organizationId: string,
   cursor?: string,
 ) {
-  const query = new URLSearchParams({ limit: "50" });
+  const query = new URLSearchParams({ limit: "20" });
   if (cursor) query.set("cursor", cursor);
   return (
     await apiRequest<{ data: CleanupEventDraftPage }>(
@@ -164,8 +165,10 @@ export async function listOwnedCleanupEvents(
   token: string,
   organizationId: string,
   cursor?: string,
+  section?: EventSection,
 ) {
-  const query = new URLSearchParams({ limit: "25" });
+  const query = new URLSearchParams({ limit: "20" });
+  if (section) query.set("section", section);
   if (cursor) query.set("cursor", cursor);
   return (
     await apiRequest<{ data: CleanupEventOwnedPage }>(
@@ -188,8 +191,9 @@ export async function getOwnedCleanupEvent(
   ).data;
 }
 
-export async function listPublicCleanupEvents(token: string, cursor?: string) {
-  const query = new URLSearchParams({ limit: "25" });
+export async function listPublicCleanupEvents(token: string, cursor?: string, section?: EventSection) {
+  const query = new URLSearchParams({ limit: "20" });
+  if (section) query.set("section", section);
   if (cursor) query.set("cursor", cursor);
   return (
     await apiRequest<{ data: CleanupEventPublicPage }>(`/events?${query}`, {
@@ -242,8 +246,10 @@ export async function listMyEventParticipations(
   token: string,
   scope: "active" | "history" | "all" = "active",
   cursor?: string,
+  section?: EventSection | "withdrawn",
 ) {
   const query = new URLSearchParams({ scope, limit: "20" });
+  if (section) query.set("section", section);
   if (cursor) query.set("cursor", cursor);
   return (
     await apiRequest<{ data: EventParticipationPage }>(
@@ -263,6 +269,7 @@ type EventMapViewport = {
   cursor?: string;
 };
 type EventMapRadius = {
+  section?: EventSection;
   latitude: number;
   longitude: number;
   radiusMeters: number;
@@ -308,7 +315,7 @@ export async function listOrganizationCleanupEventMap(
 ) {
   return (
     await apiRequest<{ data: CleanupEventMapPage }>(
-      `${root(organizationId)}/map?${mapQuery(query)}`,
+      `${root(organizationId)}/map?${mapQuery(query)}&includePublic=true`,
       { accessToken: token, signal },
     )
   ).data;
@@ -317,10 +324,14 @@ export async function listEventParticipants(
   token: string,
   organizationId: string,
   eventId: string,
+  status = "JOINED",
+  cursor?: string,
 ) {
+  const query = new URLSearchParams({ status, limit: "20" });
+  if (cursor) query.set("cursor", cursor);
   return (
     await apiRequest<{ data: EventParticipantOperationsPage }>(
-      `${root(organizationId)}/${encodeURIComponent(eventId)}/participants?status=JOINED&limit=50`,
+      `${root(organizationId)}/${encodeURIComponent(eventId)}/participants?${query}`,
       { accessToken: token },
     )
   ).data;

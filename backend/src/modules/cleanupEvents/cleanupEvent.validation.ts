@@ -152,18 +152,24 @@ export const listDraftQuerySchema = z
   })
   .strict();
 
+export const eventSectionSchema = z.enum(["upcoming", "ongoing", "past", "cancelled"]).optional();
+
 export const listCleanupEventsQuerySchema = z
   .object({
+    section: eventSectionSchema,
     limit: z.coerce.number().int().min(1).max(50).default(20),
     cursor: z.string().trim().min(1).max(500).optional(),
   })
   .strict();
 
-export const cleanupEventMapQuerySchema = sriLankaMapViewportQuerySchema;
-export const cleanupEventNearbyMapQuerySchema = sriLankaMapRadiusQuerySchema;
+export const cleanupEventMapQuerySchema = sriLankaMapViewportQuerySchema.safeExtend({
+  includePublic: z.enum(["true", "false"]).transform(value => value === "true").optional(),
+});
+export const cleanupEventNearbyMapQuerySchema = sriLankaMapRadiusQuerySchema.safeExtend({ section: eventSectionSchema });
 
 export const listMyParticipationsQuerySchema = z
   .object({
+    section: z.enum(["upcoming", "ongoing", "past", "cancelled", "withdrawn"]).optional(),
     scope: z.enum(["active", "history", "all"]).default("active"),
     limit: z.coerce.number().int().min(1).max(50).default(20),
     cursor: z.string().trim().min(1).max(500).optional(),

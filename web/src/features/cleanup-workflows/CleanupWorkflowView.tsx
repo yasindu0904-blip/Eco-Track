@@ -6,7 +6,7 @@ import "./cleanupWorkflow.css";
 
 type Props = { accessToken: string; organizationId: string; onBack?: () => void };
 
-export function CleanupWorkflowView({ accessToken, organizationId, onBack }: Props) {
+export function CleanupWorkflowView({ accessToken, organizationId }: Props) {
   const [workflow, setWorkflow] = useState<CleanupWorkflow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
@@ -21,7 +21,7 @@ export function CleanupWorkflowView({ accessToken, organizationId, onBack }: Pro
 
   return (
     <main className="workflow-page">
-      <header><div>{onBack && <button type="button" onClick={onBack}>Back</button>}<h1>Cleanup workflow</h1></div><p>Protected lifecycle steps used by this organization’s cleanup events.</p></header>
+      <header><div><h1>Cleanup workflow</h1></div></header>
       {error && <section className="workflow-message" role="alert"><p>{error}</p><button type="button" onClick={() => setReload((value) => value + 1)}>Try again</button></section>}
       {!error && !workflow && <p className="workflow-message" aria-live="polite">Loading workflow…</p>}
       {workflow && <ol className="workflow-list">{workflow.statuses.map((status) => {

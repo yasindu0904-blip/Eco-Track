@@ -77,7 +77,7 @@ describe("mobile map location picker", () => {
         />,
       );
     });
-    expect(renderer!.root.findAll((node) => node.children.includes("Ready to save"))).toHaveLength(1);
+    expect(renderer!.root.findAll((node) => node.children.includes("Ready to save"))).toHaveLength(0);
     expect(renderer!.root.findAll((node) => node.children.includes("Selected coordinates"))).toHaveLength(0);
   });
 

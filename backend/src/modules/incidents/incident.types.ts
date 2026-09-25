@@ -96,6 +96,7 @@ export interface PublicIncidentListPageDto {
 }
 
 export interface OrganizationIncidentSummaryDto {
+  hasOwnedCleanupEvent?: boolean;
   id: string;
   title: string;
   category: IncidentCategoryDto;
@@ -141,6 +142,17 @@ export interface OrganizationIncidentReviewDto {
 }
 
 export interface OrganizationIncidentDetailDto extends IncidentDetailDto {
+  activeCleanupEvent?: {
+    id: string;
+    title: string;
+    description: string;
+    publicInstructions: string | null;
+    startsAt: string | null;
+    eventAddress: string | null;
+    meetingAddress: string | null;
+    organization: { id: string; name: string };
+  } | null;
+
   falseReviewCount: number;
   accessSource: OrganizationIncidentAccessSourceDto;
   currentReview: OrganizationIncidentReviewDto | null;

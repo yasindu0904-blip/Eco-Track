@@ -1,3 +1,4 @@
+import { ListWindow } from "../../components/lists/ListControls";
 import { useCallback, useEffect, useState } from "react";
 
 import { ApiRequestError } from "../../api/apiClient";
@@ -22,7 +23,7 @@ function readableError(error: unknown): string {
     : "EcoTrack could not load your impact right now.";
 }
 
-export function MyImpactPage({ accessToken, onBack }: MyImpactPageProps) {
+export function MyImpactPage({ accessToken }: MyImpactPageProps) {
   const [summary, setSummary] = useState<ImpactSummary | null>(null);
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -74,11 +75,11 @@ export function MyImpactPage({ accessToken, onBack }: MyImpactPageProps) {
   return (
     <main className="impact-page">
       <header className="impact-header">
-        <button type="button" onClick={onBack}>← Dashboard</button>
+
         <div>
           <span>Citizen &amp; volunteer</span>
           <h1>My Impact</h1>
-          <p>Verified community actions and non-monetary EcoTrack achievements.</p>
+
         </div>
       </header>
 
@@ -97,7 +98,7 @@ export function MyImpactPage({ accessToken, onBack }: MyImpactPageProps) {
             <article className="impact-points-card">
               <span>Verified contribution points</span>
               <strong>{summary.totalPoints}</strong>
-              <p>Recognition only—points are not money, employment, or access permissions.</p>
+
             </article>
             <div className="impact-breakdown">
               {summary.breakdown.map((item) => (
@@ -121,11 +122,11 @@ export function MyImpactPage({ accessToken, onBack }: MyImpactPageProps) {
             {summary.achievements.length === 0 ? (
               <div className="impact-empty">
                 <strong>Your first achievement is ahead</strong>
-                <p>Verified reports and confirmed cleanup participation will build your impact.</p>
+
               </div>
             ) : (
               <div className="impact-achievements">
-                {summary.achievements.map((achievement) => (
+                {<ListWindow items={summary.achievements} >{visible => visible.map((achievement) => (
                   <article key={achievement.id}>
                     <span aria-hidden="true">★</span>
                     <div>
@@ -134,7 +135,7 @@ export function MyImpactPage({ accessToken, onBack }: MyImpactPageProps) {
                       <small>Earned {new Date(achievement.awardedAt).toLocaleDateString()}</small>
                     </div>
                   </article>
-                ))}
+                ))}</ListWindow>}
               </div>
             )}
           </section>
@@ -150,11 +151,11 @@ export function MyImpactPage({ accessToken, onBack }: MyImpactPageProps) {
             {contributions.length === 0 ? (
               <div className="impact-empty">
                 <strong>No verified contributions yet</strong>
-                <p>Submitting or joining alone does not award points. EcoTrack records rewards only after verified action.</p>
+
               </div>
             ) : (
               <div className="impact-history">
-                {contributions.map((contribution) => (
+                {<ListWindow items={contributions} hasMore={Boolean(nextCursor)} busy={loadingMore} loadMore={() => void loadMore()}>{visible => visible.map((contribution) => (
                   <article key={contribution.id}>
                     <span className="impact-history-points">+{contribution.points}</span>
                     <div>
@@ -163,19 +164,10 @@ export function MyImpactPage({ accessToken, onBack }: MyImpactPageProps) {
                       <small>{new Date(contribution.createdAt).toLocaleString()}</small>
                     </div>
                   </article>
-                ))}
+                ))}</ListWindow>}
               </div>
             )}
-            {nextCursor && (
-              <button
-                className="impact-load-more"
-                type="button"
-                disabled={loadingMore}
-                onClick={() => void loadMore()}
-              >
-                {loadingMore ? "Loading…" : "Load more history"}
-              </button>
-            )}
+
           </section>
         </>
       ) : null}

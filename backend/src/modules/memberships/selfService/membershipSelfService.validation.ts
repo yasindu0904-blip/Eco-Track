@@ -17,6 +17,7 @@ export const createMembershipRequestSchema = z
 
 export const listMembershipRequestsQuerySchema = z
   .object({
+    status: z.enum(["PENDING", "APPROVED", "DECLINED", "WITHDRAWN"]).optional(),
     cursor: z.string().trim().min(1).max(500).optional(),
     limit: z.coerce.number().int().min(1).max(50).default(20),
   })

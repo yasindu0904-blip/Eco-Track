@@ -1074,7 +1074,7 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
   );
   assert.equal(
     organizationBItems.some(({ id }) => id === organizationBOnlyIncidentId),
-    true,
+    false,
   );
   assert.equal(
     organizationBItems.some(({ id }) => id === boundaryIncidentId),
@@ -1137,7 +1137,7 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
   ).data.items;
   assert.deepEqual(
     resolvedItems.map(({ id }) => id),
-    [organizationBOnlyIncidentId],
+    [],
   );
 
   const recentResponse = await request(
@@ -1173,7 +1173,7 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
   assert.equal(new Set(pagedIds).size, pagedIds.length);
   assert.deepEqual(
     new Set(pagedIds),
-    new Set([organizationBOnlyIncidentId, boundaryIncidentId]),
+    new Set([boundaryIncidentId]),
   );
 
   await prisma.incidentReview.createMany({
@@ -1295,19 +1295,13 @@ test("two-organization discovery preserves tenant-safe spatial and historical ac
       data: { items: Array<Record<string, unknown> & { id: string }> };
     }
   ).data.items;
-  assert.deepEqual(
-    new Set(retainedItems.map(({ id }) => id)),
-    new Set([
-      overlapIncidentId,
-      organizationBOnlyIncidentId,
-      outsideIncidentId,
-    ]),
+  assert.deepEqual(retainedItems, []);
+  // Historical detail access is preserved, but never widens current map coverage.
+  const historicalDetail = await request(
+    `/organizations/${organizationId}/incidents/${outsideIncidentId}`,
+    otherToken,
   );
-  const retainedReview = retainedItems.find(
-    ({ id }) => id === outsideIncidentId,
-  );
-  assert.equal(retainedReview?.currentReviewStatus, "VALID");
-  assert.equal("privateNotes" in (retainedReview ?? {}), false);
+  assert.equal(historicalDetail.status, 200);
 
   await prisma.organization.update({
     where: { id: organizationBId },

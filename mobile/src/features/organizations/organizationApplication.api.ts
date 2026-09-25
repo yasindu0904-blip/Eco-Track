@@ -67,3 +67,9 @@ export async function listMyOrganizationApplications(
 
   return response.data;
 }
+
+export async function listMyApplicationPage(accessToken: string, section: "pending" | "approved" | "declined" | "all", cursor?: string) {
+  const query = new URLSearchParams({ section, limit: "20" });
+  if (cursor) query.set("cursor", cursor);
+  return (await apiRequest<{ data: { items: OrganizationApplication[]; nextCursor: string | null } }>(`/organization-applications/me?${query}`, { accessToken })).data;
+}

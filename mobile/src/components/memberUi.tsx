@@ -1,10 +1,12 @@
-import type { ReactNode } from "react";
+import { useScrollMemory } from "./lists/usePagedList";
+import { useContext, type ReactNode } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaHandledContext, ScreenDepthContext, usePageHeader } from "./appHeaderContext";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -49,24 +51,36 @@ type ScreenProps = {
   children: ReactNode;
   contentStyle?: StyleProp<ViewStyle>;
   scrollEnabled?: boolean;
+  rememberKey?: string;
 };
 
-export function Screen({ children, contentStyle, scrollEnabled = true }: ScreenProps) {
+export function Screen({ children, contentStyle, scrollEnabled = true, rememberKey }: ScreenProps) {
+  const scrollMemory = useScrollMemory(rememberKey);
+  const safeAreaHandled = useContext(SafeAreaHandledContext);
+  const depth = useContext(ScreenDepthContext);
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <ScrollView
-          scrollEnabled={scrollEnabled}
-          contentContainerStyle={[styles.screenContent, contentStyle]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {children}
-        </ScrollView>
-      </KeyboardAvoidingView>
+    <SafeAreaView edges={safeAreaHandled ? [] : ["top", "bottom", "left", "right"]} style={styles.safeArea}>
+      <SafeAreaHandledContext.Provider value>
+        <ScreenDepthContext.Provider value={depth + 1}>
+          <KeyboardAvoidingView
+            style={styles.flex}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+          >
+            <ScrollView
+              key={rememberKey}
+              contentOffset={{ x: 0, y: scrollMemory.read() }}
+              onScroll={event => scrollMemory.write(event.nativeEvent.contentOffset.y)}
+              scrollEventThrottle={100}
+              scrollEnabled={scrollEnabled}
+              contentContainerStyle={[styles.screenContent, contentStyle]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {children}
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </ScreenDepthContext.Provider>
+      </SafeAreaHandledContext.Provider>
     </SafeAreaView>
   );
 }
@@ -124,6 +138,14 @@ export function PageHeader({
   backLabel = "Back",
   action,
 }: PageHeaderProps) {
+  const inShell = usePageHeader(title, onBack, backLabel);
+  if (inShell) {
+    if (!subtitle && !action) return null;
+    return <View style={styles.pageHeaderCopy}>
+      {subtitle ? <Text style={styles.pageSubtitle}>{subtitle}</Text> : null}
+      {action}
+    </View>;
+  }
   return (
     <View style={styles.pageHeader}>
       <View style={styles.pageHeaderTop}>
@@ -279,14 +301,12 @@ export function SectionHeader({
 
 export function ActionRow({
   title,
-  description,
-  symbol,
   onPress,
   tone = "default",
 }: {
   title: string;
-  description: string;
-  symbol: string;
+  description?: string;
+  symbol?: string;
   onPress: () => void;
   tone?: "default" | "primary" | "warm";
 }) {
@@ -301,16 +321,8 @@ export function ActionRow({
         pressed && styles.actionRowPressed,
       ]}
     >
-      <View style={[
-        styles.actionSymbol,
-        tone === "primary" && styles.actionSymbolPrimary,
-        tone === "warm" && styles.actionSymbolWarm,
-      ]}>
-        <Text style={styles.actionSymbolText}>{symbol}</Text>
-      </View>
       <View style={styles.actionCopy}>
         <Text style={[styles.actionTitle, tone === "primary" && styles.actionTitlePrimary]}>{title}</Text>
-        <Text style={[styles.actionDescription, tone === "primary" && styles.actionDescriptionPrimary]}>{description}</Text>
       </View>
       <Text style={[styles.actionArrow, tone === "primary" && styles.actionTitlePrimary]}>›</Text>
     </Pressable>
@@ -318,8 +330,9 @@ export function ActionRow({
 }
 
 export function LoadingState({ message = "Loading EcoTrack…" }: { message?: string }) {
+  const safeAreaHandled = useContext(SafeAreaHandledContext);
   return (
-    <SafeAreaView style={styles.loadingScreen}>
+    <SafeAreaView edges={safeAreaHandled ? [] : ["top", "bottom", "left", "right"]} style={styles.loadingScreen}>
       <AppMark />
       <ActivityIndicator size="large" color={memberColors.primary} />
       <Text style={styles.loadingText}>{message}</Text>

@@ -1,3 +1,4 @@
+import type { MembershipRequestStatus } from "./membershipSelfService.types";
 import { apiRequest } from "../../api/apiClient";
 import type { AuthenticatedUserProfile } from "../auth/auth.types";
 
@@ -58,8 +59,10 @@ export async function requestMembership(
 export async function listMyMembershipRequests(
   accessToken: string,
   cursor?: string,
+  status?: MembershipRequestStatus,
 ): Promise<MembershipRequestPage> {
   const parameters = new URLSearchParams({ limit: "20" });
+  if (status) parameters.set("status", status);
   if (cursor) parameters.set("cursor", cursor);
   const response = await apiRequest<MembershipRequestListResponse>(
     `/organization-membership-requests/me?${parameters.toString()}`,

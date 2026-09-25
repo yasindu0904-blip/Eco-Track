@@ -1,3 +1,4 @@
+import { ListWindow } from "../../components/lists/ListControls";
 import { useCallback, useEffect, useState } from "react";
 import { describeApiFailure } from "../../api/apiError";
 import {
@@ -14,6 +15,7 @@ export function EventParticipantOperations({
   organizationId,
   eventId,
 }: Props) {
+  const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState<EventParticipantOperationsPage>();
   const [busyKey, setBusyKey] = useState<string>();
   const [error, setError] = useState<string>();
@@ -51,6 +53,15 @@ export function EventParticipantOperations({
       setBusyKey(undefined);
     }
   };
+  async function loadMore() {
+    if (!page?.nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const next = await listEventParticipants(accessToken, organizationId, eventId, "JOINED", page.nextCursor);
+      setPage(current => current ? { ...next, participants: [...current.participants, ...next.participants] } : next);
+    } catch (reason) { setError(describeApiFailure(reason).message); }
+    finally { setLoadingMore(false); }
+  }
   const attendanceOpen = Boolean(
     page?.event.startsAt &&
       new Date(page.event.startsAt).getTime() <= renderedAt,
@@ -62,10 +73,7 @@ export function EventParticipantOperations({
         <div>
           <span>VOLUNTEERS</span>
           <h3>Attendance</h3>
-          <p>
-            Contact volunteers when needed and record attendance after the event
-            starts.
-          </p>
+
         </div>
         <button type="button" className="secondary" onClick={() => void load()}>
           Refresh
@@ -81,10 +89,9 @@ export function EventParticipantOperations({
       ) : page.participants.length === 0 ? (
         <div className="event-editor-empty">
           <strong>No joined volunteers</strong>
-          <p>People appear here after pressing Volunteer.</p>
         </div>
       ) : (
-        page.participants.map((participant) => (
+        <ListWindow items={page.participants} hasMore={Boolean(page.nextCursor)} busy={loadingMore} loadMore={() => void loadMore()}>{visible => visible.map((participant) => (
           <article className="event-participant-card" key={participant.id}>
             <div className="event-participant-person">
               <div>
@@ -164,7 +171,7 @@ export function EventParticipantOperations({
               Remove volunteer
             </button>
           </article>
-        ))
+        ))}</ListWindow>
       )}
     </section>
   );

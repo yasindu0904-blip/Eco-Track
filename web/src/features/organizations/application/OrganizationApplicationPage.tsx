@@ -1,3 +1,5 @@
+import { ListSections, PageControls } from "../../../components/lists/ListControls";
+import { applicationSections, useListState, usePagedList, type ApplicationSection } from "../../../components/lists/usePagedList";
 import {
   useEffect,
   useState,
@@ -8,12 +10,11 @@ import type { AuthenticatedUserProfile } from "../../auth/auth.types";
 import {
   createOrganizationApplication,
   listAdministrativeAreas,
-  listMyOrganizationApplications,
+  listMyApplicationPage,
 } from "./organizationApplication.api";
 import type {
   AdministrativeArea,
   CreateOrganizationApplicationInput,
-  OrganizationApplication,
   OrganizationStatus,
 } from "./organizationApplication.types";
 import "./organizationApplication.css";
@@ -34,20 +35,14 @@ function statusLabel(status: OrganizationStatus): string {
     .join(" ");
 }
 
-export function OrganizationApplicationPage({
-  accessToken,
-  profile,
-  initialView = "apply",
-  onBackToDashboard,
-  onSignOut,
-}: OrganizationApplicationPageProps) {
+export function OrganizationApplicationPage({ accessToken, profile, initialView = "apply" }: OrganizationApplicationPageProps) {
   const [view, setView] =
     useState<"apply" | "applications">(initialView);
-  const [applications, setApplications] = useState<OrganizationApplication[]>([]);
+  const [section, setSection] = useListState<ApplicationSection>("applications.section", "pending");
+  const list = usePagedList("applications:" + section, cursor => listMyApplicationPage(accessToken!, section, cursor), false, view === "applications" && Boolean(accessToken));
+  const applications = list.items;
+  const isLoadingApplications = list.busy;
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingApplications, setIsLoadingApplications] = useState(
-    initialView === "applications" && Boolean(accessToken),
-  );
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [areaSearch, setAreaSearch] = useState("");
@@ -92,63 +87,7 @@ export function OrganizationApplicationPage({
     };
   }, [accessToken, areaSearch]);
 
-  async function loadApplications(): Promise<void> {
-    if (!accessToken) {
-      setErrorMessage("Sign in is required to load your applications.");
-      return;
-    }
-
-    setIsLoadingApplications(true);
-    setErrorMessage(null);
-
-    try {
-      setApplications(await listMyOrganizationApplications(accessToken));
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Unable to load applications.",
-      );
-    } finally {
-      setIsLoadingApplications(false);
-    }
-  }
-
-  useEffect(() => {
-    if (initialView !== "applications" || !accessToken) {
-      return;
-    }
-
-    let isActive = true;
-
-    void listMyOrganizationApplications(accessToken)
-      .then((loadedApplications) => {
-        if (!isActive) {
-          return;
-        }
-
-        setApplications(loadedApplications);
-        setErrorMessage(null);
-      })
-      .catch((error: unknown) => {
-        if (!isActive) {
-          return;
-        }
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Unable to load applications.",
-        );
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoadingApplications(false);
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [accessToken, initialView]);
+  async function loadApplications() { list.refresh(); }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -199,18 +138,7 @@ export function OrganizationApplicationPage({
     <main className="organization-shell">
       <header className="organization-header">
         <div className="organization-header-start">
-          {onBackToDashboard && (
-            <button
-              className="organization-back-button"
-              type="button"
-              onClick={onBackToDashboard}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-              Dashboard
-            </button>
-          )}
+
           <div>
             <span className="organization-brand">EcoTrack</span>
             <p>Organization onboarding</p>
@@ -218,9 +146,7 @@ export function OrganizationApplicationPage({
         </div>
         <div className="organization-user">
           <span>{profile ? profile.fullName ?? profile.email : "Development preview"}</span>
-          {onSignOut ? (
-            <button type="button" onClick={onSignOut}>Sign out</button>
-          ) : (
+          {!accessToken && (
             <span className="preview-badge">Preview mode</span>
           )}
         </div>
@@ -231,7 +157,7 @@ export function OrganizationApplicationPage({
           <div>
             <span className="organization-eyebrow">Citizen application</span>
             <h1>Bring your environmental organization to EcoTrack</h1>
-            <p>Submit your organization details and proposed service area for review.</p>
+
           </div>
           <div className="organization-step"><strong>1</strong><span>Submit</span></div>
           <div className="organization-step"><strong>2</strong><span>Review</span></div>
@@ -240,7 +166,7 @@ export function OrganizationApplicationPage({
 
         <nav className="organization-tabs" aria-label="Organization applications">
           <button className={view === "apply" ? "active" : ""} onClick={() => setView("apply")}>New application</button>
-          <button className={view === "applications" ? "active" : ""} onClick={() => { setView("applications"); void loadApplications(); }}>My applications <span>{applications.length}</span></button>
+          <button className={view === "applications" ? "active" : ""} onClick={() => { setView("applications"); void loadApplications(); }}>My applications</button>
         </nav>
 
         {message && <div className="organization-notice success" role="status">{message}</div>}
@@ -251,7 +177,7 @@ export function OrganizationApplicationPage({
           <form className="organization-form" onSubmit={handleSubmit}>
             <section className="organization-card">
               <div className="organization-card-heading">
-                <span>01</span><div><h2>Organization details</h2><p>Tell us about the organization requesting an EcoTrack workspace.</p></div>
+                <span>01</span><div><h2>Organization details</h2></div>
               </div>
               <div className="organization-grid">
                 <label className="wide">Organization name<input name="name" required minLength={2} placeholder="e.g. Green Colombo Society" /></label>
@@ -265,7 +191,7 @@ export function OrganizationApplicationPage({
 
             <section className="organization-card">
               <div className="organization-card-heading">
-                <span>02</span><div><h2>Service areas</h2><p>Select the official Grama Niladhari Divisions covered by the organization.</p></div>
+                <span>02</span><div><h2>Service areas</h2></div>
               </div>
               <div className="gn-area-selector">
                 <label>
@@ -326,16 +252,18 @@ export function OrganizationApplicationPage({
             </section>
 
             <div className="organization-submit">
-              <p>Submission links official GN boundaries as pending records. An administrator must review and activate the organization.</p>
+
               <button type="submit" disabled={isSubmitting}>{isSubmitting ? "Submitting…" : "Submit application"}</button>
             </div>
           </form>
         ) : (
           <section className="organization-applications" aria-live="polite">
+            <ListSections value={section} options={applicationSections} onChange={setSection} />
+            {list.error && <p role="alert">{list.error}</p>}
             {isLoadingApplications ? (
               <div className="organization-empty">Loading your applications…</div>
             ) : applications.length === 0 ? (
-              <div className="organization-empty"><h2>No applications yet</h2><p>Your submitted organizations will appear here.</p><button onClick={() => setView("apply")}>Start an application</button></div>
+              <div className="organization-empty"><h2>No applications yet</h2><button onClick={() => setView("apply")}>Start an application</button></div>
             ) : (
               applications.map((application) => (
                 <article className="application-card" key={application.id}>
@@ -346,6 +274,7 @@ export function OrganizationApplicationPage({
                 </article>
               ))
             )}
+            <PageControls {...list} />
           </section>
         )}
       </section>

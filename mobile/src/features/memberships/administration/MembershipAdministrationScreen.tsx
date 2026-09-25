@@ -176,7 +176,7 @@ export function MembershipAdministrationScreen({ accessToken, organizationId, or
 
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.sectionTitle}>Pending requests</Text>
-        <Text style={sharedStyles.sectionSubtitle}>Approve verified members or decline with a useful reason.</Text>
+
         {requestError ? <Notice message={requestError} tone="error" /> : null}
         <Button label="Refresh requests" variant="secondary" loading={loadingRequests} onPress={() => void loadRequests()} />
         {requests.map((request) => (
@@ -196,14 +196,14 @@ export function MembershipAdministrationScreen({ accessToken, organizationId, or
 
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.sectionTitle}>Add an existing user</Text>
-        <Text style={sharedStyles.sectionSubtitle}>Use the person's exact verified EcoTrack email. New additions start as Organization Members.</Text>
+
         <Field label="Verified email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" required />
         <Button label="Add as member" loading={busyKey === "add-member"} disabled={!email.trim() || busyKey !== null} onPress={() => void add()} />
       </View>
 
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.sectionTitle}>Organization members</Text>
-        <Text style={sharedStyles.sectionSubtitle}>The final active Organization Admin cannot be demoted, suspended, or removed.</Text>
+
         {memberError ? <Notice message={memberError} tone="error" /> : null}
         <Button label="Refresh members" variant="secondary" loading={loadingMembers} onPress={() => void loadMembers()} />
         {members.map((member) => {
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   copy: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
   declineBox: { gap: spacing.sm, padding: spacing.md, borderRadius: 12, backgroundColor: colors.dangerSoft },
   empty: { color: colors.textMuted, textAlign: "center", paddingVertical: spacing.lg },
-  status: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5, backgroundColor: colors.successSoft },
+  status: {  },
   statusText: { color: colors.text, fontSize: 10, fontWeight: "900" },
   flex: { flex: 1 },
 });

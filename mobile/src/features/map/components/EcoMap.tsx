@@ -67,6 +67,7 @@ export interface EcoMapProps {
   height?: number;
   accessibleLabel?: string;
   showListFallback?: boolean;
+  showMarkerCoordinates?: boolean;
   listTitle?: string;
   showCurrentLocation?: boolean;
   onMarkerSelect?: (marker: MapMarkerFeature) => void;
@@ -187,6 +188,7 @@ export function EcoMap({
   height = 480,
   accessibleLabel = "EcoTrack incident and cleanup event map",
   showListFallback = true,
+  showMarkerCoordinates = true,
   listTitle = "Locations in this view",
   showCurrentLocation = true,
   onMarkerSelect,
@@ -644,6 +646,7 @@ export function EcoMap({
                 filter={clusterFilter}
                 layout={{
                   "text-field": ["get", "point_count_abbreviated"],
+                  "text-font": ["Noto Sans Regular"],
                   "text-size": 12,
                 }}
                 paint={{ "text-color": "#ffffff" }}
@@ -653,7 +656,7 @@ export function EcoMap({
                 type="circle"
                 filter={incidentFilter}
                 paint={{
-                  "circle-color": "#d34a3a",
+                  "circle-color": ["case", ["==", ["get", "isOwned"], true], "#f1b642", ["in", ["get", "status"], ["literal", ["CLEANUP_ORGANIZED", "Cleanup organized"]]], "#2878b5", "#d34a3a"],
                   "circle-radius": 10,
                   "circle-stroke-color": "#ffffff",
                   "circle-stroke-width": 3,
@@ -664,7 +667,7 @@ export function EcoMap({
                 type="circle"
                 filter={cleanupEventFilter}
                 paint={{
-                  "circle-color": "#2878b5",
+                  "circle-color": ["case", ["==", ["get", "isOwned"], true], "#f1b642", "#2878b5"],
                   "circle-radius": 10,
                   "circle-stroke-color": "#ffffff",
                   "circle-stroke-width": 3,
@@ -848,8 +851,9 @@ export function EcoMap({
                   <View
                     style={[
                       styles.listDot,
-                      marker.properties.kind === "CLEANUP_EVENT" &&
+                      (marker.properties.kind === "CLEANUP_EVENT" || marker.properties.status?.toUpperCase().replaceAll(" ", "_") === "CLEANUP_ORGANIZED") &&
                         styles.eventDot,
+                      marker.properties.isOwned && styles.ownedDot,
                     ]}
                   />
                   <View style={styles.listItemText}>
@@ -857,9 +861,8 @@ export function EcoMap({
                       {marker.properties.title}
                     </Text>
                     <Text style={styles.listItemMeta} numberOfLines={1}>
-                      {marker.properties.status} ·{" "}
-                      {location.latitude.toFixed(4)},{" "}
-                      {location.longitude.toFixed(4)}
+                      {marker.properties.status}
+                      {showMarkerCoordinates && <> · {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</>}
                     </Text>
                   </View>
                 </Pressable>
@@ -1115,6 +1118,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: "#d34a3a",
   },
+  ownedDot: { backgroundColor: "#f1b642" },
   eventDot: {
     backgroundColor: "#2878b5",
   },

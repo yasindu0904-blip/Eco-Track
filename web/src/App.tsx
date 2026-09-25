@@ -1,3 +1,4 @@
+import { ListMemoryProvider } from "./components/lists/ListMemoryProvider";
 import type { ReactNode } from "react";
 
 import "./App.css";
@@ -103,21 +104,21 @@ function App() {
 
   if (profile.platformRole === "SUPER_ADMIN") {
     return (
-      <SuperAdminApp
+      <ListMemoryProvider key={profile.id}><SuperAdminApp
         profile={profile}
         accessToken={accessToken}
         onSignOut={signOut}
-      />
+      /></ListMemoryProvider>
     );
   }
 
   return (
-    <AuthenticatedUserApp
+    <ListMemoryProvider key={profile.id}><AuthenticatedUserApp
       profile={profile}
       accessToken={accessToken}
       onProfileUpdated={replaceProfile}
       onSignOut={signOut}
-    />
+    /></ListMemoryProvider>
   );
 }
 

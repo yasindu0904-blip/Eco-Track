@@ -2,7 +2,8 @@ import TestRenderer, { act } from "react-test-renderer";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { CleanupEventDraftScreen } from "./CleanupEventDraftScreen";
-import { createDraft, listDrafts } from "./cleanupEvent.api";
+import { Alert } from "react-native";
+import { createDraft, discardDraft, listDrafts } from "./cleanupEvent.api";
 import { listOrganizationMembers } from "../memberships/administration/membershipAdministration.api";
 import { getOrganizationIncidentDetail } from "../organizations/organizationIncidentDiscovery.api";
 
@@ -143,4 +144,19 @@ describe("CleanupEventDraftScreen simplified linked-event flow", () => {
     expect(input.startsAt).toBeTruthy();
     expect("eventLatitude" in input).toBe(false);
   });
+});
+
+
+test("draft cross confirms deletion and removes the draft only on success", async () => {
+  vi.mocked(listDrafts).mockResolvedValue({ items: [savedDraft], nextCursor: null });
+  vi.mocked(discardDraft).mockResolvedValue(undefined);
+  let renderer!: TestRenderer.ReactTestRenderer;
+  await act(async () => { renderer = TestRenderer.create(<CleanupEventDraftScreen accessToken="token" organizationId="organization-1" onBack={vi.fn()} />); });
+  await act(async () => { renderer.root.findByProps({ accessibilityLabel: "Delete draft: Canal cleanup" }).props.onPress(); });
+  expect(discardDraft).not.toHaveBeenCalled();
+  const actions = vi.mocked(Alert.alert).mock.calls.at(-1)![2]!;
+  await act(async () => { await actions.find(action => action.text === "Delete")!.onPress!(); });
+  expect(discardDraft).toHaveBeenCalledWith("token", "organization-1", "draft-1");
+  expect(renderer.root.findAllByProps({ accessibilityLabel: "Delete draft: Canal cleanup" })).toHaveLength(0);
+  await act(async () => renderer.unmount());
 });

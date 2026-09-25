@@ -41,6 +41,7 @@ describe("INT-02 Android client parity", () => {
       { screen: "membership" },
       { screen: "createOrganization" },
       { screen: "organizationApplications" },
+      { screen: "organizationWorkspaces" },
       { screen: "organizationWorkspace", organizationId },
       { screen: "organizationWorkspace", organizationId, tab: "incidentDiscovery", incidentId: "incident-1" },
       { screen: "organizationWorkspace", organizationId, tab: "eventDrafts", eventId: "event-1" },

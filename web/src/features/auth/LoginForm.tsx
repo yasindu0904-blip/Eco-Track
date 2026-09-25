@@ -59,10 +59,6 @@ export function LoginForm() {
             <span>2</span>
             Open the link in this browser
           </li>
-          <li>
-            <span>3</span>
-            Return here signed in
-          </li>
         </ol>
 
         <button
@@ -86,11 +82,8 @@ export function LoginForm() {
   return (
     <section className="login-panel">
       <div className="section-heading">
-        <span className="eyebrow">Passwordless access</span>
         <h2>Sign in</h2>
-        <p>
-          Enter your email to receive a magic link. No password needed.
-        </p>
+        <p>Enter your email.</p>
       </div>
 
       <form className="login-form" onSubmit={handleSubmit}>
@@ -146,15 +139,6 @@ export function LoginForm() {
         </button>
       </form>
 
-      <div className="security-note">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M7 10V8a5 5 0 0 1 10 0v2" />
-          <path d="M5 10h14v10H5z" />
-        </svg>
-        <p>
-          Your link is single-use. EcoTrack never asks you to create a password.
-        </p>
-      </div>
     </section>
   );
 }

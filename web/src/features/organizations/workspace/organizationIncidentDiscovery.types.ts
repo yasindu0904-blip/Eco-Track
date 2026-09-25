@@ -5,6 +5,7 @@ import type {
 } from "../../incidents/incident.types";
 
 export interface OrganizationIncidentSummary {
+  hasOwnedCleanupEvent?: boolean;
   id: string;
   title: string;
   category: IncidentCategory;
@@ -40,6 +41,17 @@ export interface OrganizationIncidentReview {
 }
 
 export interface OrganizationIncidentDetail extends OrganizationIncidentSummary {
+  activeCleanupEvent?: {
+    id: string;
+    title: string;
+    description: string;
+    publicInstructions: string | null;
+    startsAt: string | null;
+    eventAddress: string | null;
+    meetingAddress: string | null;
+    organization: { id: string; name: string };
+  } | null;
+
   description: string;
   highlightUntil: string;
   archiveAfter: string;

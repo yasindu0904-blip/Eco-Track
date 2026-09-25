@@ -1,17 +1,17 @@
+import { ListWindow } from "../../components/lists/ListControls";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ApiRequestError } from "../../api/apiClient";
 import { pingSuperAdmin } from "../../auth/auth.api";
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
-import { BrandHeader, Button, Field, LoadingState, Notice, Screen, sharedStyles } from "../../components/ui";
+import { Button, Field, LoadingState, Notice, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
-import { NotificationButton } from "../notifications/NotificationInboxScreen";
 import {
   approveOrganizationApplication,
   declineOrganizationApplication,
   getOrganizationApplicationForReview,
-  listPendingOrganizationApplications,
+  listPendingOrganizationApplicationPage,
 } from "./organizationReview.api";
 import type { OrganizationReviewApplication } from "./organizationReview.types";
 import { getPlatformSummary } from "../dashboards/dashboard.api";
@@ -20,7 +20,6 @@ import { Metric, SummaryCards, total } from "../dashboards/SummaryCards";
 type Props = {
   accessToken: string;
   profile: AuthenticatedUserProfile;
-  onOpenNotifications: () => void;
   onSignOut: () => void;
 };
 
@@ -32,8 +31,20 @@ function readableError(error: unknown): string {
   return "The Super Admin request could not be completed.";
 }
 
-export function SuperAdminDashboard({ accessToken, profile, onOpenNotifications, onSignOut }: Props) {
+export function SuperAdminDashboard({ accessToken, profile }: Props) {
   const loadPlatformSummary = useCallback(() => getPlatformSummary(accessToken), [accessToken]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  async function loadMoreApplications() {
+    if (!accessToken || !nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await listPendingOrganizationApplicationPage(accessToken, nextCursor);
+      setApplications(current => [...current, ...page.items]);
+      setNextCursor(page.nextCursor);
+    } catch (reason) { setError(readableError(reason)); }
+    finally { setLoadingMore(false); }
+  }
   const [applications, setApplications] = useState<OrganizationReviewApplication[]>([]);
   const [selected, setSelected] = useState<OrganizationReviewApplication | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
@@ -49,18 +60,18 @@ export function SuperAdminDashboard({ accessToken, profile, onOpenNotifications,
     setError(null);
 
     try {
-      const pending = await listPendingOrganizationApplications(accessToken);
+      const page = await listPendingOrganizationApplicationPage(accessToken);
+      const pending = page.items;
+      setNextCursor(page.nextCursor);
       setApplications(pending);
 
-      if (selected && !pending.some((application) => application.id === selected.id)) {
-        setSelected(null);
-      }
+      setSelected(current => current && pending.some(application => application.id === current.id) ? current : null);
     } catch (caughtError) {
       setError(readableError(caughtError));
     } finally {
       setLoading(false);
     }
-  }, [accessToken, selected]);
+  }, [accessToken]);
 
   useEffect(() => {
     void loadApplications();
@@ -151,12 +162,7 @@ export function SuperAdminDashboard({ accessToken, profile, onOpenNotifications,
 
   return (
     <Screen>
-      <BrandHeader eyebrow="Protected platform area" title="Super Admin" compact />
       <SummaryCards load={loadPlatformSummary} label="Platform summary">{(summary) => <><Metric label="Active users" value={`${summary.users.active} / ${summary.users.total}`} /><Metric label="Organizations" value={total(summary.organizationsByState)} /><Metric label="Incidents" value={total(summary.incidentsByState)} /><Metric label="Cleanup events" value={total(summary.eventsByLifecycle)} /></>}</SummaryCards>
-      <NotificationButton
-        accessToken={accessToken}
-        onOpen={onOpenNotifications}
-      />
 
       <View style={[sharedStyles.card, styles.adminIdentity]}>
         <View style={styles.adminBadge}><Text style={styles.adminBadgeText}>★</Text></View>
@@ -190,7 +196,7 @@ export function SuperAdminDashboard({ accessToken, profile, onOpenNotifications,
         {applications.length === 0 ? (
           <Notice message="There are no pending organization applications." tone="success" />
         ) : (
-          applications.map((application) => (
+          <ListWindow items={applications} hasMore={Boolean(nextCursor)} busy={loadingMore} loadMore={() => void loadMoreApplications()} >{visible => visible.map((application) => (
             <Pressable
               key={application.id}
               onPress={() => void selectApplication(application.id)}
@@ -207,7 +213,7 @@ export function SuperAdminDashboard({ accessToken, profile, onOpenNotifications,
               </View>
               <Text style={styles.openText}>{loadingDetails ? "…" : "Open"}</Text>
             </Pressable>
-          ))
+          ))}</ListWindow>
         )}
       </View>
 
@@ -248,7 +254,6 @@ export function SuperAdminDashboard({ accessToken, profile, onOpenNotifications,
         </View>
       ) : null}
 
-      <Button label="Sign out" variant="secondary" onPress={onSignOut} />
     </Screen>
   );
 }

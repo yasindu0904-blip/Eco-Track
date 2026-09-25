@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { describeApiFailure } from "../../api/apiError";
 import { Button, Field, Notice, sharedStyles } from "../../components/ui";
@@ -32,6 +32,10 @@ export function EventOperationsScreen({
   const [data, setData] = useState<EventOperations>();
   const [readiness, setReadiness] = useState<EventCompletionReadiness>();
   const [note, setNote] = useState("");
+  const [visibility, setVisibility] = useState<"PARTICIPANTS" | "INTERNAL">("PARTICIPANTS");
+  const [evidenceType, setEvidenceType] = useState<"BEFORE" | "PROGRESS" | "AFTER">("PROGRESS");
+  const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset>();
+  const [picking, setPicking] = useState(false);
   const [caption, setCaption] = useState("");
   const [cancelReason, setCancelReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -66,6 +70,8 @@ export function EventOperationsScreen({
   }, [load]);
   async function run(operation: () => Promise<unknown>, success: string) {
     setBusy(true);
+    setError(undefined);
+    setMessage(undefined);
     try {
       await operation();
       setMessage(success);
@@ -83,40 +89,43 @@ export function EventOperationsScreen({
     }
   }
   async function chooseEvidence() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError("Photo-library permission is required.");
-      return;
+    setPicking(true);
+    setError(undefined);
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setError("Photo-library permission is required.");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.75 });
+      if (!result.canceled && result.assets[0]) setPhoto(result.assets[0]);
+    } catch (reason) {
+      setError(describeApiFailure(reason, "Unable to select a photo.").message);
+    } finally {
+      setPicking(false);
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.75,
-    });
-    if (result.canceled || !result.assets[0]) return;
-    const asset = result.assets[0];
-    const response = await fetch(asset.uri);
-    const buffer = await response.arrayBuffer();
-    await run(
-      () =>
-        uploadEventEvidence(
-          accessToken,
-          organizationId,
-          eventId,
-          {
-            data: buffer,
-            originalFileName: asset.fileName ?? `event-${Date.now()}.jpg`,
-            contentType: asset.mimeType ?? "image/jpeg",
-            sizeBytes: asset.fileSize ?? buffer.byteLength,
-          },
-          { type: "PROGRESS", caption: caption || null },
-        ),
-      "Evidence uploaded.",
-    );
+  }
+  async function uploadEvidence() {
+    if (!photo || busy) return;
+    await run(async () => {
+      const response = await fetch(photo.uri);
+      if (!response.ok) throw new Error("Unable to read the selected photo. Please choose it again.");
+      const buffer = await response.arrayBuffer();
+      await uploadEventEvidence(accessToken, organizationId, eventId, {
+        data: buffer,
+        originalFileName: photo.fileName ?? `event-${Date.now()}.jpg`,
+        contentType: photo.mimeType ?? "image/jpeg",
+        sizeBytes: buffer.byteLength,
+      }, { type: evidenceType, caption: caption || null });
+      setPhoto(undefined);
+      setCaption("");
+    }, "Evidence uploaded and recorded.");
   }
   if (!data)
     return (
       <View style={sharedStyles.card}>
         <Text>{error ?? "Loading event operations…"}</Text>
+        {error && <Button label="Try again" variant="secondary" onPress={() => void load()} />}
       </View>
     );
   const terminal =
@@ -124,28 +133,24 @@ export function EventOperationsScreen({
     data.event.lifecycleStatus === "CANCELLED";
   return (
     <View style={styles.shell}>
-      <View style={sharedStyles.card}>
-        <Text style={styles.eyebrow}>EVENT OPERATIONS</Text>
-        <Text style={sharedStyles.sectionTitle}>
-          {data.event.currentWorkflowStatus.label}
-        </Text>
-        <Text style={sharedStyles.sectionSubtitle}>
-          Post updates, record evidence, then complete or cancel the event.
-        </Text>
-        {error ? <Notice tone="error" message={error} /> : null}
-        {message ? <Notice tone="success" message={message} /> : null}
-      </View>
+      {error ? <Notice tone="error" message={error} /> : null}
+      {message ? <Notice tone="success" message={message} /> : null}
       {!terminal ? (
         <>
           <View style={sharedStyles.card}>
+            <Text style={sharedStyles.sectionTitle}>Post an update</Text>
+            <Choices label="Visibility" value={visibility} onChange={setVisibility} disabled={busy} options={[
+              { value: "PARTICIPANTS", label: "Participants" },
+              { value: "INTERNAL", label: "Internal team only" },
+            ]} />
             <Field
-              label="Participant update"
+              label="Note"
               value={note}
-              onChangeText={setNote}
+              onChangeText={value => setNote(value.slice(0, 2000))}
               multiline
             />
             <Button
-              label="Post update"
+              label="Add note"
               disabled={busy || !note.trim()}
               onPress={() =>
                 void run(async () => {
@@ -153,26 +158,29 @@ export function EventOperationsScreen({
                     accessToken,
                     organizationId,
                     eventId,
-                    "PARTICIPANTS",
+                    visibility,
                     note,
                   );
                   setNote("");
-                }, "Update posted.")
+                }, "Event note added.")
               }
-            />
-            <Field
-              label="Evidence caption"
-              value={caption}
-              onChangeText={setCaption}
-            />
-            <Button
-              label="Choose and upload evidence"
-              disabled={busy}
-              onPress={() => void chooseEvidence()}
             />
           </View>
           <View style={sharedStyles.card}>
+            <Text style={sharedStyles.sectionTitle}>Upload evidence</Text>
+            <Choices label="Evidence type" value={evidenceType} onChange={setEvidenceType} disabled={busy} options={[
+              { value: "BEFORE", label: "Before" },
+              { value: "PROGRESS", label: "Progress" },
+              { value: "AFTER", label: "After" },
+            ]} />
+            <Field label="Caption" value={caption} onChangeText={value => setCaption(value.slice(0, 500))} />
+            {photo && <Image source={{ uri: photo.uri }} style={styles.photo} accessibilityLabel="Selected evidence photo" />}
+            <Button label={photo ? "Change photo" : "Choose photo"} variant="secondary" disabled={busy || picking} onPress={() => void chooseEvidence()} />
+            <Button label="Upload evidence" disabled={busy || picking || !photo} onPress={() => void uploadEvidence()} />
+          </View>
+          <View style={sharedStyles.card}>
             <Text style={sharedStyles.sectionTitle}>Finish event</Text>
+            <Button label="Refresh checks" variant="secondary" disabled={busy || picking} onPress={() => void load()} />
             {readiness?.checks.map((check) => (
               <Text
                 style={check.ready ? styles.ready : styles.blocked}
@@ -252,25 +260,54 @@ export function EventOperationsScreen({
         </>
       ) : null}
       <View style={sharedStyles.card}>
-        <Text style={sharedStyles.sectionTitle}>Updates and evidence</Text>
+        <Text style={sharedStyles.sectionTitle}>Notes</Text>
+        {data.notes.length === 0 && <Text style={styles.copy}>No operational notes yet.</Text>}
         {data.notes.map((item) => (
           <View style={styles.entry} key={item.id}>
-            <Text style={styles.title}>{item.visibility}</Text>
+            <Text style={styles.title}>{item.visibility === "INTERNAL" ? "Internal" : "Participants"}</Text>
             <Text style={styles.copy}>{item.noteText}</Text>
+            <Text style={styles.copy}>{item.author.fullName ?? "Organization member"} · {new Date(item.createdAt).toLocaleString()}</Text>
           </View>
         ))}
+      </View>
+      <View style={sharedStyles.card}>
+        <Text style={sharedStyles.sectionTitle}>Evidence</Text>
+        {data.evidence.length === 0 && <Text style={styles.copy}>No evidence uploaded yet.</Text>}
         {data.evidence.map((item) => (
           <View style={styles.entry} key={item.id}>
-            <Text style={styles.title}>{item.type} evidence</Text>
-            <Text style={styles.copy}>{item.caption || "Photo recorded"}</Text>
+            <Image source={{ uri: item.url }} style={styles.photo} accessibilityLabel={item.caption ?? `${item.type.toLowerCase()} cleanup evidence`} />
+            <Text style={styles.title}>{item.type}</Text>
+            {item.caption && <Text style={styles.copy}>{item.caption}</Text>}
           </View>
         ))}
       </View>
     </View>
   );
 }
+function Choices<T extends string>({ label, value, options, onChange, disabled }: {
+  label: string;
+  value: T;
+  options: Array<{ value: T; label: string }>;
+  onChange: (value: T) => void;
+  disabled: boolean;
+}) {
+  return <View style={styles.choices}>
+    <Text style={styles.title}>{label}</Text>
+    <View style={styles.choiceRow} accessibilityRole="radiogroup" accessibilityLabel={label}>
+      {options.map(option => <Pressable key={option.value} accessibilityRole="radio" accessibilityLabel={option.label} accessibilityState={{ checked: value === option.value, disabled }} disabled={disabled} onPress={() => onChange(option.value)} style={[styles.choice, value === option.value && styles.choiceSelected]}>
+        <Text style={styles.choiceText}>{option.label}</Text>
+      </Pressable>)}
+    </View>
+  </View>;
+}
 const styles = StyleSheet.create({
   shell: { gap: spacing.md },
+  photo: { width: "100%", height: 200, borderRadius: 12, resizeMode: "contain", backgroundColor: colors.surfaceMuted },
+  choices: { gap: spacing.sm },
+  choiceRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  choice: { padding: spacing.sm, minHeight: 44, justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderRadius: 9 },
+  choiceSelected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  choiceText: { color: colors.primary, fontWeight: "700" },
   eyebrow: {
     color: colors.primary,
     fontWeight: "900",

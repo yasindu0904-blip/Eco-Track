@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { ListSections, PageControls } from "../../components/lists/ListControls";
+import { applicationSections, useListState, usePagedList, type ApplicationSection } from "../../components/lists/usePagedList";
 import { StyleSheet, Text, View } from "react-native";
 
-import { ApiRequestError } from "../../api/apiClient";
-import { Button, LoadingState, Notice, PageHeader, Screen, sharedStyles } from "../../components/ui";
+import { Button, Notice, PageHeader, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
-import { listMyOrganizationApplications } from "./organizationApplication.api";
+import { listMyApplicationPage } from "./organizationApplication.api";
 import type { OrganizationApplication, OrganizationStatus } from "./organizationApplication.types";
 
 type Props = {
@@ -30,41 +30,15 @@ export function MyOrganizationApplicationsScreen({
   onBack,
   onCreateAnother,
 }: Props) {
-  const [applications, setApplications] = useState<OrganizationApplication[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      setApplications(await listMyOrganizationApplications(accessToken));
-    } catch (caughtError) {
-      setError(
-        caughtError instanceof ApiRequestError || caughtError instanceof Error
-          ? caughtError.message
-          : "Your organization requests could not be loaded.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [accessToken]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  if (loading) {
-    return <LoadingState message="Loading your organization requests…" />;
-  }
-
+  const [section, setSection] = useListState<ApplicationSection>("applications.section", "pending");
+  const list = usePagedList("applications:" + section, cursor => listMyApplicationPage(accessToken, section, cursor), true);
+  const { items: applications, error } = list;
   return (
     <Screen>
       <PageHeader
         eyebrow="My requests"
         title="Organization requests"
-        subtitle="Follow each application from submission through review."
+
         onBack={onBack}
         backLabel="Dashboard"
       />
@@ -73,12 +47,12 @@ export function MyOrganizationApplicationsScreen({
       ) : null}
       {error ? <Notice message={error} tone="error" /> : null}
 
-      {applications.length === 0 ? (
+      <ListSections value={section} options={applicationSections} onChange={setSection} />
+
+      {list.busy && applications.length === 0 ? <Text>Loading requests...</Text> : applications.length === 0 ? (
         <View style={sharedStyles.card}>
-          <Text style={sharedStyles.sectionTitle}>No organization requests yet</Text>
-          <Text style={sharedStyles.sectionSubtitle}>
-            When you submit an organization onboarding request, its review status will appear here.
-          </Text>
+          <Text style={sharedStyles.sectionTitle}>No requests in this section</Text>
+
         </View>
       ) : (
         applications.map((application) => (
@@ -106,7 +80,7 @@ export function MyOrganizationApplicationsScreen({
         ))
       )}
 
-      <Button label="Refresh statuses" onPress={() => void load()} />
+      <PageControls {...list} />
       <Button label="Create another request" variant="secondary" onPress={onCreateAnother} />
     </Screen>
   );
@@ -114,10 +88,10 @@ export function MyOrganizationApplicationsScreen({
 
 const styles = StyleSheet.create({
   applicationName: { flex: 1 },
-  status: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
-  statusActive: { backgroundColor: colors.successSoft },
-  statusDanger: { backgroundColor: colors.dangerSoft },
-  statusPending: { backgroundColor: colors.warningSoft },
+  status: {  },
+  statusActive: {  },
+  statusDanger: {  },
+  statusPending: {  },
   statusText: { color: colors.text, fontSize: 10, fontWeight: "900" },
   date: { color: colors.textMuted, fontSize: 12 },
   detail: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },

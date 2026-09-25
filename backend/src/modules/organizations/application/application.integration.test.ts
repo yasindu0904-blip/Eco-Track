@@ -381,4 +381,19 @@ test("reads an owned application and hides another requester's application", asy
   assert.equal(otherResponse.status, 404);
 });
 
+test("application sections remain requester-scoped and validate page cursors", async () => {
+  const query = (suffix: string) => fetch(`${baseUrl}/api/v1/organization-applications/me?${suffix}`, {
+    headers: { authorization: `Bearer ${validAccessToken}` },
+  });
+  const pending = await query("section=pending&limit=1");
+  assert.equal(pending.status, 200);
+  const page = (await pending.json()).data;
+  assert.equal(page.items[0].id, createdApplicationId);
+  assert.equal(page.items.some((item: { id: string }) => item.id === otherApplicationId), false);
+  const approved = await query("section=approved&limit=20");
+  assert.deepEqual((await approved.json()).data.items, []);
+  assert.equal((await query("section=invalid")).status, 400);
+  assert.equal((await query("cursor=invalid")).status, 400);
+});
+
 registerResourceCleanup();

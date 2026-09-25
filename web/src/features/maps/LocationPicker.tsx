@@ -14,6 +14,7 @@ export interface LocationPickerProps {
   disabled?: boolean;
   confirmed?: boolean;
   confirmLabel?: string;
+  showInstructions?: boolean;
   referenceMarker?: MapMarkerFeature;
   focusReferenceLabel?: string;
   boundaries?: MapBoundaryFeatureCollection;
@@ -27,6 +28,7 @@ export function LocationPicker({
   disabled = false,
   confirmed = false,
   confirmLabel = "Confirm this location",
+  showInstructions = true,
   referenceMarker,
   focusReferenceLabel = "Focus reference location",
   boundaries,
@@ -112,32 +114,19 @@ export function LocationPicker({
         onLocationSelect={selectLocation}
       />
 
-      <div className="eco-location-picker-controls">
-        <div
-          className={
-            confirmed
-              ? "eco-location-picker-status is-confirmed"
-              : "eco-location-picker-status"
-          }
-        >
-          <span className="eco-location-picker-label">
-            {confirmed ? "Location confirmed" : "Location selection"}
-          </span>
-          <strong>
-            {confirmed ? "Ready to save" : "Choose a point on the map"}
-          </strong>
-          <small>
-            {confirmed
-              ? "Use the form's save button to keep this location."
-              : "Tap the map, then confirm the event location."}
-          </small>
-        </div>
+      <div className={`eco-location-picker-controls${disabled && confirmed ? " eco-location-picker-readonly" : ""}`}>
+        {!confirmed && showInstructions && (
+          <div className="eco-location-picker-status">
+            <span className="eco-location-picker-label">Location selection</span>
+            <strong>Choose a point on the map</strong>
+            <small>Tap the map, then confirm the event location.</small>
+          </div>
+        )}
 
         {referenceMarker && referenceLocation && (
           <button
             type="button"
             className="eco-location-focus-reference"
-            disabled={disabled}
             onClick={() =>
               setFocusRequest({
                 referenceId: referenceMarker.properties.id,
@@ -155,14 +144,16 @@ export function LocationPicker({
           </p>
         )}
 
-        <button
+        {disabled && confirmed ? (
+          <span className="eco-location-confirmed-text" role="status">Location confirmed</span>
+        ) : <button
           type="button"
           className="eco-location-confirm"
           disabled={disabled}
           onClick={confirmLocation}
         >
           {confirmed ? "Location confirmed" : confirmLabel}
-        </button>
+        </button>}
       </div>
     </section>
   );

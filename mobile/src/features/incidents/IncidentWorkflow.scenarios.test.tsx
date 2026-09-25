@@ -7,7 +7,7 @@ import {
   createIncident,
   getMyIncident,
   listIncidentCategories,
-  listMyIncidents,
+  listMyIncidentPage,
 } from "./incident.api";
 import { IncidentReportScreen } from "./IncidentReportScreen";
 import { MyReportsScreen } from "./MyReportsScreen";
@@ -26,6 +26,7 @@ vi.mock("expo-image-picker", () => ({
 }));
 
 vi.mock("react-native", () => ({
+  ScrollView: "ScrollView",
   Image: "Image",
   Pressable: "Pressable",
   StyleSheet: { create: <T,>(styles: T) => styles },
@@ -116,7 +117,7 @@ vi.mock("./incident.api", () => ({
   createIncident: vi.fn(),
   getMyIncident: vi.fn(),
   listIncidentCategories: vi.fn(),
-  listMyIncidents: vi.fn(),
+  listMyIncidentPage: vi.fn(),
   uploadEvidence: vi.fn(),
 }));
 
@@ -201,7 +202,7 @@ function textContent(renderer: TestRenderer.ReactTestRenderer): string {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(listIncidentCategories).mockResolvedValue([category]);
-  vi.mocked(listMyIncidents).mockResolvedValue([summary]);
+  vi.mocked(listMyIncidentPage).mockResolvedValue({ items: [summary], nextCursor: null });
   vi.mocked(getMyIncident).mockResolvedValue(detail);
 });
 
@@ -364,9 +365,9 @@ describe("mobile incident workflow scenarios", () => {
   });
 
   test("My Reports renders cancellation, replacement, and completed incident history", async () => {
-    vi.mocked(listMyIncidents).mockResolvedValueOnce([
+    vi.mocked(listMyIncidentPage).mockResolvedValueOnce({ items: [
       { ...summary, status: "RESOLVED" },
-    ]);
+    ], nextCursor: null });
     vi.mocked(getMyIncident).mockResolvedValueOnce(completedDetail);
     let renderer: TestRenderer.ReactTestRenderer;
     await act(async () => {

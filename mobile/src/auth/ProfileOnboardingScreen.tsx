@@ -3,7 +3,6 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { colors, spacing } from "../components/theme";
 import {
-  BrandHeader,
   Button,
   Field,
   Notice,
@@ -24,7 +23,6 @@ export function ProfileOnboardingScreen({
   accessToken,
   profile,
   onCompleted,
-  onSignOut,
 }: Props) {
   const [fullName, setFullName] = useState(profile.fullName ?? "");
   const [phoneNumber, setPhoneNumber] = useState(profile.phoneNumber ?? "");
@@ -54,10 +52,8 @@ export function ProfileOnboardingScreen({
 
   return (
     <Screen contentStyle={styles.screen}>
-      <BrandHeader compact eyebrow="One last step" />
 
       <View style={sharedStyles.card}>
-        <Text style={sharedStyles.sectionTitle}>Complete your profile</Text>
         <Text style={sharedStyles.sectionSubtitle}>
           Add the contact details needed for cleanup-event coordination. You
           only need to do this once.
@@ -93,12 +89,6 @@ export function ProfileOnboardingScreen({
           onPress={() => void saveProfile()}
           loading={saving}
           disabled={!fullName.trim() || !phoneNumber.trim()}
-        />
-        <Button
-          label="Sign out"
-          variant="secondary"
-          onPress={onSignOut}
-          disabled={saving}
         />
       </View>
     </Screen>

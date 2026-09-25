@@ -162,6 +162,7 @@ export async function listIncidentRecordsByReporter(
   prisma: PrismaClient,
   input: {
     reporterUserId: string;
+    section?: "active" | "resolved" | "all";
     limit: number;
     cursor: IncidentListCursor | null;
   },
@@ -169,6 +170,7 @@ export async function listIncidentRecordsByReporter(
   return prisma.incident.findMany({
     where: {
       reporterUserId: input.reporterUserId,
+      ...(input.section === "active" ? { status: { in: ["ACTIVE" as const, "CLEANUP_ORGANIZED" as const] } } : input.section === "resolved" ? { status: "RESOLVED" as const } : {}),
       ...(input.cursor
         ? {
             OR: [
@@ -341,7 +343,7 @@ export async function findOrganizationIncidentDetailRecord(
   );
   if (!access) return null;
 
-  const [incident, currentReview, falseReviewCount] = await Promise.all([
+  const [incident, currentReview, falseReviewCount, activeCleanupEvent] = await Promise.all([
     database.incident.findUnique({
       where: { id: incidentId },
       select: incidentDetailSelect,
@@ -359,10 +361,29 @@ export async function findOrganizationIncidentDetailRecord(
         organization: { status: "ACTIVE" },
       },
     }),
+    database.cleanupEvent.findFirst({
+      where: {
+        incidentId,
+        lifecycleStatus: "PUBLISHED",
+        publishedAt: { not: null },
+        organization: { status: "ACTIVE" },
+      },
+      // Cross-organization event information is limited to public fields.
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        publicInstructions: true,
+        startsAt: true,
+        eventAddress: true,
+        meetingAddress: true,
+        organization: { select: { id: true, name: true } },
+      },
+    }),
   ]);
 
   if (!incident) return null;
-  return { incident, access, currentReview, falseReviewCount };
+  return { incident, access, currentReview, falseReviewCount, activeCleanupEvent };
 }
 
 export async function lockOrganizationIncidentReview(
@@ -451,6 +472,7 @@ export type PublicIncidentDiscoveryRow = {
 };
 
 type PublicIncidentDiscoveryInput = {
+  awaitingCleanup?: boolean;
   limit: number;
   cursor: OrganizationIncidentDiscoveryCursor | null;
   status?: PublicIncidentDiscoveryRow["status"];
@@ -461,7 +483,14 @@ type PublicIncidentDiscoveryInput = {
 
 function incidentDiscoveryFilters(input: PublicIncidentDiscoveryInput) {
   return {
-    status: input.status
+    status: input.awaitingCleanup
+      ? Prisma.sql`AND incident."status" IN ('ACTIVE'::"IncidentStatus", 'EXPIRED'::"IncidentStatus")
+          AND NOT EXISTS (
+            SELECT 1 FROM "cleanup_events" AS cleanup_event
+            WHERE cleanup_event."incident_id" = incident."id"
+              AND cleanup_event."lifecycle_status" = 'PUBLISHED'::"CleanupLifecycleStatus"
+          )`
+      : input.status
       ? Prisma.sql`AND incident."status" = ${input.status}::"IncidentStatus"`
       : Prisma.sql`AND incident."status" IN (
           'ACTIVE'::"IncidentStatus",
@@ -626,6 +655,7 @@ export type OrganizationIncidentDiscoveryRow = {
   reportedAt: Date;
   cursorReportedAt: string;
   falseReviewCount: number;
+  hasOwnedCleanupEvent: boolean;
   currentReviewStatus: "VIEWED" | "VALID" | "FALSE" | null;
 };
 
@@ -646,7 +676,7 @@ export async function listCoveredOrganizationIncidents(
 ): Promise<OrganizationIncidentDiscoveryRow[]> {
   const statusFilter = input.status
     ? Prisma.sql`AND incident."status" = ${input.status}::"IncidentStatus"`
-    : Prisma.sql`AND incident."status" <> 'ARCHIVED'::"IncidentStatus"`;
+    : Prisma.empty;
   const categoryFilter = input.categoryId
     ? Prisma.sql`AND incident."category_id" = ${input.categoryId}::uuid`
     : Prisma.empty;
@@ -685,6 +715,12 @@ export async function listCoveredOrganizationIncidents(
   return prisma.$queryRaw<OrganizationIncidentDiscoveryRow[]>`
     SELECT
       incident."id",
+      EXISTS (
+        SELECT 1 FROM "cleanup_events" AS owned_event
+        WHERE owned_event."incident_id" = incident."id"
+          AND owned_event."organization_id" = ${input.organizationId}::uuid
+          AND owned_event."lifecycle_status" IN ('DRAFT'::"CleanupLifecycleStatus", 'PUBLISHED'::"CleanupLifecycleStatus")
+      ) AS "hasOwnedCleanupEvent",
       incident."title",
       category."id" AS "categoryId",
       category."name" AS "categoryName",
@@ -735,20 +771,10 @@ export async function listCoveredOrganizationIncidents(
               incident."geo_point"
             )
         )
-        OR EXISTS (
-          SELECT 1
-          FROM "incident_reviews" AS retained_review
-          WHERE retained_review."incident_id" = incident."id"
-            AND retained_review."organization_id" = ${input.organizationId}::uuid
-        )
-        OR EXISTS (
-          SELECT 1
-          FROM "cleanup_events" AS retained_event
-          WHERE retained_event."incident_id" = incident."id"
-            AND retained_event."organization_id" = ${input.organizationId}::uuid
-        )
+
       )
       ${viewportFilter}
+      AND incident."status" NOT IN ('RESOLVED'::"IncidentStatus", 'ARCHIVED'::"IncidentStatus")
       ${statusFilter}
       ${categoryFilter}
       ${reportedAfterFilter}

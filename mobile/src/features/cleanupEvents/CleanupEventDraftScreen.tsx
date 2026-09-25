@@ -1,3 +1,4 @@
+import { ListWindow } from "../../components/lists/ListControls";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { describeApiFailure } from "../../api/apiError";
@@ -78,6 +79,8 @@ export function CleanupEventDraftScreen({
   onMapInteractionChange,
 }: Props) {
   const initial = dateParts();
+  const [draftCursor, setDraftCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [drafts, setDrafts] = useState<CleanupEventDraft[]>([]);
   const [selected, setSelected] = useState<CleanupEventDraft>();
   const [members, setMembers] = useState<OrganizationMember[]>([]);
@@ -105,6 +108,7 @@ export function CleanupEventDraftScreen({
         listOrganizationMembers(accessToken, organizationId),
       ]);
       setDrafts(page.items);
+      setDraftCursor(page.nextCursor);
       setMembers(memberPage.items);
       if (initialDraftId)
         open(await getDraft(accessToken, organizationId, initialDraftId));
@@ -117,6 +121,15 @@ export function CleanupEventDraftScreen({
   useEffect(() => {
     void load();
   }, [load]);
+  async function loadMoreDrafts() {
+    if (!draftCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await listDrafts(accessToken, organizationId, draftCursor);
+      setDrafts(current => [...current, ...page.items]);
+      setDraftCursor(page.nextCursor);
+    } catch (reason) { setError(describeApiFailure(reason).message); } finally { setLoadingMore(false); }
+  }
   const activeIncidentId = incidentId ?? selected?.incidentId ?? null;
   useEffect(() => {
     if (!activeIncidentId) {
@@ -147,6 +160,32 @@ export function CleanupEventDraftScreen({
       active = false;
     };
   }, [accessToken, activeIncidentId, organizationId]);
+  function confirmDeleteDraft(draft: CleanupEventDraft) {
+    if (busy) return;
+    Alert.alert("Delete draft?", `Delete "${draft.title}"? This cannot be undone.`, [
+      { text: "Keep", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: () => void deleteDraft(draft) },
+    ]);
+  }
+  async function deleteDraft(draft: CleanupEventDraft) {
+    setBusy(true);
+    setError(undefined);
+    setMessage(undefined);
+    try {
+      await discardDraft(accessToken, organizationId, draft.id);
+      setDrafts(items => items.filter(item => item.id !== draft.id));
+      if (selected?.id === draft.id) { reset(); setCreating(false); }
+      setMessage("Draft deleted.");
+    } catch (reason) {
+      setError(describeApiFailure(reason, "Unable to delete this draft.").message);
+    } finally { setBusy(false); }
+  }
+  function deleteControl(draft: CleanupEventDraft) {
+    return <Pressable accessibilityRole="button" accessibilityLabel={`Delete draft: ${draft.title}`}
+      disabled={busy} style={styles.deleteDraft} onPress={() => confirmDeleteDraft(draft)}>
+      <Text style={styles.deleteDraftText}>{"\u00d7"}</Text>
+    </Pressable>;
+  }
   function open(draft: CleanupEventDraft) {
     const parts = dateParts(draft.startsAt);
     setSelected(draft);
@@ -258,7 +297,7 @@ export function CleanupEventDraftScreen({
               ? "New cleanup event"
               : "Cleanup drafts"
         }
-        subtitle="One event, one start time, one volunteer list."
+
         onBack={onBack}
         backLabel="Workspace"
         action={<Button label="New" variant="secondary" onPress={reset} />}
@@ -270,10 +309,11 @@ export function CleanupEventDraftScreen({
           {drafts.length === 0 ? (
             <Notice message="No private drafts yet." />
           ) : (
-            drafts.map((draft) => (
+            <ListWindow items={drafts} hasMore={Boolean(draftCursor)} busy={loadingMore} loadMore={() => void loadMoreDrafts()} >{visible => visible.map((draft) => (
+              <View key={draft.id} style={styles.draftRow}>
               <Pressable
                 style={styles.item}
-                key={draft.id}
+                disabled={busy}
                 onPress={() => open(draft)}
               >
                 <Text style={styles.title}>{draft.title}</Text>
@@ -283,13 +323,18 @@ export function CleanupEventDraftScreen({
                     : "Time not set"}
                 </Text>
               </Pressable>
-            ))
+                {deleteControl(draft)}
+              </View>
+            ))}</ListWindow>
           )}
         </View>
       ) : (
         <>
           <View style={sharedStyles.card}>
+            <View style={sharedStyles.spacedRow}>
             <Text style={styles.eyebrow}>01 · EVENT DETAILS</Text>
+              {selected ? deleteControl(selected) : null}
+            </View>
             <Field
               label="Title"
               value={title}
@@ -375,34 +420,7 @@ export function CleanupEventDraftScreen({
               loading={busy}
               onPress={() => void save()}
             />
-            {selected ? (
-              <Button
-                label="Discard draft"
-                variant="danger"
-                disabled={busy}
-                onPress={() =>
-                  Alert.alert("Discard draft?", "This cannot be undone.", [
-                    { text: "Keep", style: "cancel" },
-                    {
-                      text: "Discard",
-                      style: "destructive",
-                      onPress: () =>
-                        void (async () => {
-                          await discardDraft(
-                            accessToken,
-                            organizationId,
-                            selected.id,
-                          );
-                          setDrafts((items) =>
-                            items.filter(({ id }) => id !== selected.id),
-                          );
-                          reset();
-                        })(),
-                    },
-                  ])
-                }
-              />
-            ) : null}
+
           </View>
           {selected ? (
             <>
@@ -477,6 +495,9 @@ export function CleanupEventDraftScreen({
   );
 }
 const styles = StyleSheet.create({
+  draftRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+  deleteDraft: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  deleteDraftText: { color: "#a33128", fontSize: 28 },
   screen: { gap: spacing.md },
   eyebrow: {
     color: colors.primary,
@@ -485,6 +506,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   item: {
+    flex: 1,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,

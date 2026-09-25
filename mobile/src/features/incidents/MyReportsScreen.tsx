@@ -1,10 +1,12 @@
+import { ListSections, PageControls } from "../../components/lists/ListControls";
+import { reportSections, useListState, usePagedList, type ReportSection } from "../../components/lists/usePagedList";
 import { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Button, LoadingState, Notice, PageHeader, Screen, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
-import { getMyIncident, listMyIncidents } from "./incident.api";
-import type { IncidentDetail, IncidentStatus, IncidentSummary } from "./incident.types";
+import { getMyIncident, listMyIncidentPage } from "./incident.api";
+import type { IncidentDetail, IncidentStatus } from "./incident.types";
 
 type Props = {
   accessToken: string;
@@ -23,20 +25,12 @@ function date(value: string): string {
 }
 
 export function MyReportsScreen({ accessToken, submittedIncident, initialIncidentId, onBack, onNewReport }: Props) {
-  const [reports, setReports] = useState<IncidentSummary[]>([]);
+  const [section, setSection] = useListState<ReportSection>("reports.section", "active");
+  const list = usePagedList("reports:" + section, cursor => listMyIncidentPage(accessToken, section, cursor), true);
+  const reports = list.items;
   const [detail, setDetail] = useState<IncidentDetail | null>(submittedIncident ?? null);
-  const [loading, setLoading] = useState(!submittedIncident);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (submittedIncident || initialIncidentId) return;
-    let active = true;
-    void listMyIncidents(accessToken)
-      .then((items) => { if (active) setReports(items); })
-      .catch((loadError: unknown) => { if (active) setError(loadError instanceof Error ? loadError.message : "Could not load reports."); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [accessToken, initialIncidentId, submittedIncident]);
 
   useEffect(() => {
     if (!submittedIncident && initialIncidentId) void open(initialIncidentId);
@@ -77,24 +71,27 @@ export function MyReportsScreen({ accessToken, submittedIncident, initialInciden
   }
 
   return (
-    <Screen>
+    <Screen rememberKey={"reports:" + section}>
       <PageHeader
         eyebrow="Your activity"
         title="My reports"
-        subtitle="Follow the shared status of incidents you submitted."
         onBack={onBack}
         backLabel="Dashboard"
         action={<Button label="New report" compact onPress={onNewReport} />}
       />
+      <ListSections value={section} options={reportSections} onChange={setSection} />
+      {list.error && <Notice tone="error" message={list.error} />}
+
       {error ? <Notice tone="error" message={error} /> : null}
-      {reports.length === 0 ? <View style={sharedStyles.card}><Text style={sharedStyles.sectionTitle}>No reports yet</Text><Text style={sharedStyles.sectionSubtitle}>Your submitted environmental incidents will appear here.</Text><Button label="Report an incident" onPress={onNewReport} /></View> : reports.map((report) => <Pressable key={report.id} onPress={() => void open(report.id)} style={sharedStyles.card}>{report.thumbnailUrl ? <Image source={{ uri: report.thumbnailUrl }} style={styles.thumbnail} /> : null}<View style={styles.reportHeading}><Text style={styles.category}>{report.category.name}</Text><Text style={styles.reportStatus}>{label(report.status as IncidentStatus)}</Text></View><Text style={styles.reportTitle}>{report.title}</Text><Text style={styles.body}>{report.addressText ?? `${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}`}</Text><View style={sharedStyles.spacedRow}><Text style={styles.date}>{date(report.reportedAt)}</Text><Text style={styles.open}>View →</Text></View></Pressable>)}
+      {list.busy && reports.length === 0 ? <Text>Loading reports...</Text> : reports.length === 0 ? <View style={sharedStyles.card}><Text style={sharedStyles.sectionTitle}>No reports in this section</Text><Button label="Report an incident" onPress={onNewReport} /></View> : reports.map((report) => <Pressable key={report.id} onPress={() => void open(report.id)} style={sharedStyles.card}>{report.thumbnailUrl ? <Image source={{ uri: report.thumbnailUrl }} style={styles.thumbnail} /> : null}<View style={styles.reportHeading}><Text style={styles.category}>{report.category.name}</Text><Text style={styles.reportStatus}>{label(report.status as IncidentStatus)}</Text></View><Text style={styles.reportTitle}>{report.title}</Text><Text style={styles.body}>{report.addressText ?? `${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}`}</Text><View style={sharedStyles.spacedRow}><Text style={styles.date}>{date(report.reportedAt)}</Text><Text style={styles.open}>View →</Text></View></Pressable>)}
+      <PageControls {...list} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   top: { gap: spacing.md }, back: { color: colors.primary, fontWeight: "800", paddingVertical: 8 }, intro: { gap: spacing.xs, paddingVertical: spacing.md }, eyebrow: { color: colors.primary, fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }, title: { color: colors.text, fontSize: 34, fontWeight: "900" },
-  thumbnail: { width: "100%", height: 180, borderRadius: 14 }, reportHeading: { flexDirection: "row", justifyContent: "space-between", gap: spacing.sm }, category: { color: colors.primary, fontSize: 12, fontWeight: "900" }, reportStatus: { color: colors.primaryDark, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12, backgroundColor: colors.primarySoft, fontSize: 11, fontWeight: "800" }, reportTitle: { color: colors.text, fontSize: 20, fontWeight: "900" }, body: { color: colors.textMuted, fontSize: 14, lineHeight: 21 }, date: { color: colors.textMuted, fontSize: 11 }, open: { color: colors.primary, fontWeight: "900" },
-  detailHero: { gap: spacing.sm, padding: spacing.lg, borderRadius: 20, backgroundColor: colors.primaryDark }, detailTitle: { color: colors.surface, fontSize: 30, fontWeight: "900" }, heroMeta: { color: "#cde5d4" }, status: { alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, backgroundColor: colors.primarySoft }, statusText: { color: colors.primaryDark, fontWeight: "900" }, coordinates: { color: colors.text, fontWeight: "900" }, detailPhoto: { width: "100%", aspectRatio: 4 / 3, borderRadius: 12 },
+  thumbnail: { width: "100%", height: 180, borderRadius: 14 }, reportHeading: { flexDirection: "row", justifyContent: "space-between", gap: spacing.sm }, category: { color: colors.primary, fontSize: 12, fontWeight: "900" }, reportStatus: { color: colors.primaryDark, fontSize: 11, fontWeight: "800" }, reportTitle: { color: colors.text, fontSize: 20, fontWeight: "900" }, body: { color: colors.textMuted, fontSize: 14, lineHeight: 21 }, date: { color: colors.textMuted, fontSize: 11 }, open: { color: colors.primary, fontWeight: "900" },
+  detailHero: { gap: spacing.sm, padding: spacing.lg, borderRadius: 20, backgroundColor: colors.primaryDark }, detailTitle: { color: colors.surface, fontSize: 30, fontWeight: "900" }, heroMeta: { color: "#cde5d4" }, status: { alignSelf: "flex-start" }, statusText: { color: colors.primaryDark, fontWeight: "900" }, coordinates: { color: colors.text, fontWeight: "900" }, detailPhoto: { width: "100%", aspectRatio: 4 / 3, borderRadius: 12 },
   history: { flexDirection: "row", gap: spacing.md, minHeight: 74 }, dot: { width: 14, height: 14, marginTop: 3, borderWidth: 3, borderColor: "#b9dcc4", borderRadius: 7, backgroundColor: colors.primary }, historyText: { flex: 1 }, historyTitle: { color: colors.text, fontWeight: "900" }, historyDate: { color: colors.textMuted, fontSize: 11, marginBottom: 4 }, metaLabel: { color: colors.textMuted, fontSize: 11, textTransform: "uppercase" }, metaValue: { color: colors.text, fontWeight: "800", marginBottom: spacing.sm },
 });

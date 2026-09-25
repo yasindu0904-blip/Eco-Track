@@ -1,8 +1,10 @@
+import { ListMemoryProvider } from "./src/components/lists/ListMemoryProvider";
 import { useCallback, useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { Alert, BackHandler, StyleSheet, Text, View } from "react-native";
 
 import { AuthenticatedUserApp } from "./src/app/AuthenticatedUserApp";
+import { AppShell } from "./src/components/AppShell";
 import { hasCompletedProfile } from "./src/authorization/authorizationUi";
 import { LoginScreen } from "./src/auth/LoginScreen";
 import { ProfileOnboardingScreen } from "./src/auth/ProfileOnboardingScreen";
@@ -89,18 +91,27 @@ export default function App() {
       </Screen>
     );
   } else if (authentication.profile && authentication.accessToken && !hasCompletedProfile(authentication.profile)) {
-    content = <ProfileOnboardingScreen accessToken={authentication.accessToken} profile={authentication.profile} onCompleted={authentication.replaceProfile} onSignOut={() => void signOut()} />;
+    content = <AppShell title="Complete your profile" onSignOut={() => void signOut()}>
+      <ProfileOnboardingScreen accessToken={authentication.accessToken} profile={authentication.profile} onCompleted={authentication.replaceProfile} onSignOut={() => void signOut()} />
+    </AppShell>;
   } else if (authentication.profile && authentication.accessToken && authentication.profile.platformRole === "SUPER_ADMIN") {
-    content = showSuperAdminNotifications
-      ? <NotificationInboxScreen accessToken={authentication.accessToken} onBack={() => setShowSuperAdminNotifications(false)} />
-      : <SuperAdminDashboard accessToken={authentication.accessToken} profile={authentication.profile} onOpenNotifications={() => setShowSuperAdminNotifications(true)} onSignOut={() => void signOut()} />;
+    content = <AppShell title={showSuperAdminNotifications ? "Notifications" : "Super Admin"}
+      accessToken={authentication.accessToken}
+      onHome={() => setShowSuperAdminNotifications(false)}
+      onBack={showSuperAdminNotifications ? () => setShowSuperAdminNotifications(false) : undefined}
+      onNotifications={() => setShowSuperAdminNotifications(true)}
+      onSignOut={() => void signOut()}>
+      {showSuperAdminNotifications
+        ? <NotificationInboxScreen accessToken={authentication.accessToken} onBack={() => setShowSuperAdminNotifications(false)} />
+        : <SuperAdminDashboard accessToken={authentication.accessToken} profile={authentication.profile} onSignOut={() => void signOut()} />}
+    </AppShell>;
   } else if (authentication.profile && authentication.accessToken) {
     content = <AuthenticatedUserApp accessToken={authentication.accessToken} profile={authentication.profile} pushNotification={pendingPushNotification} onPushNotificationHandled={handlePushNotificationHandled} onProfileUpdated={authentication.replaceProfile} onSignOut={signOut} />;
   } else {
     content = <LoadingState />;
   }
 
-  return <><StatusBar style="dark" />{content}</>;
+  return <><StatusBar style="dark" /><ListMemoryProvider key={authentication.profile?.id ?? authentication.status}>{content}</ListMemoryProvider></>;
 }
 
 const styles = StyleSheet.create({

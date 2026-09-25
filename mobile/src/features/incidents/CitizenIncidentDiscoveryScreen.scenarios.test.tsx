@@ -26,6 +26,8 @@ vi.mock("expo-location", () => ({
 }));
 
 vi.mock("react-native", () => ({
+  ScrollView: "ScrollView",
+  Image: "Image",
   ActivityIndicator: "ActivityIndicator",
   Pressable: "Pressable",
   StyleSheet: { create: <T,>(styles: T) => styles },
@@ -121,6 +123,16 @@ vi.mock("../cleanupEvents/cleanupEvent.api", () => ({
   listNearbyCleanupEventMap: vi.fn(),
 }));
 
+const publicIncident = {
+  id: "incident-evidence", title: "Plastic beside the canal", description: "Bags and bottles beside the water.",
+  category: { id: "waste", name: "Waste", description: null }, severity: "MEDIUM" as const,
+  status: "ACTIVE" as const, latitude: 6.9271, longitude: 79.8612, addressText: "Canal road",
+  reportedAt: "2026-08-20T00:00:00.000Z", thumbnailUrl: null, falseReviewCount: 0, isOwnReport: false,
+  highlightUntil: "2026-09-20T00:00:00.000Z", archiveAfter: "2026-10-20T00:00:00.000Z",
+  resolvedAt: null, archivedAt: null, statusHistory: [],
+  photos: [{ id: "photo-1", url: "https://example.test/evidence.jpg", caption: "Bottles by the canal", sortOrder: 0 }],
+};
+
 const emptyEventPage = {
   type: "FeatureCollection" as const,
   features: [],
@@ -173,6 +185,8 @@ function map(renderer: TestRenderer.ReactTestRenderer) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(getPublicIncident).mockResolvedValue(publicIncident);
+  vi.mocked(listNearbyPublicIncidents).mockResolvedValue({ items: [], nextCursor: null });
   testState.foregroundRefresh = undefined;
   vi.mocked(getPublicCleanupEvent).mockResolvedValue(undefined as never);
   vi.mocked(listNearbyCleanupEventMap).mockResolvedValue(emptyEventPage);
@@ -286,12 +300,13 @@ describe("mobile citizen cleanup-event discovery", () => {
         latitude: 6.9271,
         longitude: 79.8612,
         radiusMeters: 2_000,
-        limit: 50,
+        limit: 20,
+          section: "upcoming",
       }),
       expect.any(AbortSignal),
     );
     await act(async () => {
-      await button(renderer!, "Load more events").props.onPress();
+      await button(renderer!, "Load more").props.onPress();
     });
     expect(listNearbyCleanupEventMap).toHaveBeenLastCalledWith(
       "token",
@@ -304,15 +319,15 @@ describe("mobile citizen cleanup-event discovery", () => {
     expect(map(renderer!).props.onViewportChange).toBeUndefined();
 
     await act(async () => {
-      button(renderer!, "Search within 5 km").props.onPress();
+      button(renderer!, "Search within 3 km").props.onPress();
       await Promise.resolve();
     });
     expect(listNearbyCleanupEventMap).toHaveBeenLastCalledWith(
       "token",
-      expect.objectContaining({ radiusMeters: 5_000, cursor: undefined }),
+      expect.objectContaining({ radiusMeters: 3_000, cursor: undefined }),
       expect.any(AbortSignal),
     );
-    expect(map(renderer!).props.searchRadiusMeters).toBe(5_000);
+    expect(map(renderer!).props.searchRadiusMeters).toBe(3_000);
   });
 
   test("event marker selection loads details and opens the join flow", async () => {
@@ -393,7 +408,10 @@ describe("mobile citizen cleanup-event discovery", () => {
       button(renderer!, "Join event").props.onPress();
     });
     expect(onOpenEvent).toHaveBeenCalledWith("event-mobile");
-    expect(getPublicIncident).not.toHaveBeenCalled();
+    expect(getPublicIncident).toHaveBeenCalledWith("token", "incident-mobile", expect.any(AbortSignal));
+    expect(renderer!.root.findByType("Image" as never).props.source.uri).toBe(publicIncident.photos[0]!.url);
+    await act(async () => { map(renderer!).props.onMarkerSelect(event); });
+    expect(textContent(renderer!)).toContain(publicIncident.description);
   });
 
   test("returning from background refreshes only cleanup events", async () => {
@@ -432,4 +450,29 @@ describe("mobile citizen cleanup-event discovery", () => {
     expect(listNearbyCleanupEventMap).toHaveBeenCalledTimes(2);
     expect(listPublicIncidents).not.toHaveBeenCalled();
   });
+});
+
+test("Awaiting cleanup shows nearby incidents and evidence without a join action", async () => {
+  vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue({ granted: true, canAskAgain: true, expires: "never", status: Location.PermissionStatus.GRANTED });
+  vi.mocked(Location.getCurrentPositionAsync).mockResolvedValue({ coords: { latitude: 6.9271, longitude: 79.8612, altitude: null, accuracy: 10, altitudeAccuracy: null, heading: null, speed: null }, timestamp: 1 });
+  vi.mocked(listNearbyPublicIncidents).mockResolvedValue({ items: [publicIncident], nextCursor: "more-incidents" });
+  let renderer: TestRenderer.ReactTestRenderer;
+  await act(async () => { renderer = renderScreen(); });
+  const selectSection = (label: string) => renderer!.root.findAllByProps({ accessibilityRole: "tab" }).find(node => node.findByType("Text" as never).props.children === label)!.props.onPress();
+  await act(async () => { selectSection("Awaiting cleanup"); });
+  expect(listNearbyPublicIncidents).not.toHaveBeenCalled();
+  await act(async () => { await button(renderer!, "Use my location").props.onPress(); });
+  expect(listNearbyPublicIncidents).toHaveBeenCalledWith("token", expect.objectContaining({ awaitingCleanup: true, radiusMeters: 2000, limit: 20 }), expect.any(AbortSignal));
+  const incidentMarker = map(renderer!).props.markers[0];
+  await act(async () => { map(renderer!).props.onMarkerSelect(incidentMarker); });
+  expect(textContent(renderer!)).toContain("No cleanup event created yet.");
+  expect(renderer!.root.findByType("Image" as never).props.source.uri).toBe(publicIncident.photos[0]!.url);
+  expect(map(renderer!).props.markerActionLabel(incidentMarker)).toBe("View incident: Plastic beside the canal");
+  expect(getPublicCleanupEvent).not.toHaveBeenCalled();
+  await act(async () => { button(renderer!, "Load more").props.onPress(); });
+  expect(listNearbyPublicIncidents).toHaveBeenLastCalledWith("token", expect.objectContaining({ awaitingCleanup: true, cursor: "more-incidents" }), expect.any(AbortSignal));
+  expect(textContent(renderer!)).toContain(publicIncident.description);
+  await act(async () => { selectSection("Upcoming"); });
+  expect(textContent(renderer!)).not.toContain("No cleanup event created yet.");
+  expect(listNearbyCleanupEventMap).toHaveBeenCalled();
 });

@@ -190,6 +190,13 @@ describe("EcoMap location fallback", () => {
     expect(markerSource.props.cluster).toBe(true);
     expect(markerSource.props.clusterRadius).toBe(48);
     expect(markerSource.props.data.features).toHaveLength(250);
+    const mapStyle = renderer!.root.findByType("Map" as never).props.mapStyle;
+    const countLayer = renderer!.root.findByProps({ id: "eco-map-cluster-count" });
+    const glyphUrl = mapStyle.glyphs
+      .replace("{fontstack}", encodeURIComponent(countLayer.props.layout["text-font"].join(",")))
+      .replace("{range}", "0-255");
+    expect(new URL(glyphUrl).protocol).toBe("https:");
+    expect(glyphUrl).toBe("https://demotiles.maplibre.org/font/Noto%20Sans%20Regular/0-255.pbf");
 
     await act(async () => {
       await markerSource.props.onPress({

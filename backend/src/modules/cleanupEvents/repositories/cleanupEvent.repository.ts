@@ -505,28 +505,42 @@ export function findOwnedCleanupEventById(
   });
 }
 
+export type EventSection = "upcoming" | "ongoing" | "past" | "cancelled";
+
+export function eventSectionWhere(section?: EventSection, now = new Date()): Prisma.CleanupEventWhereInput {
+  if (section === "past") return { lifecycleStatus: "COMPLETED" };
+  if (section === "cancelled") return { lifecycleStatus: "CANCELLED" };
+  if (section === "upcoming") return { lifecycleStatus: "PUBLISHED", startsAt: { gt: now } };
+  if (section === "ongoing") return { lifecycleStatus: "PUBLISHED", startsAt: { lte: now } };
+  return {};
+}
+
 export function listPublicCleanupEventRecords(
   prisma: PrismaClient,
-  command: { cursor: CleanupEventPublicCursor | null; limit: number },
+  command: { cursor: CleanupEventPublicCursor | null; limit: number; section?: EventSection },
 ): Promise<CleanupEventPublicRecord[]> {
+  const field = command.section ? "startsAt" : "publishedAt";
+  const direction = command.section === "upcoming" ? "asc" : "desc";
+  const comparison = direction === "asc" ? "gt" : "lt";
   return prisma.cleanupEvent.findMany({
     where: {
       lifecycleStatus: { in: [...publicCleanupEventLifecycleStatuses] },
+      ...eventSectionWhere(command.section),
       publishedAt: { not: null },
       organization: { status: "ACTIVE" },
       ...(command.cursor
         ? {
             OR: [
-              { publishedAt: { lt: command.cursor.publishedAt } },
+              { [field]: { [comparison]: command.cursor.publishedAt } },
               {
-                publishedAt: command.cursor.publishedAt,
-                id: { lt: command.cursor.id },
+                [field]: command.cursor.publishedAt,
+                id: { [comparison]: command.cursor.id },
               },
             ],
           }
         : {}),
     },
-    orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+    orderBy: [{ [field]: direction }, { id: direction }],
     take: command.limit + 1,
     select: publicEventSelect,
   });
@@ -537,13 +551,18 @@ export function listOwnedCleanupEventRecords(
   command: {
     organizationId: string;
     coordinatorMembershipId?: string;
+    section?: EventSection;
     cursor: CleanupEventOwnedCursor | null;
     limit: number;
   },
 ): Promise<CleanupEventPublicRecord[]> {
+  const field = command.section ? "startsAt" : "updatedAt";
+  const direction = command.section === "upcoming" ? "asc" : "desc";
+  const comparison = direction === "asc" ? "gt" : "lt";
   return prisma.cleanupEvent.findMany({
     where: {
       organizationId: command.organizationId,
+      ...eventSectionWhere(command.section),
       ...(command.coordinatorMembershipId
         ? {
             coordinators: {
@@ -554,16 +573,16 @@ export function listOwnedCleanupEventRecords(
       ...(command.cursor
         ? {
             OR: [
-              { updatedAt: { lt: command.cursor.updatedAt } },
+              { [field]: { [comparison]: command.cursor.updatedAt } },
               {
-                updatedAt: command.cursor.updatedAt,
-                id: { lt: command.cursor.id },
+                [field]: command.cursor.updatedAt,
+                id: { [comparison]: command.cursor.id },
               },
             ],
           }
         : {}),
     },
-    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+    orderBy: [{ [field]: direction }, { id: direction }],
     take: command.limit + 1,
     select: publicEventSelect,
   });
@@ -587,6 +606,7 @@ export type CleanupEventMapRow = {
 export type CleanupEventMapCursor = { sortAt: Date; id: string };
 
 type PublicCleanupEventMapInput = {
+  section?: EventSection;
   limit: number;
   cursor: CleanupEventMapCursor | null;
   userId: string;
@@ -661,7 +681,15 @@ export function listNearbyPublicCleanupEventMapRecords(
     radiusMeters: number;
   },
 ): Promise<CleanupEventMapRow[]> {
-  const cursor = publicMapCursor(query.cursor);
+  const ascending = query.section === "upcoming";
+  const sortColumn = query.section ? Prisma.sql`event."starts_at"` : Prisma.sql`event."published_at"`;
+  const order = ascending ? Prisma.sql`ASC` : Prisma.sql`DESC`;
+  const compare = ascending ? Prisma.sql`>` : Prisma.sql`<`;
+  const cursor = query.cursor ? Prisma.sql`AND (${sortColumn}, event."id") ${compare} (${query.cursor.sortAt}, ${query.cursor.id}::uuid)` : Prisma.empty;
+  const lifecycle = query.section === "past" ? "COMPLETED" : query.section === "cancelled" ? "CANCELLED" : "PUBLISHED";
+  const now = new Date();
+  const timeFilter = query.section === "upcoming" ? Prisma.sql`AND event."starts_at" > ${now}`
+    : query.section === "ongoing" ? Prisma.sql`AND event."starts_at" <= ${now}` : Prisma.empty;
   return prisma.$queryRaw<CleanupEventMapRow[]>(Prisma.sql`
     SELECT event."id", event."title",
       event."lifecycle_status"::text AS "lifecycleStatus",
@@ -680,7 +708,8 @@ export function listNearbyPublicCleanupEventMapRecords(
     FROM "cleanup_events" event
     JOIN "organizations" organization ON organization."id" = event."organization_id"
       AND organization."status" = 'ACTIVE'::"OrganizationStatus"
-    WHERE event."lifecycle_status" IN (${publicMapStatuses})
+    WHERE event."lifecycle_status" = ${lifecycle}::"CleanupLifecycleStatus"
+      ${timeFilter}
       AND event."published_at" IS NOT NULL
       AND extensions.ST_DWithin(
         event."event_geo_point",
@@ -690,7 +719,7 @@ export function listNearbyPublicCleanupEventMapRecords(
         ${query.radiusMeters}::double precision
       )
       ${cursor}
-    ORDER BY event."published_at" DESC, event."id" DESC
+    ORDER BY ${sortColumn} ${order}, event."id" ${order}
     LIMIT ${query.limit + 1}
   `);
 }
@@ -699,6 +728,7 @@ export function listOrganizationCleanupEventMapRecords(
   prisma: PrismaClient,
   query: {
     organizationId: string;
+    includePublic?: boolean;
     limit: number;
     cursor: CleanupEventMapCursor | null;
     west: number;
@@ -710,6 +740,33 @@ export function listOrganizationCleanupEventMapRecords(
   const cursor = query.cursor
     ? Prisma.sql`AND (event."updated_at", event."id") < (${query.cursor.sortAt}, ${query.cursor.id}::uuid)`
     : Prisma.empty;
+  // Review discovery includes covered public activity and this tenant's private drafts.
+  // The default map remains available to the separate owned-event management flow.
+  const visibility = query.includePublic
+    ? Prisma.sql`
+        organization."status" = 'ACTIVE'::"OrganizationStatus"
+        AND (
+          (event."lifecycle_status" = 'PUBLISHED'::"CleanupLifecycleStatus" AND event."published_at" IS NOT NULL)
+          OR (event."lifecycle_status" = 'DRAFT'::"CleanupLifecycleStatus"
+            AND event."organization_id" = ${query.organizationId}::uuid)
+        )
+        AND EXISTS (
+          SELECT 1
+          FROM "organization_service_areas" AS service_area
+          JOIN "organizations" AS viewing_organization
+            ON viewing_organization."id" = service_area."organization_id"
+            AND viewing_organization."status" = 'ACTIVE'::"OrganizationStatus"
+          LEFT JOIN "administrative_areas" AS administrative_area
+            ON administrative_area."id" = service_area."administrative_area_id"
+            AND administrative_area."is_active" = true
+          WHERE service_area."organization_id" = ${query.organizationId}::uuid
+            AND service_area."status" = 'ACTIVE'::"ServiceAreaStatus"
+            AND extensions.ST_Covers(
+              COALESCE(service_area."boundary", administrative_area."boundary"),
+              event."event_geo_point"
+            )
+        )`
+    : Prisma.sql`event."organization_id" = ${query.organizationId}::uuid`;
   return prisma.$queryRaw<CleanupEventMapRow[]>(Prisma.sql`
     SELECT event."id", event."title",
       event."lifecycle_status"::text AS "lifecycleStatus",
@@ -721,7 +778,7 @@ export function listOrganizationCleanupEventMapRecords(
       event."incident_id" AS "incidentId", false AS "isJoined"
     FROM "cleanup_events" event
     JOIN "organizations" organization ON organization."id" = event."organization_id"
-    WHERE event."organization_id" = ${query.organizationId}::uuid
+    WHERE ${visibility}
       AND extensions.ST_Covers(
         extensions.ST_MakeEnvelope(${query.west}::double precision, ${query.south}::double precision,
           ${query.east}::double precision, ${query.north}::double precision, 4326)::extensions.geography,

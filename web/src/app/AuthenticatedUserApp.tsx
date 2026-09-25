@@ -199,9 +199,7 @@ export function AuthenticatedUserApp({
           <div className="auth-card-content auth-state" role="alert">
             <h2>Organization access is unavailable</h2>
             <p>Your active memberships changed or this workspace is no longer available.</p>
-            <button className="button button-primary" type="button" onClick={() => navigate(personalDashboard, true)}>
-              Return to personal dashboard
-            </button>
+
           </div>
         </section>
       </main>
@@ -269,12 +267,6 @@ export function AuthenticatedUserApp({
           screen: "organization-workspaces",
         })}
         activeOrganization={firstMembership}
-        onOpenOrganizationWorkspace={firstMembership
-          ? () => navigate({
-            screen: "organization-workspace",
-            organizationId: firstMembership.organization.id,
-          })
-          : undefined}
         onStartOrganizationApplication={() => navigate({
           screen: "organization-apply",
         })}
@@ -298,19 +290,12 @@ export function AuthenticatedUserApp({
         profile={profile}
         accessToken={accessToken}
         activeScreen={destination.screen}
-        activeOrganization={firstMembership}
         onDashboard={() => navigate(personalDashboard)}
         onOpenNotifications={() => navigate({ screen: "notifications" })}
         onManageMembership={() => navigate({ screen: "membership" })}
         onOpenOrganizationWorkspaces={() => navigate({
           screen: "organization-workspaces",
         })}
-        onOpenOrganizationWorkspace={firstMembership
-          ? () => navigate({
-            screen: "organization-workspace",
-            organizationId: firstMembership.organization.id,
-          })
-          : undefined}
         onViewOrganizationApplications={() => navigate({
           screen: "organization-applications",
         })}

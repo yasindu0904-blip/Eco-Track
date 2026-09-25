@@ -1,3 +1,4 @@
+import { ListWindow } from "../../components/lists/ListControls";
 import { useEffect, useState } from "react";
 import { useCallback } from "react";
 import { getPlatformSummary } from "../dashboards/dashboard.api";
@@ -9,7 +10,7 @@ import { NotificationButton } from "../notifications/NotificationButton";
 import {
   approveOrganizationApplication,
   declineOrganizationApplication,
-  listPendingOrganizationApplications,
+  listPendingOrganizationApplicationPage,
 } from "./organizationReview.api";
 import type { OrganizationReviewApplication } from "./organizationReview.types";
 import "./superAdminDashboard.css";
@@ -65,6 +66,18 @@ export function SuperAdminDashboard({
   onOpenNotifications,
   onSignOut,
 }: SuperAdminDashboardProps) {
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  async function loadMoreApplications() {
+    if (!accessToken || !nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await listPendingOrganizationApplicationPage(accessToken, nextCursor);
+      setApplications(current => [...current, ...page.items]);
+      setNextCursor(page.nextCursor);
+    } catch (reason) { setReviewMessage(reason instanceof Error ? reason.message : "Unable to load applications."); }
+    finally { setLoadingMore(false); }
+  }
   const [applications, setApplications] = useState<OrganizationReviewApplication[]>([]);
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
@@ -85,8 +98,10 @@ export function SuperAdminDashboard({
 
     let isActive = true;
 
-    void listPendingOrganizationApplications(accessToken)
-      .then((loadedApplications) => {
+    void listPendingOrganizationApplicationPage(accessToken)
+      .then((page) => {
+        const loadedApplications = page.items;
+        if (isActive) setNextCursor(page.nextCursor);
         if (isActive) {
           setApplications(loadedApplications);
           setSelectedApplicationId(loadedApplications[0]?.id ?? null);
@@ -224,7 +239,7 @@ export function SuperAdminDashboard({
           <DashboardIcon name="shield" />
           <div>
             <strong>Protected console</strong>
-            <p>Supabase authentication and CASL permissions secure this area.</p>
+
           </div>
         </div>
 
@@ -250,9 +265,7 @@ export function SuperAdminDashboard({
           <div>
             <span className="super-admin-eyebrow">Platform overview</span>
             <h1>Good to see you, {displayName}</h1>
-            <p>
-              Review organization applications and monitor platform activity.
-            </p>
+
           </div>
 
           <div className="super-admin-identity">
@@ -275,7 +288,7 @@ export function SuperAdminDashboard({
               </div>
               <div className="super-admin-review-heading-actions">
                 <span className="super-admin-coming-badge">
-                  {applications.length} pending
+                  Pending applications
                 </span>
                 <button
                   className="super-admin-refresh-button"
@@ -285,8 +298,10 @@ export function SuperAdminDashboard({
                     if (!accessToken) return;
                     setReviewStatus("loading");
                     setReviewMessage(null);
-                    void listPendingOrganizationApplications(accessToken)
-                      .then((loadedApplications) => {
+                    void listPendingOrganizationApplicationPage(accessToken)
+                      .then((page) => {
+        const loadedApplications = page.items;
+        setNextCursor(page.nextCursor);
                         setApplications(loadedApplications);
                         setSelectedApplicationId(loadedApplications[0]?.id ?? null);
                         setReviewStatus("ready");
@@ -340,7 +355,7 @@ export function SuperAdminDashboard({
             ) : (
               <div className="super-admin-review-workspace">
                 <div className="super-admin-review-list" aria-label="Pending applications">
-                  {applications.map((application) => (
+                  {<ListWindow items={applications} hasMore={Boolean(nextCursor)} busy={loadingMore} loadMore={() => void loadMoreApplications()} >{visible => visible.map((application) => (
                     <button
                       type="button"
                       key={application.id}
@@ -361,7 +376,7 @@ export function SuperAdminDashboard({
                         {application.serviceAreas.length} GN {application.serviceAreas.length === 1 ? "Division" : "Divisions"}
                       </small>
                     </button>
-                  ))}
+                  ))}</ListWindow>}
                 </div>
 
                 {selectedApplication && (

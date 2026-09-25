@@ -31,6 +31,8 @@ export const MAP_REQUEST_LIMITS = {
 export const OPENSTREETMAP_RASTER_STYLE = {
   version: 8,
   name: "EcoTrack OpenStreetMap",
+  // Native symbol layers need a glyph URL even with a raster basemap.
+  glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
   sources: {
     openStreetMap: {
       type: "raster",

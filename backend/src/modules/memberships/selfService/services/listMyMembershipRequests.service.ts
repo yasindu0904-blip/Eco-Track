@@ -11,6 +11,7 @@ export async function listMyMembershipRequests(
   dependencies: MembershipSelfServiceDependencies,
   command: {
     requesterUserId: string;
+    status?: "PENDING" | "APPROVED" | "DECLINED" | "WITHDRAWN";
     cursor?: string;
     limit: number;
   },
@@ -19,6 +20,7 @@ export async function listMyMembershipRequests(
     dependencies.prisma,
     {
       requesterUserId: command.requesterUserId,
+      ...(command.status ? { status: command.status } : {}),
       cursor: command.cursor
         ? decodeMembershipRequestCursor(command.cursor)
         : null,

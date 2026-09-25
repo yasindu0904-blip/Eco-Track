@@ -105,13 +105,13 @@ export function listPendingMembershipRequestRecords(
       ...(command.cursor
         ? {
             OR: [
-              { createdAt: { lt: command.cursor.date } },
-              { createdAt: command.cursor.date, id: { lt: command.cursor.id } },
+              { createdAt: { gt: command.cursor.date } },
+              { createdAt: command.cursor.date, id: { gt: command.cursor.id } },
             ],
           }
         : {}),
     },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     take: command.limit + 1,
     select: adminMembershipRequestSelect,
   });

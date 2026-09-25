@@ -1,3 +1,6 @@
+import { IncidentEvidence } from "./IncidentEvidence";
+import { ListSections, PageControls } from "../../components/lists/ListControls";
+import { eventSections, useListState, type EventSection } from "../../components/lists/usePagedList";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -23,7 +26,6 @@ import {
   listNearbyCleanupEventMap,
 } from "../cleanupEvents/cleanupEvent.api";
 import type {
-  CleanupEventMapFeature,
   CleanupEventPublicDetail,
 } from "../cleanupEvents/cleanupEvent.types";
 import {
@@ -32,6 +34,7 @@ import {
   SRI_LANKA_MAP_BOUNDS,
   type MapBoundaryFeatureCollection,
   type MapLocation,
+  type MapMarkerFeature,
   useRefreshOnForeground,
 } from "../map";
 
@@ -42,9 +45,15 @@ type Props = {
   onOpenEvent: (eventId: string) => void;
 };
 
+import { getPublicIncident, listNearbyPublicIncidents } from "./incident.api";
+import type { IncidentDetail } from "./incident.types";
+
+type DiscoverySection = EventSection | "awaiting";
+const discoverySections = [...eventSections, { value: "awaiting" as const, label: "Awaiting cleanup" }];
+
 type SearchContext = { location: MapLocation; radiusMeters: number };
 
-const RADIUS_OPTIONS = [2_000, 5_000, 10_000, 25_000] as const;
+const RADIUS_OPTIONS = [1_000, 2_000, 3_000] as const;
 
 function readable(value: string): string {
   return value
@@ -68,15 +77,17 @@ export function CitizenIncidentDiscoveryScreen({
   onReportIncident,
   onOpenEvent,
 }: Props) {
-  const [events, setEvents] = useState<CleanupEventMapFeature[]>([]);
+  const [section, setSection] = useListState<DiscoverySection>("nearby-activity-v2.section", "upcoming");
+  const [events, setEvents] = useListState<MapMarkerFeature[]>("nearby-activity-v2.events", []);
   const [eventDetail, setEventDetail] = useState<CleanupEventPublicDetail>();
+  const [incidentDetail, setIncidentDetail] = useState<IncidentDetail>();
   const [selectedId, setSelectedId] = useState<string>();
-  const [search, setSearch] = useState<SearchContext>();
-  const [focusLocation, setFocusLocation] = useState<MapLocation>();
+  const [search, setSearch] = useListState<SearchContext | undefined>("nearby-activity-v2.search", undefined);
+  const [focusLocation, setFocusLocation] = useListState<MapLocation | undefined>("nearby-activity-v2.focus", undefined);
   const [searchedBoundary, setSearchedBoundary] =
     useState<MapBoundaryFeatureCollection>();
-  const [radiusMeters, setRadiusMeters] = useState<number>(RADIUS_OPTIONS[0]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [radiusMeters, setRadiusMeters] = useListState<number>("nearby-activity-v2.radius", 2_000);
+  const [nextCursor, setNextCursor] = useListState<string | null>("nearby-activity-v2.cursor", null);
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -87,8 +98,11 @@ export function CitizenIncidentDiscoveryScreen({
   const selectedIdRef = useRef<string | undefined>(undefined);
 
   const selectEvent = useCallback((id?: string) => {
+    if (selectedIdRef.current === id) return;
     selectedIdRef.current = id;
     setSelectedId(id);
+    setEventDetail(undefined);
+    setIncidentDetail(undefined);
   }, []);
 
   useEffect(
@@ -102,7 +116,7 @@ export function CitizenIncidentDiscoveryScreen({
   const runSearch = useCallback(
     async (
       context: SearchContext,
-      options: { append?: boolean; cursor?: string } = {},
+      options: { append?: boolean; cursor?: string; section?: DiscoverySection; pageIndex?: number } = {},
     ) => {
       requestController.current?.abort();
       const controller = new AbortController();
@@ -117,16 +131,22 @@ export function CitizenIncidentDiscoveryScreen({
         selectEvent(undefined);
       }
       try {
-        const page = await listNearbyCleanupEventMap(
-          accessToken,
-          {
-            ...context.location,
-            radiusMeters: context.radiusMeters,
-            limit: 50,
-            cursor: options.cursor,
-          },
-          controller.signal,
-        );
+        const selectedSection = options.section ?? section;
+        const query = { ...context.location, radiusMeters: context.radiusMeters, limit: 20, cursor: options.cursor };
+        let page: { features: MapMarkerFeature[]; nextCursor: string | null };
+        if (selectedSection === "awaiting") {
+          const incidents = await listNearbyPublicIncidents(accessToken, { ...query, awaitingCleanup: true }, controller.signal);
+          page = {
+            nextCursor: incidents.nextCursor,
+            features: incidents.items.map(incident => ({
+              type: "Feature", geometry: { type: "Point", coordinates: [incident.longitude, incident.latitude] },
+              properties: { id: incident.id, kind: "INCIDENT", title: incident.title, status: incident.status,
+                category: incident.category.name, occurredAt: incident.reportedAt },
+            })),
+          };
+        } else {
+          page = await listNearbyCleanupEventMap(accessToken, { ...query, section: selectedSection }, controller.signal);
+        }
         if (controller.signal.aborted) return;
 
         const loadedEvents = options.append
@@ -140,6 +160,7 @@ export function CitizenIncidentDiscoveryScreen({
           : page.features;
         setEvents(loadedEvents);
         setNextCursor(page.nextCursor);
+
         const currentId = selectedIdRef.current;
         selectEvent(
           currentId &&
@@ -150,14 +171,14 @@ export function CitizenIncidentDiscoveryScreen({
       } catch (requestError) {
         if (controller.signal.aborted) return;
         setError(
-          describeApiFailure(requestError, "Unable to discover cleanup events.")
+          describeApiFailure(requestError, "Unable to discover nearby activity.")
             .message,
         );
       } finally {
         if (requestController.current === controller) setLoading(false);
       }
     },
-    [accessToken, events, selectEvent],
+    [accessToken, events, selectEvent, section, setEvents, setNextCursor],
   );
 
   const refreshAfterForeground = useCallback(() => {
@@ -171,35 +192,33 @@ export function CitizenIncidentDiscoveryScreen({
 
     const controller = new AbortController();
     detailController.current = controller;
-    void Promise.resolve()
-      .then(() => {
-        if (controller.signal.aborted) return undefined;
-        setEventDetail(undefined);
-        setDetailLoading(true);
-        return getPublicCleanupEvent(
-          accessToken,
-          selectedId,
-          controller.signal,
-        );
-      })
-      .then((loaded) => {
-        if (!controller.signal.aborted && loaded) setEventDetail(loaded);
-      })
-      .catch((requestError: unknown) => {
-        if (!controller.signal.aborted) {
-          setError(
-            describeApiFailure(
-              requestError,
-              "Unable to load cleanup event details.",
-            ).message,
-          );
+    void Promise.resolve().then(async () => {
+      if (controller.signal.aborted) return;
+      setDetailLoading(true);
+      setEventDetail(undefined);
+      setIncidentDetail(undefined);
+      setError(undefined);
+      try {
+        if (section === "awaiting") {
+          const incident = await getPublicIncident(accessToken, selectedId, controller.signal);
+          if (!controller.signal.aborted) setIncidentDetail(incident);
+        } else {
+          const event = await getPublicCleanupEvent(accessToken, selectedId, controller.signal);
+          if (controller.signal.aborted) return;
+          setEventDetail(event);
+          if (event.incidentId) {
+            const incident = await getPublicIncident(accessToken, event.incidentId, controller.signal);
+            if (!controller.signal.aborted) setIncidentDetail(incident);
+          }
         }
-      })
-      .finally(() => {
+      } catch (requestError: unknown) {
+        if (!controller.signal.aborted) setError(describeApiFailure(requestError, "Unable to load activity details.").message);
+      } finally {
         if (!controller.signal.aborted) setDetailLoading(false);
-      });
+      }
+    });
     return () => controller.abort();
-  }, [accessToken, selectedId]);
+  }, [accessToken, selectedId, section]);
 
   const findNearMe = async () => {
     if (locating) return;
@@ -250,16 +269,23 @@ export function CitizenIncidentDiscoveryScreen({
     void runSearch(nextSearch);
   };
 
-  const selectedEvent = events.find(
+  function changeSection(value: DiscoverySection) {
+    requestController.current?.abort();
+    detailController.current?.abort();
+    setSection(value);
+    setEvents([]); setNextCursor(null); selectEvent(undefined); setEventDetail(undefined);
+    if (search) void runSearch(search, { section: value });
+  }
+
+  const selectedEvent = section !== "awaiting" ? events.find(
     (event) => event.properties.id === selectedId,
-  );
+  ) : undefined;
 
   return (
-    <Screen scrollEnabled={!mapInteracting}>
+    <Screen rememberKey={"nearby:" + section} scrollEnabled={!mapInteracting}>
       <PageHeader
         eyebrow="Community map"
         title="Find cleanup activity"
-        subtitle="Use your current location to find published cleanup events within a distance you choose."
         onBack={onBack}
         backLabel="Dashboard"
       />
@@ -270,7 +296,7 @@ export function CitizenIncidentDiscoveryScreen({
         onPress={() => void findNearMe()}
       />
       <Button
-        label="Refresh events"
+        label={section === "awaiting" ? "Refresh incidents" : "Refresh events"}
         variant="secondary"
         disabled={!search || loading}
         onPress={() => search && void runSearch(search)}
@@ -281,6 +307,7 @@ export function CitizenIncidentDiscoveryScreen({
         onPress={onReportIncident}
       />
 
+      <ListSections value={section} options={discoverySections} onChange={changeSection} />
       <View style={styles.radiusCard}>
         <Text style={styles.radiusLabel}>SEARCH RADIUS</Text>
         <View style={styles.radiusOptions}>
@@ -309,8 +336,8 @@ export function CitizenIncidentDiscoveryScreen({
         </View>
         <Text style={styles.radiusSummary}>
           {search
-            ? `${events.length} published event${events.length === 1 ? "" : "s"} loaded`
-            : "Location is required before events are loaded"}
+            ? `${events.length} ${section === "awaiting" ? "incident" : "published event"}${events.length === 1 ? "" : "s"} loaded`
+            : "Location required first"}
         </Text>
       </View>
 
@@ -318,7 +345,7 @@ export function CitizenIncidentDiscoveryScreen({
       {loading ? (
         <Notice
           tone="info"
-          message={`Loading published cleanup events within ${radiusMeters / 1_000} km.`}
+          message={`Loading ${section === "awaiting" ? "incidents" : "published cleanup events"} within ${radiusMeters / 1_000} km.`}
         />
       ) : null}
 
@@ -335,17 +362,18 @@ export function CitizenIncidentDiscoveryScreen({
         selectedLocation={focusLocation}
         searchRadiusMeters={search?.radiusMeters}
         showListFallback
-        listTitle={`Cleanup events within ${radiusMeters / 1_000} km`}
+        showMarkerCoordinates={false}
+        listTitle={`${section === "awaiting" ? "Incidents awaiting cleanup" : "Cleanup events"} within ${radiusMeters / 1_000} km`}
         showCurrentLocation={false}
         height={430}
-        accessibleLabel="Published cleanup event discovery map"
+        accessibleLabel={section === "awaiting" ? "Incidents awaiting cleanup map" : "Published cleanup event discovery map"}
         onMarkerSelect={(marker) => selectEvent(marker.properties.id)}
         markerActionLabel={(marker) =>
-          marker.properties.isJoined
+          marker.properties.kind === "INCIDENT" ? `View incident: ${marker.properties.title}` : marker.properties.isJoined
             ? `View event details: ${marker.properties.title}`
             : `Join event: ${marker.properties.title}`
         }
-        onMarkerAction={(marker) => onOpenEvent(marker.properties.id)}
+        onMarkerAction={(marker) => marker.properties.kind === "INCIDENT" ? selectEvent(marker.properties.id) : onOpenEvent(marker.properties.id)}
         onInteractionChange={setMapInteracting}
       />
 
@@ -412,20 +440,19 @@ export function CitizenIncidentDiscoveryScreen({
         </View>
       ) : null}
 
+      {section === "awaiting" && selectedId && detailLoading ? <ActivityIndicator color={colors.primary} /> : null}
+      {incidentDetail && <IncidentEvidence incident={incidentDetail} awaitingCleanup={section === "awaiting"} />}
+
       {!search ? (
         <View style={sharedStyles.card}>
           <Text style={sharedStyles.sectionTitle}>
             Use your location to begin
           </Text>
-          <Text style={sharedStyles.sectionSubtitle}>
-            EcoTrack only requests published cleanup events inside your selected
-            radius.
-          </Text>
         </View>
       ) : !loading && events.length === 0 ? (
         <View style={sharedStyles.card}>
           <Text style={sharedStyles.sectionTitle}>
-            No published cleanup events found
+            {section === "awaiting" ? "No incidents awaiting cleanup found" : "No published cleanup events found"}
           </Text>
           <Text style={sharedStyles.sectionSubtitle}>
             Try a larger search radius or refresh the search.
@@ -433,16 +460,7 @@ export function CitizenIncidentDiscoveryScreen({
         </View>
       ) : null}
 
-      {nextCursor && search ? (
-        <Button
-          label="Load more events"
-          variant="secondary"
-          loading={loading}
-          onPress={() =>
-            void runSearch(search, { append: true, cursor: nextCursor })
-          }
-        />
-      ) : null}
+      <PageControls hasNext={Boolean(nextCursor && search)} busy={loading} next={() => { if (search && nextCursor) void runSearch(search, { append: true, cursor: nextCursor }); }} />
     </Screen>
   );
 }
