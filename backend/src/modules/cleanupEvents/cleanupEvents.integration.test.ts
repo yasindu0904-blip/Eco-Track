@@ -402,7 +402,8 @@ before(async () => {
   `;
 
   const app = createApp(authenticationDependencies, {
-    cleanupEventDependencies,
+    // Direct Prisma fixture changes must be visible to every assertion.
+    cleanupEventDependencies: { ...cleanupEventDependencies, cache: undefined },
     incidentDependencies: { ...incidentDependencies, cache: undefined, rateLimit: undefined },
   });
   await new Promise<void>((resolve) => {
