@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
-import { describeApiFailure } from "../../api/apiError";
+import { useListScroll } from "../../components/lists/useListScroll";
+import { ListSections, PageControls } from "../../components/lists/ListControls";
+import { eventSections, useListState, usePagedList, type EventSection } from "../../components/lists/usePagedList";
 import { listMyEventParticipations } from "./cleanupEvent.api";
-import type { EventParticipation } from "./cleanupEvent.types";
 import "./cleanupEvent.css";
 
 type Props = {
@@ -10,87 +10,29 @@ type Props = {
   onOpenEvent: (eventId: string) => void;
 };
 
-export function MyJoinedCleanupEventsPage({
-  accessToken,
-  onBack,
-  onOpenEvent,
-}: Props) {
-  const [scope, setScope] = useState<"active" | "history">("active");
-  const [items, setItems] = useState<EventParticipation[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [busy, setBusy] = useState(true);
-  const [error, setError] = useState<string>();
-  const load = useCallback(
-    async (cursor?: string) => {
-      setBusy(true);
-      setError(undefined);
-      try {
-        const page = await listMyEventParticipations(
-          accessToken,
-          scope,
-          cursor,
-        );
-        setItems((current) =>
-          cursor ? [...current, ...page.items] : page.items,
-        );
-        setNextCursor(page.nextCursor);
-      } catch (reason) {
-        setError(
-          describeApiFailure(reason, "Unable to load your cleanup events.")
-            .message,
-        );
-      } finally {
-        setBusy(false);
-      }
-    },
-    [accessToken, scope],
-  );
-  useEffect(() => {
-    const timeout = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timeout);
-  }, [load]);
+export function MyJoinedCleanupEventsPage({ accessToken, onOpenEvent }: Props) {
+  const [section, setSection] = useListState<EventSection | "withdrawn">("joined.section", "upcoming");
+  const list = usePagedList("joined:" + section, cursor => listMyEventParticipations(accessToken, "all", cursor, section), false);
+  const { items, busy, error } = list;
+  useListScroll("joined:" + section + ":" + list.pageNumber, !busy);
   return (
     <main className="public-events-shell">
       <header className="event-editor-header">
         <div>
           <span>MY VOLUNTEERING</span>
           <h1>My joined cleanup events</h1>
-          <p>Review commitments, assignments, attendance, and history.</p>
         </div>
-        <button
-          className="event-action-button secondary"
-          type="button"
-          onClick={onBack}
-        >
-          Citizen dashboard
-        </button>
+
       </header>
-      <div className="participation-tabs">
-        <button
-          className={scope === "active" ? "selected" : "secondary"}
-          onClick={() => setScope("active")}
-        >
-          Active
-        </button>
-        <button
-          className={scope === "history" ? "selected" : "secondary"}
-          onClick={() => setScope("history")}
-        >
-          History
-        </button>
-      </div>
+      <ListSections value={section} options={[...eventSections, { value: "withdrawn", label: "Withdrawn / removed" }]} onChange={setSection} />
       {error && <p className="event-editor-notice error">{error}</p>}
       <section className="event-editor-panel public-event-list">
         {busy && items.length === 0 ? (
           <p>Loading your events…</p>
         ) : items.length === 0 ? (
           <div className="event-editor-empty">
-            <strong>No {scope} participations</strong>
-            <p>
-              {scope === "active"
-                ? "Volunteer for a published cleanup to see it here."
-                : "Withdrawn or removed events will appear here."}
-            </p>
+            <strong>No events in this section</strong>
+
           </div>
         ) : (
           items.map((item) => (
@@ -111,16 +53,7 @@ export function MyJoinedCleanupEventsPage({
             </button>
           ))
         )}
-        {nextCursor && (
-          <button
-            type="button"
-            className="event-action-button secondary"
-            disabled={busy}
-            onClick={() => void load(nextCursor)}
-          >
-            Load more
-          </button>
-        )}
+        <PageControls {...list} />
       </section>
     </main>
   );

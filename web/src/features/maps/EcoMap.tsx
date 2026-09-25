@@ -49,6 +49,7 @@ export interface EcoMapProps {
   className?: string;
   accessibleLabel?: string;
   showListFallback?: boolean;
+  showMarkerCoordinates?: boolean;
   listTitle?: string;
   showCurrentLocation?: boolean;
   onMarkerSelect?: (marker: MapMarkerFeature) => void;
@@ -425,7 +426,7 @@ function ClusteredMarkerLayer({
         radius={isSelected ? 13 : 10}
         pathOptions={{
           color: "#ffffff",
-          fillColor: isIncident ? "#d34a3a" : "#2878b5",
+          fillColor: marker.properties.isOwned ? "#f1b642" : isIncident && marker.properties.status?.toUpperCase().replaceAll(" ", "_") !== "CLEANUP_ORGANIZED" ? "#d34a3a" : "#2878b5",
           fillOpacity: 1,
           weight: isSelected ? 4 : 3,
         }}
@@ -470,6 +471,7 @@ export function EcoMap({
   className = "",
   accessibleLabel = "EcoTrack incident and cleanup event map",
   showListFallback = true,
+  showMarkerCoordinates = true,
   listTitle = "Locations in this view",
   showCurrentLocation = true,
   onMarkerSelect,
@@ -622,15 +624,15 @@ export function EcoMap({
                     onClick={() => onMarkerSelect?.(marker)}
                   >
                     <span
-                      className={`eco-map-list-dot eco-map-list-dot-${marker.properties.kind.toLowerCase()}`}
+                      className={`eco-map-list-dot eco-map-list-dot-${(marker.properties.status?.toUpperCase().replaceAll(" ", "_") === "CLEANUP_ORGANIZED" ? "cleanup_event" : marker.properties.kind.toLowerCase())}`}
+                      style={marker.properties.isOwned ? { backgroundColor: "#f1b642" } : undefined}
                       aria-hidden="true"
                     />
                     <span>
                       <strong>{marker.properties.title}</strong>
                       <small>
-                        {marker.properties.status} ·{" "}
-                        {location.latitude.toFixed(4)},{" "}
-                        {location.longitude.toFixed(4)}
+                        {marker.properties.status}
+                        {showMarkerCoordinates && <> · {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</>}
                       </small>
                     </span>
                   </button>

@@ -1,3 +1,4 @@
+import { useInvalidateLists } from "../../components/lists/usePagedList";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import { describeApiFailure } from "../../api/apiError";
@@ -22,6 +23,7 @@ export function EventParticipationPanel({
   event,
   onChanged,
 }: Props) {
+  const invalidateLists = useInvalidateLists();
   const [participation, setParticipation] = useState<EventParticipation | null>(
     null,
   );
@@ -53,6 +55,7 @@ export function EventParticipationPanel({
     try {
       const saved = (await joinCleanupEvent(accessToken, event.id))
         .participation;
+      invalidateLists("joined:");
       setParticipation(saved);
       setMessage("You are now volunteering for this cleanup event.");
       onChanged?.(saved);
@@ -70,6 +73,7 @@ export function EventParticipationPanel({
     setError(undefined);
     try {
       const saved = await withdrawFromCleanupEvent(accessToken, event.id);
+      invalidateLists("joined:");
       setParticipation(saved);
       setMessage("You withdrew from this event.");
       onChanged?.(saved);
@@ -90,10 +94,7 @@ export function EventParticipationPanel({
       <Text style={sharedStyles.sectionTitle}>
         {active ? "You are volunteering" : "Join this cleanup"}
       </Text>
-      <Text style={sharedStyles.sectionSubtitle}>
-        One tap reserves your place. You will receive an in-app reminder 30
-        minutes before the event.
-      </Text>
+
       {participation ? (
         <Text style={styles.status}>
           {participation.status} · {participation.attendanceStatus}
@@ -150,13 +151,5 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 1,
   },
-  status: {
-    alignSelf: "flex-start",
-    color: colors.primary,
-    backgroundColor: colors.successSoft,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 99,
-    fontWeight: "900",
-  },
+  status: { alignSelf: "flex-start", color: colors.primary, fontWeight: "900" },
 });

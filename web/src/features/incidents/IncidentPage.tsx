@@ -1,3 +1,6 @@
+import { useListScroll } from "../../components/lists/useListScroll";
+import { ListSections, PageControls } from "../../components/lists/ListControls";
+import { reportSections, useInvalidateLists, useListState, usePagedList, type ReportSection } from "../../components/lists/usePagedList";
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 
 import {
@@ -12,7 +15,7 @@ import {
   createIncident,
   getMyIncident,
   listIncidentCategories,
-  listMyIncidents,
+  listMyIncidentPage,
   uploadIncidentEvidence,
 } from "./incident.api";
 import type {
@@ -20,7 +23,6 @@ import type {
   IncidentDetail,
   IncidentSeverity,
   IncidentStatus,
-  IncidentSummary,
   UploadedIncidentEvidence,
 } from "./incident.types";
 import { CitizenIncidentDiscovery } from "./CitizenIncidentDiscovery";
@@ -68,18 +70,14 @@ function formatDate(value: string): string {
   }).format(new Date(value));
 }
 
-export function IncidentPage({
-  accessToken,
-  profile,
-  initialView = "create",
-  initialIncidentId,
-  onBackToDashboard,
-  onSignOut,
-  onOpenCleanupEvent,
-}: IncidentPageProps) {
+export function IncidentPage({ accessToken, profile, initialView = "create", initialIncidentId, onOpenCleanupEvent }: IncidentPageProps) {
   const [view, setView] = useState<IncidentView>(initialView);
   const [categories, setCategories] = useState<IncidentCategory[]>([]);
-  const [reports, setReports] = useState<IncidentSummary[]>([]);
+  const [section, setSection] = useListState<ReportSection>("reports.section", "active");
+  const invalidateLists = useInvalidateLists();
+  const reportList = usePagedList("reports:" + section, cursor => listMyIncidentPage(accessToken, section, cursor), false, view === "reports");
+  useListScroll("reports:" + section + ":" + reportList.pageNumber, !reportList.busy && view === "reports");
+  const reports = reportList.items;
   const [detail, setDetail] = useState<IncidentDetail | null>(null);
   const [categoryId, setCategoryId] = useState("");
   const [severity, setSeverity] = useState<IncidentSeverity>("MEDIUM");
@@ -95,7 +93,7 @@ export function IncidentPage({
     UploadedIncidentEvidence[]
   >([]);
   const [submissionId, setSubmissionId] = useState(() => crypto.randomUUID());
-  const [isLoading, setIsLoading] = useState(initialView === "reports");
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [notification, setNotification] = useState<IncidentNotification | null>(
@@ -140,31 +138,6 @@ export function IncidentPage({
       active = false;
     };
   }, [accessToken]);
-
-  useEffect(() => {
-    if (view !== "reports") return;
-    let active = true;
-    void listMyIncidents(accessToken)
-      .then((loaded) => {
-        if (active) setReports(loaded);
-      })
-      .catch((error: unknown) => {
-        if (active)
-          setNotification({
-            kind: "error",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Could not load your reports.",
-          });
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [accessToken, view]);
 
   function chooseFiles(event: ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(event.target.files ?? []);
@@ -248,6 +221,7 @@ export function IncidentPage({
         addressText: addressText.trim() || undefined,
         evidence,
       });
+      invalidateLists("reports:");
       setDetail(result.incident);
       setView("detail");
       setNotification(
@@ -333,13 +307,7 @@ export function IncidentPage({
       )}
       <header className="incident-header">
         <div className="incident-header-start">
-          <button
-            type="button"
-            className="incident-back"
-            onClick={onBackToDashboard}
-          >
-            ← Dashboard
-          </button>
+
           <div>
             <strong>EcoTrack</strong>
             <small>Incident reporting</small>
@@ -363,11 +331,6 @@ export function IncidentPage({
         </nav>
         <div className="incident-profile">
           <span>{profile.fullName ?? profile.email}</span>
-          {onSignOut && (
-            <button type="button" onClick={onSignOut}>
-              Sign out
-            </button>
-          )}
         </div>
       </header>
 
@@ -378,17 +341,6 @@ export function IncidentPage({
               <div>
                 <span>COMMUNITY REPORT</span>
                 <h1>Report an environmental incident</h1>
-                <p>
-                  Share clear details and confirm the exact location so nearby
-                  organizations can respond appropriately.
-                </p>
-              </div>
-              <div className="incident-safety-note">
-                <strong>One shared report</strong>
-                <p>
-                  EcoTrack finds covering organizations. You do not need to
-                  choose one.
-                </p>
               </div>
             </div>
             <form
@@ -400,10 +352,6 @@ export function IncidentPage({
                   <span>01</span>
                   <div>
                     <h2>What did you find?</h2>
-                    <p>
-                      Select the category and urgency that best describe the
-                      issue.
-                    </p>
                   </div>
                 </div>
                 <div className="incident-category-grid">
@@ -444,17 +392,14 @@ export function IncidentPage({
                     ))}
                   </div>
                 </fieldset>
-              </section>
+
+          </section>
 
               <section className="incident-card">
                 <div className="incident-card-title">
                   <span>02</span>
                   <div>
                     <h2>Describe the incident</h2>
-                    <p>
-                      Use specific, factual information that helps reviewers
-                      understand the problem.
-                    </p>
                   </div>
                 </div>
                 <div className="incident-fields">
@@ -491,7 +436,8 @@ export function IncidentPage({
                     />
                   </label>
                 </div>
-              </section>
+
+          </section>
 
               <section className="incident-card">
                 <div className="incident-card-title">
@@ -513,6 +459,7 @@ export function IncidentPage({
                   boundaries={searchedBoundary}
                   disabled={isSubmitting}
                   confirmed={locationConfirmed}
+                  showInstructions={false}
                   confirmLabel={
                     locationConfirmed
                       ? "✓ Location confirmed"
@@ -527,7 +474,8 @@ export function IncidentPage({
                     setLocationConfirmed(true);
                   }}
                 />
-              </section>
+
+          </section>
 
               <section className="incident-card">
                 <div className="incident-card-title">
@@ -577,7 +525,8 @@ export function IncidentPage({
                     ))}
                   </ul>
                 )}
-              </section>
+
+          </section>
 
               <div className="incident-submit-bar">
                 <div>
@@ -586,10 +535,7 @@ export function IncidentPage({
                       ? "Location confirmed"
                       : "Location confirmation required"}
                   </strong>
-                  <small>
-                    {uploadProgress ??
-                      "Your report remains editable until submission."}
-                  </small>
+                  {uploadProgress && <small>{uploadProgress}</small>}
                 </div>
                 <button
                   type="submit"
@@ -608,21 +554,20 @@ export function IncidentPage({
               <div>
                 <span>YOUR ACTIVITY</span>
                 <h1>My Reports</h1>
-                <p>
-                  Follow the shared status of environmental incidents you
-                  reported.
-                </p>
+
               </div>
               <button type="button" onClick={startAnotherReport}>
                 ＋ New report
               </button>
             </div>
-            {isLoading ? (
+            <ListSections value={section} options={reportSections} onChange={setSection} />
+            {reportList.error && <p role="alert">{reportList.error}</p>}
+            {reportList.busy || isLoading ? (
               <div className="incident-empty">Loading your reports…</div>
             ) : reports.length === 0 ? (
               <div className="incident-empty">
                 <h2>No incident reports yet</h2>
-                <p>Your submitted reports will appear here.</p>
+
                 <button type="button" onClick={startAnotherReport}>
                   Report an incident
                 </button>
@@ -670,18 +615,13 @@ export function IncidentPage({
                 ))}
               </div>
             )}
+            <PageControls {...reportList} />
           </section>
         )}
 
         {view === "detail" && detail && (
           <section className="incident-detail-view">
-            <button
-              type="button"
-              className="incident-text-back"
-              onClick={() => setView("reports")}
-            >
-              ← Back to My Reports
-            </button>
+
             <div className="incident-detail-hero">
               <div>
                 <span>{detail.category.name}</span>
@@ -723,7 +663,7 @@ export function IncidentPage({
                         <div>
                           <strong>{readableStatus(history.toStatus)}</strong>
                           <small>{formatDate(history.changedAt)}</small>
-                          <p>{history.reason}</p>
+                          {history.reason !== "A cleanup event was published for this incident." && <p>{history.reason}</p>}
                         </div>
                       </li>
                     ))}

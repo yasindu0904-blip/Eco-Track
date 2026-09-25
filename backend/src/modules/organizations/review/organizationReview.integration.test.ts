@@ -237,6 +237,21 @@ test("a Super Admin can list pending applications", async () => {
   );
 });
 
+test("review queue pages without repeats and rejects invalid limits and cursors", async () => {
+  const first = await adminRequest("/api/v1/super-admin/organization-applications?limit=1");
+  assert.equal(first.status, 200);
+  const page = (await first.json()).data;
+  assert.equal(page.items.length, 1);
+  assert.ok(page.nextCursor);
+  const second = await adminRequest(`/api/v1/super-admin/organization-applications?limit=1&cursor=${encodeURIComponent(page.nextCursor)}`);
+  assert.equal(second.status, 200);
+  const next = (await second.json()).data;
+  assert.equal(next.items.length, 1);
+  assert.notEqual(next.items[0].id, page.items[0].id);
+  assert.equal((await adminRequest("/api/v1/super-admin/organization-applications?limit=500")).status, 400);
+  assert.equal((await adminRequest("/api/v1/super-admin/organization-applications?cursor=invalid")).status, 400);
+});
+
 test("approval activates the organization and creates its first admin atomically", async () => {
   const response = await adminRequest(
     `/api/v1/super-admin/organization-applications/${approveOrganizationId}/approve`,

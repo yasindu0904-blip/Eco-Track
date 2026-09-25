@@ -16,6 +16,7 @@ export interface LocationPickerProps {
   disabled?: boolean;
   confirmed?: boolean;
   confirmLabel?: string;
+  showInstructions?: boolean;
   referenceMarker?: MapMarkerFeature;
   focusReferenceLabel?: string;
   boundaries?: MapBoundaryFeatureCollection;
@@ -30,6 +31,7 @@ export function LocationPicker({
   disabled = false,
   confirmed = false,
   confirmLabel = "Confirm this location",
+  showInstructions = true,
   referenceMarker,
   focusReferenceLabel = "Focus reference location",
   boundaries,
@@ -118,17 +120,11 @@ export function LocationPicker({
       />
 
       <View style={styles.controls}>
-        <Text style={[styles.eyebrow, confirmed && styles.confirmedEyebrow]}>
-          {confirmed ? "Location confirmed" : "Location selection"}
-        </Text>
-        <Text style={styles.statusTitle}>
-          {confirmed ? "Ready to save" : "Choose a point on the map"}
-        </Text>
-        <Text style={styles.helper}>
-          {confirmed
-            ? "Use the form's save button to keep this location."
-            : "Tap the map, then confirm the event location."}
-        </Text>
+        {!confirmed && showInstructions && <>
+          <Text style={styles.eyebrow}>Location selection</Text>
+          <Text style={styles.statusTitle}>Choose a point on the map</Text>
+          <Text style={styles.helper}>Tap the map, then confirm the event location.</Text>
+        </>}
 
         {referenceMarker && referenceLocation ? (
           <Pressable

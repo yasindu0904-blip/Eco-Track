@@ -88,7 +88,7 @@
 }
 
 .citizen-dashboard-shell .notification-header {
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   max-width: none;
 }
@@ -99,7 +99,7 @@
 }
 
 .citizen-dashboard-shell .notification-header > strong {
-  grid-column: 3;
+  grid-column: 2;
   grid-row: 1;
   padding: 6px 10px;
   color: #315d43;
@@ -525,7 +525,29 @@
 .citizen-dashboard-shell .public-event-list article { padding: 14px; border-radius: 11px; box-shadow: none; }
 .citizen-dashboard-shell .public-event-status,
 .citizen-dashboard-shell .participation-status { padding: 4px 8px; font-size: 0.68rem; }
-.citizen-dashboard-shell .event-editor-header { padding: 0 0 20px; }
+.citizen-dashboard-shell .event-editor-header {
+  padding: clamp(20px, 3vw, 32px);
+  margin-top: 16px;
+  gap: 20px;
+}
+.citizen-dashboard-shell .event-editor-header h1 {
+  margin: 10px 0 4px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+/* Event rows are readable text choices, rather than solid action buttons. */
+body #root .public-event-list > button {
+  background: #fff;
+  color: #17251d;
+  border: 0;
+  box-shadow: none;
+  text-align: left;
+}
+body #root .public-event-list > button strong { color: #17251d; }
+body #root .public-event-list > button :is(span, small) { color: #195f38; }
+body #root .public-event-list > button:is(:hover, .selected) { background: #f0f7f1; }
+body #root .public-event-list > button.selected strong { color: #195f38; }
+body #root .public-event-list > button:focus-visible { outline: 2px solid #195f38; outline-offset: 2px; }
 .citizen-dashboard-shell .event-editor-panel { border-radius: var(--member-radius); box-shadow: var(--member-shadow); }
 
 .citizen-dashboard-shell .eco-map-shell {
@@ -600,4 +622,52 @@
   }
   .citizen-dashboard-shell .incident-card { padding: 18px; }
   .citizen-dashboard-shell .incident-category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* Status is information, not an action: render it as plain text. */
+body #root :is(.public-event-status, .participation-status, .membership-status, .application-status,
+  .status-badge, .organization-workspace-status, .ma-chips > span,
+  .incident-report-meta > span:last-child, .incident-detail-status,
+  .notification-card > em, .super-admin-coming-badge) {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  width: auto;
+  justify-self: start;
+}
+body .incident-detail-hero .incident-detail-status { color: #fff; }
+
+/* Real inset dividers remain visible independently of button clipping. */
+body #root .organization-event-list > .organization-event-separator {
+  display: block;
+  height: 0;
+  margin: 4px 18px;
+  border: 0;
+  border-top: 1px solid #9bb7a6;
+}
+body #root .organization-event-list > button,
+body #root .organization-event-list > button :is(span, small) { font-weight: 400; }
+body #root .organization-event-list > button strong { font-weight: 700; }
+
+body #root .eco-location-picker-readonly {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+body #root .eco-location-picker-readonly .eco-location-focus-reference {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 40px;
+  padding: 8px 12px;
+  font-size: .85rem;
+  background: #fff;
+  color: #195f38;
+  border: 1px solid #8eb59b;
+}
+body #root .eco-location-confirmed-text {
+  color: #195f38;
+  font-size: .9rem;
+  font-weight: 500;
 }

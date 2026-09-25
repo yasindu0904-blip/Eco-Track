@@ -179,6 +179,7 @@ export function listMembershipRequestRecordsByRequester(
   prisma: PrismaClient,
   command: {
     requesterUserId: string;
+    status?: "PENDING" | "APPROVED" | "DECLINED" | "WITHDRAWN";
     cursor: MembershipRequestCursor | null;
     limit: number;
   },
@@ -186,6 +187,7 @@ export function listMembershipRequestRecordsByRequester(
   return prisma.organizationMembershipRequest.findMany({
     where: {
       requesterUserId: command.requesterUserId,
+      ...(command.status ? { status: command.status } : {}),
       ...(command.cursor
         ? {
             OR: [

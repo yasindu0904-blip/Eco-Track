@@ -48,7 +48,6 @@ export function OrganizationWorkspaceScreen({
   onSelectOrganization,
   onBack,
   onViewApplications,
-  onSignOut,
   initialTab = "overview",
   initialIncidentId,
   initialEventId,
@@ -109,8 +108,11 @@ export function OrganizationWorkspaceScreen({
         eyebrow="Organization workspace"
         title={membership.organization.name}
         subtitle={profile.email}
-        onBack={onBack}
-        backLabel="Dashboard"
+        onBack={activeTab === "overview" ? onBack : () => {
+          setMapInteracting(false);
+          setActiveTab("overview");
+        }}
+        backLabel={activeTab === "overview" ? "Dashboard" : "Organization overview"}
       />
 
       {memberships.length > 1 ? (
@@ -244,9 +246,7 @@ export function OrganizationWorkspaceScreen({
                     : "Organization member"}
                 </Text>
               </View>
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusText}>ACTIVE</Text>
-              </View>
+
             </View>
             <View style={sharedStyles.divider} />
             <View style={styles.accessValue}>
@@ -257,7 +257,7 @@ export function OrganizationWorkspaceScreen({
 
           <SectionHeader
             title="Manage local action"
-            subtitle="Workspace tools"
+
             action={
               <Button
                 compact
@@ -268,34 +268,17 @@ export function OrganizationWorkspaceScreen({
             }
           />
           <View style={styles.toolList}>
-            <ActionRow
-              title="Review covered incidents"
-              description="Search reports in this organization's GN Divisions."
-              symbol="!"
-              onPress={() => setActiveTab("incidentDiscovery")}
-            />
             {membership.role === "ORG_ADMIN" ? (
               <ActionRow
                 title="Members and requests"
-                description="Review requests and manage organization roles."
+
                 symbol="M"
                 onPress={() => setActiveTab("members")}
               />
             ) : null}
-            {membership.role === "ORG_ADMIN" ? (
-              <ActionRow
-                title="Plan a cleanup event"
-                description="Create one-date event plans and assign coordinators."
-                symbol="+"
-                onPress={() => {
-                  setLinkedIncidentId(undefined);
-                  setActiveTab("eventDrafts");
-                }}
-              />
-            ) : null}
             <ActionRow
               title="Manage cleanup events"
-              description="See private drafts and published organization events."
+
               symbol="E"
               onPress={() => setActiveTab("events")}
             />
@@ -334,7 +317,6 @@ export function OrganizationWorkspaceScreen({
         />
       )}
 
-      <Button label="Sign out" variant="secondary" onPress={onSignOut} />
     </Screen>
   );
 }
@@ -372,12 +354,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   value: { color: colors.text, fontSize: 16, fontWeight: "800" },
-  statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 8,
-    backgroundColor: colors.successSoft,
-  },
+  statusBadge: {  },
   statusText: { color: colors.success, fontSize: 11, fontWeight: "900" },
   tabs: {
     flexDirection: "row",

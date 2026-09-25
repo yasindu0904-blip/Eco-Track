@@ -52,3 +52,9 @@ export async function declineOrganizationApplication(
 
   return response.data;
 }
+
+export async function listPendingOrganizationApplicationPage(accessToken: string, cursor?: string) {
+  const query = new URLSearchParams({ limit: "20" });
+  if (cursor) query.set("cursor", cursor);
+  return (await apiRequest<{ data: { items: OrganizationReviewApplication[]; nextCursor: string | null } }>(`/super-admin/organization-applications?${query}`, { accessToken })).data;
+}

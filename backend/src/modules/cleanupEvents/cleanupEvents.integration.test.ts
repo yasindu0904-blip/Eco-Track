@@ -8,6 +8,7 @@ import test, { after, before } from "node:test";
 import { createApp } from "../../app.js";
 import { prisma } from "../../database/prisma.js";
 import type { AuthenticationDependencies } from "../auth/auth.types.js";
+import { incidentDependencies } from "../incidents/incident.dependencies.js";
 import { cleanupEventDependencies } from "./cleanupEvent.dependencies.js";
 import { processDueCleanupEventReminders } from "./reminders/cleanupEventReminder.service.js";
 import { MAP_LIMITS } from "../maps/map.constants.js";
@@ -402,6 +403,7 @@ before(async () => {
 
   const app = createApp(authenticationDependencies, {
     cleanupEventDependencies,
+    incidentDependencies: { ...incidentDependencies, cache: undefined, rateLimit: undefined },
   });
   await new Promise<void>((resolve) => {
     server = app.listen(0, "127.0.0.1", () => resolve());
@@ -459,6 +461,52 @@ after(async () => {
       id: { in: Object.values(identities).map((identity) => identity.id) },
     },
   });
+});
+
+test("section lists paginate by event date and keep public, nearby, and joined results scoped", async () => {
+  const ids: string[] = [];
+  for (const day of [3, 1, 1]) {
+    const id = await createDirectDraft(`Section pagination cleanup ${day}`);
+    await makeDraftPublishable(identities.adminA.token, organizationAId, id, identities.memberA.membershipId);
+    const published = await request(identities.adminA.token, `/organizations/${organizationAId}/events/${id}/publish`, { method: "POST" });
+    assert.equal(published.status, 200);
+    await prisma.cleanupEvent.update({ where: { id }, data: { startsAt: new Date(`2098-01-0${day}T08:00:00Z`) } });
+    assert.equal((await request(identities.reporter.token, `/events/${id}/participation`, { method: "POST" })).status, 201);
+    ids.push(id);
+  }
+  const expected = [ids[1]!, ids[2]!].sort().concat(ids[0]!);
+  async function collect(path: string, map = false, joined = false) {
+    const found: string[] = [];
+    const cursors = new Set<string>();
+    let cursor: string | null = null;
+    do {
+      const response = await request(identities.reporter.token, path + (cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""));
+      assert.equal(response.status, 200);
+      const page = (await response.json()).data;
+      const rows = map ? page.features : page.items;
+      assert.equal(rows.length <= 2, true);
+      if (!joined) assertPublicEventProjection(rows);
+      found.push(...rows.map((item: { id: string; properties?: { id: string }; event?: { id: string } }) => map ? item.properties!.id : joined ? item.event!.id : item.id));
+      cursor = page.nextCursor;
+      if (cursor) { assert.equal(cursors.has(cursor), false); cursors.add(cursor); }
+      assert.ok(cursors.size < 30, "Cursor must advance");
+    } while (cursor);
+    assert.equal(new Set(found).size, found.length);
+    return found.filter(id => ids.includes(id));
+  }
+  assert.deepEqual(await collect("/events?section=upcoming&limit=2"), expected);
+  assert.deepEqual(await collect("/events/nearby?section=upcoming&limit=2&latitude=6.95&longitude=79.9&radiusMeters=2000", true), expected);
+  // Participation ID breaks equal-date ties; event dates still advance in ascending order.
+  const joined = await collect("/event-participations/me?section=upcoming&limit=2", false, true);
+  assert.deepEqual(new Set(joined.slice(0, 2)), new Set(expected.slice(0, 2)));
+  assert.equal(joined[2], ids[0]);
+  await prisma.cleanupEvent.update({ where: { id: ids[0]! }, data: { startsAt: new Date("2020-01-01T08:00:00Z") } });
+  assert.equal((await collect("/events?section=upcoming&limit=2")).includes(ids[0]!), false);
+  assert.deepEqual(await collect("/events?section=ongoing&limit=2"), [ids[0]]);
+  const otherUser = await request(identities.adminB.token, "/event-participations/me?section=upcoming&limit=20");
+  assert.equal((await otherUser.json()).data.items.some((item: { event: { id: string } }) => ids.includes(item.event.id)), false);
+  const invalid = await request(identities.reporter.token, "/events?section=unknown");
+  assert.equal(invalid.status, 400);
 });
 
 test("ORG_ADMIN can manage organization drafts while ORG_MEMBER and other tenants cannot", async () => {
@@ -890,6 +938,49 @@ test("a direct event publishes atomically and exposes only public-safe detail", 
       feature.properties.id === eventId,
   );
   assert.equal(ownedMarker.properties.isOwned, true);
+  const privateDraftId = await createDirectDraft("Private draft excluded from other organizations");
+  const sharedMapPath = `/organizations/${organizationBId}/events/map?west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=50`;
+  const ownOnly = await request(identities.adminB.token, sharedMapPath);
+  assert.equal(ownOnly.status, 200);
+  assert.ok(!(await ownOnly.json()).data.features.some((feature: { properties: { id: string } }) => feature.properties.id === eventId));
+  const sharedMap = await request(identities.adminB.token, `${sharedMapPath}&includePublic=true`);
+  assert.equal(sharedMap.status, 200);
+  const sharedMapData = (await sharedMap.json()).data;
+  const sharedMarker = sharedMapData.features.find((feature: { properties: { id: string } }) => feature.properties.id === eventId);
+  assert.equal(sharedMarker.properties.isOwned, false);
+  assert.equal(sharedMarker.properties.incidentId, null);
+  assert.ok(!sharedMapData.features.some((feature: { properties: { id: string } }) => feature.properties.id === privateDraftId));
+  assertPublicEventProjection(sharedMapData);
+  const ownerDraftMap = await request(identities.adminA.token, `/organizations/${organizationAId}/events/map?west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=100&includePublic=true`);
+  assert.equal(ownerDraftMap.status, 200);
+  const draftMarker = (await ownerDraftMap.json()).data.features.find((feature: { properties: { id: string } }) => feature.properties.id === privateDraftId);
+  assert.equal(draftMarker.properties.status, "DRAFT");
+  assert.equal(draftMarker.properties.isOwned, true);
+
+  // Coverage applies even when the viewport includes other organizations' areas.
+  const originalEvent = await prisma.cleanupEvent.findUniqueOrThrow({ where: { id: eventId } });
+  const readSharedMarkers = async () => {
+    const response = await request(identities.adminB.token, `${sharedMapPath}&includePublic=true`);
+    assert.equal(response.status, 200);
+    return (await response.json()).data.features as Array<{ properties: { id: string; status: string } }>;
+  };
+  try {
+    await prisma.cleanupEvent.update({ where: { id: eventId }, data: { eventLatitude: 6.92, eventLongitude: 79.86 } });
+    assert.ok(!(await readSharedMarkers()).some(marker => marker.properties.id === eventId));
+    await prisma.cleanupEvent.update({ where: { id: eventId }, data: {
+      eventLatitude: originalEvent.eventLatitude, eventLongitude: originalEvent.eventLongitude,
+    } });
+    await prisma.organizationServiceArea.update({ where: { id: serviceAreaBId }, data: { status: "INACTIVE" } });
+    assert.deepEqual(await readSharedMarkers(), []);
+  } finally {
+    await prisma.cleanupEvent.update({ where: { id: eventId }, data: {
+      eventLatitude: originalEvent.eventLatitude, eventLongitude: originalEvent.eventLongitude,
+      lifecycleStatus: originalEvent.lifecycleStatus,
+      currentWorkflowStatusId: originalEvent.currentWorkflowStatusId,
+    } });
+    await prisma.organizationServiceArea.update({ where: { id: serviceAreaBId }, data: { status: "ACTIVE" } });
+  }
+
   const ownedEvent = await request(
     identities.adminA.token,
     `/organizations/${organizationAId}/events/${eventId}`,
@@ -995,6 +1086,33 @@ test("linked publication requires VALID review and updates incident, histories, 
     where: { id: visibleIncidentId },
   });
   assert.equal(incident.status, "CLEANUP_ORGANIZED");
+  // Simulate an ongoing cleanup in overlapping service areas.
+  await prisma.cleanupEvent.update({ where: { id: eventId }, data: { startsAt: new Date(Date.now() - 60_000) } });
+  const sharedMap = await request(identities.adminB.token, `/organizations/${organizationBId}/events/map?west=79.8&south=6.8&east=80&north=7.1&zoom=12&includePublic=true`);
+  assert.equal(sharedMap.status, 200);
+  const sharedMarker = (await sharedMap.json()).data.features.find((feature: { properties: { id: string } }) => feature.properties.id === eventId);
+  assert.equal(sharedMarker.properties.status, "ONGOING");
+  assert.equal(sharedMarker.properties.isOwned, false);
+  assert.equal(sharedMarker.properties.incidentId, visibleIncidentId);
+  const detailResponse = await request(identities.adminB.token, `/organizations/${organizationBId}/incidents/${visibleIncidentId}`);
+  assert.equal(detailResponse.status, 200);
+  const detail = (await detailResponse.json()).data;
+  assert.equal(detail.status, "CLEANUP_ORGANIZED");
+  assert.equal(detail.activeCleanupEvent.id, eventId);
+  assert.equal(detail.activeCleanupEvent.organization.id, organizationAId);
+  assertPublicEventProjection(detail.activeCleanupEvent);
+  assert.equal(detail.currentReview, null);
+  for (const [orgId, token, expectedOwned] of [
+    [organizationAId, identities.adminA.token, true],
+    [organizationBId, identities.adminB.token, false],
+  ] as const) {
+    const incidents = await request(token, `/organizations/${orgId}/incidents?west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=100`);
+    assert.equal(incidents.status, 200);
+    const row = (await incidents.json()).data.items.find((item: { id: string }) => item.id === visibleIncidentId);
+    assert.equal(row.hasOwnedCleanupEvent, expectedOwned);
+  }
+
+
   assert.equal(
     await prisma.incidentStatusHistory.count({
       where: {
@@ -1794,6 +1912,18 @@ test("EVT-06 cancellation preserves history and releases a linked incident claim
   );
   assert.equal(cancelled.status, 200);
   assert.equal((await cancelled.json()).data.incidentStatus, "ACTIVE");
+  const reviewViewport = "west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=100";
+  const incidentMap = await request(identities.adminA.token, `/organizations/${organizationAId}/incidents?${reviewViewport}`);
+  assert.equal(incidentMap.status, 200);
+  const returnedIncident = (await incidentMap.json()).data.items.find((item: { id: string }) => item.id === cancellationIncidentId);
+  assert.equal(returnedIncident.status, "ACTIVE");
+  const eventMap = await request(identities.adminA.token, `/organizations/${organizationAId}/events/map?${reviewViewport}&includePublic=true`);
+  assert.equal(eventMap.status, 200);
+  assert.ok(!(await eventMap.json()).data.features.some((marker: { properties: { id: string } }) => marker.properties.id === eventId));
+  const incidentDetail = await request(identities.adminA.token, `/organizations/${organizationAId}/incidents/${cancellationIncidentId}`);
+  assert.equal(incidentDetail.status, 200);
+  assert.equal((await incidentDetail.json()).data.activeCleanupEvent, null);
+
   assert.equal(
     (
       await prisma.incident.findUniqueOrThrow({
@@ -1822,4 +1952,84 @@ test("EVT-06 cancellation preserves history and releases a linked incident claim
   );
 });
 
+test("past and cancelled sections expose only matching public records, newest event first", async () => {
+  for (const [section, lifecycle] of [["past", "COMPLETED"], ["cancelled", "CANCELLED"]]) {
+    const response = await request(identities.reporter.token, `/events?section=${section}&limit=50`);
+    assert.equal(response.status, 200);
+    const items = (await response.json()).data.items as { id: string; lifecycleStatus: string; startsAt: string }[];
+    assert.ok(items.length > 0);
+    assert.ok(items.every(item => item.lifecycleStatus === lifecycle));
+    assertPublicEventProjection(items);
+    const dates = items.map(item => new Date(item.startsAt).getTime());
+    assert.deepEqual(dates, [...dates].sort((a, b) => b - a));
+    const nearby = await request(identities.reporter.token, `/events/nearby?section=${section}&limit=50&latitude=6.95&longitude=79.9&radiusMeters=25000`);
+    assert.equal(nearby.status, 200);
+    assert.ok((await nearby.json()).data.features.every((feature: { properties: { status: string } }) => feature.properties.status === lifecycle));
+  }
+});
+
 registerResourceCleanup();
+
+
+test("review maps include only owned drafts and public active events before pagination", async () => {
+  const excluded = await prisma.cleanupEvent.findMany({
+    where: { organizationId: { in: [organizationAId, organizationBId] }, lifecycleStatus: { in: ["DRAFT", "COMPLETED", "CANCELLED"] } },
+    select: { id: true, organizationId: true, lifecycleStatus: true },
+  });
+  assert.deepEqual(new Set(excluded.map(event => event.lifecycleStatus)), new Set(["DRAFT", "COMPLETED", "CANCELLED"]));
+  for (const [organizationId, token] of [[organizationAId, identities.adminA.token], [organizationBId, identities.adminB.token]]) {
+    let cursor: string | null = null;
+    const ids: string[] = [];
+    do {
+      const response = await request(token!, `/organizations/${organizationId}/events/map?west=79.8&south=6.8&east=80&north=7.1&zoom=12&limit=1&includePublic=true${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`);
+      assert.equal(response.status, 200);
+      const page = (await response.json()).data;
+      for (const feature of page.features) {
+        assert.ok(["UPCOMING", "ONGOING", "DRAFT"].includes(feature.properties.status));
+        if (feature.properties.status === "DRAFT") {
+          assert.equal(feature.properties.organizationId, organizationId);
+          assert.equal(feature.properties.isOwned, true);
+        }
+        assert.ok(!excluded.some(event => event.id === feature.properties.id &&
+          (event.lifecycleStatus !== "DRAFT" || event.organizationId !== organizationId)));
+        ids.push(feature.properties.id);
+      }
+      cursor = page.nextCursor;
+    } while (cursor);
+    assert.ok(ids.length > 0);
+    assert.equal(new Set(ids).size, ids.length);
+  }
+});
+
+
+test("awaiting cleanup includes cancelled claims and private drafts but excludes published, resolved, and distant incidents", async () => {
+  const draft = await request(identities.adminA.token, `/organizations/${organizationAId}/events/drafts`, {
+    method: "POST", body: JSON.stringify(draftInput({ incidentId: cancellationIncidentId, title: "Private retry draft" })),
+  });
+  assert.equal(draft.status, 201);
+  const query = `latitude=6.96&longitude=79.92&radiusMeters=3000&categoryId=${categoryId}&awaitingCleanup=true&limit=1`;
+  const ids: string[] = [];
+  let cursor: string | null = null;
+  do {
+    const response = await request(identities.reporter.token, `/incidents/nearby?${query}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`);
+    assert.equal(response.status, 200);
+    const page = (await response.json()).data;
+    for (const item of page.items) {
+      assert.ok(["ACTIVE", "EXPIRED"].includes(item.status));
+      assert.equal("reporterUserId" in item, false);
+      assert.equal("cleanupEvents" in item, false);
+      ids.push(item.id);
+    }
+    cursor = page.nextCursor;
+  } while (cursor);
+  assert.deepEqual(ids, [cancellationIncidentId]);
+  assert.ok(!ids.includes(visibleIncidentId), "Published cleanups are excluded");
+  assert.ok(!ids.includes(lifecycleIncidentId), "Resolved incidents are excluded");
+  assert.ok(!ids.includes(invisibleIncidentId), "Incidents outside the radius are excluded");
+  await prisma.incident.update({ where: { id: cancellationIncidentId }, data: { status: "EXPIRED" } });
+  const expired = await request(identities.reporter.token, `/incidents/nearby?${query}`);
+  assert.ok((await expired.json()).data.items.some((item: { id: string }) => item.id === cancellationIncidentId));
+  await prisma.incident.update({ where: { id: cancellationIncidentId }, data: { status: "ARCHIVED", archivedAt: new Date() } });
+  const archived = await request(identities.reporter.token, `/incidents/nearby?${query}`);
+  assert.deepEqual((await archived.json()).data.items, []);
+});

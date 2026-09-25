@@ -248,10 +248,11 @@ function encodeCursor(record: IncidentDetailRecord): string {
 
 export async function listMyIncidents(
   dependencies: IncidentDependencies,
-  input: { userId: string; limit: number; cursor?: string },
+  input: { userId: string; limit: number; cursor?: string; section?: "active" | "resolved" | "all" },
 ): Promise<IncidentListPageDto> {
   const records = await listIncidentRecordsByReporter(dependencies.prisma, {
     reporterUserId: input.userId,
+    section: input.section,
     limit: input.limit,
     cursor: input.cursor ? decodeCursor(input.cursor) : null,
   });
@@ -302,6 +303,10 @@ export async function getOrganizationIncidentDetail(
 
   return {
     ...(await toDetailDto(dependencies, record.incident)),
+    activeCleanupEvent: record.activeCleanupEvent ? {
+      ...record.activeCleanupEvent,
+      startsAt: record.activeCleanupEvent.startsAt?.toISOString() ?? null,
+    } : null,
     falseReviewCount: record.falseReviewCount,
     accessSource: record.access.accessSource,
     currentReview: record.currentReview
@@ -597,6 +602,7 @@ export async function listOrganizationIncidents(
       reportedAt: row.reportedAt.toISOString(),
       falseReviewCount: row.falseReviewCount,
       currentReviewStatus: row.currentReviewStatus,
+      hasOwnedCleanupEvent: row.hasOwnedCleanupEvent,
     })),
     nextCursor:
       hasMore && last ? encodeIncidentDiscoveryCursor(last) : null,

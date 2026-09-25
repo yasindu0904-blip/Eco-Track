@@ -46,8 +46,6 @@ import {
   type CleanupEventDraftCursor,
   type CleanupEventDraftRecord,
   type CleanupEventMapCursor,
-  type CleanupEventOwnedCursor,
-  type CleanupEventPublicCursor,
   type CleanupEventPublicRecord,
 } from "../repositories/cleanupEvent.repository.js";
 import {
@@ -201,7 +199,7 @@ function decodeCursor(cursor: string): CleanupEventDraftCursor {
   }
 }
 
-function decodeDatedCursor<T extends "publishedAt" | "updatedAt">(
+function decodeDatedCursor<T extends "publishedAt" | "updatedAt" | "startsAt">(
   cursor: string,
   field: T,
 ): { [K in T]: Date } & { id: string } {
@@ -225,7 +223,7 @@ function decodeDatedCursor<T extends "publishedAt" | "updatedAt">(
 }
 
 function encodeDatedCursor(
-  field: "publishedAt" | "updatedAt",
+  field: "publishedAt" | "updatedAt" | "startsAt",
   date: Date,
   id: string,
 ): string {
@@ -505,15 +503,13 @@ export async function listPublicCleanupEvents(
   dependencies: CleanupEventDependencies,
   query: ValidatedCleanupEventListQuery,
 ): Promise<CleanupEventPublicPageDto> {
-  const cursor = query.cursor
-    ? (decodeDatedCursor(
-        query.cursor,
-        "publishedAt",
-      ) as CleanupEventPublicCursor)
-    : null;
+  const field = query.section ? "startsAt" : "publishedAt";
+  const decoded = query.cursor ? decodeDatedCursor(query.cursor, field) : null;
+  const cursor = decoded ? { publishedAt: decoded[field], id: decoded.id } : null;
   const records = await listPublicCleanupEventRecords(dependencies.prisma, {
     cursor,
     limit: query.limit,
+    section: query.section,
   });
   const hasMore = records.length > query.limit;
   const page = hasMore ? records.slice(0, query.limit) : records;
@@ -522,7 +518,7 @@ export async function listPublicCleanupEvents(
     items: page.map(toPublicSummary),
     nextCursor:
       hasMore && last?.publishedAt
-        ? encodeDatedCursor("publishedAt", last.publishedAt, last.id)
+        ? encodeDatedCursor(field, last[field]!, last.id)
         : null,
   };
 }
@@ -588,9 +584,9 @@ export async function listOwnedCleanupEvents(
   membership: { id: string; role: "ORG_MEMBER" | "ORG_ADMIN" },
   query: ValidatedCleanupEventListQuery,
 ): Promise<CleanupEventOwnedPageDto> {
-  const cursor = query.cursor
-    ? (decodeDatedCursor(query.cursor, "updatedAt") as CleanupEventOwnedCursor)
-    : null;
+  const field = query.section ? "startsAt" : "updatedAt";
+  const decoded = query.cursor ? decodeDatedCursor(query.cursor, field) : null;
+  const cursor = decoded ? { updatedAt: decoded[field], id: decoded.id } : null;
   const records = await listOwnedCleanupEventRecords(dependencies.prisma, {
     organizationId,
     ...(membership.role === "ORG_MEMBER"
@@ -598,6 +594,7 @@ export async function listOwnedCleanupEvents(
       : {}),
     cursor,
     limit: query.limit,
+    section: query.section,
   });
   const hasMore = records.length > query.limit;
   const page = hasMore ? records.slice(0, query.limit) : records;
@@ -606,7 +603,7 @@ export async function listOwnedCleanupEvents(
     items: page.map(toOwnedSummary),
     nextCursor:
       hasMore && last
-        ? encodeDatedCursor("updatedAt", last.updatedAt, last.id)
+        ? encodeDatedCursor(field, last[field]!, last.id)
         : null,
   };
 }
@@ -647,11 +644,12 @@ export async function listNearbyPublicCleanupEventMap(
   query: ValidatedCleanupEventNearbyMapQuery,
   userId: string,
 ): Promise<CleanupEventMapFeatureCollectionDto> {
+  const field = query.section ? "startsAt" : "publishedAt";
   const decoded = query.cursor
-    ? decodeDatedCursor(query.cursor, "publishedAt")
+    ? decodeDatedCursor(query.cursor, field)
     : null;
   const cursor = decoded
-    ? { sortAt: decoded.publishedAt, id: decoded.id }
+    ? { sortAt: decoded[field], id: decoded.id }
     : null;
   const records = await observeSpatialQuery(
     dependencies.spatialQueryObserver,
@@ -667,7 +665,7 @@ export async function listNearbyPublicCleanupEventMap(
         userId,
       }),
   );
-  return toMapPage(records, query.limit, "publishedAt", false);
+  return toMapPage(records, query.limit, field, false);
 }
 
 export async function listOrganizationCleanupEventMap(
@@ -693,14 +691,14 @@ export async function listOrganizationCleanupEventMap(
         cursor,
       }),
   );
-  return toMapPage(records, query.limit, "updatedAt", true);
+  return toMapPage(records, query.limit, "updatedAt", organizationId);
 }
 
 function toMapPage(
   records: Awaited<ReturnType<typeof listPublicCleanupEventMapRecords>>,
   limit: number,
-  cursorField: "publishedAt" | "updatedAt",
-  isOwned: boolean,
+  cursorField: "publishedAt" | "updatedAt" | "startsAt",
+  isOwned: boolean | string,
 ): CleanupEventMapFeatureCollectionDto {
   const hasMore = records.length > limit;
   const page = hasMore ? records.slice(0, limit) : records;
@@ -726,14 +724,14 @@ function toMapPage(
         organizationName: record.organizationName,
         incidentId: record.incidentId,
         isJoined: record.isJoined,
-        isOwned,
+        isOwned: typeof isOwned === "string" ? record.organizationId === isOwned : isOwned,
       },
     })),
     nextCursor:
       hasMore && last
         ? encodeDatedCursor(
             cursorField,
-            cursorField === "publishedAt" ? last.publishedAt! : last.updatedAt,
+            last[cursorField]!,
             last.id,
           )
         : null,

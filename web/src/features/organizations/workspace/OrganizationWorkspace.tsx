@@ -33,19 +33,7 @@ interface OrganizationWorkspaceProps {
   initialEventId?: string;
 }
 
-export function OrganizationWorkspace({
-  profile,
-  accessToken,
-  memberships,
-  selectedOrganizationId,
-  onSelectOrganization,
-  onBackToDashboard,
-  onViewApplications,
-  onSignOut,
-  initialTab = "overview",
-  initialIncidentId,
-  initialEventId,
-}: OrganizationWorkspaceProps) {
+export function OrganizationWorkspace({ profile, accessToken, memberships, selectedOrganizationId, onSelectOrganization, onViewApplications, initialTab = "overview", initialIncidentId, initialEventId }: OrganizationWorkspaceProps) {
   const [activeTab, setActiveTab] = useState<
     "overview" | "incident-discovery" | "event-drafts" | "events" | "members"
   >(initialTab);
@@ -79,13 +67,8 @@ export function OrganizationWorkspace({
   return (
     <div className="organization-workspace-shell">
       <header className="organization-workspace-header">
-        <button type="button" onClick={onBackToDashboard}>
-          Citizen dashboard
-        </button>
+
         <strong>EcoTrack</strong>
-        <button type="button" onClick={onSignOut}>
-          Sign out
-        </button>
       </header>
 
       <main className="organization-workspace-main">

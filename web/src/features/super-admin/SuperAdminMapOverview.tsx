@@ -159,10 +159,7 @@ export function SuperAdminMapOverview({
     <section className="super-admin-map-card" aria-label="Public map oversight">
       <span className="super-admin-eyebrow">Public map oversight</span>
       <h2>Incidents and cleanup events</h2>
-      <p>
-        Read-only, public-safe operational awareness. Assignment and
-        organization actions are intentionally unavailable.
-      </p>
+
       {error && <p role="alert">{error}</p>}
       <AdministrativeAreaMapSearch
         accessToken={accessToken}

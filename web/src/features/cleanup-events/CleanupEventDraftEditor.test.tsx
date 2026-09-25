@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { listOrganizationMembers } from "../memberships/administration/membershipAdministration.api";
 import { getOrganizationIncidentDetail } from "../organizations/workspace/organizationIncidentDiscovery.api";
 import { CleanupEventDraftEditor } from "./CleanupEventDraftEditor";
-import { createDraft, listDrafts } from "./cleanupEvent.api";
+import { createDraft, discardDraft, listDrafts } from "./cleanupEvent.api";
 
 vi.mock("../maps", () => ({
   COLOMBO_MAP_CENTER: { latitude: 6.9271, longitude: 79.8612 },
@@ -107,6 +107,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe("CleanupEventDraftEditor simplified linked-event flow", () => {
@@ -138,4 +139,33 @@ describe("CleanupEventDraftEditor simplified linked-event flow", () => {
     expect("eventLatitude" in input).toBe(false);
     expect("eventLongitude" in input).toBe(false);
   });
+});
+
+
+test("draft list deletion supports cancellation, failure, and retry", async () => {
+  vi.mocked(listDrafts).mockResolvedValue({ items: [savedDraft], nextCursor: null });
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  vi.mocked(discardDraft).mockRejectedValueOnce(new Error("Deletion failed")).mockResolvedValue(undefined);
+  render(<CleanupEventDraftEditor accessToken="token" organizationId="organization-1" />);
+  const remove = await screen.findByRole("button", { name: "Delete draft: Canal cleanup" });
+  fireEvent.click(remove);
+  expect(discardDraft).not.toHaveBeenCalled();
+  confirm.mockReturnValue(true);
+  fireEvent.click(remove);
+  expect(await screen.findByRole("alert")).toBeTruthy();
+  expect(screen.getByText("Canal cleanup")).toBeTruthy();
+  fireEvent.click(remove);
+  await waitFor(() => expect(screen.queryByText("Canal cleanup")).toBeNull());
+  expect(discardDraft).toHaveBeenLastCalledWith("token", "organization-1", "draft-1");
+});
+
+test("editor corner cross deletes the selected draft and returns to the list", async () => {
+  vi.mocked(listDrafts).mockResolvedValue({ items: [savedDraft], nextCursor: null });
+  vi.mocked(discardDraft).mockResolvedValue(undefined);
+  vi.spyOn(window, "confirm").mockReturnValue(true);
+  render(<CleanupEventDraftEditor accessToken="token" organizationId="organization-1" />);
+  fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
+  fireEvent.click(screen.getByRole("button", { name: "Delete draft: Canal cleanup" }));
+  expect(await screen.findByText("No private drafts")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
 });

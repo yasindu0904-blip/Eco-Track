@@ -300,3 +300,24 @@ test("new notifications create durable deliveries without replaying old notifica
 });
 
 registerResourceCleanup();
+
+
+test("concurrent push registration retries and token transfers remain idempotent and user-owned", async () => {
+  const installationA = randomUUID();
+  const installationB = randomUUID();
+  const sharedToken = `ExponentPushToken[concurrent-${randomUUID()}]`;
+  const register = (authToken: string, installation: string) => request(authToken, `/api/v1/push-devices/${installation}`, {
+    method: "PUT", body: JSON.stringify({ expoPushToken: sharedToken, platform: "ANDROID" }),
+  });
+  const repeated = await Promise.all(Array.from({ length: 4 }, () => register(userAToken, installationA)));
+  assert.deepEqual(repeated.map(response => response.status), [200, 200, 200, 200]);
+  assert.equal(await prisma.userDevice.count({ where: { installationId: installationA } }), 1);
+
+  const transfers = await Promise.all([register(userAToken, installationA), register(userBToken, installationB)]);
+  assert.deepEqual(transfers.map(response => response.status), [200, 200]);
+  const devices = await prisma.userDevice.findMany({ where: { installationId: { in: [installationA, installationB] } } });
+  assert.equal(devices.filter(device => device.expoPushToken === sharedToken && device.isActive).length, 1);
+  assert.equal(devices.find(device => device.installationId === installationA)?.userId, userAId);
+  assert.equal(devices.find(device => device.installationId === installationB)?.userId, userBId);
+  assert.equal((await register(userBToken, installationA)).status, 409);
+});

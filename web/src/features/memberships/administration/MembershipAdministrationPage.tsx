@@ -1,3 +1,4 @@
+import { ListWindow } from "../../../components/lists/ListControls";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 import { describeApiFailure } from "../../../api/apiError";
@@ -33,7 +34,7 @@ function replaceMember(items: OrganizationMember[], updated: OrganizationMember)
   return items.map((item) => item.id === updated.id ? updated : item);
 }
 
-export function MembershipAdministrationPage({ accessToken, organizationId, organizationName, onBack }: Props) {
+export function MembershipAdministrationPage({ accessToken, organizationId, organizationName }: Props) {
   const [requests, setRequests] = useState<AdminMembershipRequest[]>([]);
   const [requestCursor, setRequestCursor] = useState<string | null>(null);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
@@ -202,41 +203,41 @@ export function MembershipAdministrationPage({ accessToken, organizationId, orga
     <main className="membership-admin-page">
       <header className="membership-admin-header">
         <div><span>Organization workspace</span><h1>Membership administration</h1><p>{organizationName}</p></div>
-        <button className="ma-button ma-secondary" type="button" onClick={onBack}>Back</button>
+
       </header>
 
       {notice && <p className="ma-notice ma-success" role="status">{notice}<button type="button" onClick={() => setNotice(null)}>Dismiss</button></p>}
 
       <section className="ma-card" aria-labelledby="pending-requests-heading">
-        <div className="ma-section-heading"><div><h2 id="pending-requests-heading">Pending requests</h2><p>Approve verified members or decline with a clear reason.</p></div><button className="ma-button ma-secondary" type="button" disabled={loadingRequests} onClick={() => void loadRequests()}>Refresh</button></div>
+        <div className="ma-section-heading"><div><h2 id="pending-requests-heading">Pending requests</h2></div><button className="ma-button ma-secondary" type="button" disabled={loadingRequests} onClick={() => void loadRequests()}>Refresh</button></div>
         {requestError && <p className="ma-notice ma-error" role="alert">{requestError}</p>}
         <div className="ma-list" aria-busy={loadingRequests}>
-          {requests.map((request) => (
+          {<ListWindow items={requests} hasMore={Boolean(requestCursor)} busy={loadingRequests} loadMore={() => { if (requestCursor) void loadRequests(requestCursor); }}>{visible => visible.map((request) => (
             <article key={request.id} className="ma-request">
               <div className="ma-person"><div><h3>{request.requester.fullName ?? "EcoTrack user"}</h3><p>{request.requester.email}{request.requester.phoneNumber ? ` | ${request.requester.phoneNumber}` : ""}</p></div><small>{new Date(request.createdAt).toLocaleString()}</small></div>
               <p>{request.message ?? "No request message was provided."}</p>
               <div className="ma-actions"><button className="ma-button ma-primary" type="button" disabled={busyKey !== null} onClick={() => void approve(request)}>Approve</button><button className="ma-button ma-danger" type="button" disabled={busyKey !== null} onClick={() => { setDecliningId(request.id); setDeclineReason(""); }}>Decline</button></div>
               {decliningId === request.id && <form className="ma-decline" onSubmit={(event) => void decline(event, request.id)}><label>Decline reason<textarea value={declineReason} onChange={(event) => setDeclineReason(event.target.value)} minLength={5} maxLength={500} required /></label><div className="ma-actions"><button className="ma-button ma-danger" disabled={busyKey !== null}>Confirm decline</button><button className="ma-button ma-secondary" type="button" onClick={() => setDecliningId(null)}>Cancel</button></div></form>}
             </article>
-          ))}
+          ))}</ListWindow>}
           {!loadingRequests && requests.length === 0 && <p className="ma-empty">There are no pending membership requests.</p>}
         </div>
-        {requestCursor && <button className="ma-button ma-secondary" type="button" disabled={loadingRequests} onClick={() => void loadRequests(requestCursor)}>Load more requests</button>}
+
       </section>
 
       <section className="ma-card" aria-labelledby="members-heading">
-        <div className="ma-section-heading"><div><h2 id="members-heading">Organization members</h2><p>Roles and access always apply only to this organization.</p></div></div>
+        <div className="ma-section-heading"><div><h2 id="members-heading">Organization members</h2></div></div>
         <form className="ma-add-form" onSubmit={add}><label>Existing EcoTrack user's verified email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label><button className="ma-button ma-primary" disabled={busyKey !== null}>Add as member</button></form>
         <form className="ma-filters" onSubmit={(event) => { event.preventDefault(); void loadMembers(); }}><label>Search<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name or email" /></label><label>Role<select value={role} onChange={(event) => setRole(event.target.value as MembershipRole | "")}><option value="">All roles</option><option value="ORG_MEMBER">Organization Member</option><option value="ORG_ADMIN">Organization Admin</option></select></label><label>Status<select value={status} onChange={(event) => setStatus(event.target.value as MembershipStatus | "")}><option value="">All statuses</option><option value="ACTIVE">Active</option><option value="SUSPENDED">Suspended</option><option value="REMOVED">Removed</option><option value="LEFT">Left</option></select></label><button className="ma-button ma-secondary" disabled={loadingMembers}>Apply filters</button></form>
         {memberError && <p className="ma-notice ma-error" role="alert">{memberError}</p>}
         <div className="ma-list" aria-busy={loadingMembers}>
-          {members.map((member) => {
+          {<ListWindow items={members} key={`${query}:${role}:${status}`} hasMore={Boolean(memberCursor)} busy={loadingMembers} loadMore={() => { if (memberCursor) void loadMembers(memberCursor); }}>{visible => visible.map((member) => {
             const busy = busyKey === `member-${member.id}`;
             return <article key={member.id} className="ma-member"><div className="ma-person"><div><h3>{member.user.fullName ?? "EcoTrack user"}</h3><p>{member.user.email}{member.user.phoneNumber ? ` | ${member.user.phoneNumber}` : ""}</p></div><div className="ma-chips"><span>{member.role === "ORG_ADMIN" ? "Admin" : "Member"}</span><span className={`ma-status-${member.status.toLowerCase()}`}>{member.status}</span></div></div><p>Joined {new Date(member.joinedAt).toLocaleDateString()}</p><div className="ma-actions">{member.status === "ACTIVE" && <button className="ma-button ma-secondary" type="button" disabled={busy || busyKey !== null} onClick={() => void updateRole(member, member.role === "ORG_ADMIN" ? "ORG_MEMBER" : "ORG_ADMIN")}>{member.role === "ORG_ADMIN" ? "Demote to member" : "Promote to admin"}</button>}{member.status === "ACTIVE" ? <><button className="ma-button ma-secondary" type="button" disabled={busy || busyKey !== null} onClick={() => void updateStatus(member, "SUSPENDED")}>Suspend</button><button className="ma-button ma-danger" type="button" disabled={busy || busyKey !== null} onClick={() => void updateStatus(member, "REMOVED")}>Remove</button></> : <button className="ma-button ma-primary" type="button" disabled={busy || busyKey !== null} onClick={() => void updateStatus(member, "ACTIVE")}>Reactivate</button>}</div></article>;
-          })}
+          })}</ListWindow>}
           {!loadingMembers && members.length === 0 && <p className="ma-empty">No organization members match these filters.</p>}
         </div>
-        {memberCursor && <button className="ma-button ma-secondary" type="button" disabled={loadingMembers} onClick={() => void loadMembers(memberCursor)}>Load more members</button>}
+
       </section>
     </main>
   );

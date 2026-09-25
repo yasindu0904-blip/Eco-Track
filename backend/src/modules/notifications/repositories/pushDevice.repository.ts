@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../../generated/prisma/client.js";
+import { Prisma, type PrismaClient } from "../../../generated/prisma/client.js";
 
 import { ApplicationError } from "../../../errors/applicationError.js";
 import type { RegisterPushDeviceCommand } from "../notification.types.js";
@@ -17,59 +17,73 @@ export async function registerPushDeviceRecord(
   prisma: PrismaClient,
   command: RegisterPushDeviceCommand,
 ) {
-  return prisma.$transaction(async (transaction) => {
-    const existingInstallation = await transaction.userDevice.findUnique({
-      where: { installationId: command.installationId },
-      select: { userId: true },
-    });
+  // Registration can run both at startup and when the native push token changes.
+  // Retry the entire transaction so ownership and token transfer are rechecked.
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await prisma.$transaction(async (transaction) => {
+        const existingInstallation = await transaction.userDevice.findUnique({
+          where: { installationId: command.installationId },
+          select: { userId: true },
+        });
 
-    if (existingInstallation && existingInstallation.userId !== command.userId) {
-      throw new ApplicationError(
-        409,
-        "PUSH_INSTALLATION_CONFLICT",
-        "This app installation is already registered to another account.",
-      );
+        if (existingInstallation && existingInstallation.userId !== command.userId) {
+          throw new ApplicationError(
+            409,
+            "PUSH_INSTALLATION_CONFLICT",
+            "This app installation is already registered to another account.",
+          );
+        }
+
+        const now = new Date();
+
+        await transaction.userDevice.updateMany({
+          where: {
+            expoPushToken: command.expoPushToken,
+            NOT: { installationId: command.installationId },
+          },
+          data: {
+            expoPushToken: null,
+            isActive: false,
+            deactivatedAt: now,
+          },
+        });
+
+        return transaction.userDevice.upsert({
+          where: { installationId: command.installationId },
+          create: {
+            userId: command.userId,
+            installationId: command.installationId,
+            expoPushToken: command.expoPushToken,
+            platform: command.platform,
+            deviceName: command.deviceName,
+            appVersion: command.appVersion,
+            isActive: true,
+            registeredAt: now,
+            lastSeenAt: now,
+          },
+          update: {
+            expoPushToken: command.expoPushToken,
+            platform: command.platform,
+            deviceName: command.deviceName,
+            appVersion: command.appVersion,
+            isActive: true,
+            deactivatedAt: null,
+            lastSeenAt: now,
+          },
+          select: pushDeviceSelect,
+        });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      const retryable = error instanceof Prisma.PrismaClientKnownRequestError
+        && (error.code === "P2034" || error.code === "P2002");
+      if (!retryable) throw error;
+      if (attempt >= 4) {
+        throw new ApplicationError(409, "PUSH_REGISTRATION_BUSY", "Device registration is busy. Please try again.");
+      }
+      await new Promise(resolve => setTimeout(resolve, 25 * (attempt + 1)));
     }
-
-    const now = new Date();
-
-    await transaction.userDevice.updateMany({
-      where: {
-        expoPushToken: command.expoPushToken,
-        NOT: { installationId: command.installationId },
-      },
-      data: {
-        expoPushToken: null,
-        isActive: false,
-        deactivatedAt: now,
-      },
-    });
-
-    return transaction.userDevice.upsert({
-      where: { installationId: command.installationId },
-      create: {
-        userId: command.userId,
-        installationId: command.installationId,
-        expoPushToken: command.expoPushToken,
-        platform: command.platform,
-        deviceName: command.deviceName,
-        appVersion: command.appVersion,
-        isActive: true,
-        registeredAt: now,
-        lastSeenAt: now,
-      },
-      update: {
-        expoPushToken: command.expoPushToken,
-        platform: command.platform,
-        deviceName: command.deviceName,
-        appVersion: command.appVersion,
-        isActive: true,
-        deactivatedAt: null,
-        lastSeenAt: now,
-      },
-      select: pushDeviceSelect,
-    });
-  });
+  }
 }
 
 export async function deactivatePushDeviceRecord(

@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { IncidentEvidence } from "../incidents/IncidentEvidence";
+import { getPublicIncident } from "../incidents/incident.api";
+import type { IncidentDetail } from "../incidents/incident.types";
+import { useListScroll } from "../../components/lists/useListScroll";
+import { ListSections, PageControls } from "../../components/lists/ListControls";
+import { eventSections, useListState, usePagedList, type EventSection } from "../../components/lists/usePagedList";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { describeApiFailure } from "../../api/apiError";
 import {
@@ -7,7 +13,6 @@ import {
 } from "./cleanupEvent.api";
 import type {
   CleanupEventPublicDetail,
-  CleanupEventPublicSummary,
   EventParticipation,
 } from "./cleanupEvent.types";
 import { EventParticipationPanel } from "./EventParticipationPanel";
@@ -22,57 +27,43 @@ type Props = {
 const formatDate = (value: string | null) =>
   value ? new Date(value).toLocaleString() : "Schedule to be confirmed";
 
-export function PublicCleanupEventsPage({
-  accessToken,
-  initialEventId,
-  onBack,
-}: Props) {
+export function PublicCleanupEventsPage({ accessToken, initialEventId }: Props) {
   const detailOnly = Boolean(initialEventId);
-  const [items, setItems] = useState<CleanupEventPublicSummary[]>([]);
+  const [section, setSection] = useListState<EventSection>("events.section", "upcoming");
+  const list = usePagedList("events:" + section, cursor => listPublicCleanupEvents(accessToken, cursor, section), false, !initialEventId);
+  useListScroll("events:" + section + ":" + list.pageNumber, !list.busy && !initialEventId);
+  const items = list.items;
+  const detailRequest = useRef(0);
+  useEffect(() => () => { detailRequest.current += 1; }, []);
+  const [incident, setIncident] = useState<IncidentDetail>();
   const [selected, setSelected] = useState<CleanupEventPublicDetail>();
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [busy, setBusy] = useState(true);
+  const [busy, setBusy] = useState(Boolean(initialEventId));
   const [error, setError] = useState<string>();
   const [participationContext, setParticipationContext] = useState<{
     eventId: string;
     participation: EventParticipation | null;
   }>();
-  const load = useCallback(
-    async (cursor?: string) => {
-      setBusy(true);
-      setError(undefined);
-      try {
-        const page = await listPublicCleanupEvents(accessToken, cursor);
-        setItems((current) =>
-          cursor ? [...current, ...page.items] : page.items,
-        );
-        setNextCursor(page.nextCursor);
-        if (!cursor && !initialEventId && page.items[0])
-          setSelected(
-            await getPublicCleanupEvent(accessToken, page.items[0].id),
-          );
-      } catch (reason) {
-        setError(
-          describeApiFailure(reason, "Unable to load cleanup events.").message,
-        );
-      } finally {
-        setBusy(false);
-      }
-    },
-    [accessToken, initialEventId],
-  );
   const open = useCallback(
     async (id: string) => {
+      const request = ++detailRequest.current;
       setBusy(true);
       setError(undefined);
+      setIncident(undefined);
       try {
-        setSelected(await getPublicCleanupEvent(accessToken, id));
+        const detail = await getPublicCleanupEvent(accessToken, id);
+        if (request !== detailRequest.current) return;
+        setSelected(detail);
+        if (detail.incidentId) {
+          const linkedIncident = await getPublicIncident(accessToken, detail.incidentId);
+          if (request === detailRequest.current) setIncident(linkedIncident);
+        }
       } catch (reason) {
+        if (request !== detailRequest.current) return;
         setError(
           describeApiFailure(reason, "Unable to open this event.").message,
         );
       } finally {
-        setBusy(false);
+        if (request === detailRequest.current) setBusy(false);
       }
     },
     [accessToken],
@@ -87,10 +78,9 @@ export function PublicCleanupEventsPage({
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       if (initialEventId) void open(initialEventId);
-      else void load();
     }, 0);
     return () => window.clearTimeout(timeout);
-  }, [initialEventId, load, open]);
+  }, [initialEventId, open]);
 
   return (
     <main className="public-events-shell">
@@ -98,20 +88,12 @@ export function PublicCleanupEventsPage({
         <div>
           <span>COMMUNITY CLEANUPS</span>
           <h1>{selected?.title ?? "Published cleanup events"}</h1>
-          <p>
-            {detailOnly
-              ? "Review the schedule, instructions, and volunteer options for this cleanup."
-              : "Choose a public event to see its verified schedule, instructions, and join options."}
-          </p>
+
         </div>
-        <button
-          className="event-action-button secondary"
-          type="button"
-          onClick={onBack}
-        >
-          Back
-        </button>
+
       </header>
+      {!initialEventId && <ListSections value={section} options={eventSections} onChange={value => { detailRequest.current += 1; setBusy(false); setSection(value); setSelected(undefined); }} />}
+      {list.error && <p role="alert">{list.error}</p>}
       {error && (
         <p className="event-editor-notice error" role="alert">
           {error}
@@ -123,12 +105,12 @@ export function PublicCleanupEventsPage({
         {!detailOnly && (
           <section className="event-editor-panel">
             <h2>Upcoming and active events</h2>
-            {busy && items.length === 0 ? (
+            {list.busy && items.length === 0 ? (
               <p>Loading events…</p>
             ) : items.length === 0 ? (
               <div className="event-editor-empty">
                 <strong>No published events yet</strong>
-                <p>Organization drafts appear here only after publishing.</p>
+
               </div>
             ) : (
               <div className="public-event-list">
@@ -148,16 +130,7 @@ export function PublicCleanupEventsPage({
                 ))}
               </div>
             )}
-            {nextCursor && (
-              <button
-                className="event-action-button secondary"
-                disabled={busy}
-                type="button"
-                onClick={() => void load(nextCursor)}
-              >
-                Load more
-              </button>
-            )}
+            <PageControls {...list} />
           </section>
         )}
         <section className="event-editor-panel public-event-detail">
@@ -170,10 +143,7 @@ export function PublicCleanupEventsPage({
             ) : (
               <>
                 <h2>Select an event</h2>
-                <p>
-                  Public details do not expose private coordinator or planning
-                  notes.
-                </p>
+
               </>
             )
           ) : (
@@ -213,6 +183,7 @@ export function PublicCleanupEventsPage({
                     eventId={selected.id}
                   />
                 )}
+              {incident && <IncidentEvidence incident={incident} />}
             </>
           )}
         </section>

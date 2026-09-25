@@ -15,6 +15,7 @@ export type PublicIncidentPage = {
   nextCursor: string | null;
 };
 export type IncidentDiscoveryFilters = {
+  awaitingCleanup?: boolean;
   limit?: number;
   cursor?: string;
   status?: IncidentStatus;

@@ -1,5 +1,4 @@
 import type { AuthenticatedUserProfile } from "../auth/auth.types";
-import type { ActiveOrganizationMembership } from "../memberships/administration/membershipAdministration.types";
 import { NotificationButton } from "../notifications/NotificationButton";
 
 export type CitizenIconName =
@@ -70,12 +69,10 @@ type CitizenSidebarProps = {
   profile: AuthenticatedUserProfile;
   accessToken: string;
   activeScreen: string;
-  activeOrganization?: ActiveOrganizationMembership;
   onDashboard: () => void;
   onOpenNotifications: () => void;
   onManageMembership: () => void;
   onOpenOrganizationWorkspaces: () => void;
-  onOpenOrganizationWorkspace?: () => void;
   onViewOrganizationApplications: () => void;
   onReportIncident: () => void;
   onViewIncidentReports: () => void;
@@ -89,12 +86,10 @@ export function CitizenSidebar({
   profile,
   accessToken,
   activeScreen,
-  activeOrganization,
   onDashboard,
   onOpenNotifications,
   onManageMembership,
   onOpenOrganizationWorkspaces,
-  onOpenOrganizationWorkspace,
   onViewOrganizationApplications,
   onReportIncident,
   onViewIncidentReports,
@@ -134,18 +129,13 @@ export function CitizenSidebar({
           <SidebarBullet /> Dashboard
         </button>
         <span className="citizen-dashboard-nav-label">Organizations</span>
-        {activeOrganization && onOpenOrganizationWorkspace && (
-          <button type="button" onClick={onOpenOrganizationWorkspace} {...navigationState(active("organization-workspace"))}>
-            <SidebarBullet /> Organization workspace
-          </button>
-        )}
         <button type="button" onClick={onViewOrganizationApplications} {...navigationState(active("organization-apply", "organization-applications"))}>
           <SidebarBullet /> My organization requests
         </button>
         <button type="button" onClick={onManageMembership} {...navigationState(active("membership"))}>
           <SidebarBullet /> Join an organization
         </button>
-        <button type="button" onClick={onOpenOrganizationWorkspaces} {...navigationState(active("organization-workspaces"))}>
+        <button type="button" onClick={onOpenOrganizationWorkspaces} {...navigationState(active("organization-workspaces", "organization-workspace"))}>
           <SidebarBullet /> Organization workspaces
         </button>
         <span className="citizen-dashboard-nav-label">Community action</span>

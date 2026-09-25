@@ -1,3 +1,4 @@
+import { getPublicIncident } from "../incidents/incident.api";
 import TestRenderer, { act } from "react-test-renderer";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -15,6 +16,8 @@ vi.mock("../../config/env", () => ({
 }));
 
 vi.mock("react-native", () => ({
+  ScrollView: "ScrollView",
+  Image: "Image",
   Pressable: "Pressable",
   StyleSheet: { create: <T,>(styles: T) => styles },
   Text: "Text",
@@ -28,6 +31,8 @@ vi.mock("../../components/ui", () => ({
   Screen: "Screen",
   sharedStyles: { card: {}, sectionTitle: {} },
 }));
+
+vi.mock("../incidents/incident.api", () => ({ getPublicIncident: vi.fn() }));
 
 vi.mock("./cleanupEvent.api", () => ({
   getPublicCleanupEvent: vi.fn(),
@@ -102,4 +107,23 @@ describe("PublicCleanupEventsScreen participant updates", () => {
       renderer!.root.findAllByType("ParticipantEventUpdatesPanel" as never),
     ).toHaveLength(1);
   });
+});
+
+const publicIncident = {
+  id: "incident-evidence", title: "Plastic beside the canal", description: "Bags and bottles beside the water.",
+  category: { id: "waste", name: "Waste", description: null }, severity: "MEDIUM" as const,
+  status: "ACTIVE" as const, latitude: 6.9271, longitude: 79.8612, addressText: "Canal road",
+  reportedAt: "2026-08-20T00:00:00.000Z", thumbnailUrl: null, falseReviewCount: 0, isOwnReport: false,
+  highlightUntil: "2026-09-20T00:00:00.000Z", archiveAfter: "2026-10-20T00:00:00.000Z",
+  resolvedAt: null, archivedAt: null, statusHistory: [],
+  photos: [{ id: "photo-1", url: "https://example.test/evidence.jpg", caption: "Bottles by the canal", sortOrder: 0 }],
+};
+
+test("a linked event also shows its incident evidence on the join screen", async () => {
+  vi.mocked(getPublicCleanupEvent).mockResolvedValue({ ...event, incidentId: publicIncident.id });
+  vi.mocked(getPublicIncident).mockResolvedValue(publicIncident);
+  let renderer: TestRenderer.ReactTestRenderer;
+  await act(async () => { renderer = TestRenderer.create(<PublicCleanupEventsScreen accessToken="token" initialEventId="event-1" onBack={vi.fn()} />); });
+  expect(getPublicIncident).toHaveBeenCalledWith("token", publicIncident.id);
+  expect(renderer!.root.findByType("Image" as never).props.source.uri).toBe(publicIncident.photos[0]!.url);
 });

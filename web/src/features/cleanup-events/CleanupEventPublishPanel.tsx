@@ -26,7 +26,7 @@ export function CleanupEventPublishPanel({ accessToken, organizationId, eventId,
     } finally { setBusy(false); }
   }
   return <section className="event-editor-panel event-publish-panel">
-    <div className="event-editor-section-heading"><span>04</span><div><h2>Publish event</h2><p>EcoTrack checks the saved server data again inside one transaction before publishing.</p></div></div>
+    <div className="event-editor-section-heading"><span>04</span><div><h2>Publish event</h2></div></div>
     {error && <p className="event-editor-notice error" role="alert">{error}</p>}
     {winningEventId && <p className="event-editor-linked">This incident is already claimed by event <code>{winningEventId}</code>.</p>}
     {winningEventId && !winningEvent && <button type="button" className="secondary" disabled={busy} onClick={() => void (async () => { setBusy(true); try { setWinningEvent(await getPublicCleanupEvent(accessToken, winningEventId)); } catch (reason) { setError(describeApiFailure(reason, "Unable to open the published event.").message); } finally { setBusy(false); } })()}>View already published event</button>}

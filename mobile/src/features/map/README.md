@@ -3,6 +3,9 @@
 The native map foundation uses `@maplibre/maplibre-react-native` with an
 OpenStreetMap raster style and `expo-location` for one-shot foreground GPS.
 Import public contracts from `src/features/map`.
+Cluster counts use Noto Sans Regular glyphs from the explicit HTTPS glyph URL
+in `map.constants.ts`. Native MapLibre cannot fall back to local fonts when
+that URL is omitted, even though the basemap itself uses raster tiles.
 
 ## Development preview
 
@@ -67,3 +70,15 @@ The mobile types intentionally match the backend and web MAP-01 contracts.
 GeoJSON uses `[longitude, latitude]`; API forms use
 `{ latitude, longitude }`. `onViewportChange(viewport, context)` is debounced
 by 400 ms, aborts stale callbacks, and is suppressed for bounds over 1.5°.
+
+
+## Android push registration after configuration changes
+
+`app.json` references `./google-services.json` for `com.ecotrack.mobile`.
+Adding that file or changing native plugins requires regenerating the Android
+project and rebuilding/installing the development client. A Metro reload only
+updates JavaScript and cannot initialize missing native Firebase resources.
+Run `npx expo prebuild --platform android --no-install` before the Android build
+when an existing generated project predates the configuration. Confirm the
+Google Services plugin is applied and `android/app/google-services.json` exists.
+Keep private FCM service-account credentials out of the mobile application.

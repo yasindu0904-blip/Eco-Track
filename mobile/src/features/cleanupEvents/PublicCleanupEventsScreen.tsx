@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
+import { IncidentEvidence } from "../incidents/IncidentEvidence";
+import { getPublicIncident } from "../incidents/incident.api";
+import type { IncidentDetail } from "../incidents/incident.types";
+import { ListSections, PageControls } from "../../components/lists/ListControls";
+import { eventSections, useListState, usePagedList, type EventSection } from "../../components/lists/usePagedList";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { describeApiFailure } from "../../api/apiError";
 import {
-  Button,
   Notice,
   PageHeader,
   Screen,
@@ -16,7 +20,6 @@ import {
 } from "./cleanupEvent.api";
 import type {
   CleanupEventPublicDetail,
-  CleanupEventPublicSummary,
   EventParticipation,
 } from "./cleanupEvent.types";
 import { EventParticipationPanel } from "./EventParticipationPanel";
@@ -33,56 +36,46 @@ export function PublicCleanupEventsScreen({
   initialEventId,
   onBack,
 }: Props) {
-  const [items, setItems] = useState<CleanupEventPublicSummary[]>([]);
+  const [section, setSection] = useListState<EventSection>("events.section", "upcoming");
+  const list = usePagedList("events:" + section, cursor => listPublicCleanupEvents(accessToken, cursor, section), true, !initialEventId);
+  const items = list.items;
+  const detailRequest = useRef(0);
+  useEffect(() => () => { detailRequest.current += 1; }, []);
+  const [incident, setIncident] = useState<IncidentDetail>();
   const [selected, setSelected] = useState<CleanupEventPublicDetail>();
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [busy, setBusy] = useState(true);
+  const [busy, setBusy] = useState(Boolean(initialEventId));
   const [error, setError] = useState<string>();
   const [participationContext, setParticipationContext] = useState<{
     eventId: string;
     participation: EventParticipation | null;
   }>();
-  const load = useCallback(
-    async (cursor?: string) => {
-      setBusy(true);
-      setError(undefined);
-      try {
-        if (initialEventId && !cursor) {
-          setSelected(await getPublicCleanupEvent(accessToken, initialEventId));
-          return;
-        }
-        const page = await listPublicCleanupEvents(accessToken, cursor);
-        setItems((current) =>
-          cursor ? [...current, ...page.items] : page.items,
-        );
-        setNextCursor(page.nextCursor);
-      } catch (reason) {
-        setError(
-          describeApiFailure(reason, "Unable to load cleanup events.").message,
-        );
-      } finally {
-        setBusy(false);
-      }
-    },
-    [accessToken, initialEventId],
-  );
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   async function open(id: string): Promise<void> {
+    const request = ++detailRequest.current;
     setBusy(true);
     setError(undefined);
+      setIncident(undefined);
     try {
-      setSelected(await getPublicCleanupEvent(accessToken, id));
+      const detail = await getPublicCleanupEvent(accessToken, id);
+        if (request !== detailRequest.current) return;
+        setSelected(detail);
+        if (detail.incidentId) {
+          const linkedIncident = await getPublicIncident(accessToken, detail.incidentId);
+          if (request === detailRequest.current) setIncident(linkedIncident);
+        }
     } catch (reason) {
+      if (request !== detailRequest.current) return;
       setError(
         describeApiFailure(reason, "Unable to load event details.").message,
       );
     } finally {
-      setBusy(false);
+      if (request === detailRequest.current) setBusy(false);
     }
   }
+  useEffect(() => {
+    if (initialEventId) void open(initialEventId);
+  // The destination ID controls opening a detail page.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialEventId]);
   const handleParticipationChanged = useCallback(
     (participation: EventParticipation | null) => {
       if (selected)
@@ -92,25 +85,25 @@ export function PublicCleanupEventsScreen({
   );
 
   return (
-    <Screen>
+    <Screen rememberKey={selected ? undefined : "events:" + section}>
       <PageHeader
         eyebrow="Community cleanups"
         title={selected ? selected.title : "Published events"}
-        subtitle={
-          selected
-            ? selected.organization.name
-            : "Verified schedules, instructions, and volunteer availability."
-        }
         onBack={
           selected && !initialEventId ? () => setSelected(undefined) : onBack
         }
         backLabel={selected && !initialEventId ? "Events" : "Back"}
         action={
           selected ? (
-            <Text style={styles.status}>{selected.displayStatus}</Text>
+            <View style={styles.eventHeading}>
+              <Text style={styles.organizationName}>{selected.organization.name}</Text>
+              <Text style={styles.status}>{selected.displayStatus}</Text>
+            </View>
           ) : undefined
         }
       />
+      {!selected && <ListSections value={section} options={eventSections} onChange={value => { detailRequest.current += 1; setBusy(false); setSection(value); }} />}
+      {list.error && <Notice tone="error" message={list.error} />}
       {error ? <Notice tone="error" message={error} /> : null}
       {selected ? (
         <>
@@ -145,6 +138,7 @@ export function PublicCleanupEventsScreen({
               eventId={selected.id}
             />
           ) : null}
+          {incident && <IncidentEvidence incident={incident} />}
         </>
       ) : (
         <View style={sharedStyles.card}>
@@ -174,14 +168,7 @@ export function PublicCleanupEventsScreen({
               </Pressable>
             ))
           )}
-          {nextCursor ? (
-            <Button
-              label="Load more"
-              variant="secondary"
-              loading={busy}
-              onPress={() => void load(nextCursor)}
-            />
-          ) : null}
+          <PageControls {...list} />
         </View>
       )}
     </Screen>
@@ -190,17 +177,10 @@ export function PublicCleanupEventsScreen({
 
 const styles = StyleSheet.create({
   detail: { borderColor: colors.primary },
-  status: {
-    alignSelf: "flex-start",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: colors.successSoft,
-    color: colors.success,
-    fontSize: 11,
-    fontWeight: "900",
-  },
+  status: { alignSelf: "flex-start", color: colors.success, fontSize: 11, fontWeight: "900" },
   organization: { color: colors.text, fontWeight: "800" },
+  eventHeading: { gap: 10, alignItems: "flex-start" },
+  organizationName: { color: colors.primary, fontSize: 16, fontWeight: "800" },
   copy: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
   heading: {
     color: colors.primary,

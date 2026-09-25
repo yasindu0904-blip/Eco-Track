@@ -1,4 +1,6 @@
 import { registerRootComponent } from "expo";
+import { createElement } from "react";
+import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
 
 import App from "./App";
 import { MapPreviewApp } from "./src/features/map/MapPreviewApp";
@@ -9,4 +11,8 @@ configureNotificationPresentation();
 const RootComponent =
   process.env.EXPO_PUBLIC_MAP_PREVIEW === "true" ? MapPreviewApp : App;
 
-registerRootComponent(RootComponent);
+function SafeRoot() {
+  return createElement(SafeAreaProvider, { initialMetrics: initialWindowMetrics }, createElement(RootComponent));
+}
+
+registerRootComponent(SafeRoot);

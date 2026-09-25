@@ -14,8 +14,8 @@ import { Button, Notice, sharedStyles } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import { listIncidentCategories } from "../incidents/incident.api";
 import type { IncidentCategory } from "../incidents/incident.types";
-import { listOrganizationCleanupEventMap } from "../cleanupEvents/cleanupEvent.api";
-import type { CleanupEventMapFeature } from "../cleanupEvents/cleanupEvent.types";
+import { getPublicCleanupEvent, listOrganizationCleanupEventMap } from "../cleanupEvents/cleanupEvent.api";
+import type { CleanupEventPublicDetail, CleanupEventMapFeature } from "../cleanupEvents/cleanupEvent.types";
 import {
   AdministrativeAreaMapSearch,
   EcoMap,
@@ -51,7 +51,6 @@ const statuses = [
   { value: "", label: "All current" },
   { value: "ACTIVE", label: "Active" },
   { value: "CLEANUP_ORGANIZED", label: "Organized" },
-  { value: "RESOLVED", label: "Resolved" },
 ] as const;
 
 const times = [
@@ -147,6 +146,32 @@ export function OrganizationIncidentDiscovery({
   const [reviewError, setReviewError] = useState<string>();
   const [reviewNotice, setReviewNotice] = useState<string>();
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const selectedEvent = selectedKind === "CLEANUP_EVENT"
+    ? events.find((event) => event.properties.id === selectedId) : undefined;
+  const selectedIncidentId = selectedKind === "INCIDENT"
+    ? selectedId : selectedEvent?.properties.incidentId ?? undefined;
+  const [publicEvent, setPublicEvent] = useState<CleanupEventPublicDetail>();
+  const [eventError, setEventError] = useState<string>();
+  const linkedPublicEvent = selectedKind === "INCIDENT" ? events.find((event) =>
+    event.properties.incidentId === selectedId && ["UPCOMING", "ONGOING"].includes(event.properties.status)) : undefined;
+  const publicEventId = selectedEvent?.properties.status !== "DRAFT"
+    ? selectedEvent?.properties.id ?? linkedPublicEvent?.properties.id : undefined;
+  useEffect(() => {
+    const controller = new AbortController();
+    void Promise.resolve().then(async () => {
+      if (controller.signal.aborted) return;
+      setPublicEvent(undefined);
+      setEventError(undefined);
+      if (!publicEventId) return;
+      try {
+        const loaded = await getPublicCleanupEvent(accessToken, publicEventId, controller.signal);
+        if (!controller.signal.aborted) setPublicEvent(loaded);
+      } catch (error: unknown) {
+        if (!controller.signal.aborted) setEventError(describeApiFailure(error, "Unable to load cleanup event details.").message);
+      }
+    });
+    return () => controller.abort();
+  }, [accessToken, publicEventId]);
   const activeRequest = useRef<AbortController | undefined>(undefined);
   const detailRequest = useRef<AbortController | undefined>(undefined);
   const selectedIdRef = useRef<string | undefined>(undefined);
@@ -229,7 +254,7 @@ export function OrganizationIncidentDiscovery({
     setReasonCode(undefined);
     setPrivateNotes("");
 
-    if (!selectedId || selectedKind !== "INCIDENT" || !canReview) {
+    if (!selectedIncidentId || !canReview) {
       return;
     }
 
@@ -239,7 +264,7 @@ export function OrganizationIncidentDiscovery({
     void getOrganizationIncidentDetail(
       accessToken,
       organizationId,
-      selectedId,
+      selectedIncidentId,
       controller.signal,
     )
       .then((loaded) => {
@@ -268,7 +293,7 @@ export function OrganizationIncidentDiscovery({
       });
 
     return () => controller.abort();
-  }, [accessToken, canReview, organizationId, selectedId, selectedKind]);
+  }, [accessToken, canReview, organizationId, selectedIncidentId]);
 
   const loadDiscovery = useCallback(
     async (
@@ -442,7 +467,9 @@ export function OrganizationIncidentDiscovery({
 
   const markers = useMemo<MapMarkerFeature[]>(
     () => [
-      ...incidents.map(
+      ...incidents.filter((incident) => incident.status === "CLEANUP_ORGANIZED" || !events.some((event) =>
+        event.properties.isOwned && event.properties.status === "DRAFT" && event.properties.incidentId === incident.id
+      )).map(
         (incident) =>
           ({
             type: "Feature",
@@ -453,14 +480,19 @@ export function OrganizationIncidentDiscovery({
             properties: {
               id: incident.id,
               kind: "INCIDENT",
+              isOwned: incident.hasOwnedCleanupEvent ?? events.some((event) =>
+                event.properties.incidentId === incident.id && event.properties.isOwned
+                && ["DRAFT", "UPCOMING", "ONGOING"].includes(event.properties.status)),
               title: incident.title,
-              status: readable(incident.status),
+              status: incident.status,
               category: incident.category.name,
               occurredAt: incident.reportedAt,
             },
           }) satisfies MapMarkerFeature,
       ),
-      ...events,
+      ...events.filter((event) => !incidents.some((incident) =>
+        incident.id === event.properties.incidentId && incident.status === "CLEANUP_ORGANIZED"
+        && ["UPCOMING", "ONGOING"].includes(event.properties.status))),
     ],
     [events, incidents],
   );
@@ -475,14 +507,20 @@ export function OrganizationIncidentDiscovery({
       features: [...boundaries.features, ...searchedBoundary.features],
     };
   }, [boundaries, searchedBoundary]);
-  const selected = incidents.find((incident) => incident.id === selectedId);
-  const selectedEvent = events.find(
-    (event) => event.properties.id === selectedId,
-  );
-  const selectedDetail = detail?.id === selectedId ? detail : undefined;
+  const selected = incidents.find((incident) => incident.id === selectedIncidentId)
+    ?? (detail?.id === selectedIncidentId ? detail : undefined);
+
+  const selectedDetail = detail?.id === selectedIncidentId ? detail : undefined;
+
+  const displayedEvent = selectedKind === "INCIDENT"
+    ? selectedDetail?.activeCleanupEvent ?? (publicEvent?.id === publicEventId ? publicEvent : undefined)
+    : publicEvent?.id === selectedId ? publicEvent : undefined;
+
+  const displayedEventStatus = selectedEvent?.properties.status
+    ?? linkedPublicEvent?.properties.status;
 
   const submitReview = async () => {
-    if (!canReview || !selectedId || selectedDetail?.id !== selectedId) return;
+    if (!canReview || !selectedIncidentId || selectedDetail?.id !== selectedIncidentId) return;
     if (
       reviewStatus === "VIEWED" &&
       selectedDetail.currentReview &&
@@ -513,7 +551,7 @@ export function OrganizationIncidentDiscovery({
       const result = await updateOrganizationIncidentReview(
         accessToken,
         organizationId,
-        selectedId,
+        selectedIncidentId,
         {
           status: reviewStatus,
           ...(reviewStatus === "FALSE" && reasonCode ? { reasonCode } : {}),
@@ -521,7 +559,7 @@ export function OrganizationIncidentDiscovery({
         },
       );
       setDetail((current) => {
-        if (!current || current.id !== selectedId) return current;
+        if (!current || current.id !== selectedIncidentId) return current;
         const wasFalse = current.currentReview?.status === "FALSE";
         const isFalse = result.review.status === "FALSE";
         return {
@@ -536,7 +574,7 @@ export function OrganizationIncidentDiscovery({
       });
       setIncidents((current) =>
         current.map((incident) =>
-          incident.id === selectedId
+          incident.id === selectedIncidentId
             ? {
                 ...incident,
                 falseReviewCount: Math.max(
@@ -586,7 +624,7 @@ export function OrganizationIncidentDiscovery({
               ? "Loading incidents and events in this map view…"
               : nextCursor || nextEventCursor
                 ? `Showing the first ${incidents.length + events.length} items in view`
-                : `${incidents.length} incidents and ${events.length} owned events loaded in this map view`}
+                : `${incidents.length} incidents and ${events.length} cleanup events loaded in this map view`}
           </Text>
           <Text style={styles.areaCount}>
             {boundariesLoading
@@ -694,7 +732,7 @@ export function OrganizationIncidentDiscovery({
       <EcoMap
         markers={markers}
         boundaries={displayedBoundaries}
-        selectedMarkerId={selectedId}
+        selectedMarkerId={markers.some((marker) => marker.properties.id === selectedId) ? selectedId : markers.find((marker) => marker.properties.id === selectedIncidentId || marker.properties.incidentId === selectedIncidentId)?.properties.id}
         showListFallback={false}
         showCurrentLocation={false}
         height={430}
@@ -707,52 +745,8 @@ export function OrganizationIncidentDiscovery({
       />
 
       {incidents.length + events.length === 0 && !loading ? (
-        <View style={sharedStyles.card}>
-          <Text style={sharedStyles.sectionTitle}>
-            No covered incidents in this view
-          </Text>
-          <Text style={sharedStyles.sectionSubtitle}>
-            Use the map focus control to return to your service areas.
-          </Text>
-        </View>
-      ) : (
-        incidents.map((incident) => (
-          <Pressable
-            key={incident.id}
-            accessibilityRole="button"
-            onPress={() => selectMarker(incident.id, "INCIDENT")}
-            style={[
-              sharedStyles.card,
-              styles.incidentCard,
-              incident.id === selectedId && styles.incidentCardSelected,
-            ]}
-          >
-            <Text style={styles.category}>{incident.category.name}</Text>
-            <Text style={styles.incidentTitle}>{incident.title}</Text>
-            <Text style={styles.meta}>
-              {readable(incident.severity)} severity ·{" "}
-              {readable(incident.status)}
-            </Text>
-          </Pressable>
-        ))
-      )}
-
-      {events.map((event) => (
-        <Pressable
-          key={`event-${event.properties.id}`}
-          accessibilityRole="button"
-          onPress={() => selectMarker(event.properties.id, "CLEANUP_EVENT")}
-          style={[
-            sharedStyles.card,
-            styles.incidentCard,
-            event.properties.id === selectedId && styles.incidentCardSelected,
-          ]}
-        >
-          <Text style={styles.category}>OWNED CLEANUP EVENT</Text>
-          <Text style={styles.incidentTitle}>{event.properties.title}</Text>
-          <Text style={styles.meta}>{readable(event.properties.status)}</Text>
-        </Pressable>
-      ))}
+        <Text accessibilityRole="text">No covered incidents in this view</Text>
+      ) : null}
 
       {(nextCursor || nextEventCursor) && viewport ? (
         <Button
@@ -947,7 +941,7 @@ export function OrganizationIncidentDiscovery({
               />
             </View>
           ) : null}
-          {onCreateDraftFromIncident ? (
+          {onCreateDraftFromIncident && selected.status !== "CLEANUP_ORGANIZED" ? (
             <Button
               label="Create cleanup-event draft"
               onPress={() => onCreateDraftFromIncident(selected.id)}
@@ -955,28 +949,23 @@ export function OrganizationIncidentDiscovery({
           ) : null}
         </View>
       ) : null}
-      {selectedKind === "CLEANUP_EVENT" && selectedEvent ? (
-        <View style={[sharedStyles.card, styles.detail]}>
-          <Text style={styles.category}>OWNED CLEANUP EVENT</Text>
-          <Text style={sharedStyles.sectionTitle}>
-            {selectedEvent.properties.title}
-          </Text>
-          <View style={sharedStyles.spacedRow}>
-            <Text style={styles.detailLabel}>STATUS</Text>
-            <Text style={styles.detailValue}>
-              {readable(selectedEvent.properties.status)}
-            </Text>
-          </View>
-          {onOpenEvent ? (
-            <Button
-              label="Open selected event"
-              onPress={() =>
-                onOpenEvent(
-                  selectedEvent.properties.id,
-                  selectedEvent.properties.status,
-                )
-              }
-            />
+      {displayedEvent || selectedEvent ? (
+        <View style={[sharedStyles.card, styles.detail]} accessibilityLabel="Cleanup event details">
+          <Text style={styles.category}>CLEANUP EVENT</Text>
+          <Text style={sharedStyles.sectionTitle}>{displayedEvent?.title ?? selectedEvent?.properties.title}</Text>
+          <Text style={styles.category}>{displayedEvent?.organization.name ?? selectedEvent?.properties.organizationName}</Text>
+          {displayedEventStatus ? <Text style={styles.detailValue}>{readable(displayedEventStatus)}</Text> : null}
+          {displayedEvent ? <>
+            <Text style={styles.detailValue}>{displayedEvent.description}</Text>
+            {displayedEvent.startsAt ? <Text style={styles.detailValue}>{new Date(displayedEvent.startsAt).toLocaleString()}</Text> : null}
+            {displayedEvent.eventAddress ? <Text style={styles.detailValue}>{displayedEvent.eventAddress}</Text> : null}
+            {displayedEvent.meetingAddress ? <Text style={styles.detailValue}>Meeting point: {displayedEvent.meetingAddress}</Text> : null}
+            {displayedEvent.publicInstructions ? <Text style={styles.detailValue}>{displayedEvent.publicInstructions}</Text> : null}
+          </> : null}
+          {eventError ? <Text accessibilityRole="alert">{eventError}</Text> : null}
+          {onOpenEvent && selectedEvent?.properties.isOwned ? (
+            <Button label="Open selected event"
+              onPress={() => onOpenEvent(selectedEvent.properties.id, selectedEvent.properties.status)} />
           ) : null}
         </View>
       ) : null}

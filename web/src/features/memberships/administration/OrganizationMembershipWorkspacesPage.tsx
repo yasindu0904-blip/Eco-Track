@@ -1,3 +1,4 @@
+import { ListWindow } from "../../../components/lists/ListControls";
 import { useEffect, useState } from "react";
 
 import { describeApiFailure } from "../../../api/apiError";
@@ -12,11 +13,7 @@ type Props = {
   onOpenWorkspace: (organizationId: string) => void;
 };
 
-export function OrganizationMembershipWorkspacesPage({
-  accessToken,
-  onBack,
-  onOpenWorkspace,
-}: Props) {
+export function OrganizationMembershipWorkspacesPage({ accessToken, onOpenWorkspace }: Props) {
   const [memberships, setMemberships] = useState<ActiveOrganizationMembership[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [selectedAdminMembership, setSelectedAdminMembership] =
@@ -114,14 +111,9 @@ export function OrganizationMembershipWorkspacesPage({
         <div>
           <span>Verified organization access</span>
           <h1>Organization workspaces</h1>
-          <p>
-            Choose an active organization. Your permissions are checked again
-            by the backend for the selected workspace.
-          </p>
+
         </div>
-        <button className="ma-button ma-secondary" type="button" onClick={onBack}>
-          Back to citizen dashboard
-        </button>
+
       </header>
 
       {error && (
@@ -134,23 +126,25 @@ export function OrganizationMembershipWorkspacesPage({
         <div className="ma-section-heading">
           <div>
             <h2 id="workspace-list-heading">Your active memberships</h2>
-            <p>
-              Organization roles stay isolated. Admin access in one organization
-              never grants admin access in another.
-            </p>
+
           </div>
           <button
-            className="ma-button ma-secondary"
+            className="ma-button ma-secondary ma-refresh-icon"
             type="button"
+            aria-label="Refresh memberships"
+            title="Refresh memberships"
+            aria-busy={loading}
             disabled={loading}
             onClick={() => void refresh()}
           >
-            {loading ? "Loading..." : "Refresh"}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M20 7a9 9 0 0 0-15-2L2 8m0-5v5h5M4 17a9 9 0 0 0 15 2l3-3m0 5v-5h-5" />
+            </svg>
           </button>
         </div>
 
         <div className="ma-list" aria-busy={loading}>
-          {memberships.map((membership) => (
+          {<ListWindow items={memberships} hasMore={Boolean(nextCursor)} busy={loadingMore} loadMore={() => void loadMore()}>{visible => visible.map((membership) => (
             <article className="ma-member" key={membership.membershipId}>
               <div className="ma-person">
                 <div>
@@ -163,7 +157,7 @@ export function OrganizationMembershipWorkspacesPage({
                       ? "Organization Admin"
                       : "Organization Member"}
                   </span>
-                  <span className="ma-status-active">ACTIVE</span>
+
                 </div>
               </div>
 
@@ -191,7 +185,7 @@ export function OrganizationMembershipWorkspacesPage({
                 )}
               </div>
             </article>
-          ))}
+          ))}</ListWindow>}
 
           {!loading && memberships.length === 0 && (
             <p className="ma-empty">
@@ -200,16 +194,7 @@ export function OrganizationMembershipWorkspacesPage({
           )}
         </div>
 
-        {nextCursor && (
-          <button
-            className="ma-button ma-secondary"
-            type="button"
-            disabled={loadingMore}
-            onClick={() => void loadMore()}
-          >
-            {loadingMore ? "Loading..." : "Load more workspaces"}
-          </button>
-        )}
+
       </section>
     </main>
   );

@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ListWindow } from "../../components/lists/ListControls";
+import { ListSections } from "../../components/lists/ListControls";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import type { AuthenticatedUserProfile } from "../../auth/auth.types";
@@ -41,6 +43,7 @@ export function MembershipSelfServiceScreen({ accessToken, profile, onProfileUpd
   const [organizationCursor, setOrganizationCursor] = useState<string | null>(null);
   const [loadingOrganizations, setLoadingOrganizations] = useState(true);
   const [organizationError, setOrganizationError] = useState<string | null>(null);
+  const [requestSection, setRequestSection] = useState<MembershipRequestStatus | "ALL">("PENDING");
   const [requests, setRequests] = useState<MembershipRequest[]>([]);
   const [requestCursor, setRequestCursor] = useState<string | null>(null);
   const [loadingRequests, setLoadingRequests] = useState(true);
@@ -66,24 +69,31 @@ export function MembershipSelfServiceScreen({ accessToken, profile, onProfileUpd
     }
   }, [accessToken, query]);
 
+  const requestGeneration = useRef(0);
   const loadRequests = useCallback(async (cursor?: string) => {
+    const generation = ++requestGeneration.current;
     setLoadingRequests(true);
     setRequestError(null);
     try {
-      const page = await listMyMembershipRequests(accessToken, cursor);
+      const page = await listMyMembershipRequests(accessToken, cursor, requestSection === "ALL" ? undefined : requestSection);
+      if (generation !== requestGeneration.current) return;
       setRequests((current) => cursor ? [...current, ...page.items] : page.items);
       setRequestCursor(page.nextCursor);
     } catch (error) {
+      if (generation !== requestGeneration.current) return;
       setRequestError(messageFrom(error, "Membership requests could not be loaded. Check your connection and retry."));
     } finally {
-      setLoadingRequests(false);
+      if (generation === requestGeneration.current) setLoadingRequests(false);
     }
-  }, [accessToken]);
+  }, [accessToken, requestSection]);
 
   useEffect(() => {
     void loadOrganizations();
+  }, [loadOrganizations]);
+  useEffect(() => {
     void loadRequests();
-  }, [loadOrganizations, loadRequests]);
+    return () => { requestGeneration.current += 1; };
+  }, [loadRequests]);
 
   async function saveProfile() {
     setSaving(true);
@@ -106,7 +116,8 @@ export function MembershipSelfServiceScreen({ accessToken, profile, onProfileUpd
     setRequestError(null);
     try {
       const created = await requestMembership(accessToken, organizationId);
-      setRequests((current) => [created, ...current]);
+      setRequests((current) => [created, ...current.filter(item => item.id !== created.id)]);
+      setRequestSection("PENDING");
     } catch (error) {
       setRequestError(messageFrom(error, "The membership request could not be submitted."));
       await loadRequests();
@@ -120,7 +131,7 @@ export function MembershipSelfServiceScreen({ accessToken, profile, onProfileUpd
     setRequestError(null);
     try {
       const updated = await withdrawMembershipRequest(accessToken, requestId);
-      setRequests((current) => current.map((request) => request.id === requestId ? updated : request));
+      setRequests((current) => current.map((request) => request.id === requestId ? updated : request).filter(item => requestSection === "ALL" || item.status === requestSection));
     } catch (error) {
       setRequestError(messageFrom(error, "The request could not be withdrawn."));
       await loadRequests();
@@ -134,14 +145,14 @@ export function MembershipSelfServiceScreen({ accessToken, profile, onProfileUpd
       <PageHeader
         eyebrow="Account & membership"
         title="Profile and membership"
-        subtitle="Update your details or request access to an approved organization."
+
         onBack={onBack}
         backLabel="Dashboard"
       />
 
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.sectionTitle}>Edit profile</Text>
-        <Text style={sharedStyles.sectionSubtitle}>Only your full name and phone number can be edited. Your verified email and roles stay protected.</Text>
+
         <View style={styles.readOnlyField}><Text style={styles.label}>Verified email</Text><Text style={styles.value}>{profile.email}</Text></View>
         <Field label="Full name" value={fullName} onChangeText={setFullName} autoCapitalize="words" required />
         <Field label="Phone number" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" required />
@@ -151,7 +162,7 @@ export function MembershipSelfServiceScreen({ accessToken, profile, onProfileUpd
 
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.sectionTitle}>Find active organizations</Text>
-        <Text style={sharedStyles.sectionSubtitle}>Search approved organizations and request ORG_MEMBER access.</Text>
+
         <Field label="Organization name" value={query} onChangeText={setQuery} placeholder="Search organizations" />
         <Button label="Search" onPress={() => void loadOrganizations()} loading={loadingOrganizations} />
         {organizationError ? <><Notice message={organizationError} tone="error" /><Button label="Retry organization search" variant="secondary" onPress={() => void loadOrganizations()} /></> : null}
@@ -172,10 +183,11 @@ export function MembershipSelfServiceScreen({ accessToken, profile, onProfileUpd
 
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.sectionTitle}>My membership requests</Text>
-        <Text style={sharedStyles.sectionSubtitle}>Past requests stay visible. Only pending requests can be withdrawn.</Text>
+
+          <ListSections value={requestSection} options={[{ value: "PENDING", label: "Pending" }, { value: "APPROVED", label: "Approved" }, { value: "DECLINED", label: "Declined" }, { value: "WITHDRAWN", label: "Withdrawn" }, { value: "ALL", label: "All" }]} onChange={value => { if (value === requestSection) return; requestGeneration.current += 1; setRequests([]); setRequestCursor(null); setLoadingRequests(true); setRequestSection(value); }} />
         {requestError ? <Notice message={requestError} tone="error" /> : null}
         <Button label="Refresh requests" variant="secondary" onPress={() => void loadRequests()} loading={loadingRequests} />
-        {requests.map((request) => (
+        {<ListWindow items={requests} key={requestSection} hasMore={Boolean(requestCursor)} busy={loadingRequests} loadMore={() => { if (requestCursor) void loadRequests(requestCursor); }}>{visible => visible.map((request) => (
           <View key={request.id} style={styles.resultCard}>
             <View style={sharedStyles.spacedRow}>
               <Text style={[styles.resultTitle, styles.flex]}>{request.organization.name}</Text>
@@ -185,9 +197,8 @@ export function MembershipSelfServiceScreen({ accessToken, profile, onProfileUpd
             {request.reviewNotes ? <Text style={styles.copy}>Review note: {request.reviewNotes}</Text> : null}
             {request.status === "PENDING" ? <Button label="Withdraw pending request" variant="secondary" onPress={() => void withdraw(request.id)} loading={busyId === request.id} disabled={busyId !== null} /> : null}
           </View>
-        ))}
+        ))}</ListWindow>}
         {!loadingRequests && requests.length === 0 ? <Text style={styles.copy}>You have no membership requests yet.</Text> : null}
-        {requestCursor ? <Button label="Load older requests" variant="secondary" onPress={() => void loadRequests(requestCursor)} disabled={loadingRequests} /> : null}
       </View>
     </Screen>
   );
@@ -201,11 +212,11 @@ const styles = StyleSheet.create({
   resultTitle: { color: colors.text, fontSize: 17, fontWeight: "800" },
   copy: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
   slug: { color: colors.primary, fontSize: 12, fontWeight: "700" },
-  status: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 },
-  statusPending: { backgroundColor: colors.warningSoft },
-  statusApproved: { backgroundColor: colors.successSoft },
-  statusDeclined: { backgroundColor: colors.dangerSoft },
-  statusWithdrawn: { backgroundColor: colors.border },
+  status: {  },
+  statusPending: {  },
+  statusApproved: {  },
+  statusDeclined: {  },
+  statusWithdrawn: {  },
   statusText: { color: colors.text, fontSize: 10, fontWeight: "900" },
   flex: { flex: 1 },
 });

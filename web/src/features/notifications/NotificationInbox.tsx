@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { listDateLabel } from "../../components/lists/usePagedList";
+import { ListWindow, ListSections } from "../../components/lists/ListControls";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { describeApiFailure } from "../../api/apiError";
 import {
@@ -72,11 +74,7 @@ export function NotificationButton({
   );
 }
 
-export function NotificationInbox({
-  accessToken,
-  onBack,
-  onNavigateNotification,
-}: NotificationInboxProps) {
+export function NotificationInbox({ accessToken, onNavigateNotification }: NotificationInboxProps) {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -87,20 +85,26 @@ export function NotificationInbox({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
+  const generation = useRef(0);
   const load = useCallback((): void => {
+    const request = ++generation.current;
+    setLoading(true); setLoadingMore(false);
     void Promise.all([
       listNotifications(accessToken, { unreadOnly }),
       getUnreadNotificationCount(accessToken),
     ])
       .then(([page, count]) => {
+        if (request !== generation.current) return;
         setItems(page.items);
         setNextCursor(page.nextCursor);
         setUnreadCount(count);
       })
       .catch((caughtError: unknown) => {
+        if (request !== generation.current) return;
         setError(readableError(caughtError));
       })
       .finally(() => {
+        if (request !== generation.current) return;
         setLoading(false);
       });
   }, [accessToken, unreadOnly]);
@@ -119,11 +123,13 @@ export function NotificationInbox({
   }
 
   useEffect(() => {
-    void load();
+    const timer = window.setTimeout(load, 0);
+    return () => { window.clearTimeout(timer); generation.current += 1; };
   }, [load]);
 
   async function loadMore(): Promise<void> {
     if (!nextCursor || loadingMore) return;
+    const request = generation.current;
     setLoadingMore(true);
     setError(null);
     try {
@@ -131,12 +137,14 @@ export function NotificationInbox({
         cursor: nextCursor,
         unreadOnly,
       });
+      if (request !== generation.current) return;
       setItems((current) => [...current, ...page.items]);
       setNextCursor(page.nextCursor);
     } catch (caughtError) {
+      if (request !== generation.current) return;
       setError(readableError(caughtError));
     } finally {
-      setLoadingMore(false);
+      if (request === generation.current) setLoadingMore(false);
     }
   }
 
@@ -184,24 +192,17 @@ export function NotificationInbox({
   return (
     <main className="notification-page">
       <header className="notification-header">
-        <button type="button" onClick={onBack}>← Back</button>
+
         <div>
           <span>Personal inbox</span>
           <h1>Notifications</h1>
-          <p>Important EcoTrack updates remain here until you are ready to read them.</p>
+
         </div>
         <strong>{unreadCount} unread</strong>
       </header>
 
       <section className="notification-toolbar">
-        <label>
-          <input
-            type="checkbox"
-            checked={unreadOnly}
-            onChange={(event) => changeUnreadFilter(event.target.checked)}
-          />
-          Unread only
-        </label>
+        <ListSections value={unreadOnly ? "unread" : "all"} options={[{ value: "unread", label: "Unread" }, { value: "all", label: "All" }]} onChange={value => changeUnreadFilter(value === "unread")} />
         <button type="button" disabled={mutating || unreadCount === 0} onClick={() => void markAll()}>
           {mutating ? "Updating…" : "Mark all as read"}
         </button>
@@ -215,12 +216,14 @@ export function NotificationInbox({
       ) : items.length === 0 ? (
         <section className="notification-empty">
           <strong>{unreadOnly ? "No unread notifications" : "Your inbox is clear"}</strong>
-          <p>New EcoTrack updates will appear here.</p>
+
           {error && <button className="notification-retry" type="button" onClick={retryLoad}>Try again</button>}
         </section>
       ) : (
         <section className="notification-list" aria-live="polite">
-          {items.map((item) => (
+          {<ListWindow items={items} key={String(unreadOnly)} hasMore={Boolean(nextCursor)} busy={loadingMore} loadMore={() => void loadMore()}>{visible => visible.map((item, index) => (
+            <div key={item.id}>
+              {(index === 0 || listDateLabel(visible[index - 1]!.createdAt) !== listDateLabel(item.createdAt)) && <h2 className="list-date-heading">{listDateLabel(item.createdAt)}</h2>}
             <button
               className={`notification-card ${item.readAt ? "notification-card-read" : "notification-card-unread"}`}
               type="button"
@@ -233,17 +236,13 @@ export function NotificationInbox({
                 <span>{item.message}</span>
                 <small>{new Date(item.createdAt).toLocaleString()}</small>
               </span>
-              {!item.readAt && <em>New</em>}
             </button>
-          ))}
+            </div>
+          ))}</ListWindow>}
         </section>
       )}
 
-      {nextCursor && !loading && (
-        <button className="notification-load-more" type="button" disabled={loadingMore} onClick={() => void loadMore()}>
-          {loadingMore ? "Loading…" : "Load more"}
-        </button>
-      )}
+
     </main>
   );
 }

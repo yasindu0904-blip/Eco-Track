@@ -1,3 +1,4 @@
+import { getPublicIncident } from "../incidents/incident.api";
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -9,6 +10,8 @@ import {
 } from "./cleanupEvent.api";
 import type { EventParticipation } from "./cleanupEvent.types";
 import { PublicCleanupEventsPage } from "./PublicCleanupEventsPage";
+
+vi.mock("../incidents/incident.api", () => ({ getPublicIncident: vi.fn() }));
 
 vi.mock("./cleanupEvent.api", () => ({
   getPublicCleanupEvent: vi.fn(),
@@ -41,8 +44,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-test("a map-selected event opens in a focused detail view and returns through its caller", async () => {
-  vi.mocked(getPublicCleanupEvent).mockResolvedValue({
+const event = {
     id: "event-1",
     organization: { id: "organization-1", name: "Green Neighbours" },
     incidentId: null,
@@ -61,7 +63,10 @@ test("a map-selected event opens in a focused detail view and returns through it
     startsAt: "2026-08-23T08:00:00.000Z",
     capacity: 25,
     joinedVolunteerCount: 0,
-  });
+  } as const;
+
+test("a map-selected event opens in a focused detail view and returns through its caller", async () => {
+  vi.mocked(getPublicCleanupEvent).mockResolvedValue(event);
   const onBack = vi.fn();
 
   render(
@@ -86,6 +91,23 @@ test("a map-selected event opens in a focused detail view and returns through it
   fireEvent.click(screen.getByRole("button", { name: "Mock joined" }));
   expect(await screen.findByText("Participant updates")).toBeTruthy();
 
-  fireEvent.click(screen.getByRole("button", { name: "Back" }));
-  expect(onBack).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+});
+
+const publicIncident = {
+  id: "incident-evidence", title: "Plastic beside the canal", description: "Bags and bottles beside the water.",
+  category: { id: "waste", name: "Waste", description: null }, severity: "MEDIUM" as const,
+  status: "ACTIVE" as const, latitude: 6.9271, longitude: 79.8612, addressText: "Canal road",
+  reportedAt: "2026-08-20T00:00:00.000Z", thumbnailUrl: null, falseReviewCount: 0, isOwnReport: false,
+  highlightUntil: "2026-09-20T00:00:00.000Z", archiveAfter: "2026-10-20T00:00:00.000Z",
+  resolvedAt: null, archivedAt: null, statusHistory: [],
+  photos: [{ id: "photo-1", url: "https://example.test/evidence.jpg", caption: "Bottles by the canal", sortOrder: 0 }],
+};
+
+test("a linked event also shows its incident evidence on the join page", async () => {
+  vi.mocked(getPublicCleanupEvent).mockResolvedValue({ ...event, incidentId: publicIncident.id });
+  vi.mocked(getPublicIncident).mockResolvedValue(publicIncident);
+  render(<PublicCleanupEventsPage accessToken="token" initialEventId="event-1" onBack={vi.fn()} />);
+  expect(await screen.findByAltText("Bottles by the canal")).toHaveProperty("src", publicIncident.photos[0].url);
+  expect(getPublicIncident).toHaveBeenCalledWith("token", publicIncident.id);
 });

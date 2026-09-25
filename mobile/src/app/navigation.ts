@@ -11,6 +11,7 @@ export type MobileDestination =
   | { screen: "membership" }
   | { screen: "createOrganization" }
   | { screen: "organizationApplications" }
+  | { screen: "organizationWorkspaces" }
   | {
       screen: "organizationWorkspace";
       organizationId: string;
@@ -30,6 +31,22 @@ export type MobileDestination =
   | { screen: "impact" };
 
 export const mobileDashboard: MobileDestination = { screen: "dashboard" };
+
+export const mobileScreenTitles: Record<MobileDestination["screen"], string> = {
+  dashboard: "EcoTrack",
+  notifications: "Notifications",
+  membership: "Manage membership",
+  createOrganization: "Organization request",
+  organizationApplications: "Organization requests",
+  organizationWorkspaces: "Organization workspaces",
+  organizationWorkspace: "Organization workspace",
+  findCleanupActivity: "Find cleanup activity",
+  cleanupEvents: "Cleanup events",
+  joinedCleanupEvents: "My joined events",
+  reportIncident: "Report an incident",
+  myReports: "My Reports",
+  impact: "My Impact",
+};
 
 export function parentDestination(
   destination: MobileDestination,

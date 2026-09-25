@@ -52,6 +52,7 @@ export interface PublicIncidentPage {
 }
 
 export interface IncidentDiscoveryFilters {
+  awaitingCleanup?: boolean;
   limit?: number;
   cursor?: string;
   status?: IncidentStatus;

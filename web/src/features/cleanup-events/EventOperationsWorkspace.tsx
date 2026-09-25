@@ -102,23 +102,6 @@ export function EventOperationsWorkspace({
     data.event.lifecycleStatus === "CANCELLED";
   return (
     <section className="event-operations" aria-label="Event operations">
-      <header className="event-operations-heading">
-        <div>
-          <span>EVENT OPERATIONS</span>
-          <h2>{data.event.currentWorkflowStatus.label}</h2>
-          <p>
-            Post updates, record evidence, then complete or cancel the event.
-          </p>
-        </div>
-        <button
-          className="secondary"
-          disabled={busy}
-          type="button"
-          onClick={() => void load()}
-        >
-          Refresh
-        </button>
-      </header>
       {error && (
         <p className="event-editor-notice error" role="alert">
           {error}
@@ -226,6 +209,7 @@ export function EventOperationsWorkspace({
       {!terminal && (
         <section className="event-editor-panel">
           <h3>Finish the event</h3>
+          <button type="button" className="secondary" disabled={busy} onClick={() => void load()}>Refresh checks</button>
           {readiness && (
             <div className="event-readiness">
               {readiness.checks.map((check) => (
@@ -340,21 +324,6 @@ export function EventOperationsWorkspace({
           )}
         </section>
       </div>
-      <section className="event-editor-panel">
-        <h3>Status timeline</h3>
-        {data.history.map((entry) => (
-          <article className="event-operation-entry" key={entry.id}>
-            <strong>
-              {entry.fromStatus?.label ?? "Created"} → {entry.toStatus.label}
-            </strong>
-            <p>{entry.notes}</p>
-            <small>
-              {entry.changedBy.fullName ?? "Organization member"} ·{" "}
-              {new Date(entry.changedAt).toLocaleString()}
-            </small>
-          </article>
-        ))}
-      </section>
     </section>
   );
 }

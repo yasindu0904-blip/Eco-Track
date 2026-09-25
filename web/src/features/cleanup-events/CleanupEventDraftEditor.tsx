@@ -1,3 +1,4 @@
+import { ListWindow } from "../../components/lists/ListControls";
 import {
   useCallback,
   useEffect,
@@ -73,13 +74,9 @@ function incidentMarker(
   };
 }
 
-export function CleanupEventDraftEditor({
-  accessToken,
-  organizationId,
-  incidentId,
-  initialDraftId,
-  onBack,
-}: Props) {
+export function CleanupEventDraftEditor({ accessToken, organizationId, incidentId, initialDraftId }: Props) {
+  const [draftCursor, setDraftCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [drafts, setDrafts] = useState<CleanupEventDraft[]>([]);
   const [selected, setSelected] = useState<CleanupEventDraft>();
   const [members, setMembers] = useState<OrganizationMember[]>([]);
@@ -110,6 +107,7 @@ export function CleanupEventDraftEditor({
         }),
       ]);
       setDrafts(draftPage.items);
+      setDraftCursor(draftPage.nextCursor);
       setMembers(memberPage.items);
       if (initialDraftId)
         setSelected(
@@ -132,6 +130,15 @@ export function CleanupEventDraftEditor({
     return () => window.clearTimeout(timeout);
   }, [load]);
 
+  async function loadMoreDrafts() {
+    if (!draftCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await listDrafts(accessToken, organizationId, draftCursor);
+      setDrafts(current => [...current, ...page.items]);
+      setDraftCursor(page.nextCursor);
+    } catch (reason) { setNotice({ tone: "error", message: describeApiFailure(reason).message }); } finally { setLoadingMore(false); }
+  }
   const activeIncidentId = incidentId ?? selected?.incidentId ?? null;
   useEffect(() => {
     if (!activeIncidentId) return;
@@ -176,6 +183,24 @@ export function CleanupEventDraftEditor({
     setLocationConfirmed(Boolean(incidentId));
     setBoundary(undefined);
   }
+  async function deleteDraft(draft: CleanupEventDraft) {
+    if (busy || !window.confirm(`Delete draft "${draft.title}"? This cannot be undone.`)) return;
+    setBusy(true);
+    setNotice(undefined);
+    try {
+      await discardDraft(accessToken, organizationId, draft.id);
+      setDrafts(items => items.filter(item => item.id !== draft.id));
+      if (selected?.id === draft.id) {
+        setSelected(undefined);
+        setShowCreate(false);
+        resetForm();
+      }
+      setNotice({ tone: "success", message: "Draft deleted." });
+    } catch (reason) {
+      setNotice({ tone: "error", message: describeApiFailure(reason, "Unable to delete this draft.").message });
+    } finally { setBusy(false); }
+  }
+
   function openDraft(draft: CleanupEventDraft): void {
     setSelected(draft);
     setShowCreate(false);
@@ -276,17 +301,10 @@ export function CleanupEventDraftEditor({
     <section className="event-editor">
       <header className="event-editor-header">
         <div>
-          {onBack && (
-            <button className="secondary" type="button" onClick={onBack}>
-              ← Back
-            </button>
-          )}
+
           <span>ORGANIZATION CLEANUP</span>
           <h1>Cleanup events</h1>
-          <p>
-            Create one clear event time, choose coordinators, and publish when
-            ready.
-          </p>
+
         </div>
         <button
           type="button"
@@ -315,7 +333,7 @@ export function CleanupEventDraftEditor({
               <p>Create a cleanup event to begin.</p>
             </div>
           ) : (
-            drafts.map((draft) => (
+            <ListWindow items={drafts} hasMore={Boolean(draftCursor)} busy={loadingMore} loadMore={() => void loadMoreDrafts()} >{visible => visible.map((draft) => (
               <article key={draft.id}>
                 <span>
                   <strong>{draft.title}</strong>
@@ -326,11 +344,14 @@ export function CleanupEventDraftEditor({
                       : "Direct location"}
                   </small>
                 </span>
-                <button type="button" onClick={() => openDraft(draft)}>
-                  Continue
-                </button>
+                <div className="event-draft-row-actions">
+                  <button type="button" disabled={busy} onClick={() => openDraft(draft)}>Continue</button>
+                  <button type="button" className="event-draft-delete" disabled={busy}
+                    aria-label={`Delete draft: ${draft.title}`} title="Delete draft"
+                    onClick={() => void deleteDraft(draft)}>&times;</button>
+                </div>
               </article>
-            ))
+            ))}</ListWindow>
           )}
         </div>
       )}
@@ -341,10 +362,11 @@ export function CleanupEventDraftEditor({
               <span>01</span>
               <div>
                 <h2>{selected ? "Event details" : "Create event"}</h2>
-                <p>
-                  One date and start time replaces the old session workflow.
-                </p>
+
               </div>
+              {selected && <button type="button" className="event-draft-delete" disabled={busy}
+                aria-label={`Delete draft: ${selected.title}`} title="Delete draft"
+                onClick={() => void deleteDraft(selected)}>&times;</button>}
             </div>
             <div className="event-editor-form-grid">
               <label>
@@ -406,10 +428,7 @@ export function CleanupEventDraftEditor({
             {marker ? (
               <div className="event-editor-linked">
                 <strong>Location locked to: {linkedIncident?.title}</strong>
-                <p>
-                  The backend always uses this incident point; it cannot be
-                  moved.
-                </p>
+
                 <LocationPicker
                   value={location}
                   disabled
@@ -446,30 +465,7 @@ export function CleanupEventDraftEditor({
               <button disabled={busy}>
                 {busy ? "Saving…" : selected ? "Save changes" : "Create draft"}
               </button>
-              {selected && (
-                <button
-                  className="danger"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    if (window.confirm("Discard this private draft?"))
-                      void (async () => {
-                        await discardDraft(
-                          accessToken,
-                          organizationId,
-                          selected.id,
-                        );
-                        setDrafts((items) =>
-                          items.filter(({ id }) => id !== selected.id),
-                        );
-                        setSelected(undefined);
-                        resetForm();
-                      })();
-                  }}
-                >
-                  Discard draft
-                </button>
-              )}
+
             </div>
           </form>
           {selected && (
@@ -479,10 +475,7 @@ export function CleanupEventDraftEditor({
                   <span>02</span>
                   <div>
                     <h2>Coordinators</h2>
-                    <p>
-                      Active organization members can help manage attendance and
-                      event updates.
-                    </p>
+
                   </div>
                 </div>
                 <div className="event-editor-coordinator-form">

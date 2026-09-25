@@ -113,11 +113,12 @@ function toDto(record: ReviewApplicationRecord): OrganizationReviewApplicationDt
 
 export async function listPendingOrganizationApplicationRecords(
   prisma: PrismaClient,
+  page?: { limit: number; cursor: { createdAt: Date; id: string } | null },
 ): Promise<OrganizationReviewApplicationDto[]> {
   const records = await prisma.organization.findMany({
-    where: { status: OrganizationStatus.PENDING_REVIEW },
-    orderBy: { createdAt: "asc" },
-    take: 100,
+    where: { status: OrganizationStatus.PENDING_REVIEW, ...(page?.cursor ? { OR: [{ createdAt: { gt: page.cursor.createdAt } }, { createdAt: page.cursor.createdAt, id: { gt: page.cursor.id } }] } : {}) },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    take: page ? page.limit + 1 : 100,
     select: reviewApplicationSelect,
   });
 

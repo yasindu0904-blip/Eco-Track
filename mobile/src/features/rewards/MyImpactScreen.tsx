@@ -83,7 +83,7 @@ export function MyImpactScreen({
       <PageHeader
         eyebrow="Citizen and volunteer"
         title="My Impact"
-        subtitle="Verified community action and non-monetary achievements."
+
         onBack={onBack}
         backLabel="Dashboard"
       />
@@ -102,9 +102,7 @@ export function MyImpactScreen({
           <View style={styles.pointsCard}>
             <Text style={styles.pointsEyebrow}>VERIFIED CONTRIBUTION POINTS</Text>
             <Text style={styles.pointsValue}>{summary.totalPoints}</Text>
-            <Text style={styles.pointsNote}>
-              Recognition only—points are not money, employment, or access permissions.
-            </Text>
+
           </View>
 
           <View style={styles.breakdownGrid}>
@@ -127,9 +125,7 @@ export function MyImpactScreen({
             {summary.achievements.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyTitle}>Your first achievement is ahead</Text>
-                <Text style={sharedStyles.sectionSubtitle}>
-                  Verified reports and confirmed cleanup participation will build your impact.
-                </Text>
+
               </View>
             ) : summary.achievements.map((achievement) => (
               <View key={achievement.id} style={styles.achievementCard}>
@@ -153,9 +149,7 @@ export function MyImpactScreen({
             {contributions.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyTitle}>No verified contributions yet</Text>
-                <Text style={sharedStyles.sectionSubtitle}>
-                  Submitting or joining alone does not award points. Rewards begin after verified action.
-                </Text>
+
               </View>
             ) : contributions.map((contribution) => (
               <View key={contribution.id} style={styles.historyCard}>

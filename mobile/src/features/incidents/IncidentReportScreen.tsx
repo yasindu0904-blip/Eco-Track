@@ -1,3 +1,4 @@
+import { useInvalidateLists } from "../../components/lists/usePagedList";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
@@ -53,6 +54,7 @@ export function IncidentReportScreen({
   onBack,
   onSubmitted,
 }: Props) {
+  const invalidateLists = useInvalidateLists();
   const [categories, setCategories] = useState<IncidentCategory[]>([]);
   const [categoryId, setCategoryId] = useState("");
   const [severity, setSeverity] = useState<IncidentSeverity>("MEDIUM");
@@ -243,8 +245,7 @@ export function IncidentReportScreen({
         setUploaded(evidence);
       }
       setMessage("Saving your report…");
-      onSubmitted(
-        await createIncident(accessToken, {
+      const result = await createIncident(accessToken, {
           submissionId,
           categoryId,
           title: title.trim(),
@@ -254,8 +255,9 @@ export function IncidentReportScreen({
           longitude: location.longitude,
           addressText: addressText.trim() || undefined,
           evidence,
-        }),
-      );
+        });
+      invalidateLists("reports:");
+      onSubmitted(result);
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -272,7 +274,6 @@ export function IncidentReportScreen({
       <PageHeader
         eyebrow="Community report"
         title="Report an incident"
-        subtitle="Confirm the location and share evidence that helps nearby organizations understand the concern."
         onBack={onBack}
         backLabel="Dashboard"
       />
@@ -347,9 +348,6 @@ export function IncidentReportScreen({
 
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.sectionTitle}>3. Confirm the location</Text>
-        <Text style={sharedStyles.sectionSubtitle}>
-          Use the middle location icon or move the map beneath the black pin.
-        </Text>
         <AdministrativeAreaMapSearch
           accessToken={accessToken}
           onBoundaryChange={setSearchedBoundary}
@@ -359,6 +357,7 @@ export function IncidentReportScreen({
           boundaries={searchedBoundary}
           disabled={busy}
           confirmed={locationConfirmed}
+          showInstructions={false}
           confirmLabel={
             locationConfirmed
               ? "✓ Location confirmed"
@@ -379,8 +378,7 @@ export function IncidentReportScreen({
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.sectionTitle}>4. Photo evidence</Text>
         <Text style={sharedStyles.sectionSubtitle}>
-          Choose up to 5 photos. Images are resized and compressed before
-          upload.
+          Choose up to 5 photos.
         </Text>
         <Button
           label="Take photo"

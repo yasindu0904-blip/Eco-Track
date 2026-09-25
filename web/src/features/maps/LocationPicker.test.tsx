@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { MapMarkerFeature } from "./map.types";
 import { EcoMap } from "./EcoMap";
@@ -44,7 +44,21 @@ const incidentMarker: MapMarkerFeature = {
   },
 };
 
+afterEach(cleanup);
+
 describe("LocationPicker", () => {
+  test("locked incident locations allow focusing but display confirmation as text", () => {
+    const onChange = vi.fn();
+    const onConfirm = vi.fn();
+    render(<LocationPicker disabled confirmed referenceMarker={incidentMarker} focusReferenceLabel="Focus incident" onChange={onChange} onConfirm={onConfirm} />);
+    fireEvent.click(screen.getByRole("button", { name: "Focus incident" }));
+    expect(screen.getByTestId("focus-location").textContent).toBe("6.92,79.86");
+    expect(screen.getByText("Location confirmed").getAttribute("role")).toBe("status");
+    expect(screen.queryByRole("button", { name: "Location confirmed" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Select event point" }));
+    expect(onChange).not.toHaveBeenCalled();
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
   test("shows only the reference incident and confirms a map-selected event location", () => {
     const onChange = vi.fn();
     const onConfirm = vi.fn();
@@ -93,7 +107,8 @@ describe("LocationPicker", () => {
         />
       </form>,
     );
-    expect(screen.getByText("Ready to save")).toBeTruthy();
-    expect(screen.getByText("Use the form's save button to keep this location.")).toBeTruthy();
+    expect(screen.queryByText("Ready to save")).toBeNull();
+    expect(screen.queryByText("Use the form's save button to keep this location.")).toBeNull();
+    expect(screen.getByRole("button", { name: "Location confirmed" })).toBeTruthy();
   });
 });

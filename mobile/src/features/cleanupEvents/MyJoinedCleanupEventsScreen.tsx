@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { ListSections, PageControls } from "../../components/lists/ListControls";
+import { eventSections, useListState, usePagedList, type EventSection } from "../../components/lists/usePagedList";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { describeApiFailure } from "../../api/apiError";
 import {
-  Button,
   Notice,
   PageHeader,
   Screen,
@@ -10,7 +9,6 @@ import {
 } from "../../components/ui";
 import { colors, spacing } from "../../components/theme";
 import { listMyEventParticipations } from "./cleanupEvent.api";
-import type { EventParticipation } from "./cleanupEvent.types";
 
 export function MyJoinedCleanupEventsScreen({
   accessToken,
@@ -21,59 +19,24 @@ export function MyJoinedCleanupEventsScreen({
   onBack: () => void;
   onOpenEvent: (eventId: string) => void;
 }) {
-  const [scope, setScope] = useState<"active" | "history">("active");
-  const [items, setItems] = useState<EventParticipation[]>([]);
-  const [busy, setBusy] = useState(true);
-  const [error, setError] = useState<string>();
-  const load = useCallback(async () => {
-    setBusy(true);
-    setError(undefined);
-    try {
-      setItems((await listMyEventParticipations(accessToken, scope)).items);
-    } catch (reason) {
-      setError(
-        describeApiFailure(reason, "Unable to load your events.").message,
-      );
-    } finally {
-      setBusy(false);
-    }
-  }, [accessToken, scope]);
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const [section, setSection] = useListState<EventSection | "withdrawn">("joined.section", "upcoming");
+  const list = usePagedList("joined:" + section, cursor => listMyEventParticipations(accessToken, "all", cursor, section), true);
+  const { items, busy, error } = list;
   return (
-    <Screen>
+    <Screen rememberKey={"joined:" + section}>
       <PageHeader
         eyebrow="My volunteering"
         title="My joined events"
-        subtitle="Active commitments, assignments, attendance, and history."
         onBack={onBack}
         backLabel="Dashboard"
       />
-      <View style={styles.tabs}>
-        <Button
-          label="Active"
-          variant={scope === "active" ? "primary" : "secondary"}
-          onPress={() => setScope("active")}
-        />
-        <Button
-          label="History"
-          variant={scope === "history" ? "primary" : "secondary"}
-          onPress={() => setScope("history")}
-        />
-      </View>
+      <ListSections value={section} options={[...eventSections, { value: "withdrawn", label: "Withdrawn / removed" }]} onChange={setSection} />
       {error ? <Notice tone="error" message={error} /> : null}
       <View style={sharedStyles.card}>
         {busy ? (
           <Text style={styles.copy}>Loading your events…</Text>
         ) : items.length === 0 ? (
-          <Notice
-            message={
-              scope === "active"
-                ? "Volunteer for a published cleanup to see it here."
-                : "Withdrawn or removed events appear here."
-            }
-          />
+          <Notice message="No events in this section." />
         ) : (
           items.map((item) => (
             <Pressable
@@ -97,6 +60,7 @@ export function MyJoinedCleanupEventsScreen({
           ))
         )}
       </View>
+      <PageControls {...list} />
     </Screen>
   );
 }

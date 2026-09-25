@@ -35,7 +35,7 @@ export async function listMyParticipations(
   return {
     items: items.map(toParticipationDto),
     nextCursor: hasMore && last
-      ? Buffer.from(JSON.stringify({ joinedAt: last.joinedAt.toISOString(), id: last.id }), "utf8").toString("base64url")
+      ? Buffer.from(JSON.stringify({ joinedAt: (query.section ? last.cleanupEvent.startsAt! : last.joinedAt).toISOString(), id: last.id }), "utf8").toString("base64url")
       : null,
   };
 }

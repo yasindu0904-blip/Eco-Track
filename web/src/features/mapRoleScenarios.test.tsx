@@ -73,6 +73,8 @@ vi.mock("./maps", async () => {
             .map((marker) => marker.properties.id)
             .join(",") || "none"}
         </output>
+        <output data-testid="owned-marker-ids">{props.markers?.filter(marker => marker.properties.isOwned).map(marker => marker.properties.id).join(",")}</output>
+        <output data-testid="marker-statuses">{props.markers?.map(marker => marker.properties.status).join(",")}</output>
         <output data-testid="boundary-ids">
           {(props.boundaries?.features ?? [])
             .map((boundary) => boundary.properties.id)
@@ -123,6 +125,16 @@ vi.mock("./organizations/workspace/organizationIncidentDiscovery.api", () => ({
   updateOrganizationIncidentReview: vi.fn(),
 }));
 
+const publicIncident = {
+  id: "incident-evidence", title: "Plastic beside the canal", description: "Bags and bottles beside the water.",
+  category: { id: "waste", name: "Waste", description: null }, severity: "MEDIUM" as const,
+  status: "ACTIVE" as const, latitude: 6.9271, longitude: 79.8612, addressText: "Canal road",
+  reportedAt: "2026-08-20T00:00:00.000Z", thumbnailUrl: null, falseReviewCount: 0, isOwnReport: false,
+  highlightUntil: "2026-09-20T00:00:00.000Z", archiveAfter: "2026-10-20T00:00:00.000Z",
+  resolvedAt: null, archivedAt: null, statusHistory: [],
+  photos: [{ id: "photo-1", url: "https://example.test/evidence.jpg", caption: "Bottles by the canal", sortOrder: 0 }],
+};
+
 const emptyIncidentPage = { items: [], nextCursor: null };
 const emptyEventPage = {
   type: "FeatureCollection" as const,
@@ -136,6 +148,7 @@ const emptyBoundaries = {
 };
 
 beforeEach(() => {
+  vi.mocked(getPublicIncident).mockResolvedValue(publicIncident);
   vi.mocked(listIncidentCategories).mockResolvedValue([]);
   vi.mocked(listPublicIncidents).mockResolvedValue(emptyIncidentPage);
   vi.mocked(listNearbyPublicIncidents).mockResolvedValue(emptyIncidentPage);
@@ -265,7 +278,8 @@ describe("role-specific map scenarios", () => {
           latitude: 6.9271,
           longitude: 79.8612,
           radiusMeters: 2_000,
-          limit: 50,
+          limit: 20,
+          section: "upcoming",
         }),
         expect.any(AbortSignal),
       ),
@@ -275,7 +289,7 @@ describe("role-specific map scenarios", () => {
     expect(listNearbyCleanupEventMap).toHaveBeenCalledTimes(1);
     expect(listPublicCleanupEventMap).not.toHaveBeenCalled();
     fireEvent.click(
-      await screen.findByRole("button", { name: "Load more events" }),
+      await screen.findByRole("button", { name: "Next page" }),
     );
     await waitFor(() =>
       expect(listNearbyCleanupEventMap).toHaveBeenLastCalledWith(
@@ -289,16 +303,16 @@ describe("role-specific map scenarios", () => {
     expect(screen.getByTestId("search-radius").textContent).toBe("2000");
 
     fireEvent.change(screen.getByLabelText("Search radius"), {
-      target: { value: "5000" },
+      target: { value: "3000" },
     });
     await waitFor(() =>
       expect(listNearbyCleanupEventMap).toHaveBeenLastCalledWith(
         "token",
-        expect.objectContaining({ radiusMeters: 5_000, cursor: undefined }),
+        expect.objectContaining({ radiusMeters: 3_000, cursor: undefined }),
         expect.any(AbortSignal),
       ),
     );
-    expect(screen.getByTestId("search-radius").textContent).toBe("5000");
+    expect(screen.getByTestId("search-radius").textContent).toBe("3000");
   });
 
   test("citizen map loads only cleanup events and opens their existing detail and join flow", async () => {
@@ -400,7 +414,10 @@ describe("role-specific map scenarios", () => {
     );
     expect(onOpenEvent).toHaveBeenCalledWith("event-filtered");
     expect(listPublicIncidents).not.toHaveBeenCalled();
-    expect(getPublicIncident).not.toHaveBeenCalled();
+    expect(getPublicIncident).toHaveBeenCalledWith("token", "incident-filtered", expect.any(AbortSignal));
+    expect(await screen.findByAltText("Bottles by the canal")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Map marker Beach cleanup" }));
+    expect(screen.getByText(publicIncident.description)).toBeTruthy();
   });
 
   test("organization map renders empty results without exposing review actions", async () => {
@@ -416,6 +433,7 @@ describe("role-specific map scenarios", () => {
     expect(
       await screen.findByText("No covered incidents in this view"),
     ).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Resolved" })).toBeNull();
     expect(screen.queryByRole("button", { name: /submit review/i })).toBeNull();
     expect(
       screen.queryByRole("button", { name: /create cleanup draft/i }),
@@ -486,9 +504,8 @@ describe("role-specific map scenarios", () => {
     expect(screen.getByTestId("marker-ids").textContent).toBe(
       "overlap-incident",
     );
-    expect(screen.getAllByText("Incident in both service areas")).toHaveLength(
-      2,
-    );
+    expect(screen.queryByRole("complementary", { name: "Covered incidents" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Map marker Incident in both service areas" })).toBeTruthy();
   });
 
   test("organization selection keeps authorized review and cleanup actions on the selected incident", async () => {
@@ -557,6 +574,65 @@ describe("role-specific map scenarios", () => {
     );
   });
 
+  test("another organization's ongoing cleanup shares one incident marker and displays both details; standalone events are visible", async () => {
+    const incident = {
+      id: "linked-incident", title: "Covered waste report",
+      category: { id: "category-1", name: "Waste", description: null },
+      severity: "MEDIUM" as const, status: "CLEANUP_ORGANIZED" as const,
+      latitude: 6.91, longitude: 79.86, addressText: "Beach",
+      reportedAt: "2026-08-20T00:00:00.000Z", falseReviewCount: 0, currentReviewStatus: null,
+    };
+    const event = {
+      id: "linked-event", title: "Other organization's cleanup",
+      organization: { id: "other-org", name: "Coastal volunteers" },
+      incidentId: incident.id, description: "Clean the shoreline together.",
+      publicInstructions: "Meet by the pier.", lifecycleStatus: "PUBLISHED" as const,
+      displayStatus: "ONGOING" as const, eventLatitude: 6.91, eventLongitude: 79.86,
+      eventAddress: "Beach", meetingLatitude: null, meetingLongitude: null,
+      meetingAddress: null, startsAt: "2026-08-21T08:00:00.000Z",
+      publishedAt: "2026-08-20T08:00:00.000Z", capacity: null, joinedVolunteerCount: 0,
+    };
+    vi.mocked(listOrganizationIncidents).mockResolvedValue({ items: [incident], nextCursor: null });
+    vi.mocked(getOrganizationIncidentDetail).mockResolvedValue({
+      ...incident, description: "Plastic scattered along the shoreline.",
+      highlightUntil: "2026-09-01T00:00:00.000Z", archiveAfter: "2026-10-01T00:00:00.000Z",
+      resolvedAt: null, archivedAt: null, thumbnailUrl: null, photos: [], statusHistory: [],
+      accessSource: "CURRENT_SERVICE_AREA", currentReview: null, activeCleanupEvent: event,
+    });
+    vi.mocked(listOrganizationCleanupEventMap).mockResolvedValue({
+      type: "FeatureCollection", nextCursor: null,
+      features: [event, { ...event, id: "standalone", title: "Independent cleanup", incidentId: null }].map(item => ({
+        type: "Feature", geometry: { type: "Point", coordinates: [79.86, 6.91] },
+        properties: { id: item.id, kind: "CLEANUP_EVENT", title: item.title, status: "ONGOING",
+          organizationId: "other-org", organizationName: "Coastal volunteers", incidentId: item.incidentId,
+          occurredAt: item.publishedAt, isOwned: false, isJoined: false },
+      })),
+    });
+    vi.mocked(getPublicCleanupEvent).mockImplementation(async (_token, id) => ({
+      ...event, id, incidentId: id === "standalone" ? null : incident.id,
+      title: id === "standalone" ? "Independent cleanup" : event.title,
+    }));
+    render(<OrganizationIncidentDiscovery accessToken="token" organizationId="my-org" canReview onCreateDraftFromIncident={vi.fn()} onOpenEvent={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Load viewport" }));
+    await waitFor(() => expect(screen.getByTestId("marker-ids").textContent).toBe("linked-incident,standalone"));
+    expect(screen.getByTestId("marker-statuses").textContent).toBe("CLEANUP_ORGANIZED,ONGOING");
+    fireEvent.click(screen.getByRole("button", { name: "Map marker Covered waste report" }));
+    expect(await screen.findByText("Plastic scattered along the shoreline.")).toBeTruthy();
+    expect(await screen.findByText("Clean the shoreline together.")).toBeTruthy();
+    expect(screen.getByText("Meet by the pier.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Create cleanup-event draft" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Map marker Independent cleanup" }));
+    await waitFor(() => expect(getPublicCleanupEvent).toHaveBeenCalledWith("token", "standalone", expect.any(AbortSignal)));
+    expect(await screen.findByText("Clean the shoreline together.")).toBeTruthy();
+    expect(screen.queryByText("Plastic scattered along the shoreline.")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open selected event" })).toBeNull();
+    expect(screen.queryByRole("complementary", { name: "Covered incidents" })).toBeNull();
+    expect(screen.getByTestId("owned-marker-ids").textContent).toBe("");
+    fireEvent.click(screen.getByRole("button", { name: "Map marker Covered waste report" }));
+    expect(await screen.findByText("Plastic scattered along the shoreline.")).toBeTruthy();
+    expect(await screen.findByText("Clean the shoreline together.")).toBeTruthy();
+  });
+
   test("Super Admin selection stays synchronized and remains read-only", async () => {
     vi.mocked(listPublicIncidents).mockResolvedValue({
       items: [
@@ -592,4 +668,60 @@ describe("role-specific map scenarios", () => {
     expect(screen.queryByRole("button", { name: /assign/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /operate/i })).toBeNull();
   });
+});
+
+
+test("an owned draft appears on the map and opens its private draft workspace", async () => {
+  vi.mocked(listOrganizationCleanupEventMap).mockResolvedValue({
+    type: "FeatureCollection", nextCursor: null, features: [{
+      type: "Feature", geometry: { type: "Point", coordinates: [79.86, 6.91] },
+      properties: { id: "own-draft", kind: "CLEANUP_EVENT", title: "Private cleanup plan", status: "DRAFT",
+        occurredAt: "2026-09-01T00:00:00Z", organizationId: "my-org", organizationName: "My organization",
+        incidentId: null, isOwned: true, isJoined: false },
+    }],
+  });
+  const onOpenEvent = vi.fn();
+  render(<OrganizationIncidentDiscovery accessToken="token" organizationId="my-org" canReview onOpenEvent={onOpenEvent} />);
+  fireEvent.click(screen.getByRole("button", { name: "Load viewport" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Map marker Private cleanup plan" }));
+  expect(screen.getByTestId("marker-statuses").textContent).toBe("DRAFT");
+  expect(screen.getByTestId("owned-marker-ids").textContent).toBe("own-draft");
+  expect(getPublicCleanupEvent).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Open selected event" }));
+  expect(onOpenEvent).toHaveBeenCalledWith("own-draft", "DRAFT");
+});
+
+
+test("owned linked cleanups retain their ownership color without the event page loaded", async () => {
+  vi.mocked(listOrganizationIncidents).mockResolvedValue({ nextCursor: null, items: [{
+    id: "owned-incident", title: "Our cleanup location", hasOwnedCleanupEvent: true,
+    category: { id: "waste", name: "Waste", description: null }, severity: "MEDIUM", status: "CLEANUP_ORGANIZED",
+    latitude: 6.91, longitude: 79.86, addressText: null, reportedAt: "2026-09-01T00:00:00Z",
+    falseReviewCount: 0, currentReviewStatus: null,
+  }] });
+  render(<OrganizationIncidentDiscovery accessToken="token" organizationId="my-org" canReview={false} />);
+  fireEvent.click(screen.getByRole("button", { name: "Load viewport" }));
+  await waitFor(() => expect(screen.getByTestId("owned-marker-ids").textContent).toBe("owned-incident"));
+  expect(screen.queryByRole("complementary", { name: "Covered incidents" })).toBeNull();
+});
+
+test("Awaiting cleanup uses the nearby incident filter, shows evidence, and clears it on section change", async () => {
+  Object.defineProperty(window.navigator, "geolocation", { configurable: true, value: {
+    getCurrentPosition: (success: PositionCallback) => success({ coords: { latitude: 6.9271, longitude: 79.8612 } } as GeolocationPosition),
+  }});
+  vi.mocked(listNearbyPublicIncidents).mockResolvedValue({ items: [publicIncident], nextCursor: "more-incidents" });
+  render(<CitizenIncidentDiscovery accessToken="token" />);
+  fireEvent.click(screen.getByRole("button", { name: "Awaiting cleanup" }));
+  expect(listNearbyPublicIncidents).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Use my location" }));
+  await waitFor(() => expect(listNearbyPublicIncidents).toHaveBeenCalledWith("token", expect.objectContaining({ awaitingCleanup: true, radiusMeters: 2000, limit: 20 }), expect.any(AbortSignal)));
+  fireEvent.click(await screen.findByRole("button", { name: "Map marker Plastic beside the canal" }));
+  expect(await screen.findByText("No cleanup event created yet.")).toBeTruthy();
+  expect(screen.getByAltText("Bottles by the canal")).toHaveProperty("src", publicIncident.photos[0].url);
+  expect(screen.queryByRole("button", { name: "Join event" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+  await waitFor(() => expect(listNearbyPublicIncidents).toHaveBeenLastCalledWith("token", expect.objectContaining({ awaitingCleanup: true, cursor: "more-incidents" }), expect.any(AbortSignal)));
+  fireEvent.click(screen.getByRole("button", { name: "Upcoming" }));
+  await waitFor(() => expect(listNearbyCleanupEventMap).toHaveBeenCalled());
+  expect(screen.queryByText("No cleanup event created yet.")).toBeNull();
 });

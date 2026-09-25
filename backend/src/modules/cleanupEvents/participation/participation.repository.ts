@@ -1,3 +1,4 @@
+import { eventSectionWhere, type EventSection } from "../repositories/cleanupEvent.repository.js";
 import { Prisma, type PrismaClient } from "../../../generated/prisma/client.js";
 
 export const joinableLifecycleStatuses = ["PUBLISHED"] as const;
@@ -81,33 +82,41 @@ export function listMyParticipationRecords(
   command: {
     userId: string;
     scope: "active" | "history" | "all";
+    section?: EventSection | "withdrawn";
     limit: number;
     cursor: ParticipationCursor | null;
   },
 ): Promise<ParticipationRecord[]> {
-  const status =
+  const status = command.section === "withdrawn" ? { in: ["WITHDRAWN" as const, "REMOVED" as const] } : command.section ? { in: ["JOINED" as const] } :
     command.scope === "active"
       ? { in: ["JOINED" as const] }
       : command.scope === "history"
         ? { in: ["WITHDRAWN" as const, "REMOVED" as const] }
         : undefined;
+  const byEventDate = Boolean(command.section);
+  const direction = command.section === "upcoming" ? "asc" : "desc";
+  const comparison = direction === "asc" ? "gt" : "lt";
+  const dated = (date: Date, equal = false): Prisma.EventParticipantWhereInput => byEventDate
+    ? { cleanupEvent: { startsAt: equal ? date : { [comparison]: date } } }
+    : { joinedAt: equal ? date : { lt: date } };
   return database.eventParticipant.findMany({
     where: {
       userId: command.userId,
+      ...(command.section && command.section !== "withdrawn" ? { cleanupEvent: eventSectionWhere(command.section) } : {}),
       ...(status ? { status } : {}),
       ...(command.cursor
         ? {
             OR: [
-              { joinedAt: { lt: command.cursor.joinedAt } },
+              dated(command.cursor.joinedAt),
               {
-                joinedAt: command.cursor.joinedAt,
-                id: { lt: command.cursor.id },
+                ...dated(command.cursor.joinedAt, true),
+                id: { [comparison]: command.cursor.id },
               },
             ],
           }
         : {}),
     },
-    orderBy: [{ joinedAt: "desc" }, { id: "desc" }],
+    orderBy: byEventDate ? [{ cleanupEvent: { startsAt: direction } }, { id: direction }] : [{ joinedAt: "desc" }, { id: "desc" }],
     take: command.limit + 1,
     include: participationInclude,
   });

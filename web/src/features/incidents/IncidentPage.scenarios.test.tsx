@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   getMyIncident,
   listIncidentCategories,
-  listMyIncidents,
+  listMyIncidentPage,
 } from "./incident.api";
 import { IncidentPage } from "./IncidentPage";
 
@@ -24,7 +24,7 @@ vi.mock("./incident.api", () => ({
   createIncident: vi.fn(),
   getMyIncident: vi.fn(),
   listIncidentCategories: vi.fn(),
-  listMyIncidents: vi.fn(),
+  listMyIncidentPage: vi.fn(),
   uploadIncidentEvidence: vi.fn(),
 }));
 
@@ -110,7 +110,7 @@ const profile = {
 
 beforeEach(() => {
   vi.mocked(listIncidentCategories).mockResolvedValue([]);
-  vi.mocked(listMyIncidents).mockResolvedValue([report]);
+  vi.mocked(listMyIncidentPage).mockResolvedValue({ items: [report], nextCursor: null });
   vi.mocked(getMyIncident).mockResolvedValue(detail);
 });
 
@@ -159,11 +159,8 @@ describe("web incident workflow scenarios", () => {
       await screen.findByRole("button", { name: /view report/i }),
     );
 
-    expect(
-      await screen.findByText(
-        "A cleanup event was published for this incident.",
-      ),
-    ).toBeTruthy();
+    await screen.findByText("Incident report submitted.");
+    expect(screen.queryByText("A cleanup event was published for this incident.")).toBeNull();
     expect(screen.getAllByText("Cleanup Organized").length).toBeGreaterThan(0);
     expect(screen.getByText("Incident report submitted.")).toBeTruthy();
     expect(getMyIncident).toHaveBeenCalledWith("token", report.id);
@@ -173,7 +170,7 @@ describe("web incident workflow scenarios", () => {
 
   test("a recoverable report-list failure does not sign out the valid session", async () => {
     const onSignOut = vi.fn();
-    vi.mocked(listMyIncidents).mockRejectedValueOnce(new Error("weak network"));
+    vi.mocked(listMyIncidentPage).mockRejectedValueOnce(new Error("weak network"));
 
     render(
       <IncidentPage
@@ -189,13 +186,13 @@ describe("web incident workflow scenarios", () => {
       "weak network",
     );
     expect(onSignOut).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
   });
 
   test("My Reports shows cancellation, replacement, and final resolution history", async () => {
-    vi.mocked(listMyIncidents).mockResolvedValueOnce([
+    vi.mocked(listMyIncidentPage).mockResolvedValueOnce({ items: [
       { ...report, status: "RESOLVED" },
-    ]);
+    ], nextCursor: null });
     vi.mocked(getMyIncident).mockResolvedValueOnce(completedDetail);
 
     render(

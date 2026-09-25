@@ -1,3 +1,4 @@
+import { useInvalidateLists } from "../../components/lists/usePagedList";
 import { useCallback, useEffect, useState } from "react";
 import { describeApiFailure } from "../../api/apiError";
 import {
@@ -21,6 +22,7 @@ export function EventParticipationPanel({
   event,
   onChanged,
 }: Props) {
+  const invalidateLists = useInvalidateLists();
   const [participation, setParticipation] = useState<EventParticipation | null>(
     null,
   );
@@ -57,6 +59,7 @@ export function EventParticipationPanel({
     try {
       const saved = (await joinCleanupEvent(accessToken, event.id))
         .participation;
+      invalidateLists("joined:");
       setParticipation(saved);
       setMessage(
         participation?.status === "WITHDRAWN"
@@ -81,6 +84,7 @@ export function EventParticipationPanel({
     setMessage(undefined);
     try {
       const saved = await withdrawFromCleanupEvent(accessToken, event.id);
+      invalidateLists("joined:");
       setParticipation(saved);
       setMessage("You have withdrawn from this event.");
       onChanged?.(saved);
@@ -111,10 +115,7 @@ export function EventParticipationPanel({
           <h3 id="participation-title">
             {active ? "You are volunteering" : "Join this cleanup"}
           </h3>
-          <p>
-            One tap reserves your place. EcoTrack will remind you 30 minutes
-            before the start time.
-          </p>
+
         </div>
       </div>
       {participation && (
