@@ -1,4 +1,5 @@
 import type { AuthenticatedUserProfile } from "../auth/auth.types";
+import { EcoTrackMark } from "../../components/EcoTrackMark";
 import { NotificationButton } from "../notifications/NotificationButton";
 
 export type CitizenIconName =
@@ -110,12 +111,7 @@ export function CitizenSidebar({
     <aside className="citizen-dashboard-sidebar">
       <div className="citizen-dashboard-brand">
         <span className="citizen-dashboard-brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 64 64">
-            <path className="citizen-brand-stem" d="M32 48V24" />
-            <path className="citizen-brand-leaf" d="M31 27C18 28 11 20 10 10c12-1 21 4 23 15" />
-            <path className="citizen-brand-leaf citizen-brand-leaf-right" d="M33 30c12 0 20-7 21-17-11-2-20 3-23 14" />
-            <path className="citizen-brand-soil" d="M18 53c2-9 7-14 14-14s12 5 14 14H18Z" />
-          </svg>
+          <EcoTrackMark />
         </span>
         <span>
           <strong>EcoTrack</strong>

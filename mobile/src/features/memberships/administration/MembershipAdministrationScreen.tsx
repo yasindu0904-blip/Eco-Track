@@ -164,7 +164,7 @@ export function MembershipAdministrationScreen({ accessToken, organizationId, or
   }
 
   return (
-    <Screen>
+    <Screen onRefresh={() => Promise.all([loadRequests(), loadMembers()]).then(() => undefined)}>
       <PageHeader
         eyebrow="Organization workspace"
         title="Membership administration"

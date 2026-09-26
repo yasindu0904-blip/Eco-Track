@@ -79,7 +79,7 @@ export function MyImpactScreen({
   }
 
   return (
-    <Screen>
+    <Screen onRefresh={load}>
       <PageHeader
         eyebrow="Citizen and volunteer"
         title="My Impact"

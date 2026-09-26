@@ -34,7 +34,7 @@ export function MyOrganizationApplicationsScreen({
   const list = usePagedList("applications:" + section, cursor => listMyApplicationPage(accessToken, section, cursor), true);
   const { items: applications, error } = list;
   return (
-    <Screen>
+    <Screen onRefresh={list.refresh}>
       <PageHeader
         eyebrow="My requests"
         title="Organization requests"

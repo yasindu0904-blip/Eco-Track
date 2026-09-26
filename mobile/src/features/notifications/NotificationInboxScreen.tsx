@@ -154,7 +154,7 @@ export function NotificationInboxScreen({
   };
 
   return (
-    <Screen>
+    <Screen onRefresh={load}>
       <PageHeader
         eyebrow="Personal inbox"
         title="Notifications"

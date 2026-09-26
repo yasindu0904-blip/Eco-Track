@@ -282,7 +282,11 @@ export function CitizenIncidentDiscoveryScreen({
   ) : undefined;
 
   return (
-    <Screen rememberKey={"nearby:" + section} scrollEnabled={!mapInteracting}>
+    <Screen
+      rememberKey={"nearby:" + section}
+      scrollEnabled={!mapInteracting}
+      onRefresh={search ? () => runSearch(search) : undefined}
+    >
       <PageHeader
         eyebrow="Community map"
         title="Find cleanup activity"

@@ -85,7 +85,10 @@ export function PublicCleanupEventsScreen({
   );
 
   return (
-    <Screen rememberKey={selected ? undefined : "events:" + section}>
+    <Screen
+      rememberKey={selected ? undefined : "events:" + section}
+      onRefresh={selected ? () => open(selected.id) : list.refresh}
+    >
       <PageHeader
         eyebrow="Community cleanups"
         title={selected ? selected.title : "Published events"}

@@ -161,7 +161,7 @@ export function SuperAdminDashboard({ accessToken, profile }: Props) {
   }
 
   return (
-    <Screen>
+    <Screen onRefresh={loadApplications}>
       <SummaryCards load={loadPlatformSummary} label="Platform summary">{(summary) => <><Metric label="Active users" value={`${summary.users.active} / ${summary.users.total}`} /><Metric label="Organizations" value={total(summary.organizationsByState)} /><Metric label="Incidents" value={total(summary.incidentsByState)} /><Metric label="Cleanup events" value={total(summary.eventsByLifecycle)} /></>}</SummaryCards>
 
       <View style={[sharedStyles.card, styles.adminIdentity]}>

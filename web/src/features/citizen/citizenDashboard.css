@@ -31,17 +31,10 @@
   flex: 0 0 38px;
   width: 38px;
   height: 38px;
-  display: grid;
-  place-items: center;
-  border-radius: 11px;
-  background: rgba(255, 255, 255, 0.1);
+  display: block;
 }
 
-.citizen-dashboard-brand-mark svg { width: 29px; height: 29px; }
-.citizen-brand-stem { fill: none; stroke: #92d36e; stroke-width: 4; stroke-linecap: round; }
-.citizen-brand-leaf { fill: #71c74e; }
-.citizen-brand-leaf-right { fill: #a7dc66; }
-.citizen-brand-soil { fill: #b8886e; }
+.citizen-dashboard-brand-mark img { width: 100%; height: 100%; display: block; }
 
 .citizen-dashboard-brand > span:last-child,
 .citizen-dashboard-user > span:nth-child(2) { min-width: 0; display: grid; }

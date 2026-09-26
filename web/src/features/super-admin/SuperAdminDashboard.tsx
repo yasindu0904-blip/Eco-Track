@@ -6,6 +6,7 @@ import { SummaryPanel } from "../dashboards/SummaryPanel";
 import { total } from "../dashboards/dashboard.utils";
 
 import type { AuthenticatedUserProfile } from "../auth/auth.types";
+import { EcoTrackMark } from "../../components/EcoTrackMark";
 import { NotificationButton } from "../notifications/NotificationButton";
 import {
   approveOrganizationApplication,
@@ -153,21 +154,7 @@ export function SuperAdminDashboard({
       <aside className="super-admin-sidebar">
         <div className="super-admin-brand">
           <span className="super-admin-brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 64 64">
-              <path className="super-admin-brand-stem" d="M32 48V24" />
-              <path
-                className="super-admin-brand-leaf"
-                d="M31 27C18 28 11 20 10 10c12-1 21 4 23 15"
-              />
-              <path
-                className="super-admin-brand-leaf super-admin-brand-leaf-right"
-                d="M33 30c12 0 20-7 21-17-11-2-20 3-23 14"
-              />
-              <path
-                className="super-admin-brand-soil"
-                d="M18 53c2-9 7-14 14-14s12 5 14 14H18Z"
-              />
-            </svg>
+            <EcoTrackMark />
           </span>
           <span>
             <strong>EcoTrack</strong>

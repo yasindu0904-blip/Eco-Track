@@ -9,7 +9,7 @@ type Props = {
   memberships: ActiveOrganizationMembership[];
   loading: boolean;
   error: boolean;
-  onRetry: () => void;
+  onRetry: () => void | Promise<void>;
   onBack: () => void;
   onSelect: (organizationId: string) => void;
   onManageMembership: () => void;
@@ -17,7 +17,7 @@ type Props = {
 
 export function OrganizationWorkspacesScreen({ memberships, loading, error, onRetry, onBack, onSelect, onManageMembership }: Props) {
   return (
-    <Screen>
+    <Screen onRefresh={onRetry}>
       <PageHeader title="Organization workspaces" onBack={onBack} backLabel="Dashboard" />
       {loading ? <Notice message="Loading your workspaces…" /> : error ? (
         <View style={sharedStyles.card}>

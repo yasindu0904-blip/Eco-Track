@@ -141,7 +141,7 @@ export function MembershipSelfServiceScreen({ accessToken, profile, onProfileUpd
   }
 
   return (
-    <Screen>
+    <Screen onRefresh={() => Promise.all([loadOrganizations(), loadRequests()]).then(() => undefined)}>
       <PageHeader
         eyebrow="Account & membership"
         title="Profile and membership"

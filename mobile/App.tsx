@@ -75,7 +75,7 @@ export default function App() {
 
   let content;
   if (authentication.status === "loading") {
-    content = <LoadingState message="Securing your EcoTrack session…" />;
+    content = <LoadingState message={null} />;
   } else if (authentication.status === "signedOut") {
     content = <LoginScreen />;
   } else if (authentication.status === "error") {

@@ -50,7 +50,7 @@ export function MyReportsScreen({ accessToken, submittedIncident, initialInciden
 
   if (detail) {
     return (
-      <Screen>
+      <Screen onRefresh={() => open(detail.id)}>
         <PageHeader
           eyebrow={detail.category.name}
           title={detail.title}
@@ -71,7 +71,7 @@ export function MyReportsScreen({ accessToken, submittedIncident, initialInciden
   }
 
   return (
-    <Screen rememberKey={"reports:" + section}>
+    <Screen rememberKey={"reports:" + section} onRefresh={list.refresh}>
       <PageHeader
         eyebrow="Your activity"
         title="My reports"

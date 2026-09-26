@@ -145,7 +145,7 @@ export function AuthenticatedUserApp({ accessToken, profile, pushNotification, o
         memberships={activeMemberships}
         loading={!membershipsLoaded}
         error={membershipsError}
-        onRetry={() => void reloadActiveMemberships()}
+        onRetry={reloadActiveMemberships}
         onBack={() => navigate(mobileDashboard)}
         onSelect={(organizationId) => navigate({ screen: "organizationWorkspace", organizationId, tab: "overview" })}
         onManageMembership={() => navigate({ screen: "membership" })}

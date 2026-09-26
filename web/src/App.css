@@ -61,29 +61,10 @@
   margin: 0 auto 12px;
 }
 
-.brand-mark svg {
+.brand-mark img {
   width: 100%;
   height: 100%;
-  overflow: visible;
-}
-
-.brand-stem {
-  fill: none;
-  stroke: #358b38;
-  stroke-width: 4;
-  stroke-linecap: round;
-}
-
-.brand-leaf {
-  fill: #78c941;
-}
-
-.brand-leaf-right {
-  fill: #9bdb4e;
-}
-
-.brand-soil {
-  fill: #795548;
+  display: block;
 }
 
 .brand-header h1 {

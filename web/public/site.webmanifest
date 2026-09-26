@@ -1,0 +1,17 @@
+{
+  "name": "Eco Track web",
+  "short_name": "Eco Track",
+  "description": "Community-driven environmental action",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f7f4",
+  "theme_color": "#195f38",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

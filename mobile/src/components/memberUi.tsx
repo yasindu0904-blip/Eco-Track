@@ -1,5 +1,13 @@
 import { useScrollMemory } from "./lists/usePagedList";
-import { useContext, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SafeAreaHandledContext, ScreenDepthContext, usePageHeader } from "./appHeaderContext";
 import {
@@ -7,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -52,33 +61,86 @@ type ScreenProps = {
   contentStyle?: StyleProp<ViewStyle>;
   scrollEnabled?: boolean;
   rememberKey?: string;
+  onRefresh?: () => void | Promise<void>;
 };
 
-export function Screen({ children, contentStyle, scrollEnabled = true, rememberKey }: ScreenProps) {
+type ScreenRefreshHandler = () => void | Promise<void>;
+type RegisterScreenRefresh = (handler: ScreenRefreshHandler) => () => void;
+
+const ScreenRefreshContext = createContext<RegisterScreenRefresh | null>(null);
+
+export function useRegisterScreenRefresh(handler: ScreenRefreshHandler) {
+  const register = useContext(ScreenRefreshContext);
+  useEffect(() => register?.(handler), [handler, register]);
+}
+
+export function Screen({ children, contentStyle, scrollEnabled = true, rememberKey, onRefresh }: ScreenProps) {
   const scrollMemory = useScrollMemory(rememberKey);
   const safeAreaHandled = useContext(SafeAreaHandledContext);
   const depth = useContext(ScreenDepthContext);
+  const refreshHandlers = useRef(new Set<ScreenRefreshHandler>());
+  const [refreshHandlerCount, setRefreshHandlerCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const registerRefresh = useCallback<RegisterScreenRefresh>((handler) => {
+    refreshHandlers.current.add(handler);
+    setRefreshHandlerCount(refreshHandlers.current.size);
+    return () => {
+      refreshHandlers.current.delete(handler);
+      setRefreshHandlerCount(refreshHandlers.current.size);
+    };
+  }, []);
+  const handleRefresh = useCallback(async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    const handlers = [
+      ...(onRefresh ? [onRefresh] : []),
+      ...refreshHandlers.current,
+    ];
+    try {
+      await Promise.allSettled(
+        handlers.map((handler) => Promise.resolve().then(handler)),
+      );
+    } finally {
+      setRefreshing(false);
+    }
+  }, [onRefresh, refreshing]);
+  const refreshControl = scrollEnabled && (Boolean(onRefresh) || refreshHandlerCount > 0)
+    ? (
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => void handleRefresh()}
+          colors={[memberColors.primary]}
+          tintColor={memberColors.primary}
+          progressBackgroundColor={memberColors.surface}
+        />
+      )
+    : undefined;
+
   return (
     <SafeAreaView edges={safeAreaHandled ? [] : ["top", "bottom", "left", "right"]} style={styles.safeArea}>
       <SafeAreaHandledContext.Provider value>
         <ScreenDepthContext.Provider value={depth + 1}>
-          <KeyboardAvoidingView
-            style={styles.flex}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-          >
-            <ScrollView
-              key={rememberKey}
-              contentOffset={{ x: 0, y: scrollMemory.read() }}
-              onScroll={event => scrollMemory.write(event.nativeEvent.contentOffset.y)}
-              scrollEventThrottle={100}
-              scrollEnabled={scrollEnabled}
-              contentContainerStyle={[styles.screenContent, contentStyle]}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
+          <ScreenRefreshContext.Provider value={registerRefresh}>
+            <KeyboardAvoidingView
+              style={styles.flex}
+              behavior={Platform.OS === "ios" ? "padding" : undefined}
             >
-              {children}
-            </ScrollView>
-          </KeyboardAvoidingView>
+              <ScrollView
+                key={rememberKey}
+                contentOffset={{ x: 0, y: scrollMemory.read() }}
+                onScroll={event => scrollMemory.write(event.nativeEvent.contentOffset.y)}
+                scrollEventThrottle={100}
+                scrollEnabled={scrollEnabled}
+                alwaysBounceVertical={Boolean(refreshControl)}
+                refreshControl={refreshControl}
+                contentContainerStyle={[styles.screenContent, contentStyle]}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                {children}
+              </ScrollView>
+            </KeyboardAvoidingView>
+          </ScreenRefreshContext.Provider>
         </ScreenDepthContext.Provider>
       </SafeAreaHandledContext.Provider>
     </SafeAreaView>
@@ -329,13 +391,13 @@ export function ActionRow({
   );
 }
 
-export function LoadingState({ message = "Loading EcoTrack…" }: { message?: string }) {
+export function LoadingState({ message = "Loading EcoTrack…" }: { message?: string | null }) {
   const safeAreaHandled = useContext(SafeAreaHandledContext);
   return (
     <SafeAreaView edges={safeAreaHandled ? [] : ["top", "bottom", "left", "right"]} style={styles.loadingScreen}>
       <AppMark />
       <ActivityIndicator size="large" color={memberColors.primary} />
-      <Text style={styles.loadingText}>{message}</Text>
+      {message ? <Text style={styles.loadingText}>{message}</Text> : null}
     </SafeAreaView>
   );
 }

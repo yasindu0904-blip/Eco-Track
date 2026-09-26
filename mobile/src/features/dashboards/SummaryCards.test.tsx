@@ -14,6 +14,7 @@ vi.mock("../../components/ui", async () => {
     Button: ({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) => React.createElement("Button", { label, onPress, disabled }, label),
     Notice: ({ message }: { message: string }) => React.createElement("Notice", { message }, message),
     sharedStyles: { card: {}, sectionTitle: {} },
+    useRegisterScreenRefresh: () => undefined,
   };
 });
 vi.mock("../../components/theme", () => ({ spacing: { sm: 8 } }));

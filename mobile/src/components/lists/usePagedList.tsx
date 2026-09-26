@@ -55,7 +55,9 @@ export function usePagedList<T,>(key: string, loader: (cursor?: string) => Promi
       if (visible.pages[visible.index + 1]) save({ ...visible, index: visible.index + 1 });
       else void fetchPage(visible, page.nextCursor);
     },
-    refresh: () => { if (!busy) void fetchPage({ key, pages: [], index: 0, savedAt: 0 }); },
+    refresh: () => busy
+      ? Promise.resolve()
+      : fetchPage({ key, pages: [], index: 0, savedAt: 0 }),
   };
 }
 export const eventSections = [

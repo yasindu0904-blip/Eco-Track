@@ -23,7 +23,7 @@ export function MyJoinedCleanupEventsScreen({
   const list = usePagedList("joined:" + section, cursor => listMyEventParticipations(accessToken, "all", cursor, section), true);
   const { items, busy, error } = list;
   return (
-    <Screen rememberKey={"joined:" + section}>
+    <Screen rememberKey={"joined:" + section} onRefresh={list.refresh}>
       <PageHeader
         eyebrow="My volunteering"
         title="My joined events"

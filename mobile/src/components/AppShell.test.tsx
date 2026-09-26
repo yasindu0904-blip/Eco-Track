@@ -5,7 +5,7 @@ import { PageHeader, Screen } from "./memberUi";
 
 vi.mock("react-native", () => ({
   ActivityIndicator: "ActivityIndicator", KeyboardAvoidingView: "KeyboardAvoidingView",
-  Platform: { OS: "android" }, Pressable: "Pressable", ScrollView: "ScrollView",
+  Platform: { OS: "android" }, Pressable: "Pressable", RefreshControl: "RefreshControl", ScrollView: "ScrollView",
   Text: "Text", TextInput: "TextInput", View: "View",
   StyleSheet: { create: <T,>(styles: T) => styles },
 }));
@@ -67,6 +67,29 @@ describe("shared mobile header", () => {
     await act(async () => { tree = create(<Screen><PageHeader title="Sign in" /></Screen>); });
     expect(tree.root.findByType("SafeAreaView" as never).props.edges).toEqual(["top", "bottom", "left", "right"]);
     expect(tree.root.findAllByProps({ children: "Sign in" })).toHaveLength(1);
+  });
+
+  it("runs pull-to-refresh work and clears the native refresh indicator", async () => {
+    let finishRefresh: (() => void) | undefined;
+    const onRefresh = vi.fn(() => new Promise<void>((resolve) => {
+      finishRefresh = resolve;
+    }));
+    await act(async () => {
+      tree = create(<Screen onRefresh={onRefresh}>Refreshable content</Screen>);
+    });
+    const refreshControl = () => tree.root.findByType("ScrollView" as never).props.refreshControl;
+    expect(refreshControl().props.refreshing).toBe(false);
+    await act(async () => {
+      refreshControl().props.onRefresh();
+      await Promise.resolve();
+    });
+    expect(onRefresh).toHaveBeenCalledOnce();
+    expect(refreshControl().props.refreshing).toBe(true);
+    await act(async () => {
+      finishRefresh?.();
+      await Promise.resolve();
+    });
+    expect(refreshControl().props.refreshing).toBe(false);
   });
 
   it("inherits the workspace back action when a nested section only supplies a title", async () => {

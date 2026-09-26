@@ -6,6 +6,7 @@ import "./App.css";
 import { AuthenticatedUserApp } from "./app/AuthenticatedUserApp";
 import { SuperAdminApp } from "./app/SuperAdminApp";
 import { hasCompletedProfile } from "./authorization/authorizationUi";
+import { EcoTrackMark } from "./components/EcoTrackMark";
 import { LoginForm } from "./features/auth/LoginForm";
 import { ProfileOnboarding } from "./features/auth/ProfileOnboarding";
 import { useAuthentication } from "./features/auth/useAuthentication";
@@ -14,12 +15,7 @@ function BrandHeader() {
   return (
     <header className="brand-header">
       <div className="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 64 64" role="presentation">
-          <path className="brand-stem" d="M32 48V24" />
-          <path className="brand-leaf" d="M31 27C18 28 11 20 10 10c12-1 21 4 23 15" />
-          <path className="brand-leaf brand-leaf-right" d="M33 30c12 0 20-7 21-17-11-2-20 3-23 14" />
-          <path className="brand-soil" d="M18 53c2-9 7-14 14-14s12 5 14 14H18Z" />
-        </svg>
+        <EcoTrackMark />
       </div>
       <h1>EcoTrack</h1>
       <p>Community-Driven Environmental Action</p>

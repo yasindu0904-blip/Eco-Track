@@ -7,7 +7,7 @@ import {
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { describeApiFailure } from "../../api/apiError";
-import { Button, Notice, sharedStyles } from "../../components/ui";
+import { Button, Notice, sharedStyles, useRegisterScreenRefresh } from "../../components/ui";
 import { spacing } from "../../components/theme";
 
 type SummaryCardsProps<T> = {
@@ -45,6 +45,8 @@ export function SummaryCards<T>({
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useRegisterScreenRefresh(refresh);
 
   return (
     <View
