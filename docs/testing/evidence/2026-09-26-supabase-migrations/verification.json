@@ -1,0 +1,54 @@
+{
+  "checkedAt": "2026-09-26T07:16:00.456Z",
+  "commit": "1c6c6002ae27a8778f79ecfb639a4304e02def61",
+  "target": "Supabase configured in backend/.env (credentials omitted)",
+  "repositoryMigrationCount": 20,
+  "pending": [],
+  "unfinished": [],
+  "newTables": [
+    {
+      "table_name": "cleanup_event_reminders",
+      "rls_enabled": true
+    },
+    {
+      "table_name": "notification_deliveries",
+      "rls_enabled": true
+    },
+    {
+      "table_name": "user_devices",
+      "rls_enabled": true
+    }
+  ],
+  "frontendRoleGrants": [],
+  "preservedRowCounts": {
+    "cleanup_events": 169,
+    "event_participants": 32,
+    "event_evidence": 3,
+    "contribution_events": 13
+  },
+  "invalidNonDraftStartTimes": 0,
+  "appliedMigrations": [
+    {
+      "migration_name": "20260821120000_add_event_participant_operation_indexes",
+      "finished_at": "2026-09-26T07:15:18.012Z"
+    },
+    {
+      "migration_name": "20260822100000_add_dashboard_summary_indexes",
+      "finished_at": "2026-09-26T07:15:19.553Z"
+    },
+    {
+      "migration_name": "20260901120000_simplify_cleanup_event_workflow",
+      "finished_at": "2026-09-26T07:15:27.287Z"
+    },
+    {
+      "migration_name": "20260902100000_add_push_delivery_foundation",
+      "finished_at": "2026-09-26T07:15:31.014Z"
+    }
+  ],
+  "historicalNotes": [
+    "Service-area successful checksum matches SQL without later search_path header, with original line endings. Applied history unchanged.",
+    "Database-only 20260813150000_add_unread_notification_index matches SQL recovered from Git commit c20f46a. Applied history unchanged."
+  ],
+  "backupScope": "public schema and data; excludes Supabase Auth, Storage objects, and other schemas",
+  "rehearsal": "Restored public backup locally with PostGIS and pg_trgm; all four pending migrations passed before Supabase deployment."
+}
