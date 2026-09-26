@@ -23,41 +23,16 @@ interface SuperAdminDashboardProps {
   onSignOut: () => void;
 }
 
-type DashboardIconName =
-  | "shield"
-  | "check";
-
-interface DashboardIconProps {
-  name: DashboardIconName;
-}
-
-function DashboardIcon({ name }: DashboardIconProps) {
-  if (name === "check") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="m5 12 4 4L19 6" />
-      </svg>
-    );
-  }
-
+function DashboardIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 3 4.5 6v5c0 4.8 3 8.3 7.5 10 4.5-1.7 7.5-5.2 7.5-10V6L12 3Z" />
-      <path d="m8.5 12 2.2 2.2 4.8-5" />
+      <path d="m5 12 4 4L19 6" />
     </svg>
   );
 }
 
 function SidebarBullet() {
   return <span className="super-admin-nav-bullet" aria-hidden="true" />;
-}
-
-function formatAccountStatus(value: string): string {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
 }
 
 export function SuperAdminDashboard({
@@ -222,11 +197,6 @@ export function SuperAdminDashboard({
             Organization reviews
             <span>{applications.length}</span>
           </button>
-          <button className="super-admin-nav-item" type="button" disabled>
-            <SidebarBullet />
-            Service areas
-            <span>Next</span>
-          </button>
           {onOpenNotifications && (
             <NotificationButton
               accessToken={accessToken}
@@ -235,11 +205,13 @@ export function SuperAdminDashboard({
           )}
         </nav>
 
-        <div className="super-admin-security-note">
-          <DashboardIcon name="shield" />
-          <div>
-            <strong>Protected console</strong>
-
+        <div className="super-admin-sidebar-account" aria-label="Signed-in account">
+          <div className="super-admin-identity">
+            <span className="super-admin-avatar" aria-hidden="true">{initial}</span>
+            <span>
+              <strong>{displayName}</strong>
+              <small>Super Admin</small>
+            </span>
           </div>
         </div>
 
@@ -253,34 +225,27 @@ export function SuperAdminDashboard({
       </aside>
 
       <main className="super-admin-main">
-        {accessToken && <SummaryPanel load={loadPlatformSummary} label="Platform summary">{(summary) => (
-          <section className="super-admin-metrics" aria-label="Platform aggregates">
-            <article><small>Active users</small><strong>{summary.users.active}</strong><p>{summary.users.total} total</p></article>
-            <article><small>Organizations</small><strong>{total(summary.organizationsByState)}</strong><p>{summary.pendingOrganizationApplications} pending</p></article>
-            <article><small>Incidents</small><strong>{total(summary.incidentsByState)}</strong></article>
-            <article><small>Cleanup events</small><strong>{total(summary.eventsByLifecycle)}</strong></article>
-          </section>
-        )}</SummaryPanel>}
         <header className="super-admin-header">
           <div>
             <span className="super-admin-eyebrow">Platform overview</span>
             <h1>Good to see you, {displayName}</h1>
-
-          </div>
-
-          <div className="super-admin-identity">
-            <span className="super-admin-avatar" aria-hidden="true">
-              {initial}
-            </span>
-            <span>
-              <strong>{displayName}</strong>
-              <small>Super Admin</small>
-            </span>
           </div>
         </header>
 
-        <div className="super-admin-content-grid">
-          <section className="super-admin-review-card" id="organization-reviews">
+        {accessToken && (
+          <div className="super-admin-summary">
+            <SummaryPanel load={loadPlatformSummary} label="Platform summary">{(summary) => (
+              <div className="super-admin-metrics" aria-label="Platform aggregates">
+                <article><span>Active users</span><strong>{summary.users.active}</strong><small>{summary.users.total} total users</small></article>
+                <article><span>Organizations</span><strong>{total(summary.organizationsByState)}</strong><small>{summary.pendingOrganizationApplications} pending review</small></article>
+                <article><span>Incidents</span><strong>{total(summary.incidentsByState)}</strong><small>All statuses</small></article>
+                <article><span>Cleanup events</span><strong>{total(summary.eventsByLifecycle)}</strong><small>All statuses</small></article>
+              </div>
+            )}</SummaryPanel>
+          </div>
+        )}
+
+        <section className="super-admin-review-card" id="organization-reviews">
             <div className="super-admin-section-heading">
               <div>
                 <span className="super-admin-eyebrow">Review workspace</span>
@@ -347,7 +312,7 @@ export function SuperAdminDashboard({
             ) : applications.length === 0 ? (
               <div className="super-admin-empty-state">
                 <span className="super-admin-empty-icon" aria-hidden="true">
-                  <DashboardIcon name="check" />
+                  <DashboardIcon />
                 </span>
                 <h3>No pending applications</h3>
                 <p>New citizen organization applications will appear here.</p>
@@ -448,35 +413,7 @@ export function SuperAdminDashboard({
                 )}
               </div>
             )}
-          </section>
-
-          <aside className="super-admin-account-card">
-            <div className="super-admin-section-heading">
-              <div>
-                <span className="super-admin-eyebrow">Signed-in account</span>
-                <h2>Account details</h2>
-              </div>
-            </div>
-            <dl>
-              <div>
-                <dt>Email</dt>
-                <dd>{profile.email}</dd>
-              </div>
-              <div>
-                <dt>Platform role</dt>
-                <dd>Super Admin</dd>
-              </div>
-              <div>
-                <dt>Account status</dt>
-                <dd>
-                  <span className="super-admin-account-status">
-                    {formatAccountStatus(profile.accountStatus)}
-                  </span>
-                </dd>
-              </div>
-            </dl>
-          </aside>
-        </div>
+        </section>
         {accessToken && <SuperAdminMapOverview accessToken={accessToken} />}
       </main>
     </div>
