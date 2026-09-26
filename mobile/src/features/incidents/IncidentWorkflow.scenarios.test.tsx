@@ -268,15 +268,18 @@ describe("mobile incident workflow scenarios", () => {
         .props.onPress();
     });
 
-    expect(textContent(renderer!)).toContain("canal.jpg");
-    expect(textContent(renderer!)).toContain("waste.jpg");
+    expect(textContent(renderer!)).not.toContain("canal.jpg");
+    expect(textContent(renderer!)).not.toContain("waste.jpg");
+    expect(renderer!.root.findByProps({ accessibilityLabel: "Evidence photo 1" }).props.source.uri).toBe("file:///canal.jpg-prepared");
+    expect(renderer!.root.findByProps({ accessibilityLabel: "Evidence photo 2" }).props.source.uri).toBe("file:///waste.jpg-prepared");
     await act(async () => {
       renderer!.root
-        .findByProps({ accessibilityLabel: "Remove canal.jpg" })
+        .findByProps({ accessibilityLabel: "Remove photo 1" })
         .props.onPress();
     });
     expect(textContent(renderer!)).not.toContain("canal.jpg");
-    expect(textContent(renderer!)).toContain("waste.jpg");
+    expect(renderer!.root.findByProps({ accessibilityLabel: "Evidence photo 1" }).props.source.uri).toBe("file:///waste.jpg-prepared");
+    expect(renderer!.root.findAllByProps({ accessibilityLabel: "Evidence photo 2" })).toHaveLength(0);
     vi.unstubAllGlobals();
   });
 

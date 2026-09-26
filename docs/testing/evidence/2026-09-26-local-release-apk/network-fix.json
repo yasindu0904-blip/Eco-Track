@@ -1,0 +1,22 @@
+{
+  "checkedAt": "2026-09-26T08:27:30.313Z",
+  "cause": "Phone hotspot subnet changed after restart",
+  "oldApi": "http://10.99.17.4:5000/api/v1",
+  "newApi": "http://10.242.168.4:5000/api/v1",
+  "changes": [
+    "Ignored mobile/.env.local API URL updated",
+    "Startup profile request limited to 15 seconds with cancellation and retryable error"
+  ],
+  "checks": {
+    "phoneApiHealth": "HTTP 200",
+    "regressionTests": "2 passed",
+    "typecheck": "passed",
+    "releaseBuild": "passed",
+    "install": "success, in-place update",
+    "coldLaunch": "success",
+    "visualCheck": "App past session loading, displaying incident report form"
+  },
+  "apk": "mobile/dist/local-apk/EcoTrack-laptop-network-fix.apk",
+  "sha256": "f8c77662c863afa249c28c9073779017f377a1167495d33a7ca7bd9076373f3a",
+  "limitation": "Future hotspot IP changes still require rebuilding the local-API APK; hosted API avoids this."
+}

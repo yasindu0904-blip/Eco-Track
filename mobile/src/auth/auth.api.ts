@@ -1,4 +1,4 @@
-import { apiRequest } from "../api/apiClient";
+import { ApiRequestError, apiRequest } from "../api/apiClient";
 
 import type {
   AuthenticatedUserProfile,
@@ -9,11 +9,31 @@ import type {
 export async function fetchCurrentUser(
   accessToken: string,
 ): Promise<AuthenticatedUserProfile> {
-  const response = await apiRequest<CurrentUserResponse>("/auth/me", {
-    accessToken,
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      reject(new ApiRequestError(
+        0,
+        "SESSION_PROFILE_TIMEOUT",
+        "EcoTrack could not reach the API in time. Check your connection. For a laptop backend, its network address may have changed.",
+      ));
+      controller.abort();
+    }, 15_000);
   });
 
-  return response.data;
+  try {
+    const response = await Promise.race([
+      apiRequest<CurrentUserResponse>("/auth/me", {
+        accessToken,
+        signal: controller.signal,
+      }),
+      deadline,
+    ]);
+    return response.data;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function completeCurrentUserProfile(
