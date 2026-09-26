@@ -88,19 +88,26 @@ export function EventOperationsScreen({
       setBusy(false);
     }
   }
-  async function chooseEvidence() {
+  async function chooseEvidence(source: "library" | "camera" = "library") {
+    if (busy || picking) return;
     setPicking(true);
     setError(undefined);
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permission = source === "camera"
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        setError("Photo-library permission is required.");
+        setError(source === "camera"
+          ? "Camera permission is needed to photograph cleanup evidence."
+          : "Photo-library permission is required.");
         return;
       }
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.75 });
+      const result = source === "camera"
+        ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.75, cameraType: ImagePicker.CameraType.back })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.75 });
       if (!result.canceled && result.assets[0]) setPhoto(result.assets[0]);
     } catch (reason) {
-      setError(describeApiFailure(reason, "Unable to select a photo.").message);
+      setError(describeApiFailure(reason, source === "camera" ? "Unable to take a photo." : "Unable to select a photo.").message);
     } finally {
       setPicking(false);
     }
@@ -175,6 +182,7 @@ export function EventOperationsScreen({
             ]} />
             <Field label="Caption" value={caption} onChangeText={value => setCaption(value.slice(0, 500))} />
             {photo && <Image source={{ uri: photo.uri }} style={styles.photo} accessibilityLabel="Selected evidence photo" />}
+            <Button label="Take photo" variant="secondary" disabled={busy || picking} onPress={() => void chooseEvidence("camera")} />
             <Button label={photo ? "Change photo" : "Choose photo"} variant="secondary" disabled={busy || picking} onPress={() => void chooseEvidence()} />
             <Button label="Upload evidence" disabled={busy || picking || !photo} onPress={() => void uploadEvidence()} />
           </View>

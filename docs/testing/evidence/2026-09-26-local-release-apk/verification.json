@@ -1,0 +1,36 @@
+{
+  "date": "2026-09-26T08:04:52.512Z",
+  "commit": "26ff67ccb3925edae17e83a0bd8b8504deb3948f",
+  "buildVariant": "release",
+  "signing": "local generated debug signing key (testing only)",
+  "java": "17.0.18",
+  "apiBaseUrl": "http://10.99.17.4:5000/api/v1",
+  "deviceModel": "Samsung SM-A236E",
+  "androidVersion": "14",
+  "apkPath": "mobile/dist/local-apk/EcoTrack-laptop-release.apk",
+  "apkBytes": 116388602,
+  "sha256": "ed9e49b3baf01fe1fca97da660ede43bbf5cab145440af45f5bbe0e15651d20c",
+  "checks": {
+    "typecheck": "PASS",
+    "gradleAssembleRelease": "PASS",
+    "embeddedJavaScriptBundle": "PASS",
+    "embeddedLaptopApiUrl": "PASS",
+    "nonDebuggableApk": "PASS",
+    "adbInstallUpdate": "PASS",
+    "deviceLanApiHealth": "HTTP 200",
+    "metroStoppedBeforeColdLaunch": true,
+    "usbReverseForwarding": "none",
+    "coldLaunch": "PASS; dashboard displayed with preserved session"
+  },
+  "notTested": [
+    "Physical USB unplug test",
+    "New magic-link login",
+    "Permission denial flows",
+    "End-to-end push delivery"
+  ],
+  "notes": [
+    "Initial Java 25 native compilation failed; JDK 17 build succeeded.",
+    "Launch screenshot retained in ignored mobile/dist/local-apk/launch.png because it contains account data.",
+    "APK requires laptop backend and current LAN address; rebuild if address changes."
+  ]
+}

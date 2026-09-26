@@ -130,7 +130,7 @@ export function IncidentReportScreen({
         const data = await (await fetch(resized.uri)).arrayBuffer();
         if (data.byteLength > 8 * 1024 * 1024) {
           throw new Error(
-            `${asset.fileName ?? `Photo ${index + 1}`} is still larger than 8 MB after compression.`,
+            `Photo ${index + 1} is still larger than 8 MB after compression.`,
           );
         }
         prepared.push({
@@ -238,8 +238,8 @@ export function IncidentReportScreen({
           accessToken,
           submissionId,
           photos,
-          (complete, total, name) => {
-            setMessage(`Uploading ${name}: ${complete} of ${total} complete`);
+          (complete, total) => {
+            setMessage(`Uploading photos: ${complete} of ${total} complete`);
           },
         );
         setUploaded(evidence);
@@ -393,15 +393,12 @@ export function IncidentReportScreen({
         />
         {photos.length > 0 ? (
           <View style={styles.photoGrid}>
-            {photos.map((photo) => (
+            {photos.map((photo, index) => (
               <View key={photo.uri} style={styles.photoItem}>
-                <Image source={{ uri: photo.uri }} style={styles.photo} />
-                <Text numberOfLines={1} style={styles.photoName}>
-                  {photo.originalFileName}
-                </Text>
+                <Image source={{ uri: photo.uri }} style={styles.photo} accessibilityLabel={`Evidence photo ${index + 1}`} />
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`Remove ${photo.originalFileName}`}
+                  accessibilityLabel={`Remove photo ${index + 1}`}
                   disabled={busy}
                   style={styles.removePhotoButton}
                   onPress={() => removePhoto(photo.uri)}
@@ -467,11 +464,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   photo: { width: "100%", aspectRatio: 1.2, borderRadius: 10 },
-  photoName: {
-    paddingHorizontal: spacing.xs,
-    color: colors.textMuted,
-    fontSize: 11,
-  },
   removePhotoButton: {
     alignSelf: "flex-start",
     marginHorizontal: spacing.xs,

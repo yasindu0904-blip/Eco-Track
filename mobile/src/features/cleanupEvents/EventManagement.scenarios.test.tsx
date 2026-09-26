@@ -13,7 +13,10 @@ vi.mock("react-native", () => ({
   Alert: { alert: vi.fn() }, Image: "Image", Pressable: "Pressable", Text: "Text", View: "View",
   StyleSheet: { create: <T,>(styles: T) => styles },
 }));
-vi.mock("expo-image-picker", () => ({ requestMediaLibraryPermissionsAsync: vi.fn(), launchImageLibraryAsync: vi.fn() }));
+vi.mock("expo-image-picker", () => ({
+  requestMediaLibraryPermissionsAsync: vi.fn(), launchImageLibraryAsync: vi.fn(),
+  requestCameraPermissionsAsync: vi.fn(), launchCameraAsync: vi.fn(), CameraType: { back: "back" },
+}));
 vi.mock("../../components/ui", () => ({ Button: "Button", Field: "Field", Notice: "Notice", sharedStyles: {} }));
 vi.mock("../../components/lists/ListControls", () => ({
   ListSections: "ListSections", PageControls: "PageControls",
@@ -149,6 +152,45 @@ test("photo selection failures show an error without starting an upload", async 
   expect(renderer.root.findByType("Notice" as never).props.message).toBe("Library unavailable");
   expect(api.uploadEventEvidence).not.toHaveBeenCalled();
   expect(control("Button", "Choose photo").props.disabled).toBe(false);
+});
+
+test("camera evidence is previewed without its filename and uploaded only on confirmation", async () => {
+  vi.mocked(ImagePicker.requestCameraPermissionsAsync).mockResolvedValue({ granted: true } as never);
+  vi.mocked(ImagePicker.launchCameraAsync).mockResolvedValue({ canceled: false, assets: [{ uri: "file:///camera.jpg", fileName: "camera-generated-id.jpg", mimeType: "image/jpeg", width: 100, height: 100 }] });
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, arrayBuffer: async () => new ArrayBuffer(8) }));
+  await mountOperations();
+  await press("After", "Pressable");
+  await press("Take photo");
+  expect(ImagePicker.launchCameraAsync).toHaveBeenCalledWith(expect.objectContaining({ cameraType: "back", mediaTypes: ["images"] }));
+  expect(control("Image", "Selected evidence photo").props.source.uri).toBe("file:///camera.jpg");
+  expect(JSON.stringify(renderer.toJSON())).not.toContain("camera-generated-id.jpg");
+  expect(api.uploadEventEvidence).not.toHaveBeenCalled();
+  await press("Upload evidence");
+  expect(api.uploadEventEvidence).toHaveBeenCalledWith("token", "org-1", "event-1", expect.objectContaining({ originalFileName: "camera-generated-id.jpg", sizeBytes: 8 }), { type: "AFTER", caption: null });
+  expect(control("Image", "Selected evidence photo")).toBeUndefined();
+});
+
+test("denying camera permission leaves upload disabled and allows retry", async () => {
+  vi.mocked(ImagePicker.requestCameraPermissionsAsync).mockResolvedValue({ granted: false } as never);
+  await mountOperations();
+  await press("Take photo");
+  expect(ImagePicker.launchCameraAsync).not.toHaveBeenCalled();
+  expect(renderer.root.findByType("Notice" as never).props.message).toContain("Camera permission");
+  expect(control("Button", "Upload evidence").props.disabled).toBe(true);
+  expect(control("Button", "Take photo").props.disabled).toBe(false);
+});
+
+test("cancelling the camera preserves the previously selected evidence", async () => {
+  vi.mocked(ImagePicker.requestMediaLibraryPermissionsAsync).mockResolvedValue({ granted: true } as never);
+  vi.mocked(ImagePicker.launchImageLibraryAsync).mockResolvedValue({ canceled: false, assets: [{ uri: "file:///saved.jpg", width: 100, height: 100 }] });
+  vi.mocked(ImagePicker.requestCameraPermissionsAsync).mockResolvedValue({ granted: true } as never);
+  vi.mocked(ImagePicker.launchCameraAsync).mockResolvedValue({ canceled: true, assets: null });
+  await mountOperations();
+  await press("Choose photo");
+  await press("Take photo");
+  expect(control("Image", "Selected evidence photo").props.source.uri).toBe("file:///saved.jpg");
+  expect(control("Button", "Take photo").props.disabled).toBe(false);
+  expect(api.uploadEventEvidence).not.toHaveBeenCalled();
 });
 
 test.each(["COMPLETED", "CANCELLED"] as const)("%s events show saved evidence without editable operation fields", async status => {

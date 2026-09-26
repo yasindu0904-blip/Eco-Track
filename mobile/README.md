@@ -41,6 +41,43 @@ ecotrack://auth/callback
 
 ## Commands
 
+### Standalone APK with the laptop backend (Windows)
+
+The release APK bundles JavaScript and opens without Metro or Expo Go. Keep the
+Docker backend running and connect the phone to the laptop's Wi-Fi network.
+Set `EXPO_PUBLIC_API_BASE_URL` in `.env.local` to the laptop's current LAN address
+(for example `http://10.99.17.4:5000/api/v1`). Rebuild after changing this address.
+The phone's browser should be able to open `http://<laptop-ip>:5000/health`.
+Restarting a phone hotspot can change its subnet and the laptop's address. If
+the app cannot restore its session afterward, recheck the laptop IP, update
+`.env.local`, and rebuild/reinstall the APK. The startup profile request times
+out after 15 seconds and displays the existing retry screen if the API is
+unreachable. A hosted API avoids this dependency on the laptop's LAN address.
+
+Build from the short `C:\e` junction described below, using the installed JDK 17
+and the installed Android SDK:
+
+```powershell
+Set-Location C:\e\mobile
+$env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-17.0.18.8-hotspot'
+$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+$env:NODE_ENV = 'production'
+$env:EXPO_PUBLIC_MAP_PREVIEW = 'false'
+.\android\gradlew.bat -p .\android :app:assembleRelease --console=plain
+```
+
+The output is `android/app/build/outputs/apk/release/app-release.apk`. Copy it to
+the phone and allow installation from the file-opening app when Android asks.
+This local release uses the generated project's debug signing key for testing;
+it is not a store-distribution signing setup. It uses the same package ID as the
+development app, so a matching signature allows an update, while a different
+signature prevents installation. Do not uninstall an existing app without
+considering its local data and session.
+
+After installation, open the app without Metro, verify login and API access, and
+test the `ecotrack://auth/callback` email callback. The laptop must remain awake;
+internet access is still needed for Supabase Auth, online map services, and push.
+
 ```powershell
 npm run typecheck
 npm run doctor
