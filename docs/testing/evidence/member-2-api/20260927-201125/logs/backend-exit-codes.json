@@ -1,0 +1,116 @@
+[
+  {
+    "label": "backend-image-1",
+    "started_at_utc": "2026-09-27T14:50:38.478Z",
+    "exit_code": 0,
+    "evidence": "logs/backend-image-1.txt"
+  },
+  {
+    "label": "backend-image-0",
+    "started_at_utc": "2026-09-27T14:50:38.456Z",
+    "exit_code": 0,
+    "evidence": "logs/backend-image-0.txt"
+  },
+  {
+    "label": "backend-image-2",
+    "started_at_utc": "2026-09-27T14:50:38.483Z",
+    "exit_code": 0,
+    "evidence": "logs/backend-image-2.txt"
+  },
+  {
+    "label": "backend-network",
+    "started_at_utc": "2026-09-27T15:00:28.625Z",
+    "exit_code": 0,
+    "evidence": "logs/backend-network.txt"
+  },
+  {
+    "label": "backend-db-start",
+    "started_at_utc": "2026-09-27T15:00:28.891Z",
+    "exit_code": 0,
+    "evidence": "logs/backend-db-start.txt"
+  },
+  {
+    "label": "backend-redis-start",
+    "started_at_utc": "2026-09-27T15:00:31.183Z",
+    "exit_code": 0,
+    "evidence": "logs/backend-redis-start.txt"
+  },
+  {
+    "label": "backend-db-ready-1",
+    "started_at_utc": "2026-09-27T15:00:32.227Z",
+    "exit_code": 2,
+    "evidence": "logs/backend-db-ready-1.txt"
+  },
+  {
+    "label": "backend-db-ready-2",
+    "started_at_utc": "2026-09-27T15:00:35.132Z",
+    "exit_code": 1,
+    "evidence": "logs/backend-db-ready-2.txt"
+  },
+  {
+    "label": "backend-db-ready-3",
+    "started_at_utc": "2026-09-27T15:00:37.550Z",
+    "exit_code": 0,
+    "evidence": "logs/backend-db-ready-3.txt"
+  },
+  {
+    "label": "backend-bootstrap",
+    "started_at_utc": "2026-09-27T15:00:37.920Z",
+    "exit_code": 0,
+    "evidence": "logs/backend-bootstrap.txt"
+  },
+  {
+    "label": "backend-runner-start",
+    "started_at_utc": "2026-09-27T15:00:38.740Z",
+    "exit_code": 0,
+    "evidence": "logs/backend-runner-start.txt"
+  },
+  {
+    "label": "backend-source-copy",
+    "started_at_utc": "2026-09-27T15:00:40.968Z",
+    "exit_code": 0,
+    "evidence": "logs/backend-source-copy.txt"
+  },
+  {
+    "label": "backend-node-version",
+    "started_at_utc": "2026-09-27T15:01:11.590Z",
+    "exit_code": 0,
+    "evidence": "logs/backend-node-version.txt"
+  },
+  {
+    "label": "backend-install",
+    "started_at_utc": "2026-09-27T15:01:12.012Z",
+    "exit_code": 0,
+    "evidence": "logs/backend-install.txt"
+  },
+  {
+    "label": "backend-migrations",
+    "started_at_utc": "2026-09-27T15:02:13.132Z",
+    "exit_code": 0,
+    "evidence": "logs/backend-migrations.txt"
+  },
+  {
+    "label": "backend-prisma-generate",
+    "started_at_utc": "2026-09-27T15:02:15.023Z",
+    "exit_code": 0,
+    "evidence": "logs/backend-prisma-generate.txt"
+  },
+  {
+    "label": "backend-typecheck",
+    "started_at_utc": "2026-09-27T15:02:16.438Z",
+    "exit_code": 0,
+    "evidence": "logs/backend-typecheck.txt"
+  },
+  {
+    "label": "backend-build",
+    "started_at_utc": "2026-09-27T15:02:17.750Z",
+    "exit_code": 0,
+    "evidence": "logs/backend-build.txt"
+  },
+  {
+    "label": "backend-tests",
+    "started_at_utc": "2026-09-27T15:02:19.245Z",
+    "exit_code": 1,
+    "evidence": "logs/backend-tests.txt"
+  }
+]

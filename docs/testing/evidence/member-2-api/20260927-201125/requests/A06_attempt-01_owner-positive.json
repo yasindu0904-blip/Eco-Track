@@ -1,0 +1,37 @@
+{
+  "timestamp_utc": "2026-09-27T16:18:59.716Z",
+  "method": "GET",
+  "route": "/organizations/7b832c2f-03e7-445b-ba62-8ce08736b113/events/drafts/1c919b94-805f-4c00-8a50-5d5e1a83697d",
+  "request": null,
+  "http_status": 200,
+  "response": {
+    "data": {
+      "id": "1c919b94-805f-4c00-8a50-5d5e1a83697d",
+      "organizationId": "7b832c2f-03e7-445b-ba62-8ce08736b113",
+      "incidentId": "bd5defb7-1ba4-471f-9670-b7c08b0c0964",
+      "lifecycleStatus": "DRAFT",
+      "displayStatus": "DRAFT",
+      "title": "M2-area-1-own-draft-20260927-201125",
+      "description": "Synthetic spatial and isolation prerequisite",
+      "publicInstructions": null,
+      "eventLatitude": 6.785302,
+      "eventLongitude": 79.921836,
+      "eventAddress": null,
+      "meetingLatitude": null,
+      "meetingLongitude": null,
+      "meetingAddress": null,
+      "startsAt": "2026-09-28T16:18:31.411Z",
+      "capacity": null,
+      "locationLockedToIncident": true,
+      "createdAt": "2026-09-27T16:18:31.411Z",
+      "updatedAt": "2026-09-27T16:18:31.411Z",
+      "coordinators": []
+    }
+  },
+  "duration_ms": 3381,
+  "assertions": {
+    "status": true,
+    "id": true
+  },
+  "status": "PASS"
+}

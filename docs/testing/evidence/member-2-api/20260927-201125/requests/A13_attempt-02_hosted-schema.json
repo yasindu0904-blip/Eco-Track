@@ -1,0 +1,1255 @@
+{
+  "timestamp_utc": "2026-09-27T16:29:02.213Z",
+  "environment": "Hosted eco-track-test; READ ONLY",
+  "queries": [
+    {
+      "label": "migrations",
+      "sql": "SELECT migration_name,finished_at,rolled_back_at FROM public._prisma_migrations ORDER BY migration_name",
+      "rows": [
+        {
+          "migration_name": "20260727094824_init_identity_and_tenancy",
+          "finished_at": "2026-09-27T11:50:39.875Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260727130000_enable_rls",
+          "finished_at": "2026-09-27T11:50:44.788Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260809112727_align_identity_and_organization_foundation",
+          "finished_at": "2026-09-27T11:50:47.710Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260809170000_add_incident_categories",
+          "finished_at": "2026-09-27T11:50:52.543Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260810063140_add_organization_service_areas",
+          "finished_at": "2026-09-27T11:50:58.799Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260811120000_add_administrative_area_references",
+          "finished_at": "2026-09-27T11:51:07.565Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260811133000_add_administrative_area_search_indexes",
+          "finished_at": "2026-09-27T11:51:12.363Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260811143000_add_organization_review_notifications",
+          "finished_at": "2026-09-27T11:51:18.524Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260811150000_secure_new_tables_with_rls",
+          "finished_at": "2026-09-27T11:51:22.513Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260813120000_add_incident_and_cleanup_event_foundation",
+          "finished_at": "2026-09-27T11:51:26.967Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260815090000_add_notification_unread_index",
+          "finished_at": "2026-09-27T11:51:29.894Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260816120000_add_incident_submission_idempotency",
+          "finished_at": "2026-09-27T11:51:34.729Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260816123000_seed_incident_categories",
+          "finished_at": "2026-09-27T11:51:38.360Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260817120000_add_reward_idempotency_and_achievements",
+          "finished_at": "2026-09-27T11:51:43.522Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260820140000_add_map_event_query_indexes",
+          "finished_at": "2026-09-27T11:51:46.658Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260820150000_add_service_area_map_cursor_index",
+          "finished_at": "2026-09-27T11:51:49.388Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260821120000_add_event_participant_operation_indexes",
+          "finished_at": "2026-09-27T11:51:52.561Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260822100000_add_dashboard_summary_indexes",
+          "finished_at": "2026-09-27T11:51:57.085Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260901120000_simplify_cleanup_event_workflow",
+          "finished_at": "2026-09-27T11:52:16.647Z",
+          "rolled_back_at": null
+        },
+        {
+          "migration_name": "20260902100000_add_push_delivery_foundation",
+          "finished_at": "2026-09-27T11:52:27.092Z",
+          "rolled_back_at": null
+        }
+      ]
+    },
+    {
+      "label": "tables",
+      "sql": "SELECT c.relname,c.relrowsecurity,has_table_privilege('anon',c.oid,'SELECT,INSERT,UPDATE,DELETE') AS anon_access,has_table_privilege('authenticated',c.oid,'SELECT,INSERT,UPDATE,DELETE') AS authenticated_access FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='r' AND c.relname<>'_prisma_migrations' ORDER BY c.relname",
+      "rows": [
+        {
+          "relname": "achievement_definitions",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "administrative_areas",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "audit_logs",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "cleanup_event_reminders",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "cleanup_events",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "cleanup_workflow_statuses",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "cleanup_workflow_transitions",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "contribution_events",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "event_coordinators",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "event_evidence",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "event_notes",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "event_participants",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "event_status_history",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "incident_categories",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "incident_photos",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "incident_reviews",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "incident_status_history",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "incidents",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "notification_deliveries",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "notifications",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "organization_membership_requests",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "organization_memberships",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "organization_service_areas",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "organization_verification_documents",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "organizations",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "platform_settings",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "user_achievements",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "user_devices",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        },
+        {
+          "relname": "user_profiles",
+          "relrowsecurity": true,
+          "anon_access": false,
+          "authenticated_access": false
+        }
+      ]
+    },
+    {
+      "label": "geography",
+      "sql": "SELECT count(*)::int AS count FROM public.administrative_areas WHERE is_active=true",
+      "rows": [
+        {
+          "count": 73
+        }
+      ]
+    },
+    {
+      "label": "extensions",
+      "sql": "SELECT extname,extversion FROM pg_extension ORDER BY extname",
+      "rows": [
+        {
+          "extname": "pg_stat_statements",
+          "extversion": "1.11"
+        },
+        {
+          "extname": "pg_trgm",
+          "extversion": "1.6"
+        },
+        {
+          "extname": "pgcrypto",
+          "extversion": "1.3"
+        },
+        {
+          "extname": "plpgsql",
+          "extversion": "1.0"
+        },
+        {
+          "extname": "postgis",
+          "extversion": "3.3.7"
+        },
+        {
+          "extname": "supabase_vault",
+          "extversion": "0.3.1"
+        },
+        {
+          "extname": "uuid-ossp",
+          "extversion": "1.1"
+        }
+      ]
+    },
+    {
+      "label": "constraints",
+      "sql": "SELECT conrelid::regclass::text AS table_name,conname,contype,pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE connamespace='public'::regnamespace ORDER BY conname",
+      "rows": [
+        {
+          "table_name": "_prisma_migrations",
+          "conname": "_prisma_migrations_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "achievement_definitions",
+          "conname": "achievement_definitions_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "achievement_definitions",
+          "conname": "achievement_definitions_threshold_check",
+          "contype": "c",
+          "definition": "CHECK (((threshold_points IS NULL) OR (threshold_points > 0)))"
+        },
+        {
+          "table_name": "administrative_areas",
+          "conname": "administrative_areas_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "audit_logs",
+          "conname": "audit_logs_actor_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (actor_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE SET NULL"
+        },
+        {
+          "table_name": "audit_logs",
+          "conname": "audit_logs_organization_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE SET NULL"
+        },
+        {
+          "table_name": "audit_logs",
+          "conname": "audit_logs_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "cleanup_event_reminders",
+          "conname": "cleanup_event_reminders_cleanup_event_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (cleanup_event_id) REFERENCES cleanup_events(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "cleanup_event_reminders",
+          "conname": "cleanup_event_reminders_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "cleanup_event_reminders",
+          "conname": "cleanup_event_reminders_state_check",
+          "contype": "c",
+          "definition": "CHECK ((NOT ((processed_at IS NOT NULL) AND (cancelled_at IS NOT NULL))))"
+        },
+        {
+          "table_name": "cleanup_events",
+          "conname": "cleanup_events_cancellation_fields_check",
+          "contype": "c",
+          "definition": "CHECK (((lifecycle_status <> 'CANCELLED'::\"CleanupLifecycleStatus\") OR ((cancelled_at IS NOT NULL) AND (cancellation_reason IS NOT NULL))))"
+        },
+        {
+          "table_name": "cleanup_events",
+          "conname": "cleanup_events_capacity_check",
+          "contype": "c",
+          "definition": "CHECK (((capacity IS NULL) OR (capacity > 0)))"
+        },
+        {
+          "table_name": "cleanup_events",
+          "conname": "cleanup_events_completion_fields_check",
+          "contype": "c",
+          "definition": "CHECK (((lifecycle_status <> 'COMPLETED'::\"CleanupLifecycleStatus\") OR (completed_at IS NOT NULL)))"
+        },
+        {
+          "table_name": "cleanup_events",
+          "conname": "cleanup_events_created_by_membership_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (organization_id, created_by_membership_id) REFERENCES organization_memberships(organization_id, id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "cleanup_events",
+          "conname": "cleanup_events_current_workflow_status_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (organization_id, current_workflow_status_id) REFERENCES cleanup_workflow_statuses(organization_id, id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "cleanup_events",
+          "conname": "cleanup_events_event_latitude_check",
+          "contype": "c",
+          "definition": "CHECK (((event_latitude >= ('-90'::integer)::numeric) AND (event_latitude <= (90)::numeric)))"
+        },
+        {
+          "table_name": "cleanup_events",
+          "conname": "cleanup_events_event_longitude_check",
+          "contype": "c",
+          "definition": "CHECK (((event_longitude >= ('-180'::integer)::numeric) AND (event_longitude <= (180)::numeric)))"
+        },
+        {
+          "table_name": "cleanup_events",
+          "conname": "cleanup_events_incident_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (incident_id) REFERENCES incidents(id) ON UPDATE CASCADE ON DELETE SET NULL"
+        },
+        {
+          "table_name": "cleanup_events",
+          "conname": "cleanup_events_meeting_coordinate_pair_check",
+          "contype": "c",
+          "definition": "CHECK (((meeting_latitude IS NULL) = (meeting_longitude IS NULL)))"
+        },
+        {
+          "table_name": "cleanup_events",
+          "conname": "cleanup_events_meeting_latitude_check",
+          "contype": "c",
+          "definition": "CHECK (((meeting_latitude IS NULL) OR ((meeting_latitude >= ('-90'::integer)::numeric) AND (meeting_latitude <= (90)::numeric))))"
+        },
+        {
+          "table_name": "cleanup_events",
+          "conname": "cleanup_events_meeting_longitude_check",
+          "contype": "c",
+          "definition": "CHECK (((meeting_longitude IS NULL) OR ((meeting_longitude >= ('-180'::integer)::numeric) AND (meeting_longitude <= (180)::numeric))))"
+        },
+        {
+          "table_name": "cleanup_events",
+          "conname": "cleanup_events_organization_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "cleanup_events",
+          "conname": "cleanup_events_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "cleanup_events",
+          "conname": "cleanup_events_publication_fields_check",
+          "contype": "c",
+          "definition": "CHECK (((lifecycle_status <> ALL (ARRAY['PUBLISHED'::\"CleanupLifecycleStatus\", 'SCHEDULED'::\"CleanupLifecycleStatus\", 'IN_PROGRESS'::\"CleanupLifecycleStatus\", 'COMPLETION_SUBMITTED'::\"CleanupLifecycleStatus\", 'COMPLETED'::\"CleanupLifecycleStatus\"])) OR (published_at IS NOT NULL)))"
+        },
+        {
+          "table_name": "cleanup_workflow_statuses",
+          "conname": "cleanup_workflow_statuses_organization_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "cleanup_workflow_statuses",
+          "conname": "cleanup_workflow_statuses_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "cleanup_workflow_statuses",
+          "conname": "cleanup_workflow_statuses_position_check",
+          "contype": "c",
+          "definition": "CHECK ((\"position\" >= 0))"
+        },
+        {
+          "table_name": "cleanup_workflow_transitions",
+          "conname": "cleanup_workflow_transitions_distinct_status_check",
+          "contype": "c",
+          "definition": "CHECK ((from_status_id <> to_status_id))"
+        },
+        {
+          "table_name": "cleanup_workflow_transitions",
+          "conname": "cleanup_workflow_transitions_from_status_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (organization_id, from_status_id) REFERENCES cleanup_workflow_statuses(organization_id, id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "cleanup_workflow_transitions",
+          "conname": "cleanup_workflow_transitions_organization_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "cleanup_workflow_transitions",
+          "conname": "cleanup_workflow_transitions_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "cleanup_workflow_transitions",
+          "conname": "cleanup_workflow_transitions_to_status_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (organization_id, to_status_id) REFERENCES cleanup_workflow_statuses(organization_id, id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "contribution_events",
+          "conname": "contribution_events_cleanup_event_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (cleanup_event_id) REFERENCES cleanup_events(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "contribution_events",
+          "conname": "contribution_events_event_participant_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (event_participant_id) REFERENCES event_participants(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "contribution_events",
+          "conname": "contribution_events_incident_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (incident_id) REFERENCES incidents(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "contribution_events",
+          "conname": "contribution_events_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "contribution_events",
+          "conname": "contribution_events_points_check",
+          "contype": "c",
+          "definition": "CHECK ((points > 0))"
+        },
+        {
+          "table_name": "contribution_events",
+          "conname": "contribution_events_recorded_by_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (recorded_by_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE SET NULL"
+        },
+        {
+          "table_name": "contribution_events",
+          "conname": "contribution_events_source_check",
+          "contype": "c",
+          "definition": "CHECK ((((type = 'VERIFIED_INCIDENT_REPORT'::\"ContributionType\") AND (incident_id IS NOT NULL) AND (event_participant_id IS NULL) AND (cleanup_event_id IS NULL) AND (source_key IS NULL)) OR ((type = 'EVENT_ATTENDED'::\"ContributionType\") AND (incident_id IS NULL) AND (event_participant_id IS NOT NULL) AND (cleanup_event_id IS NULL) AND (source_key IS NULL)) OR ((type = 'EVENT_COMPLETED'::\"ContributionType\") AND (incident_id IS NULL) AND (event_participant_id IS NULL) AND (cleanup_event_id IS NOT NULL) AND (source_key IS NULL)) OR ((type = 'SPECIAL_CONTRIBUTION'::\"ContributionType\") AND (incident_id IS NULL) AND (event_participant_id IS NULL) AND (cleanup_event_id IS NULL) AND (source_key IS NOT NULL) AND ((length(btrim(source_key)) >= 1) AND (length(btrim(source_key)) <= 200)))))"
+        },
+        {
+          "table_name": "contribution_events",
+          "conname": "contribution_events_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "event_coordinators",
+          "conname": "event_coordinators_assigned_by_membership_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (assigned_by_membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "event_coordinators",
+          "conname": "event_coordinators_cleanup_event_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (cleanup_event_id) REFERENCES cleanup_events(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "event_coordinators",
+          "conname": "event_coordinators_membership_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "event_coordinators",
+          "conname": "event_coordinators_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "event_evidence",
+          "conname": "event_evidence_cleanup_event_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (cleanup_event_id) REFERENCES cleanup_events(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "event_evidence",
+          "conname": "event_evidence_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "event_evidence",
+          "conname": "event_evidence_uploaded_by_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (uploaded_by_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "event_notes",
+          "conname": "event_notes_author_membership_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (author_membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "event_notes",
+          "conname": "event_notes_cleanup_event_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (cleanup_event_id) REFERENCES cleanup_events(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "event_notes",
+          "conname": "event_notes_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "event_participants",
+          "conname": "event_participants_attendance_details_check",
+          "contype": "c",
+          "definition": "CHECK ((((attendance_status = 'UNMARKED'::\"AttendanceStatus\") AND (attendance_marked_at IS NULL) AND (attendance_marked_by_membership_id IS NULL)) OR ((attendance_status = ANY (ARRAY['ATTENDED'::\"AttendanceStatus\", 'ABSENT'::\"AttendanceStatus\"])) AND (attendance_marked_at IS NOT NULL) AND (attendance_marked_by_membership_id IS NOT NULL))))"
+        },
+        {
+          "table_name": "event_participants",
+          "conname": "event_participants_attendance_marker_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (attendance_marked_by_membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "event_participants",
+          "conname": "event_participants_cleanup_event_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (cleanup_event_id) REFERENCES cleanup_events(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "event_participants",
+          "conname": "event_participants_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "event_participants",
+          "conname": "event_participants_removed_by_membership_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (removed_by_membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE SET NULL"
+        },
+        {
+          "table_name": "event_participants",
+          "conname": "event_participants_status_details_check",
+          "contype": "c",
+          "definition": "CHECK ((((status = 'JOINED'::\"ParticipantStatus\") AND (withdrawn_at IS NULL) AND (removed_at IS NULL)) OR ((status = 'WITHDRAWN'::\"ParticipantStatus\") AND (withdrawn_at IS NOT NULL) AND (removed_at IS NULL)) OR ((status = 'REMOVED'::\"ParticipantStatus\") AND (removed_at IS NOT NULL) AND (removed_by_membership_id IS NOT NULL) AND (removal_reason IS NOT NULL))))"
+        },
+        {
+          "table_name": "event_participants",
+          "conname": "event_participants_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "event_status_history",
+          "conname": "event_status_history_changed_by_membership_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (changed_by_membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "event_status_history",
+          "conname": "event_status_history_cleanup_event_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (cleanup_event_id) REFERENCES cleanup_events(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "event_status_history",
+          "conname": "event_status_history_distinct_status_check",
+          "contype": "c",
+          "definition": "CHECK (((from_workflow_status_id IS NULL) OR (from_workflow_status_id <> to_workflow_status_id)))"
+        },
+        {
+          "table_name": "event_status_history",
+          "conname": "event_status_history_from_workflow_status_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (from_workflow_status_id) REFERENCES cleanup_workflow_statuses(id) ON UPDATE CASCADE ON DELETE SET NULL"
+        },
+        {
+          "table_name": "event_status_history",
+          "conname": "event_status_history_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "event_status_history",
+          "conname": "event_status_history_to_workflow_status_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (to_workflow_status_id) REFERENCES cleanup_workflow_statuses(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "incident_categories",
+          "conname": "incident_categories_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "incident_photos",
+          "conname": "incident_photos_incident_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (incident_id) REFERENCES incidents(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "incident_photos",
+          "conname": "incident_photos_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "incident_photos",
+          "conname": "incident_photos_sort_order_check",
+          "contype": "c",
+          "definition": "CHECK ((sort_order >= 0))"
+        },
+        {
+          "table_name": "incident_reviews",
+          "conname": "incident_reviews_incident_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (incident_id) REFERENCES incidents(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "incident_reviews",
+          "conname": "incident_reviews_organization_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "incident_reviews",
+          "conname": "incident_reviews_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "incident_reviews",
+          "conname": "incident_reviews_reviewed_by_membership_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (reviewed_by_membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "incident_status_history",
+          "conname": "incident_status_history_changed_by_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (changed_by_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE SET NULL"
+        },
+        {
+          "table_name": "incident_status_history",
+          "conname": "incident_status_history_incident_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (incident_id) REFERENCES incidents(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "incident_status_history",
+          "conname": "incident_status_history_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "incident_status_history",
+          "conname": "incident_status_history_related_cleanup_event_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (related_cleanup_event_id) REFERENCES cleanup_events(id) ON UPDATE CASCADE ON DELETE SET NULL"
+        },
+        {
+          "table_name": "incidents",
+          "conname": "incidents_category_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (category_id) REFERENCES incident_categories(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "incidents",
+          "conname": "incidents_deadline_order_check",
+          "contype": "c",
+          "definition": "CHECK (((highlight_until > reported_at) AND (archive_after > highlight_until)))"
+        },
+        {
+          "table_name": "incidents",
+          "conname": "incidents_latitude_check",
+          "contype": "c",
+          "definition": "CHECK (((latitude >= ('-90'::integer)::numeric) AND (latitude <= (90)::numeric)))"
+        },
+        {
+          "table_name": "incidents",
+          "conname": "incidents_longitude_check",
+          "contype": "c",
+          "definition": "CHECK (((longitude >= ('-180'::integer)::numeric) AND (longitude <= (180)::numeric)))"
+        },
+        {
+          "table_name": "incidents",
+          "conname": "incidents_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "incidents",
+          "conname": "incidents_reporter_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (reporter_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "notification_deliveries",
+          "conname": "notification_deliveries_attempt_count_check",
+          "contype": "c",
+          "definition": "CHECK ((attempt_count >= 0))"
+        },
+        {
+          "table_name": "notification_deliveries",
+          "conname": "notification_deliveries_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "notification_deliveries",
+          "conname": "notification_deliveries_provider_accepted_check",
+          "contype": "c",
+          "definition": "CHECK (((status <> 'PROVIDER_ACCEPTED'::\"NotificationDeliveryStatus\") OR ((expo_ticket_id IS NOT NULL) AND (receipt_checked_at IS NOT NULL))))"
+        },
+        {
+          "table_name": "notification_deliveries",
+          "conname": "notification_deliveries_receipt_pending_check",
+          "contype": "c",
+          "definition": "CHECK (((status <> 'RECEIPT_PENDING'::\"NotificationDeliveryStatus\") OR ((expo_ticket_id IS NOT NULL) AND (sent_at IS NOT NULL))))"
+        },
+        {
+          "table_name": "notification_deliveries",
+          "conname": "notification_deliveries_retry_time_check",
+          "contype": "c",
+          "definition": "CHECK (((status <> 'RETRY_PENDING'::\"NotificationDeliveryStatus\") OR (next_retry_at IS NOT NULL)))"
+        },
+        {
+          "table_name": "notification_deliveries",
+          "conname": "notification_deliveries_user_device_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (user_id, device_id) REFERENCES user_devices(user_id, id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "notification_deliveries",
+          "conname": "notification_deliveries_user_notification_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (user_id, notification_id) REFERENCES notifications(user_id, id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "notifications",
+          "conname": "notifications_organization_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE SET NULL"
+        },
+        {
+          "table_name": "notifications",
+          "conname": "notifications_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "notifications",
+          "conname": "notifications_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "notifications",
+          "conname": "notifications_user_id_id_key",
+          "contype": "u",
+          "definition": "UNIQUE (user_id, id)"
+        },
+        {
+          "table_name": "organization_membership_requests",
+          "conname": "organization_membership_requests_organization_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "organization_membership_requests",
+          "conname": "organization_membership_requests_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "organization_membership_requests",
+          "conname": "organization_membership_requests_requester_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (requester_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "organization_membership_requests",
+          "conname": "organization_membership_requests_reviewed_by_membership_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (reviewed_by_membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE SET NULL"
+        },
+        {
+          "table_name": "organization_memberships",
+          "conname": "organization_memberships_added_or_approved_by_membership_i_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (added_or_approved_by_membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE SET NULL"
+        },
+        {
+          "table_name": "organization_memberships",
+          "conname": "organization_memberships_organization_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "organization_memberships",
+          "conname": "organization_memberships_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "organization_memberships",
+          "conname": "organization_memberships_source_request_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (source_request_id) REFERENCES organization_membership_requests(id) ON UPDATE CASCADE ON DELETE SET NULL"
+        },
+        {
+          "table_name": "organization_memberships",
+          "conname": "organization_memberships_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "organization_service_areas",
+          "conname": "organization_service_areas_administrative_area_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (administrative_area_id) REFERENCES administrative_areas(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "organization_service_areas",
+          "conname": "organization_service_areas_organization_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "organization_service_areas",
+          "conname": "organization_service_areas_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "organization_service_areas",
+          "conname": "organization_service_areas_reference_or_legacy_boundary_check",
+          "contype": "c",
+          "definition": "CHECK (((administrative_area_id IS NOT NULL) OR ((area_name IS NOT NULL) AND (boundary IS NOT NULL))))"
+        },
+        {
+          "table_name": "organization_service_areas",
+          "conname": "organization_service_areas_reviewed_by_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (reviewed_by_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE SET NULL"
+        },
+        {
+          "table_name": "organization_verification_documents",
+          "conname": "organization_verification_documents_organization_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "organization_verification_documents",
+          "conname": "organization_verification_documents_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "organization_verification_documents",
+          "conname": "organization_verification_documents_reviewed_by_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (reviewed_by_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE SET NULL"
+        },
+        {
+          "table_name": "organizations",
+          "conname": "organizations_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "organizations",
+          "conname": "organizations_requested_by_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (requested_by_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "organizations",
+          "conname": "organizations_reviewed_by_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (reviewed_by_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE SET NULL"
+        },
+        {
+          "table_name": "platform_settings",
+          "conname": "platform_settings_highlight_hours_check",
+          "contype": "c",
+          "definition": "CHECK ((incident_highlight_hours > 0))"
+        },
+        {
+          "table_name": "platform_settings",
+          "conname": "platform_settings_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "platform_settings",
+          "conname": "platform_settings_singleton_check",
+          "contype": "c",
+          "definition": "CHECK ((id = 1))"
+        },
+        {
+          "table_name": "platform_settings",
+          "conname": "platform_settings_unaddressed_days_check",
+          "contype": "c",
+          "definition": "CHECK ((incident_unaddressed_days > 0))"
+        },
+        {
+          "table_name": "platform_settings",
+          "conname": "platform_settings_updated_by_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (updated_by_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE SET NULL"
+        },
+        {
+          "table_name": "user_achievements",
+          "conname": "user_achievements_achievement_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (achievement_id) REFERENCES achievement_definitions(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "user_achievements",
+          "conname": "user_achievements_awarded_from_contribution_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (awarded_from_contribution_id) REFERENCES contribution_events(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+        },
+        {
+          "table_name": "user_achievements",
+          "conname": "user_achievements_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "user_achievements",
+          "conname": "user_achievements_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "user_devices",
+          "conname": "user_devices_active_state_check",
+          "contype": "c",
+          "definition": "CHECK ((((is_active = true) AND (expo_push_token IS NOT NULL) AND (deactivated_at IS NULL)) OR ((is_active = false) AND (deactivated_at IS NOT NULL))))"
+        },
+        {
+          "table_name": "user_devices",
+          "conname": "user_devices_installation_id_not_blank_check",
+          "contype": "c",
+          "definition": "CHECK ((btrim(installation_id) <> ''::text))"
+        },
+        {
+          "table_name": "user_devices",
+          "conname": "user_devices_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table_name": "user_devices",
+          "conname": "user_devices_push_token_not_blank_check",
+          "contype": "c",
+          "definition": "CHECK (((expo_push_token IS NULL) OR (btrim(expo_push_token) <> ''::text)))"
+        },
+        {
+          "table_name": "user_devices",
+          "conname": "user_devices_user_id_fkey",
+          "contype": "f",
+          "definition": "FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        },
+        {
+          "table_name": "user_profiles",
+          "conname": "user_profiles_pkey",
+          "contype": "p",
+          "definition": "PRIMARY KEY (id)"
+        }
+      ]
+    },
+    {
+      "label": "triggers",
+      "sql": "SELECT event_object_table,trigger_name,event_manipulation FROM information_schema.triggers WHERE trigger_schema='public' ORDER BY event_object_table,trigger_name",
+      "rows": [
+        {
+          "event_object_table": "cleanup_events",
+          "trigger_name": "cleanup_events_sync_geo_points",
+          "event_manipulation": "INSERT"
+        },
+        {
+          "event_object_table": "cleanup_events",
+          "trigger_name": "cleanup_events_sync_geo_points",
+          "event_manipulation": "UPDATE"
+        },
+        {
+          "event_object_table": "cleanup_events",
+          "trigger_name": "cleanup_events_validate_workflow_status",
+          "event_manipulation": "INSERT"
+        },
+        {
+          "event_object_table": "cleanup_events",
+          "trigger_name": "cleanup_events_validate_workflow_status",
+          "event_manipulation": "UPDATE"
+        },
+        {
+          "event_object_table": "event_coordinators",
+          "trigger_name": "event_coordinators_validate_tenant",
+          "event_manipulation": "UPDATE"
+        },
+        {
+          "event_object_table": "event_coordinators",
+          "trigger_name": "event_coordinators_validate_tenant",
+          "event_manipulation": "INSERT"
+        },
+        {
+          "event_object_table": "event_notes",
+          "trigger_name": "event_notes_validate_tenant",
+          "event_manipulation": "UPDATE"
+        },
+        {
+          "event_object_table": "event_notes",
+          "trigger_name": "event_notes_validate_tenant",
+          "event_manipulation": "INSERT"
+        },
+        {
+          "event_object_table": "event_participants",
+          "trigger_name": "event_participants_validate_remover",
+          "event_manipulation": "INSERT"
+        },
+        {
+          "event_object_table": "event_participants",
+          "trigger_name": "event_participants_validate_remover",
+          "event_manipulation": "UPDATE"
+        },
+        {
+          "event_object_table": "event_status_history",
+          "trigger_name": "event_status_history_validate_context",
+          "event_manipulation": "INSERT"
+        },
+        {
+          "event_object_table": "event_status_history",
+          "trigger_name": "event_status_history_validate_context",
+          "event_manipulation": "UPDATE"
+        },
+        {
+          "event_object_table": "incident_reviews",
+          "trigger_name": "incident_reviews_validate_tenant",
+          "event_manipulation": "UPDATE"
+        },
+        {
+          "event_object_table": "incident_reviews",
+          "trigger_name": "incident_reviews_validate_tenant",
+          "event_manipulation": "INSERT"
+        },
+        {
+          "event_object_table": "incidents",
+          "trigger_name": "incidents_sync_geo_point",
+          "event_manipulation": "INSERT"
+        },
+        {
+          "event_object_table": "incidents",
+          "trigger_name": "incidents_sync_geo_point",
+          "event_manipulation": "UPDATE"
+        },
+        {
+          "event_object_table": "organizations",
+          "trigger_name": "organizations_initialize_cleanup_workflow",
+          "event_manipulation": "INSERT"
+        }
+      ]
+    },
+    {
+      "label": "categories",
+      "sql": "SELECT id,name,is_active FROM public.incident_categories ORDER BY name",
+      "rows": [
+        {
+          "id": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+          "name": "Environmental Damage",
+          "is_active": true
+        },
+        {
+          "id": "6ab4841b-0768-492e-8908-a33528daab55",
+          "name": "Litter and Waste",
+          "is_active": true
+        },
+        {
+          "id": "24dda9d8-1577-4ec8-a167-3ade4d93aff3",
+          "name": "Pollution",
+          "is_active": true
+        },
+        {
+          "id": "d34b13f0-af8d-41f5-8254-ae9922997b4d",
+          "name": "Wildlife Issue",
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "label": "settings",
+      "sql": "SELECT id,incident_highlight_hours,incident_unaddressed_days FROM public.platform_settings",
+      "rows": [
+        {
+          "id": 1,
+          "incident_highlight_hours": 48,
+          "incident_unaddressed_days": 7
+        }
+      ]
+    }
+  ],
+  "roleChecks": [
+    {
+      "role": "anon",
+      "denied": true,
+      "sqlstate": "42501"
+    },
+    {
+      "role": "authenticated",
+      "denied": true,
+      "sqlstate": "42501"
+    }
+  ],
+  "assertions": {
+    "migrationsMatch": true,
+    "migrationsFinished": true,
+    "applicationRls": true,
+    "frontendPrivilegesRevoked": true,
+    "rolesDenied": true,
+    "officialGeographyPresent": true,
+    "postgis": true,
+    "categories": true,
+    "settings": true
+  },
+  "status": "PASS"
+}

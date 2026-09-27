@@ -1,0 +1,30 @@
+{
+  "case_id": "A03",
+  "started_at_utc": "2026-09-27T16:04:58.303Z",
+  "method": "POST",
+  "route": "/incidents",
+  "request": {
+    "submissionId": "40910ba6-b8b3-4304-8f2e-d954f2d0b62b",
+    "categoryId": "not-a-uuid",
+    "title": "M2-A03-20260927-201125",
+    "description": "Synthetic validation case for Member 2 testing.",
+    "severity": "LOW",
+    "latitude": 6.795,
+    "longitude": 79.94,
+    "evidence": []
+  },
+  "http_status": 400,
+  "response": {
+    "error": {
+      "code": "INCIDENT_REQUEST_INVALID",
+      "message": "categoryId: Invalid UUID"
+    }
+  },
+  "duration_ms": 1245,
+  "assertions": {
+    "status": true,
+    "code": true,
+    "noStack": true
+  },
+  "status": "PASS"
+}

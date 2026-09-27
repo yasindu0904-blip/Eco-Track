@@ -1,0 +1,63 @@
+Started UTC: 2026-09-27T14:50:38.456Z
+Docker command: pull postgis/postgis:17-3.5
+17-3.5: Pulling from postgis/postgis
+2f600d70ef01: Pulling fs layer
+ea025e641e62: Pulling fs layer
+26a029cc5101: Pulling fs layer
+ccaf924377f9: Pulling fs layer
+a0a48bd22597: Pulling fs layer
+87746d0d7566: Pulling fs layer
+953b3faade64: Pulling fs layer
+4c5e3cb23b1e: Pulling fs layer
+b032a4e70c86: Pulling fs layer
+5756942faa50: Pulling fs layer
+9388a07819e8: Pulling fs layer
+ee293c60aa50: Pulling fs layer
+9b3173aa38c2: Pulling fs layer
+dc61d0df75b4: Pulling fs layer
+84e2e0dafa9e: Pulling fs layer
+0c9580cd8863: Pulling fs layer
+26502799a66b: Pulling fs layer
+4f4fb700ef54: Pulling fs layer
+4f4fb700ef54: Already exists
+e53b478288a9: Download complete
+87746d0d7566: Download complete
+9b3173aa38c2: Download complete
+ee293c60aa50: Download complete
+9388a07819e8: Download complete
+5756942faa50: Download complete
+ea025e641e62: Download complete
+dc61d0df75b4: Download complete
+26a029cc5101: Download complete
+0c9580cd8863: Download complete
+a0a48bd22597: Download complete
+4c5e3cb23b1e: Download complete
+84e2e0dafa9e: Download complete
+953b3faade64: Download complete
+b032a4e70c86: Download complete
+ccaf924377f9: Download complete
+a0a48bd22597: Pull complete
+ccaf924377f9: Pull complete
+4c5e3cb23b1e: Pull complete
+953b3faade64: Pull complete
+b032a4e70c86: Pull complete
+9b3173aa38c2: Pull complete
+9388a07819e8: Pull complete
+84e2e0dafa9e: Pull complete
+26502799a66b: Download complete
+2f600d70ef01: Download complete
+26a029cc5101: Pull complete
+2f600d70ef01: Pull complete
+87746d0d7566: Pull complete
+5756942faa50: Pull complete
+dc61d0df75b4: Pull complete
+0c9580cd8863: Pull complete
+26502799a66b: Pull complete
+4f4fb700ef54: Pull complete
+ee293c60aa50: Pull complete
+ea025e641e62: Pull complete
+Digest: sha256:01a6a70e41e6c4467c8f55f6063555ed72db2d6662cd0d571040d42eadaeb6f6
+Status: Downloaded newer image for postgis/postgis:17-3.5
+docker.io/postgis/postgis:17-3.5
+
+Exit code: 0

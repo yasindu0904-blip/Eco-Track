@@ -1,0 +1,5 @@
+BEGIN
+SET
+ERROR:  permission denied for table user_profiles
+Exit code: 3 (1 expected for permission denial)
+Harness annotation correction: psql ON_ERROR_STOP script SQL error exits 3; observed permission denied is the expected result. Earlier expected-1 annotation was incorrect.

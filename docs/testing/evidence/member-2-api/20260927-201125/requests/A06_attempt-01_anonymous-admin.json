@@ -1,0 +1,19 @@
+{
+  "timestamp_utc": "2026-09-27T16:19:09.035Z",
+  "method": "GET",
+  "route": "/super-admin/ping",
+  "request": null,
+  "http_status": 401,
+  "response": {
+    "error": {
+      "code": "AUTH_TOKEN_MISSING",
+      "message": "A valid Bearer access token is required."
+    }
+  },
+  "duration_ms": 329,
+  "assertions": {
+    "status": true,
+    "code": true
+  },
+  "status": "PASS"
+}

@@ -1,0 +1,23 @@
+{
+  "timestamp_utc": "2026-09-27T16:33:18.639Z",
+  "query": "SELECT e.lifecycle_status,i.status AS incident_status,i.resolved_at,(SELECT count(*)::int FROM public.event_status_history h JOIN public.cleanup_workflow_statuses s ON s.id=h.to_workflow_status_id WHERE h.cleanup_event_id=e.id AND s.code=$2) AS history_count FROM public.cleanup_events e JOIN public.incidents i ON i.id=e.incident_id WHERE e.id=$1",
+  "parameters": [
+    "36719764-41e3-4f1a-b537-8f271c2590e7",
+    "CANCELLED"
+  ],
+  "rows": [
+    {
+      "lifecycle_status": "CANCELLED",
+      "incident_status": "ACTIVE",
+      "resolved_at": null,
+      "history_count": 1
+    }
+  ],
+  "assertions": {
+    "cancelled": true,
+    "active": true,
+    "unresolved": true,
+    "oneTransition": true
+  },
+  "status": "PASS"
+}

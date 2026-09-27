@@ -1,0 +1,108 @@
+{
+  "timestamp_utc": "2026-09-27T16:19:16.256Z",
+  "status": "PASS",
+  "officialArea": {
+    "id": "6783fd92-c3e6-454f-bb92-1e3fe429dd32",
+    "name_en": "Bangalawatta",
+    "official_code": "1136125",
+    "source_name": "Satellite Images",
+    "lat": 6.837643,
+    "lon": 79.961131
+  },
+  "incidentCoverage": [
+    {
+      "id": "318f949e-cdd9-49bd-adc5-ab69026f35b6",
+      "covered": false
+    },
+    {
+      "id": "c8e1d382-7e89-4f4c-9df7-93664ad506ef",
+      "covered": false
+    },
+    {
+      "id": "e9d45be8-af03-4d22-a5f9-37f948b55211",
+      "covered": false
+    },
+    {
+      "id": "ba0fbd5c-1b94-4452-9519-0a3324a4ffc5",
+      "covered": false
+    },
+    {
+      "id": "f8c5207b-dfbc-47b3-84fa-337d61381123",
+      "covered": false
+    },
+    {
+      "id": "7c55d958-92a7-446d-8897-e633c8e285dd",
+      "covered": true
+    },
+    {
+      "id": "f1d940b5-a025-48f7-8329-23d31eb553f8",
+      "covered": true
+    },
+    {
+      "id": "a92fb738-339d-489c-bc0d-0c8b933fa65f",
+      "covered": true
+    },
+    {
+      "id": "bd5defb7-1ba4-471f-9670-b7c08b0c0964",
+      "covered": false
+    },
+    {
+      "id": "f3bf60c2-bf9c-4513-af37-7d7fac1167ce",
+      "covered": false
+    },
+    {
+      "id": "bec3762b-4d77-4da0-bfe1-e40e6298761e",
+      "covered": false
+    }
+  ],
+  "eventCoverage": [
+    {
+      "id": "91d76e2b-a993-472f-93e6-e1bdb3fbc8f4",
+      "covered": false
+    },
+    {
+      "id": "e3120d2f-0091-4aa1-9882-f6dc119ecc21",
+      "covered": false
+    },
+    {
+      "id": "142c6f4f-1cfc-4c64-b29f-5827bb79a637",
+      "covered": false
+    },
+    {
+      "id": "1b8de8e4-9e71-44cc-8985-efa89e97656e",
+      "covered": false
+    },
+    {
+      "id": "21f67744-6726-49af-922c-6ca706c45847",
+      "covered": true
+    },
+    {
+      "id": "78029c3e-29c4-4148-bd92-c5670469996b",
+      "covered": true
+    },
+    {
+      "id": "b48cae0d-0881-46d7-a727-56dedd812afe",
+      "covered": true
+    },
+    {
+      "id": "c322a9b1-c76d-4921-bbf8-bb8fd46d51c5",
+      "covered": true
+    },
+    {
+      "id": "1c919b94-805f-4c00-8a50-5d5e1a83697d",
+      "covered": false
+    },
+    {
+      "id": "63ee9015-146b-4acd-925b-efaf77a95e67",
+      "covered": false
+    },
+    {
+      "id": "d777743b-2023-4071-89f1-2a2851afbf11",
+      "covered": false
+    },
+    {
+      "id": "933f080b-3561-43e5-9cab-93b785170d0d",
+      "covered": false
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "case_id": "A03",
+  "started_at_utc": "2026-09-27T16:04:55.905Z",
+  "method": "POST",
+  "route": "/incidents",
+  "request": {
+    "submissionId": "27838d3e-6cf3-4307-9da5-4309993490f0",
+    "categoryId": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+    "title": "x",
+    "description": "Synthetic validation case for Member 2 testing.",
+    "severity": "LOW",
+    "latitude": 6.795,
+    "longitude": 79.94,
+    "evidence": []
+  },
+  "http_status": 400,
+  "response": {
+    "error": {
+      "code": "INCIDENT_REQUEST_INVALID",
+      "message": "title: Too small: expected string to have >=3 characters"
+    }
+  },
+  "duration_ms": 1143,
+  "assertions": {
+    "status": true,
+    "code": true,
+    "noStack": true
+  },
+  "status": "PASS"
+}

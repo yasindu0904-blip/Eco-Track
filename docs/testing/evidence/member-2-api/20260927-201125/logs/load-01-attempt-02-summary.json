@@ -1,0 +1,19 @@
+{
+  "users": 1,
+  "rampSeconds": 10,
+  "durationSeconds": 60,
+  "thinkTimeMs": 5000,
+  "started_at_utc": "2026-09-27T17:00:40.541Z",
+  "exitCode": 0,
+  "stopReason": null,
+  "samples": 8,
+  "errors": 0,
+  "errorPercent": 0,
+  "throughput_per_second": 0.13333333333333333,
+  "p50_ms": 1553,
+  "p95_ms": 3397,
+  "p99_ms": 3397,
+  "max_ms": 3397,
+  "sla": "Not agreed; observations only",
+  "monitoring": "Container identity sampled; CPU/memory snapshots retained; not exact restart counters or physical screenshots"
+}

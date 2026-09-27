@@ -1,0 +1,45 @@
+{
+  "http_status": 200,
+  "logs": [
+    {
+      "ts": "2026-09-27T16:30:19.447Z",
+      "log": "2026-09-27T16:30:19.360090292Z stderr F }"
+    },
+    {
+      "ts": "2026-09-27T16:30:19.447Z",
+      "log": "2026-09-27T16:30:19.36008833Z stderr F   clientVersion: '7.10.0'"
+    },
+    {
+      "ts": "2026-09-27T16:30:19.447Z",
+      "log": "2026-09-27T16:30:19.360086251Z stderr F   meta: { operation: 'commit', timeout: 5000, timeTaken: 6196 },"
+    },
+    {
+      "ts": "2026-09-27T16:30:19.447Z",
+      "log": "2026-09-27T16:30:19.360084168Z stderr F   code: 'P2028',"
+    },
+    {
+      "ts": "2026-09-27T16:30:19.447Z",
+      "log": "2026-09-27T16:30:19.360082273Z stderr F     at async file:///app/dist/modules/cleanupEvents/participation/participation.controllers.js:58:23 {"
+    },
+    {
+      "ts": "2026-09-27T16:30:19.447Z",
+      "log": "2026-09-27T16:30:19.360080274Z stderr F     at async Proxy._transactionWithCallback (/app/node_modules/@prisma/client/runtime/client.js:99:5050)"
+    },
+    {
+      "ts": "2026-09-27T16:30:19.446Z",
+      "log": "2026-09-27T16:30:19.360078141Z stderr F     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)"
+    },
+    {
+      "ts": "2026-09-27T16:30:19.446Z",
+      "log": "2026-09-27T16:30:19.360075791Z stderr F     at Ut.transaction (/app/node_modules/@prisma/client/runtime/client.js:58:1816)"
+    },
+    {
+      "ts": "2026-09-27T16:30:19.446Z",
+      "log": "2026-09-27T16:30:19.360072192Z stderr F     at #c (/app/node_modules/@prisma/client/runtime/client.js:57:14128)"
+    },
+    {
+      "ts": "2026-09-27T16:30:19.446Z",
+      "log": "2026-09-27T16:30:19.360039551Z stderr F Unexpected EcoTrack API error: PrismaClientKnownRequestError: Transaction API error: A commit cannot be executed on an expired transaction. The timeout for this transaction was 5000 ms, however 6196 ms passed since the start of the transaction. Consider increasing the interactive transaction timeout or doing less work in the transaction."
+    }
+  ]
+}

@@ -1,0 +1,282 @@
+{
+  "timestamp_utc": "2026-09-27T16:18:45.299Z",
+  "run": "20260927-201125",
+  "setup": "SQL prerequisites, not registration/approval/publication workflow tests",
+  "areas": [
+    {
+      "id": "6783fd92-c3e6-454f-bb92-1e3fe429dd32",
+      "name_en": "Bangalawatta",
+      "official_code": "1136125",
+      "source_name": "Satellite Images",
+      "lat": 6.837643,
+      "lon": 79.961131
+    },
+    {
+      "id": "358a3dc3-91d4-428c-94c2-29266a9f8c84",
+      "name_en": "Batakettara North",
+      "official_code": "1136250",
+      "source_name": "Satellite Images",
+      "lat": 6.785302,
+      "lon": 79.921836
+    }
+  ],
+  "orgs": [
+    {
+      "id": "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+      "membership": "cbdcc52a-26c4-4bdd-a887-ec46403e2c16",
+      "profileId": "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+      "area": {
+        "id": "6783fd92-c3e6-454f-bb92-1e3fe429dd32",
+        "name_en": "Bangalawatta",
+        "official_code": "1136125",
+        "source_name": "Satellite Images",
+        "lat": 6.837643,
+        "lon": 79.961131
+      },
+      "statuses": [
+        {
+          "id": "be87918e-281a-4e1e-8577-1140f7083d35",
+          "code": "DRAFT"
+        },
+        {
+          "id": "8838a25b-d6b0-4533-b470-ce1cae83030e",
+          "code": "PUBLISHED"
+        },
+        {
+          "id": "9d513d2c-34b4-46e0-913f-6acaf328079c",
+          "code": "COMPLETED"
+        },
+        {
+          "id": "bfeec130-07b8-4dfe-aa4e-58f18d3e19a8",
+          "code": "CANCELLED"
+        }
+      ]
+    },
+    {
+      "id": "7b832c2f-03e7-445b-ba62-8ce08736b113",
+      "membership": "09bed8ef-9305-412e-938e-58df5cb4ae47",
+      "profileId": "919896f3-7a20-46ae-b1fb-549b54326b11",
+      "area": {
+        "id": "358a3dc3-91d4-428c-94c2-29266a9f8c84",
+        "name_en": "Batakettara North",
+        "official_code": "1136250",
+        "source_name": "Satellite Images",
+        "lat": 6.785302,
+        "lon": 79.921836
+      },
+      "statuses": [
+        {
+          "id": "afb09e3b-e3af-46ac-a4a7-939299d8df42",
+          "code": "DRAFT"
+        },
+        {
+          "id": "cc33abef-41ff-4ab3-9640-be6f7d8761ab",
+          "code": "PUBLISHED"
+        },
+        {
+          "id": "15d7b305-872d-4043-8f4a-7ed5cd1b49f2",
+          "code": "COMPLETED"
+        },
+        {
+          "id": "8fd3536f-4dc7-405b-a7fc-b3906e0e7d21",
+          "code": "CANCELLED"
+        }
+      ]
+    }
+  ],
+  "incidents": [
+    {
+      "id": "318f949e-cdd9-49bd-adc5-ab69026f35b6",
+      "label": "radius-500",
+      "lat": 6.799521,
+      "lon": 79.94,
+      "status": "ACTIVE"
+    },
+    {
+      "id": "c8e1d382-7e89-4f4c-9df7-93664ad506ef",
+      "label": "radius-1500",
+      "lat": 6.808564,
+      "lon": 79.94,
+      "status": "ACTIVE"
+    },
+    {
+      "id": "e9d45be8-af03-4d22-a5f9-37f948b55211",
+      "label": "radius-2500",
+      "lat": 6.817606,
+      "lon": 79.94,
+      "status": "ACTIVE"
+    },
+    {
+      "id": "ba0fbd5c-1b94-4452-9519-0a3324a4ffc5",
+      "label": "radius-3500",
+      "lat": 6.826648,
+      "lon": 79.94,
+      "status": "ACTIVE"
+    },
+    {
+      "id": "f8c5207b-dfbc-47b3-84fa-337d61381123",
+      "label": "radius-resolved",
+      "lat": 6.795,
+      "lon": 79.94,
+      "status": "RESOLVED"
+    },
+    {
+      "id": "7c55d958-92a7-446d-8897-e633c8e285dd",
+      "label": "area-0-unlinked",
+      "lat": 6.837643,
+      "lon": 79.961131,
+      "status": "ACTIVE"
+    },
+    {
+      "id": "f1d940b5-a025-48f7-8329-23d31eb553f8",
+      "label": "area-0-resolved",
+      "lat": 6.837643,
+      "lon": 79.961131,
+      "status": "RESOLVED"
+    },
+    {
+      "id": "a92fb738-339d-489c-bc0d-0c8b933fa65f",
+      "label": "area-0-linked",
+      "lat": 6.837643,
+      "lon": 79.961131,
+      "status": "CLEANUP_ORGANIZED"
+    },
+    {
+      "id": "bd5defb7-1ba4-471f-9670-b7c08b0c0964",
+      "label": "area-1-unlinked",
+      "lat": 6.785302,
+      "lon": 79.921836,
+      "status": "ACTIVE"
+    },
+    {
+      "id": "f3bf60c2-bf9c-4513-af37-7d7fac1167ce",
+      "label": "area-1-resolved",
+      "lat": 6.785302,
+      "lon": 79.921836,
+      "status": "RESOLVED"
+    },
+    {
+      "id": "bec3762b-4d77-4da0-bfe1-e40e6298761e",
+      "label": "area-1-linked",
+      "lat": 6.785302,
+      "lon": 79.921836,
+      "status": "CLEANUP_ORGANIZED"
+    }
+  ],
+  "events": [
+    {
+      "id": "91d76e2b-a993-472f-93e6-e1bdb3fbc8f4",
+      "label": "radius-500",
+      "orgIndex": 0,
+      "lat": 6.799521,
+      "lon": 79.94,
+      "status": "PUBLISHED",
+      "incidentId": null
+    },
+    {
+      "id": "e3120d2f-0091-4aa1-9882-f6dc119ecc21",
+      "label": "radius-1500",
+      "orgIndex": 0,
+      "lat": 6.808564,
+      "lon": 79.94,
+      "status": "PUBLISHED",
+      "incidentId": null
+    },
+    {
+      "id": "142c6f4f-1cfc-4c64-b29f-5827bb79a637",
+      "label": "radius-2500",
+      "orgIndex": 0,
+      "lat": 6.817606,
+      "lon": 79.94,
+      "status": "PUBLISHED",
+      "incidentId": null
+    },
+    {
+      "id": "1b8de8e4-9e71-44cc-8985-efa89e97656e",
+      "label": "radius-3500",
+      "orgIndex": 0,
+      "lat": 6.826648,
+      "lon": 79.94,
+      "status": "PUBLISHED",
+      "incidentId": null
+    },
+    {
+      "id": "21f67744-6726-49af-922c-6ca706c45847",
+      "label": "area-0-own-draft",
+      "orgIndex": 0,
+      "lat": 6.837643,
+      "lon": 79.961131,
+      "status": "DRAFT",
+      "incidentId": "7c55d958-92a7-446d-8897-e633c8e285dd"
+    },
+    {
+      "id": "78029c3e-29c4-4148-bd92-c5670469996b",
+      "label": "area-0-other-draft",
+      "orgIndex": 1,
+      "lat": 6.837643,
+      "lon": 79.961131,
+      "status": "DRAFT",
+      "incidentId": null
+    },
+    {
+      "id": "b48cae0d-0881-46d7-a727-56dedd812afe",
+      "label": "area-0-direct-public",
+      "orgIndex": 0,
+      "lat": 6.837643,
+      "lon": 79.961131,
+      "status": "PUBLISHED",
+      "incidentId": null
+    },
+    {
+      "id": "c322a9b1-c76d-4921-bbf8-bb8fd46d51c5",
+      "label": "area-0-other-linked-public",
+      "orgIndex": 1,
+      "lat": 6.837643,
+      "lon": 79.961131,
+      "status": "PUBLISHED",
+      "incidentId": "a92fb738-339d-489c-bc0d-0c8b933fa65f"
+    },
+    {
+      "id": "1c919b94-805f-4c00-8a50-5d5e1a83697d",
+      "label": "area-1-own-draft",
+      "orgIndex": 1,
+      "lat": 6.785302,
+      "lon": 79.921836,
+      "status": "DRAFT",
+      "incidentId": "bd5defb7-1ba4-471f-9670-b7c08b0c0964"
+    },
+    {
+      "id": "63ee9015-146b-4acd-925b-efaf77a95e67",
+      "label": "area-1-other-draft",
+      "orgIndex": 0,
+      "lat": 6.785302,
+      "lon": 79.921836,
+      "status": "DRAFT",
+      "incidentId": null
+    },
+    {
+      "id": "d777743b-2023-4071-89f1-2a2851afbf11",
+      "label": "area-1-direct-public",
+      "orgIndex": 1,
+      "lat": 6.785302,
+      "lon": 79.921836,
+      "status": "PUBLISHED",
+      "incidentId": null
+    },
+    {
+      "id": "933f080b-3561-43e5-9cab-93b785170d0d",
+      "label": "area-1-other-linked-public",
+      "orgIndex": 0,
+      "lat": 6.785302,
+      "lon": 79.921836,
+      "status": "PUBLISHED",
+      "incidentId": "bec3762b-4d77-4da0-bfe1-e40e6298761e"
+    }
+  ],
+  "center": {
+    "lat": 6.795,
+    "lon": 79.94
+  },
+  "status": "PASS",
+  "note": "Only fixture preparation; excluded from product pass counts"
+}

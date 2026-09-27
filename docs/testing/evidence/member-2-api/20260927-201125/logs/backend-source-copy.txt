@@ -1,0 +1,4 @@
+Started UTC: 2026-09-27T15:00:40.968Z
+Docker command: exec m2-20260927201125-runner sh -c cp /source/package.json /source/package-lock.json /source/tsconfig.json /source/prisma.config.ts /work/ && cp -r /source/src /source/prisma /work/
+
+Exit code: 0

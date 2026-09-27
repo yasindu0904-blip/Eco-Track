@@ -1,0 +1,11 @@
+{
+  "timestamp_utc": "2026-09-27T16:32:01.789Z",
+  "status": "BLOCKED",
+  "reason": "Two observed withdrawal HTTP 500 failures; rejoin cannot be tested. Continuing independent checks with persisted JOINED participant.",
+  "rows": [
+    {
+      "status": "JOINED",
+      "attendance_status": "UNMARKED"
+    }
+  ]
+}

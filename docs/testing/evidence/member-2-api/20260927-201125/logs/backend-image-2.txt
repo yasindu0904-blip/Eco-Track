@@ -1,0 +1,34 @@
+Started UTC: 2026-09-27T14:50:38.483Z
+Docker command: pull node:24-bookworm
+24-bookworm: Pulling from library/node
+4cc81be23c06: Pulling fs layer
+7f25c0042239: Pulling fs layer
+240de4f9ec20: Pulling fs layer
+496e07b192ff: Pulling fs layer
+eaac70c68abd: Pulling fs layer
+de9e8d0a0071: Pulling fs layer
+81578410df16: Pulling fs layer
+7b2de2423ebd: Pulling fs layer
+26d180362d43: Download complete
+4cc81be23c06: Download complete
+7f25c0042239: Download complete
+496e07b192ff: Download complete
+f133ed9f16b1: Download complete
+7b2de2423ebd: Download complete
+eaac70c68abd: Download complete
+eaac70c68abd: Pull complete
+7b2de2423ebd: Pull complete
+240de4f9ec20: Download complete
+81578410df16: Download complete
+81578410df16: Pull complete
+de9e8d0a0071: Download complete
+de9e8d0a0071: Pull complete
+7f25c0042239: Pull complete
+240de4f9ec20: Pull complete
+4cc81be23c06: Pull complete
+496e07b192ff: Pull complete
+Digest: sha256:64af3819f9275802414d7cdc38c27e9d82bd564dec4d4da87d008255d36c63b4
+Status: Downloaded newer image for node:24-bookworm
+docker.io/library/node:24-bookworm
+
+Exit code: 0

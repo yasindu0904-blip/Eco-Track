@@ -1,0 +1,22 @@
+{
+  "timestamp_utc": "2026-09-27T16:33:35.128Z",
+  "method": "POST",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/327878e3-9476-467a-acea-1928e69baea6/complete",
+  "request": {
+    "expectedUpdatedAt": "2026-09-27T16:28:55.372Z",
+    "notes": "Synthetic readiness rejection."
+  },
+  "http_status": 409,
+  "response": {
+    "error": {
+      "code": "EVENT_COMPLETION_NOT_READY",
+      "message": "Mark every joined volunteer as attended or absent before completing the event. Upload at least one AFTER evidence photo."
+    }
+  },
+  "duration_ms": 8497,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

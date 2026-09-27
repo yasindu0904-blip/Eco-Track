@@ -1,0 +1,47 @@
+{
+  "timestamp_utc": "2026-09-27T14:41:56.846Z",
+  "method": "GET",
+  "services": [
+    {
+      "id": "eco-track",
+      "endpoint": "https://api.northflank.com/v1/projects/ecotrack/services/eco-track",
+      "http_status": 200,
+      "name": "Eco-Track",
+      "instances": 1,
+      "deployed_commit": "4181db9c2dd455569aa872ce0c73541c8cd632ce",
+      "status": {
+        "build": {
+          "status": "SUCCESS",
+          "lastTransitionTime": "2026-09-27T13:20:42.493Z"
+        },
+        "deployment": {
+          "status": "COMPLETED",
+          "reason": "DEPLOYING",
+          "lastTransitionTime": "2026-09-27T13:21:19.662Z"
+        }
+      },
+      "configured_load_balancing_mode": "leastConnection"
+    },
+    {
+      "id": "ecotrack-notification",
+      "endpoint": "https://api.northflank.com/v1/projects/ecotrack/services/ecotrack-notification",
+      "http_status": 200,
+      "name": "EcoTrack-Notification",
+      "instances": 1,
+      "deployed_commit": "4181db9c2dd455569aa872ce0c73541c8cd632ce",
+      "status": {
+        "build": {
+          "status": "SUCCESS",
+          "lastTransitionTime": "2026-09-27T13:20:44.293Z"
+        },
+        "deployment": {
+          "status": "COMPLETED",
+          "reason": "DEPLOYING",
+          "lastTransitionTime": "2026-09-27T13:21:00.323Z"
+        }
+      },
+      "configured_load_balancing_mode": "leastConnection"
+    }
+  ],
+  "note": "Read-only configuration inspection. No service changes. One instance is insufficient to demonstrate multi-instance balancing."
+}

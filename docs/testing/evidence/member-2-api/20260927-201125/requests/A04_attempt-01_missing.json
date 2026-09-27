@@ -1,0 +1,36 @@
+{
+  "started_at_utc": "2026-09-27T16:11:10.220Z",
+  "method": "POST",
+  "route": "/incidents",
+  "request": {
+    "submissionId": "2fabc3e3-e64c-4f5a-ae16-8e12be434308",
+    "categoryId": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+    "title": "M2-A04-20260927-201125",
+    "description": "Synthetic Member 2 incident for upload and idempotency testing.",
+    "severity": "LOW",
+    "latitude": 6.795,
+    "longitude": 79.94,
+    "evidence": [
+      {
+        "originalFileName": "M2-A04-test.png",
+        "contentType": "image/png",
+        "sizeBytes": 68,
+        "storagePath": "incidents/aec80483-fa4b-4cba-bc70-5f8d6ce75efe/2fabc3e3-e64c-4f5a-ae16-8e12be434308/missing.png",
+        "sortOrder": 0
+      }
+    ]
+  },
+  "response": {
+    "error": {
+      "code": "INCIDENT_EVIDENCE_MISSING",
+      "message": "The upload for M2-A04-test.png is incomplete."
+    }
+  },
+  "http_status": 422,
+  "duration_ms": 2110,
+  "assertions": {
+    "status": true,
+    "code": true
+  },
+  "status": "PASS"
+}

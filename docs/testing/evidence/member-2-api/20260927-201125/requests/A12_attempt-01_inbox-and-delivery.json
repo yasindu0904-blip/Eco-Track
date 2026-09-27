@@ -1,0 +1,113 @@
+{
+  "timestamp_utc": "2026-09-27T16:40:08.069Z",
+  "route": "/notifications?limit=50",
+  "http_status": 200,
+  "duration_ms": 2585,
+  "response": {
+    "data": {
+      "items": [
+        {
+          "id": "516108b7-b806-4e9c-8d02-4f3c4f3b9a72",
+          "organizationId": "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+          "type": "EVENT_COMPLETED",
+          "title": "Cleanup event completed",
+          "message": "M2-completion-20260927-201125 has been completed. Thank you for supporting your community.",
+          "data": {
+            "eventId": "327878e3-9476-467a-acea-1928e69baea6",
+            "organizationId": "5bd7613b-8dad-45d4-9933-f1ec124417c9"
+          },
+          "readAt": null,
+          "createdAt": "2026-09-27T16:34:56.764Z"
+        },
+        {
+          "id": "527f1a01-95d5-4134-839d-d54e03b189ef",
+          "organizationId": null,
+          "type": "ACHIEVEMENT_AWARDED",
+          "title": "Achievement earned: Green Starter",
+          "message": "Earned after reaching 20 verified EcoTrack contribution points. Your EcoTrack rewards are non-monetary and do not change your access permissions.",
+          "data": {
+            "achievementId": "00000000-0000-4000-9000-000000000020"
+          },
+          "readAt": null,
+          "createdAt": "2026-09-27T16:34:56.148Z"
+        },
+        {
+          "id": "75046430-75c0-4514-ac86-9eb15c35c198",
+          "organizationId": "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+          "type": "EVENT_UPDATED",
+          "title": "Cleanup event update",
+          "message": "A new participant update is available for M2-completion-20260927-201125.",
+          "data": {
+            "eventId": "327878e3-9476-467a-acea-1928e69baea6",
+            "organizationId": "5bd7613b-8dad-45d4-9933-f1ec124417c9"
+          },
+          "readAt": null,
+          "createdAt": "2026-09-27T16:33:53.041Z"
+        },
+        {
+          "id": "7ef984f7-4e7e-49ab-9b01-9bce56ad9f0b",
+          "organizationId": "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+          "type": "EVENT_UPDATED",
+          "title": "Cleanup attendance confirmed",
+          "message": "Your attendance for M2-completion-20260927-201125 was recorded as attended.",
+          "data": {
+            "eventId": "327878e3-9476-467a-acea-1928e69baea6",
+            "organizationId": "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+            "status": "ATTENDED"
+          },
+          "readAt": null,
+          "createdAt": "2026-09-27T16:33:41.919Z"
+        },
+        {
+          "id": "41a608b3-4802-4921-92c2-2709006f360d",
+          "organizationId": "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+          "type": "EVENT_JOINED",
+          "title": "You volunteered for a cleanup",
+          "message": "You are volunteering for M2-completion-20260927-201125.",
+          "data": {
+            "eventId": "327878e3-9476-467a-acea-1928e69baea6",
+            "organizationId": "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+            "status": "JOINED"
+          },
+          "readAt": null,
+          "createdAt": "2026-09-27T16:30:05.048Z"
+        }
+      ],
+      "nextCursor": null
+    }
+  },
+  "query": "SELECT n.id,n.user_id,n.type,n.title,n.message,n.data,(SELECT count(*)::int FROM public.notification_deliveries d WHERE d.notification_id=n.id) AS delivery_count,(SELECT count(*)::int FROM public.user_devices u WHERE u.user_id=n.user_id AND u.is_active) AS active_devices FROM public.notifications n WHERE n.user_id=$1 AND n.type='EVENT_COMPLETED' AND n.data->>'eventId'=$2",
+  "parameters": [
+    "73fb6bb5-41ee-4aa3-af84-2980c6a28dfb",
+    "327878e3-9476-467a-acea-1928e69baea6"
+  ],
+  "rows": [
+    {
+      "id": "516108b7-b806-4e9c-8d02-4f3c4f3b9a72",
+      "user_id": "73fb6bb5-41ee-4aa3-af84-2980c6a28dfb",
+      "type": "EVENT_COMPLETED",
+      "title": "Cleanup event completed",
+      "message": "M2-completion-20260927-201125 has been completed. Thank you for supporting your community.",
+      "data": {
+        "eventId": "327878e3-9476-467a-acea-1928e69baea6",
+        "organizationId": "5bd7613b-8dad-45d4-9933-f1ec124417c9"
+      },
+      "delivery_count": 0,
+      "active_devices": 0
+    }
+  ],
+  "assertions": {
+    "http200": true,
+    "exactlyOneCompletion": true,
+    "recipient": true,
+    "inboxMatchesStoredContent": true,
+    "eventMatches": true
+  },
+  "in_app_verdict": "PASS",
+  "worker_health": "BLOCKED: working admin context pending",
+  "push_queue": "NOT_RUN: no registered test device",
+  "provider_acceptance": "NOT_RUN",
+  "receipt": "NOT_RUN",
+  "phone_display": "[REDACTED]",
+  "overall_status": "BLOCKED"
+}

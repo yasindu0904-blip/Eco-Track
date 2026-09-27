@@ -1,0 +1,30 @@
+{
+  "timestamp_utc": "2026-09-27T16:33:43.132Z",
+  "method": "PATCH",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/327878e3-9476-467a-acea-1928e69baea6/participants/7cbd39f7-dbb9-4a23-b5cb-18eb85b74e83/attendance",
+  "request": {
+    "status": "ATTENDED"
+  },
+  "http_status": 200,
+  "response": {
+    "data": {
+      "id": "7cbd39f7-dbb9-4a23-b5cb-18eb85b74e83",
+      "status": "JOINED",
+      "attendanceStatus": "ATTENDED",
+      "attendanceMarkedAt": "2026-09-27T16:33:39.123Z",
+      "joinedAt": "2026-09-27T16:30:04.116Z",
+      "removedAt": null,
+      "volunteer": {
+        "id": "73fb6bb5-41ee-4aa3-af84-2980c6a28dfb",
+        "fullName": "M2-volunteer-20260927-201125",
+        "phoneNumber": "[REDACTED]"
+      }
+    }
+  },
+  "duration_ms": 8000,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

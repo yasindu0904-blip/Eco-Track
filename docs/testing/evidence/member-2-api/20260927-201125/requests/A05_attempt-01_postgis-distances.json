@@ -1,0 +1,45 @@
+{
+  "timestamp_utc": "2026-09-27T16:18:46.282Z",
+  "status": "PASS",
+  "incidentDistances": [
+    {
+      "id": "318f949e-cdd9-49bd-adc5-ab69026f35b6",
+      "meters": 499.97662851
+    },
+    {
+      "id": "c8e1d382-7e89-4f4c-9df7-93664ad506ef",
+      "meters": 1500.04075494
+    },
+    {
+      "id": "e9d45be8-af03-4d22-a5f9-37f948b55211",
+      "meters": 2499.99466464
+    },
+    {
+      "id": "ba0fbd5c-1b94-4452-9519-0a3324a4ffc5",
+      "meters": 3499.94894793
+    },
+    {
+      "id": "f8c5207b-dfbc-47b3-84fa-337d61381123",
+      "meters": 0
+    }
+  ],
+  "eventDistances": [
+    {
+      "id": "91d76e2b-a993-472f-93e6-e1bdb3fbc8f4",
+      "meters": 499.97662851
+    },
+    {
+      "id": "e3120d2f-0091-4aa1-9882-f6dc119ecc21",
+      "meters": 1500.04075494
+    },
+    {
+      "id": "142c6f4f-1cfc-4c64-b29f-5827bb79a637",
+      "meters": 2499.99466464
+    },
+    {
+      "id": "1b8de8e4-9e71-44cc-8985-efa89e97656e",
+      "meters": 3499.94894793
+    }
+  ],
+  "note": "Independent SQL distance oracle over stored spatial points"
+}

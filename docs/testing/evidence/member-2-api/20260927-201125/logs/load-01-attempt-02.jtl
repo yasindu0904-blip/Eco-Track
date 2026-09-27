@@ -1,0 +1,9 @@
+timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage,bytes,sentBytes,grpThreads,allThreads,Latency,IdleTime,Connect
+1790528448299,2681,Categories,200,OK,Bounded reads 1-1,text,true,,1584,1112,1,1,2671,0,1112
+1790528457251,1563,Nearby incidents,200,OK,Bounded reads 1-1,text,true,,3156,1158,1,1,1563,0,0
+1790528463921,1551,Nearby events,200,OK,Bounded reads 1-1,text,true,,2251,1155,1,1,1551,0,0
+1790528470529,1252,Categories,200,OK,Bounded reads 1-1,text,true,,1584,1112,1,1,1252,0,0
+1790528476798,3397,Nearby incidents,200,OK,Bounded reads 1-1,text,true,,3156,1158,1,1,3397,0,0
+1790528485215,1639,Nearby events,200,OK,Bounded reads 1-1,text,true,,2251,1155,1,1,1639,0,0
+1790528491865,1281,Categories,200,OK,Bounded reads 1-1,text,true,,1584,1112,1,1,1281,0,0
+1790528498151,1553,Nearby incidents,200,OK,Bounded reads 1-1,text,true,,3156,1158,1,1,1552,0,0

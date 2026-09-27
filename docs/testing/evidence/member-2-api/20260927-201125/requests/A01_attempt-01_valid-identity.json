@@ -1,0 +1,27 @@
+{
+  "case_id": "A01",
+  "started_at_utc": "2026-09-27T16:04:53.206Z",
+  "method": "GET",
+  "route": "/auth/me",
+  "request": null,
+  "http_status": 200,
+  "response": {
+    "data": {
+      "id": "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+      "email": "[REDACTED]",
+      "fullName": "M2-A02-20260927-201125",
+      "phoneNumber": "[REDACTED]",
+      "profileCompletedAt": "2026-09-27T16:04:52.533Z",
+      "platformRole": "USER",
+      "accountStatus": "ACTIVE"
+    }
+  },
+  "duration_ms": 1225,
+  "assertions": {
+    "status": true,
+    "id": true,
+    "role": true,
+    "active": true
+  },
+  "status": "PASS"
+}

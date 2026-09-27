@@ -1,0 +1,25 @@
+{
+  "case_id": "A01",
+  "check": "invalid-bearer",
+  "started_at_utc": "2026-09-27T14:41:26.982Z",
+  "url": "https://p01--eco-track--xnjn7t9fk69n.code.run/api/v1/auth/me",
+  "duration_ms": 748,
+  "expected": {
+    "status": 401,
+    "code": "AUTH_TOKEN_INVALID"
+  },
+  "http_status": 401,
+  "body": {
+    "error": {
+      "code": "AUTH_TOKEN_INVALID",
+      "message": "The access token is invalid or expired."
+    }
+  },
+  "assertions": {
+    "status": true,
+    "json": true,
+    "contract": true,
+    "no_stack_or_sql": true
+  },
+  "status": "PASS"
+}

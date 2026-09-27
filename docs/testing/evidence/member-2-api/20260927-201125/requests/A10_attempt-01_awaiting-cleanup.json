@@ -1,0 +1,71 @@
+{
+  "timestamp_utc": "2026-09-27T16:33:15.364Z",
+  "method": "GET",
+  "route": "/incidents/nearby?latitude=6.837643&longitude=79.961131&radiusMeters=1000&awaitingCleanup=true&limit=100",
+  "request": null,
+  "http_status": 200,
+  "response": {
+    "data": {
+      "items": [
+        {
+          "id": "6aca80ee-8ed5-439e-b958-21bd006d8f4a",
+          "title": "M2-cancellation-incident-20260927-201125",
+          "category": {
+            "id": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+            "name": "Environmental Damage",
+            "description": "Damage to trees, waterways, public green space, or ecosystems."
+          },
+          "severity": "LOW",
+          "status": "ACTIVE",
+          "latitude": 6.837643,
+          "longitude": 79.961131,
+          "addressText": null,
+          "reportedAt": "2026-09-27T16:32:05.102Z",
+          "falseReviewCount": 0,
+          "isOwnReport": false
+        },
+        {
+          "id": "7c55d958-92a7-446d-8897-e633c8e285dd",
+          "title": "M2-area-0-unlinked-20260927-201125",
+          "category": {
+            "id": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+            "name": "Environmental Damage",
+            "description": "Damage to trees, waterways, public green space, or ecosystems."
+          },
+          "severity": "LOW",
+          "status": "ACTIVE",
+          "latitude": 6.837643,
+          "longitude": 79.961131,
+          "addressText": null,
+          "reportedAt": "2026-09-27T16:18:31.411Z",
+          "falseReviewCount": 0,
+          "isOwnReport": false
+        },
+        {
+          "id": "ec5260fb-77be-419c-bc66-692a096c5779",
+          "title": "M3-M04 TEST incident Yasindu",
+          "category": {
+            "id": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+            "name": "Environmental Damage",
+            "description": "Damage to trees, waterways, public green space, or ecosystems."
+          },
+          "severity": "HIGH",
+          "status": "ACTIVE",
+          "latitude": 6.837343,
+          "longitude": 79.96116,
+          "addressText": "M3 testing location",
+          "reportedAt": "2026-09-27T14:48:56.587Z",
+          "falseReviewCount": 0,
+          "isOwnReport": false
+        }
+      ],
+      "nextCursor": null
+    }
+  },
+  "duration_ms": 1535,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

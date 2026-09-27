@@ -1,0 +1,41 @@
+{
+  "timestamp_utc": "2026-09-27T16:33:26.627Z",
+  "method": "GET",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/327878e3-9476-467a-acea-1928e69baea6/completion-readiness",
+  "request": null,
+  "http_status": 200,
+  "response": {
+    "data": {
+      "eventId": "327878e3-9476-467a-acea-1928e69baea6",
+      "ready": false,
+      "checks": [
+        {
+          "code": "WORKFLOW_COMPLETION",
+          "ready": true,
+          "message": "The configured workflow permits completion."
+        },
+        {
+          "code": "EVENT_STARTED",
+          "ready": true,
+          "message": "The cleanup start time has passed."
+        },
+        {
+          "code": "ATTENDANCE_FINAL",
+          "ready": false,
+          "message": "Mark every joined volunteer as attended or absent before completing the event."
+        },
+        {
+          "code": "AFTER_EVIDENCE",
+          "ready": false,
+          "message": "Upload at least one AFTER evidence photo."
+        }
+      ]
+    }
+  },
+  "duration_ms": 3976,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

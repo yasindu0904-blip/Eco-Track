@@ -1,0 +1,7 @@
+# Copy into ignored tmp; never export a filled version.
+accessToken=
+expectedIncidentId=
+expectedEventId=
+latitude=6.795
+longitude=79.94
+apiHost=p01--eco-track--xnjn7t9fk69n.code.run

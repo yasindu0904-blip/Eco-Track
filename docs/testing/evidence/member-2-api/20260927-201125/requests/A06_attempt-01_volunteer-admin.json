@@ -1,0 +1,20 @@
+{
+  "timestamp_utc": "2026-09-27T16:19:10.297Z",
+  "method": "GET",
+  "route": "/super-admin/ping",
+  "request": null,
+  "http_status": 403,
+  "response": {
+    "error": {
+      "code": "AUTHORIZATION_DENIED",
+      "message": "You do not have permission to perform this action."
+    }
+  },
+  "duration_ms": 1255,
+  "assertions": {
+    "status": true,
+    "code": true,
+    "noData": true
+  },
+  "status": "PASS"
+}

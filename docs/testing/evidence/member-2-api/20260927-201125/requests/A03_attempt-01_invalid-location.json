@@ -1,0 +1,30 @@
+{
+  "case_id": "A03",
+  "started_at_utc": "2026-09-27T16:04:57.062Z",
+  "method": "POST",
+  "route": "/incidents",
+  "request": {
+    "submissionId": "eccbec33-a875-4e83-be28-1759dc26c526",
+    "categoryId": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+    "title": "M2-A03-20260927-201125",
+    "description": "Synthetic validation case for Member 2 testing.",
+    "severity": "LOW",
+    "latitude": 91,
+    "longitude": 79.94,
+    "evidence": []
+  },
+  "http_status": 400,
+  "response": {
+    "error": {
+      "code": "INCIDENT_REQUEST_INVALID",
+      "message": "latitude: Latitude must be at most 90."
+    }
+  },
+  "duration_ms": 1238,
+  "assertions": {
+    "status": true,
+    "code": true,
+    "noStack": true
+  },
+  "status": "PASS"
+}

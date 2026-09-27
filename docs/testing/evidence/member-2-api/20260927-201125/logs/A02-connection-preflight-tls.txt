@@ -1,0 +1,5 @@
+Database connection preflight
+UTC: 2026-09-27T15:40:36.510Z
+Target: expected test-project session pooler
+Result: BLOCKED: self-signed certificate in certificate chain
+No SQL or authenticated hosted API requests executed. Password validity has not been established. Need trusted Supabase server root certificate; TLS verification retained.

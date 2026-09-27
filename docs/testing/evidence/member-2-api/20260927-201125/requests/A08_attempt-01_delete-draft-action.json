@@ -1,0 +1,14 @@
+{
+  "timestamp_utc": "2026-09-27T16:27:55.437Z",
+  "method": "DELETE",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/drafts/c66fcf50-2543-4b42-b548-3fae632970c6",
+  "request": null,
+  "http_status": 204,
+  "response": {},
+  "duration_ms": 2090,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

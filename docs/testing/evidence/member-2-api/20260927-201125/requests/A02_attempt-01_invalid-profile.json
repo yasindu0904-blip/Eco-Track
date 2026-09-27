@@ -1,0 +1,23 @@
+{
+  "case_id": "A02",
+  "started_at_utc": "2026-09-27T16:04:48.832Z",
+  "method": "PUT",
+  "route": "/profile/complete",
+  "request": {
+    "fullName": "",
+    "phoneNumber": "[REDACTED]"
+  },
+  "http_status": 400,
+  "response": {
+    "error": {
+      "code": "PROFILE_INPUT_INVALID",
+      "message": "Too small: expected string to have >=2 characters"
+    }
+  },
+  "duration_ms": 2513,
+  "assertions": {
+    "status": true,
+    "code": true
+  },
+  "status": "PASS"
+}

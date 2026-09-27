@@ -1,0 +1,58 @@
+{
+  "timestamp_utc": "2026-09-27T16:19:23.778Z",
+  "method": "GET",
+  "route": "/organizations/7b832c2f-03e7-445b-ba62-8ce08736b113/incidents?west=79.891836&south=6.7553019999999995&east=79.991131&north=6.867643&zoom=13&limit=100",
+  "pages": [
+    {
+      "http_status": 200,
+      "count": 2,
+      "duration_ms": 2149
+    }
+  ],
+  "returnedIds": [
+    "bec3762b-4d77-4da0-bfe1-e40e6298761e",
+    "bd5defb7-1ba4-471f-9670-b7c08b0c0964"
+  ],
+  "expected": [
+    {
+      "id": "7c55d958-92a7-446d-8897-e633c8e285dd",
+      "label": "area-0-unlinked",
+      "included": false
+    },
+    {
+      "id": "f1d940b5-a025-48f7-8329-23d31eb553f8",
+      "label": "area-0-resolved",
+      "included": false
+    },
+    {
+      "id": "a92fb738-339d-489c-bc0d-0c8b933fa65f",
+      "label": "area-0-linked",
+      "included": false
+    },
+    {
+      "id": "bd5defb7-1ba4-471f-9670-b7c08b0c0964",
+      "label": "area-1-unlinked",
+      "included": true
+    },
+    {
+      "id": "f3bf60c2-bf9c-4513-af37-7d7fac1167ce",
+      "label": "area-1-resolved",
+      "included": false
+    },
+    {
+      "id": "bec3762b-4d77-4da0-bfe1-e40e6298761e",
+      "label": "area-1-linked",
+      "included": true
+    }
+  ],
+  "assertions": {
+    "paginationComplete": true,
+    "area-0-unlinked": true,
+    "area-0-resolved": true,
+    "area-0-linked": true,
+    "area-1-unlinked": true,
+    "area-1-resolved": true,
+    "area-1-linked": true
+  },
+  "status": "PASS"
+}

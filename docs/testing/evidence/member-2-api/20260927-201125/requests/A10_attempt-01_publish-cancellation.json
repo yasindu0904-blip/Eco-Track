@@ -1,0 +1,41 @@
+{
+  "timestamp_utc": "2026-09-27T16:32:40.790Z",
+  "method": "POST",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/36719764-41e3-4f1a-b537-8f271c2590e7/publish",
+  "request": {},
+  "http_status": 200,
+  "response": {
+    "data": {
+      "event": {
+        "id": "36719764-41e3-4f1a-b537-8f271c2590e7",
+        "organization": {
+          "id": "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+          "name": "M2-org-a-20260927-201125"
+        },
+        "incidentId": "6aca80ee-8ed5-439e-b958-21bd006d8f4a",
+        "title": "M2-cancellation-updated-20260927-201125",
+        "description": "Synthetic Member 2 lifecycle test, no real-world cleanup.",
+        "lifecycleStatus": "PUBLISHED",
+        "displayStatus": "UPCOMING",
+        "eventLatitude": 6.837643,
+        "eventLongitude": 79.961131,
+        "eventAddress": "Official GN test point",
+        "startsAt": "2026-09-27T17:32:07.479Z",
+        "capacity": 5,
+        "publishedAt": "2026-09-27T16:32:37.093Z",
+        "publicInstructions": "Synthetic test only; no actual attendance requested.",
+        "meetingLatitude": 6.837643,
+        "meetingLongitude": 79.961131,
+        "meetingAddress": null,
+        "joinedVolunteerCount": 0
+      },
+      "incidentUpdated": true
+    }
+  },
+  "duration_ms": 11194,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

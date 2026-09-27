@@ -1,0 +1,11 @@
+{
+  "timestamp_utc": "2026-09-27T16:04:48.827Z",
+  "host": "aws-0-ap-southeast-2.pooler.supabase.com",
+  "project": "zkiciluuktuzkidjaiaz",
+  "identity": [
+    {
+      "database": "postgres",
+      "role": "postgres"
+    }
+  ]
+}

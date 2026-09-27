@@ -1,0 +1,25 @@
+{
+  "case_id": "A01",
+  "check": "missing-bearer",
+  "started_at_utc": "2026-09-27T14:41:26.720Z",
+  "url": "https://p01--eco-track--xnjn7t9fk69n.code.run/api/v1/auth/me",
+  "duration_ms": 261,
+  "expected": {
+    "status": 401,
+    "code": "AUTH_TOKEN_MISSING"
+  },
+  "http_status": 401,
+  "body": {
+    "error": {
+      "code": "AUTH_TOKEN_MISSING",
+      "message": "A valid Bearer access token is required."
+    }
+  },
+  "assertions": {
+    "status": true,
+    "json": true,
+    "contract": true,
+    "no_stack_or_sql": true
+  },
+  "status": "PASS"
+}

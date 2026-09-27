@@ -1,0 +1,17 @@
+{
+  "timestamp_utc": "2026-09-27T16:33:11.990Z",
+  "status": "PASS",
+  "eventId": "36719764-41e3-4f1a-b537-8f271c2590e7",
+  "currentVersion": "2026-09-27T16:32:37.093Z",
+  "response": {
+    "data": {
+      "eventId": "36719764-41e3-4f1a-b537-8f271c2590e7",
+      "lifecycleStatus": "CANCELLED",
+      "updatedAt": "2026-09-27T16:33:08.643Z",
+      "incidentStatus": "ACTIVE",
+      "rewardsAwarded": 0,
+      "idempotentReplay": false
+    }
+  },
+  "note": "Same successful cancellation is the refreshed retry for A11 and cancellation behavior for A10."
+}

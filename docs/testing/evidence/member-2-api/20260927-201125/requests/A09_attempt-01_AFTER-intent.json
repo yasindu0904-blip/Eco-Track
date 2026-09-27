@@ -1,0 +1,33 @@
+{
+  "timestamp_utc": "2026-09-27T16:34:21.209Z",
+  "method": "POST",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/327878e3-9476-467a-acea-1928e69baea6/evidence/upload-intents",
+  "request": {
+    "files": [
+      {
+        "originalFileName": "M2-AFTER.png",
+        "contentType": "image/png",
+        "sizeBytes": 68
+      }
+    ]
+  },
+  "http_status": 201,
+  "response": {
+    "data": [
+      {
+        "token": "[REDACTED]",
+        "signedUrl": "[REDACTED]",
+        "storagePath": "events/5bd7613b-8dad-45d4-9933-f1ec124417c9/327878e3-9476-467a-acea-1928e69baea6/aec80483-fa4b-4cba-bc70-5f8d6ce75efe/a9d26763-6da8-47ad-aa53-9a0ff39c4cd5.png",
+        "originalFileName": "M2-AFTER.png",
+        "contentType": "image/png",
+        "sizeBytes": 68
+      }
+    ]
+  },
+  "duration_ms": 4708,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

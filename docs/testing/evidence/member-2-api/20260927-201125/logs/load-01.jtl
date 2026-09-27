@@ -1,0 +1,10 @@
+timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage,bytes,sentBytes,grpThreads,allThreads,Latency,IdleTime,Connect
+1790528359888,2141,Categories,200,OK,Bounded reads 1-1,text,false,BUG! exception in phase 'semantic analysis' in source unit 'Script1.groovy' Unsupported class file major version 69,1584,1111,1,1,2128,0,960
+1790528367752,1463,Nearby incidents,200,OK,Bounded reads 1-1,text,false,BUG! exception in phase 'semantic analysis' in source unit 'Script2.groovy' Unsupported class file major version 69,3156,1157,1,1,1463,0,0
+1790528374246,1654,Nearby events,200,OK,Bounded reads 1-1,text,false,BUG! exception in phase 'semantic analysis' in source unit 'Script3.groovy' Unsupported class file major version 69,2251,1154,1,1,1654,0,0
+1790528380937,1178,Categories,200,OK,Bounded reads 1-1,text,false,BUG! exception in phase 'semantic analysis' in source unit 'Script4.groovy' Unsupported class file major version 69,1584,1111,1,1,1178,0,0
+1790528387130,1774,Nearby incidents,200,OK,Bounded reads 1-1,text,false,BUG! exception in phase 'semantic analysis' in source unit 'Script5.groovy' Unsupported class file major version 69,3156,1157,1,1,1774,0,0
+1790528393924,1509,Nearby events,200,OK,Bounded reads 1-1,text,false,BUG! exception in phase 'semantic analysis' in source unit 'Script6.groovy' Unsupported class file major version 69,2251,1154,1,1,1509,0,0
+1790528400449,1502,Categories,200,OK,Bounded reads 1-1,text,false,BUG! exception in phase 'semantic analysis' in source unit 'Script7.groovy' Unsupported class file major version 69,1584,1111,1,1,1502,0,0
+1790528406964,1703,Nearby incidents,200,OK,Bounded reads 1-1,text,false,BUG! exception in phase 'semantic analysis' in source unit 'Script8.groovy' Unsupported class file major version 69,3156,1157,1,1,1703,0,0
+1790528413684,1845,Nearby events,200,OK,Bounded reads 1-1,text,false,BUG! exception in phase 'semantic analysis' in source unit 'Script9.groovy' Unsupported class file major version 69,2251,1154,1,1,1845,0,0

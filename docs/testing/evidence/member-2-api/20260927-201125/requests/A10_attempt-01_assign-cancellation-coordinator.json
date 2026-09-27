@@ -1,0 +1,25 @@
+{
+  "timestamp_utc": "2026-09-27T16:32:29.593Z",
+  "method": "POST",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/36719764-41e3-4f1a-b537-8f271c2590e7/coordinators",
+  "request": {
+    "membershipId": "cbdcc52a-26c4-4bdd-a887-ec46403e2c16"
+  },
+  "http_status": 201,
+  "response": {
+    "data": {
+      "id": "50dfe7c8-070f-48b9-bd0a-9723c33432dd",
+      "cleanupEventId": "36719764-41e3-4f1a-b537-8f271c2590e7",
+      "membershipId": "cbdcc52a-26c4-4bdd-a887-ec46403e2c16",
+      "assignedByMembershipId": "cbdcc52a-26c4-4bdd-a887-ec46403e2c16",
+      "assignedAt": "2026-09-27T16:32:29.251Z",
+      "removedAt": null
+    }
+  },
+  "duration_ms": 2862,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}
