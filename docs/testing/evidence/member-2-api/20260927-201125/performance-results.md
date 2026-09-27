@@ -25,3 +25,5 @@ eco-track memory sampled range: 81.1824 to 81.3472 pct (provider units).
 ecotrack-notification cpu sampled range: 0.467958564029291 to 1.07058928571429 pct (provider units).
 
 ecotrack-notification memory sampled range: 73.0368 to 73.0384 pct (provider units).
+
+Verified Statistics screenshot: screenshots/P01-jmeter-summary.png (unaltered copy of screenshots/ss/Screenshot 2026-09-27 225427.png). Shows 82 samples, 0 failures, 0.00% errors, average 1442.73ms, median 1302.50ms, p95 2183.25ms, p99/max 3264ms, throughput 0.71 transactions/s. Use these JMeter dashboard statistics when captioning this screenshot. Earlier runner numbers use nearest-rank percentiles (p95 2162ms) and configured-duration throughput (82/120 = 0.6833/s); they are separate calculations, not additional executions. The Statistics screenshot requirement is satisfied; separate Errors-table, historical Northflank screenshots and real phone evidence are still absent. No test verdict changed.

@@ -6,3 +6,5 @@
 - Exact service restart/OOM evidence is not established by the sampled running-container identities alone.
 - D01 and M2-D02 remain OPEN. A09 withdrawal failed twice; no corrective deployment was made.
 - Share the complete sanitized run folder privately with Member 1. No automatic report submission or publishing.
+
+Verified Statistics screenshot: screenshots/P01-jmeter-summary.png (unaltered copy of screenshots/ss/Screenshot 2026-09-27 225427.png). Shows 82 samples, 0 failures, 0.00% errors, average 1442.73ms, median 1302.50ms, p95 2183.25ms, p99/max 3264ms, throughput 0.71 transactions/s. Use these JMeter dashboard statistics when captioning this screenshot. Earlier runner numbers use nearest-rank percentiles (p95 2162ms) and configured-duration throughput (82/120 = 0.6833/s); they are separate calculations, not additional executions. The Statistics screenshot requirement is satisfied; separate Errors-table, historical Northflank screenshots and real phone evidence are still absent. No test verdict changed.

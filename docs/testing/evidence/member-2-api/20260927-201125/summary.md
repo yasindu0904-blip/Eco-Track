@@ -67,3 +67,8 @@ A14 investigation finalized: see logs/A14-investigation-conclusion.md. The succe
 
 
 Worker health HTTP 200: online=true, waiting=0, failed=0. Authorized temporary M2 role restored to USER. A12 remains incomplete only for physical push/provider evidence. JMeter baseline executed; see performance-results.md for measurements and tooling failure versus retry. P01 remains BLOCKED for full guide coverage pending human screenshots and exact restart/OOM observations; HTTP measurements are reported separately.
+
+Screenshot update: Six user-supplied JMeter chart screenshots in screenshots/ss/ were visually reviewed and indexed. They show response times, percentiles, active threads, bytes throughput, latency and connection time. They do not show the Statistics or Errors tables. Those table screenshots and Northflank/phone evidence remain outstanding. Duplicate copies under tools/ss are not additional observations.
+
+
+Verified Statistics screenshot: screenshots/P01-jmeter-summary.png (unaltered copy of screenshots/ss/Screenshot 2026-09-27 225427.png). Shows 82 samples, 0 failures, 0.00% errors, average 1442.73ms, median 1302.50ms, p95 2183.25ms, p99/max 3264ms, throughput 0.71 transactions/s. Use these JMeter dashboard statistics when captioning this screenshot. Earlier runner numbers use nearest-rank percentiles (p95 2162ms) and configured-duration throughput (82/120 = 0.6833/s); they are separate calculations, not additional executions. The Statistics screenshot requirement is satisfied; separate Errors-table, historical Northflank screenshots and real phone evidence are still absent. No test verdict changed.
