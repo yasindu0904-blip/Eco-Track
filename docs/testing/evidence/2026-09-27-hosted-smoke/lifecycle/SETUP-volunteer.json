@@ -1,0 +1,24 @@
+{
+  "id": "SETUP-volunteer",
+  "name": "Provision volunteer",
+  "status": "PASS",
+  "at": "2026-09-27T12:46:28.589Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/auth/me"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1133,
+  "response": {
+    "data": {
+      "id": "3a5019d7-7666-4f72-8e7a-d6efb39e8716",
+      "email": "ecotrack-life-volunteer-1790513186874@example.com",
+      "fullName": null,
+      "phoneNumber": null,
+      "profileCompletedAt": null,
+      "platformRole": "USER",
+      "accountStatus": "ACTIVE"
+    }
+  }
+}

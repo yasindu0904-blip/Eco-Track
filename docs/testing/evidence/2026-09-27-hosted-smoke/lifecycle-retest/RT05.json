@@ -1,0 +1,46 @@
+{
+  "id": "RT05",
+  "name": "Create cancellation test draft",
+  "status": "PASS",
+  "at": "2026-09-27T12:50:15.552Z",
+  "request": {
+    "method": "POST",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/drafts",
+    "body": {
+      "title": "SMOKE TEST cancellation",
+      "description": "Synthetic smoke cancellation test only.",
+      "publicInstructions": "Test only, do not attend.",
+      "eventLatitude": 6.8376425,
+      "eventLongitude": 79.9611312062937,
+      "eventAddress": "Synthetic fixture official GN location",
+      "startsAt": "2026-09-27T13:50:11.265Z"
+    }
+  },
+  "expectedStatus": 201,
+  "httpStatus": 201,
+  "durationMs": 4287,
+  "response": {
+    "data": {
+      "id": "2f9d1cc1-e8e1-43b7-be5c-27852c98b484",
+      "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+      "incidentId": null,
+      "lifecycleStatus": "DRAFT",
+      "displayStatus": "DRAFT",
+      "title": "SMOKE TEST cancellation",
+      "description": "Synthetic smoke cancellation test only.",
+      "publicInstructions": "Test only, do not attend.",
+      "eventLatitude": 6.837643,
+      "eventLongitude": 79.961131,
+      "eventAddress": "Synthetic fixture official GN location",
+      "meetingLatitude": null,
+      "meetingLongitude": null,
+      "meetingAddress": null,
+      "startsAt": "2026-09-27T13:50:11.265Z",
+      "capacity": null,
+      "locationLockedToIncident": false,
+      "createdAt": "2026-09-27T12:50:14.141Z",
+      "updatedAt": "2026-09-27T12:50:14.141Z",
+      "coordinators": []
+    }
+  }
+}

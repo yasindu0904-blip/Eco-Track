@@ -1,0 +1,28 @@
+{
+  "id": "PROFILE-volunteer",
+  "name": "Complete volunteer profile",
+  "status": "PASS",
+  "at": "2026-09-27T12:46:30.514Z",
+  "request": {
+    "method": "PUT",
+    "route": "/api/v1/profile/complete",
+    "body": {
+      "fullName": "Smoke Lifecycle volunteer",
+      "phoneNumber": "+94700000000"
+    }
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1463,
+  "response": {
+    "data": {
+      "id": "3a5019d7-7666-4f72-8e7a-d6efb39e8716",
+      "email": "ecotrack-life-volunteer-1790513186874@example.com",
+      "fullName": "Smoke Lifecycle volunteer",
+      "phoneNumber": "+94700000000",
+      "profileCompletedAt": "2026-09-27T12:46:30.647Z",
+      "platformRole": "USER",
+      "accountStatus": "ACTIVE"
+    }
+  }
+}

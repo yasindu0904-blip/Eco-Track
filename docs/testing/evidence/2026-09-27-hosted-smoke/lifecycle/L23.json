@@ -1,0 +1,61 @@
+{
+  "id": "L23",
+  "name": "Volunteer receives in-app event notifications",
+  "status": "PASS",
+  "at": "2026-09-27T12:48:11.694Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/notifications"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1473,
+  "response": {
+    "data": {
+      "items": [
+        {
+          "id": "758902b1-afcb-4ac3-9b1a-c2b793c3def1",
+          "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+          "type": "EVENT_UPDATED",
+          "title": "Cleanup event update",
+          "message": "A new participant update is available for SMOKE TEST direct cleanup.",
+          "data": {
+            "eventId": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+            "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc"
+          },
+          "readAt": null,
+          "createdAt": "2026-09-27T12:47:37.636Z"
+        },
+        {
+          "id": "ccb06e91-bb52-48f2-981b-a346b9822920",
+          "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+          "type": "EVENT_UPDATED",
+          "title": "Cleanup attendance confirmed",
+          "message": "Your attendance for SMOKE TEST direct cleanup was recorded as attended.",
+          "data": {
+            "eventId": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+            "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+            "status": "ATTENDED"
+          },
+          "readAt": null,
+          "createdAt": "2026-09-27T12:47:26.583Z"
+        },
+        {
+          "id": "5dd3cc2c-babb-461a-b494-2f55a1e50cd1",
+          "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+          "type": "EVENT_JOINED",
+          "title": "You volunteered for a cleanup",
+          "message": "You are volunteering for SMOKE TEST direct cleanup.",
+          "data": {
+            "eventId": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+            "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+            "status": "JOINED"
+          },
+          "readAt": null,
+          "createdAt": "2026-09-27T12:47:09.531Z"
+        }
+      ],
+      "nextCursor": null
+    }
+  }
+}

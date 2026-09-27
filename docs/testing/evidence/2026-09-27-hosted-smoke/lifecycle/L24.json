@@ -1,0 +1,19 @@
+{
+  "id": "L24",
+  "name": "Completed participation appears in history",
+  "status": "PASS",
+  "at": "2026-09-27T12:48:13.792Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/event-participations/me?scope=history"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 2088,
+  "response": {
+    "data": {
+      "items": [],
+      "nextCursor": null
+    }
+  }
+}

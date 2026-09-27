@@ -1,0 +1,32 @@
+{
+  "id": "L17",
+  "name": "Post participant update",
+  "status": "PASS",
+  "at": "2026-09-27T12:47:37.800Z",
+  "request": {
+    "method": "POST",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/notes",
+    "body": {
+      "visibility": "PARTICIPANTS",
+      "noteText": "Synthetic smoke test participant update."
+    }
+  },
+  "expectedStatus": [
+    200,
+    201
+  ],
+  "httpStatus": 201,
+  "durationMs": 10427,
+  "response": {
+    "data": {
+      "id": "b73ef195-cc87-4d9a-851c-0fe418e3d2eb",
+      "visibility": "PARTICIPANTS",
+      "noteText": "Synthetic smoke test participant update.",
+      "author": {
+        "id": "19b7aada-5c97-4df8-86fe-673d2ac24a8d",
+        "fullName": "Smoke Lifecycle owner"
+      },
+      "createdAt": "2026-09-27T12:47:35.473Z"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "id": "WEB06-review",
+  "status": "PASS",
+  "name": "Hosted notification inbox renders empty All view",
+  "method": "Visual review of captured screenshot and matching HTTP 200 notifications response",
+  "screenshot": "WEB06-inbox-reviewed.png",
+  "observation": "All tab selected, 0 unread, Your inbox is clear displayed. The browser locator incorrectly expected No unread notifications, which applies to the Unread tab. The raw locator failure is retained.",
+  "limits": "No actual received notification present for this temporary user; delivery not established by this screenshot."
+}

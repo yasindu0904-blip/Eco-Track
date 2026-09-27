@@ -1,0 +1,1393 @@
+[
+  {
+    "id": "L01",
+    "name": "Official GN reference areas available",
+    "status": "PASS",
+    "at": "2026-09-27T12:46:21.878Z",
+    "count": 73,
+    "fixtureAreas": [
+      {
+        "id": "6783fd92-c3e6-454f-bb92-1e3fe429dd32",
+        "name_en": "Bangalawatta",
+        "latitude": 6.8376425,
+        "longitude": 79.9611312062937
+      },
+      {
+        "id": "358a3dc3-91d4-428c-94c2-29266a9f8c84",
+        "name_en": "Batakettara North",
+        "latitude": 6.785302,
+        "longitude": 79.9218364976486
+      }
+    ]
+  },
+  {
+    "id": "SETUP-owner",
+    "name": "Provision owner",
+    "status": "PASS",
+    "at": "2026-09-27T12:46:24.887Z",
+    "request": {
+      "method": "GET",
+      "route": "/api/v1/auth/me"
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 1803,
+    "response": {
+      "data": {
+        "id": "6fb16d28-1aec-44c1-b68c-3c6f5ee93513",
+        "email": "ecotrack-life-owner-1790513181892@example.com",
+        "fullName": null,
+        "phoneNumber": null,
+        "profileCompletedAt": null,
+        "platformRole": "USER",
+        "accountStatus": "ACTIVE"
+      }
+    }
+  },
+  {
+    "id": "PROFILE-owner",
+    "name": "Complete owner profile",
+    "status": "PASS",
+    "at": "2026-09-27T12:46:26.865Z",
+    "request": {
+      "method": "PUT",
+      "route": "/api/v1/profile/complete",
+      "body": {
+        "fullName": "Smoke Lifecycle owner",
+        "phoneNumber": "+94700000000"
+      }
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 1462,
+    "response": {
+      "data": {
+        "id": "6fb16d28-1aec-44c1-b68c-3c6f5ee93513",
+        "email": "ecotrack-life-owner-1790513181892@example.com",
+        "fullName": "Smoke Lifecycle owner",
+        "phoneNumber": "+94700000000",
+        "profileCompletedAt": "2026-09-27T12:46:27.005Z",
+        "platformRole": "USER",
+        "accountStatus": "ACTIVE"
+      }
+    }
+  },
+  {
+    "id": "SETUP-volunteer",
+    "name": "Provision volunteer",
+    "status": "PASS",
+    "at": "2026-09-27T12:46:28.589Z",
+    "request": {
+      "method": "GET",
+      "route": "/api/v1/auth/me"
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 1133,
+    "response": {
+      "data": {
+        "id": "3a5019d7-7666-4f72-8e7a-d6efb39e8716",
+        "email": "ecotrack-life-volunteer-1790513186874@example.com",
+        "fullName": null,
+        "phoneNumber": null,
+        "profileCompletedAt": null,
+        "platformRole": "USER",
+        "accountStatus": "ACTIVE"
+      }
+    }
+  },
+  {
+    "id": "PROFILE-volunteer",
+    "name": "Complete volunteer profile",
+    "status": "PASS",
+    "at": "2026-09-27T12:46:30.514Z",
+    "request": {
+      "method": "PUT",
+      "route": "/api/v1/profile/complete",
+      "body": {
+        "fullName": "Smoke Lifecycle volunteer",
+        "phoneNumber": "+94700000000"
+      }
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 1463,
+    "response": {
+      "data": {
+        "id": "3a5019d7-7666-4f72-8e7a-d6efb39e8716",
+        "email": "ecotrack-life-volunteer-1790513186874@example.com",
+        "fullName": "Smoke Lifecycle volunteer",
+        "phoneNumber": "+94700000000",
+        "profileCompletedAt": "2026-09-27T12:46:30.647Z",
+        "platformRole": "USER",
+        "accountStatus": "ACTIVE"
+      }
+    }
+  },
+  {
+    "id": "L02",
+    "name": "Prepare isolated organization fixtures",
+    "status": "PASS",
+    "at": "2026-09-27T12:46:33.362Z",
+    "note": "Direct SQL setup of synthetic organizations/memberships on test DB; registration/approval flow not covered.",
+    "organizations": [
+      {
+        "id": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+        "membership": "19b7aada-5c97-4df8-86fe-673d2ac24a8d",
+        "ownerProfile": "6fb16d28-1aec-44c1-b68c-3c6f5ee93513",
+        "areaId": "6783fd92-c3e6-454f-bb92-1e3fe429dd32"
+      },
+      {
+        "id": "a2bf1687-2b9e-49b3-8329-ea41fe32d4f5",
+        "membership": "d0ee4ccc-d03e-49d5-b7ee-1ca9945b88b1",
+        "ownerProfile": "3a5019d7-7666-4f72-8e7a-d6efb39e8716",
+        "areaId": "358a3dc3-91d4-428c-94c2-29266a9f8c84"
+      }
+    ]
+  },
+  {
+    "id": "L03",
+    "name": "Organization dashboard",
+    "status": "PASS",
+    "at": "2026-09-27T12:46:37.568Z",
+    "request": {
+      "method": "GET",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/dashboard-summary"
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 4188,
+    "response": {
+      "data": {
+        "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+        "coveringIncidentsByState": {},
+        "reviewsByState": {},
+        "eventsByLifecycle": {},
+        "upcomingEvents": 0,
+        "joinedParticipants": 0,
+        "pendingMembershipRequests": 0
+      }
+    }
+  },
+  {
+    "id": "L04",
+    "name": "Covered boundary geometry",
+    "status": "PASS",
+    "at": "2026-09-27T12:46:39.762Z",
+    "request": {
+      "method": "GET",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/service-area-boundaries?scope=all"
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 2179,
+    "response": {
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          {
+            "type": "Feature",
+            "geometry": {
+              "type": "MultiPolygon",
+              "coordinates": [
+                [
+                  [
+                    [
+                      79.962857,
+                      6.838641
+                    ],
+                    [
+                      79.962622,
+                      6.838709
+                    ],
+                    [
+                      79.962465,
+                      6.839052
+                    ],
+                    [
+                      79.962271,
+                      6.839421
+                    ],
+                    [
+                      79.962218,
+                      6.83961
+                    ],
+                    [
+                      79.962014,
+                      6.839811
+                    ],
+                    [
+                      79.96198,
+                      6.839865
+                    ],
+                    [
+                      79.961947,
+                      6.839883
+                    ],
+                    [
+                      79.961805,
+                      6.840061
+                    ],
+                    [
+                      79.96165,
+                      6.840198
+                    ],
+                    [
+                      79.961524,
+                      6.840289
+                    ],
+                    [
+                      79.961328,
+                      6.840376
+                    ],
+                    [
+                      79.960952,
+                      6.840419
+                    ],
+                    [
+                      79.9608,
+                      6.840493
+                    ],
+                    [
+                      79.960658,
+                      6.840537
+                    ],
+                    [
+                      79.960509,
+                      6.840549
+                    ],
+                    [
+                      79.960331,
+                      6.840519
+                    ],
+                    [
+                      79.960202,
+                      6.840449
+                    ],
+                    [
+                      79.960065,
+                      6.840342
+                    ],
+                    [
+                      79.95996,
+                      6.840235
+                    ],
+                    [
+                      79.959837,
+                      6.839948
+                    ],
+                    [
+                      79.959728,
+                      6.839739
+                    ],
+                    [
+                      79.959619,
+                      6.839452
+                    ],
+                    [
+                      79.959524,
+                      6.839306
+                    ],
+                    [
+                      79.959415,
+                      6.839187
+                    ],
+                    [
+                      79.959282,
+                      6.839078
+                    ],
+                    [
+                      79.958981,
+                      6.838888
+                    ],
+                    [
+                      79.958815,
+                      6.838812
+                    ],
+                    [
+                      79.95867,
+                      6.838669
+                    ],
+                    [
+                      79.95853,
+                      6.838425
+                    ],
+                    [
+                      79.958445,
+                      6.838214
+                    ],
+                    [
+                      79.958356,
+                      6.838048
+                    ],
+                    [
+                      79.95828,
+                      6.837935
+                    ],
+                    [
+                      79.958221,
+                      6.837891
+                    ],
+                    [
+                      79.958132,
+                      6.837613
+                    ],
+                    [
+                      79.957965,
+                      6.837338
+                    ],
+                    [
+                      79.957879,
+                      6.837175
+                    ],
+                    [
+                      79.957893,
+                      6.837166
+                    ],
+                    [
+                      79.957769,
+                      6.837008
+                    ],
+                    [
+                      79.957704,
+                      6.836887
+                    ],
+                    [
+                      79.957647,
+                      6.836696
+                    ],
+                    [
+                      79.957624,
+                      6.836555
+                    ],
+                    [
+                      79.957533,
+                      6.836388
+                    ],
+                    [
+                      79.957585,
+                      6.836302
+                    ],
+                    [
+                      79.957675,
+                      6.836223
+                    ],
+                    [
+                      79.957666,
+                      6.836129
+                    ],
+                    [
+                      79.957585,
+                      6.836026
+                    ],
+                    [
+                      79.957586,
+                      6.835933
+                    ],
+                    [
+                      79.957799,
+                      6.83588
+                    ],
+                    [
+                      79.958202,
+                      6.835901
+                    ],
+                    [
+                      79.958435,
+                      6.835815
+                    ],
+                    [
+                      79.958646,
+                      6.835692
+                    ],
+                    [
+                      79.958966,
+                      6.835608
+                    ],
+                    [
+                      79.95912,
+                      6.835534
+                    ],
+                    [
+                      79.959327,
+                      6.835576
+                    ],
+                    [
+                      79.959513,
+                      6.835573
+                    ],
+                    [
+                      79.959658,
+                      6.83542
+                    ],
+                    [
+                      79.959764,
+                      6.835361
+                    ],
+                    [
+                      79.959798,
+                      6.835269
+                    ],
+                    [
+                      79.959821,
+                      6.835106
+                    ],
+                    [
+                      79.959818,
+                      6.834946
+                    ],
+                    [
+                      79.959889,
+                      6.834861
+                    ],
+                    [
+                      79.960048,
+                      6.834855
+                    ],
+                    [
+                      79.960209,
+                      6.834827
+                    ],
+                    [
+                      79.96044,
+                      6.834872
+                    ],
+                    [
+                      79.960515,
+                      6.83477
+                    ],
+                    [
+                      79.960689,
+                      6.834765
+                    ],
+                    [
+                      79.960932,
+                      6.834784
+                    ],
+                    [
+                      79.961224,
+                      6.834747
+                    ],
+                    [
+                      79.961379,
+                      6.834765
+                    ],
+                    [
+                      79.961534,
+                      6.834727
+                    ],
+                    [
+                      79.961747,
+                      6.834713
+                    ],
+                    [
+                      79.962036,
+                      6.834802
+                    ],
+                    [
+                      79.962347,
+                      6.834755
+                    ],
+                    [
+                      79.962833,
+                      6.83472
+                    ],
+                    [
+                      79.962995,
+                      6.834777
+                    ],
+                    [
+                      79.963515,
+                      6.835059
+                    ],
+                    [
+                      79.963622,
+                      6.835102
+                    ],
+                    [
+                      79.963937,
+                      6.835164
+                    ],
+                    [
+                      79.964311,
+                      6.835287
+                    ],
+                    [
+                      79.964736,
+                      6.835297
+                    ],
+                    [
+                      79.965283,
+                      6.83523
+                    ],
+                    [
+                      79.965283,
+                      6.835556
+                    ],
+                    [
+                      79.965126,
+                      6.836632
+                    ],
+                    [
+                      79.964936,
+                      6.836578
+                    ],
+                    [
+                      79.964759,
+                      6.836988
+                    ],
+                    [
+                      79.964571,
+                      6.837177
+                    ],
+                    [
+                      79.964316,
+                      6.837389
+                    ],
+                    [
+                      79.964186,
+                      6.837539
+                    ],
+                    [
+                      79.964002,
+                      6.837825
+                    ],
+                    [
+                      79.963798,
+                      6.838089
+                    ],
+                    [
+                      79.96363,
+                      6.838272
+                    ],
+                    [
+                      79.963626,
+                      6.838421
+                    ],
+                    [
+                      79.963673,
+                      6.838636
+                    ],
+                    [
+                      79.963819,
+                      6.838835
+                    ],
+                    [
+                      79.963743,
+                      6.838889
+                    ],
+                    [
+                      79.963455,
+                      6.838931
+                    ],
+                    [
+                      79.963332,
+                      6.838921
+                    ],
+                    [
+                      79.963234,
+                      6.838852
+                    ],
+                    [
+                      79.963124,
+                      6.83871
+                    ],
+                    [
+                      79.963076,
+                      6.838671
+                    ],
+                    [
+                      79.962857,
+                      6.838641
+                    ]
+                  ]
+                ]
+              ]
+            },
+            "properties": {
+              "id": "996ccca0-e396-458f-a412-79cdfd04c145",
+              "name": "Bangalawatta",
+              "officialCode": "1136125",
+              "status": "ACTIVE"
+            }
+          }
+        ],
+        "truncated": false
+      }
+    }
+  },
+  {
+    "id": "L05",
+    "name": "Create direct cleanup draft",
+    "status": "PASS",
+    "at": "2026-09-27T12:46:44.071Z",
+    "request": {
+      "method": "POST",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/drafts",
+      "body": {
+        "title": "SMOKE TEST direct cleanup",
+        "description": "Synthetic event for hosted lifecycle smoke testing only.",
+        "publicInstructions": "Test fixtures only. Do not attend.",
+        "eventLatitude": 6.8376425,
+        "eventLongitude": 79.9611312062937,
+        "eventAddress": "Smoke test location in official GN area",
+        "startsAt": "2026-09-27T12:48:39.783Z",
+        "capacity": 5
+      }
+    },
+    "expectedStatus": 201,
+    "httpStatus": 201,
+    "durationMs": 4281,
+    "response": {
+      "data": {
+        "id": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+        "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+        "incidentId": null,
+        "lifecycleStatus": "DRAFT",
+        "displayStatus": "DRAFT",
+        "title": "SMOKE TEST direct cleanup",
+        "description": "Synthetic event for hosted lifecycle smoke testing only.",
+        "publicInstructions": "Test fixtures only. Do not attend.",
+        "eventLatitude": 6.837643,
+        "eventLongitude": 79.961131,
+        "eventAddress": "Smoke test location in official GN area",
+        "meetingLatitude": null,
+        "meetingLongitude": null,
+        "meetingAddress": null,
+        "startsAt": "2026-09-27T12:48:39.783Z",
+        "capacity": 5,
+        "locationLockedToIncident": false,
+        "createdAt": "2026-09-27T12:46:42.631Z",
+        "updatedAt": "2026-09-27T12:46:42.631Z",
+        "coordinators": []
+      }
+    }
+  },
+  {
+    "id": "L06",
+    "name": "Other organization cannot read private draft",
+    "status": "PASS",
+    "at": "2026-09-27T12:46:45.927Z",
+    "request": {
+      "method": "GET",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/drafts/e658a939-e6aa-46e9-817d-1e5e628f182c"
+    },
+    "expectedStatus": [
+      403,
+      404
+    ],
+    "httpStatus": 403,
+    "durationMs": 1818,
+    "response": {
+      "error": {
+        "code": "ORGANIZATION_ACCESS_DENIED",
+        "message": "You do not have access to this organization."
+      }
+    }
+  },
+  {
+    "id": "L07",
+    "name": "Assign event coordinator",
+    "status": "PASS",
+    "at": "2026-09-27T12:46:48.651Z",
+    "request": {
+      "method": "POST",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/coordinators",
+      "body": {
+        "membershipId": "19b7aada-5c97-4df8-86fe-673d2ac24a8d"
+      }
+    },
+    "expectedStatus": [
+      200,
+      201
+    ],
+    "httpStatus": 201,
+    "durationMs": 2711,
+    "response": {
+      "data": {
+        "id": "bc35d326-0b3b-433b-a9df-5a448dfc91b7",
+        "cleanupEventId": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+        "membershipId": "19b7aada-5c97-4df8-86fe-673d2ac24a8d",
+        "assignedByMembershipId": "19b7aada-5c97-4df8-86fe-673d2ac24a8d",
+        "assignedAt": "2026-09-27T12:46:48.783Z",
+        "removedAt": null
+      }
+    }
+  },
+  {
+    "id": "L08",
+    "name": "Publish readiness",
+    "status": "PASS",
+    "at": "2026-09-27T12:46:52.641Z",
+    "request": {
+      "method": "GET",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/publish-readiness"
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 3981,
+    "response": {
+      "data": {
+        "eventId": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+        "ready": true,
+        "checks": [
+          {
+            "code": "PUBLIC_DETAILS",
+            "ready": true,
+            "message": "Public description, instructions, and location are complete."
+          },
+          {
+            "code": "EVENT_TIME",
+            "ready": true,
+            "message": "The event has one future starting date and time."
+          },
+          {
+            "code": "ACTIVE_COORDINATOR",
+            "ready": true,
+            "message": "At least one active coordinator is assigned."
+          },
+          {
+            "code": "WORKFLOW_TRANSITION",
+            "ready": true,
+            "message": "The configured workflow allows publication."
+          },
+          {
+            "code": "INCIDENT_REVIEW",
+            "ready": true,
+            "message": "This direct event does not require an incident review."
+          },
+          {
+            "code": "INCIDENT_AVAILABLE",
+            "ready": true,
+            "message": "This direct event does not claim an incident."
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "L09",
+    "name": "Publish cleanup event",
+    "status": "PASS",
+    "at": "2026-09-27T12:47:02.664Z",
+    "request": {
+      "method": "POST",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/publish",
+      "body": {}
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 10015,
+    "response": {
+      "data": {
+        "event": {
+          "id": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+          "organization": {
+            "id": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+            "name": "SMOKE TEST Organization A"
+          },
+          "incidentId": null,
+          "title": "SMOKE TEST direct cleanup",
+          "description": "Synthetic event for hosted lifecycle smoke testing only.",
+          "lifecycleStatus": "PUBLISHED",
+          "displayStatus": "UPCOMING",
+          "eventLatitude": 6.837643,
+          "eventLongitude": 79.961131,
+          "eventAddress": "Smoke test location in official GN area",
+          "startsAt": "2026-09-27T12:48:39.783Z",
+          "capacity": 5,
+          "publishedAt": "2026-09-27T12:47:00.169Z",
+          "publicInstructions": "Test fixtures only. Do not attend.",
+          "meetingLatitude": null,
+          "meetingLongitude": null,
+          "meetingAddress": null,
+          "joinedVolunteerCount": 0
+        },
+        "incidentUpdated": false
+      }
+    }
+  },
+  {
+    "id": "L10",
+    "name": "Published event visible to volunteer",
+    "status": "PASS",
+    "at": "2026-09-27T12:47:04.548Z",
+    "request": {
+      "method": "GET",
+      "route": "/api/v1/events/e658a939-e6aa-46e9-817d-1e5e628f182c"
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 1873,
+    "response": {
+      "data": {
+        "id": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+        "organization": {
+          "id": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+          "name": "SMOKE TEST Organization A"
+        },
+        "incidentId": null,
+        "title": "SMOKE TEST direct cleanup",
+        "description": "Synthetic event for hosted lifecycle smoke testing only.",
+        "lifecycleStatus": "PUBLISHED",
+        "displayStatus": "UPCOMING",
+        "eventLatitude": 6.837643,
+        "eventLongitude": 79.961131,
+        "eventAddress": "Smoke test location in official GN area",
+        "startsAt": "2026-09-27T12:48:39.783Z",
+        "capacity": 5,
+        "publishedAt": "2026-09-27T12:47:00.169Z",
+        "publicInstructions": "Test fixtures only. Do not attend.",
+        "meetingLatitude": null,
+        "meetingLongitude": null,
+        "meetingAddress": null,
+        "joinedVolunteerCount": 0
+      }
+    }
+  },
+  {
+    "id": "L11",
+    "name": "Volunteer joins event",
+    "status": "PASS",
+    "at": "2026-09-27T12:47:11.260Z",
+    "request": {
+      "method": "POST",
+      "route": "/api/v1/events/e658a939-e6aa-46e9-817d-1e5e628f182c/participation",
+      "body": {}
+    },
+    "expectedStatus": [
+      200,
+      201
+    ],
+    "httpStatus": 201,
+    "durationMs": 6706,
+    "response": {
+      "data": {
+        "participation": {
+          "id": "a5a7f134-6195-4e10-a870-343ffa098888",
+          "status": "JOINED",
+          "attendanceStatus": "UNMARKED",
+          "attendanceMarkedAt": null,
+          "joinedAt": "2026-09-27T12:47:08.595Z",
+          "withdrawnAt": null,
+          "event": {
+            "id": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+            "organization": {
+              "id": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+              "name": "SMOKE TEST Organization A"
+            },
+            "incidentId": null,
+            "title": "SMOKE TEST direct cleanup",
+            "description": "Synthetic event for hosted lifecycle smoke testing only.",
+            "lifecycleStatus": "PUBLISHED",
+            "displayStatus": "UPCOMING",
+            "eventLatitude": 6.837643,
+            "eventLongitude": 79.961131,
+            "eventAddress": "Smoke test location in official GN area",
+            "startsAt": "2026-09-27T12:48:39.783Z",
+            "capacity": 5,
+            "publishedAt": "2026-09-27T12:47:00.169Z",
+            "publicInstructions": "Test fixtures only. Do not attend.",
+            "meetingLatitude": null,
+            "meetingLongitude": null,
+            "meetingAddress": null,
+            "joinedVolunteerCount": 1
+          }
+        },
+        "created": true,
+        "rejoined": false
+      }
+    }
+  },
+  {
+    "id": "L12",
+    "name": "Joined events list",
+    "status": "PASS",
+    "at": "2026-09-27T12:47:13.414Z",
+    "request": {
+      "method": "GET",
+      "route": "/api/v1/event-participations/me"
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 2143,
+    "response": {
+      "data": {
+        "items": [
+          {
+            "id": "a5a7f134-6195-4e10-a870-343ffa098888",
+            "status": "JOINED",
+            "attendanceStatus": "UNMARKED",
+            "attendanceMarkedAt": null,
+            "joinedAt": "2026-09-27T12:47:08.595Z",
+            "withdrawnAt": null,
+            "event": {
+              "id": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+              "organization": {
+                "id": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+                "name": "SMOKE TEST Organization A"
+              },
+              "incidentId": null,
+              "title": "SMOKE TEST direct cleanup",
+              "description": "Synthetic event for hosted lifecycle smoke testing only.",
+              "lifecycleStatus": "PUBLISHED",
+              "displayStatus": "UPCOMING",
+              "eventLatitude": 6.837643,
+              "eventLongitude": 79.961131,
+              "eventAddress": "Smoke test location in official GN area",
+              "startsAt": "2026-09-27T12:48:39.783Z",
+              "capacity": 5,
+              "publishedAt": "2026-09-27T12:47:00.169Z",
+              "publicInstructions": "Test fixtures only. Do not attend.",
+              "meetingLatitude": null,
+              "meetingLongitude": null,
+              "meetingAddress": null,
+              "joinedVolunteerCount": 1
+            }
+          }
+        ],
+        "nextCursor": null
+      }
+    }
+  },
+  {
+    "id": "L13",
+    "name": "Other organization cannot manage event",
+    "status": "PASS",
+    "at": "2026-09-27T12:47:15.191Z",
+    "request": {
+      "method": "GET",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/operations"
+    },
+    "expectedStatus": [
+      403,
+      404
+    ],
+    "httpStatus": 403,
+    "durationMs": 1765,
+    "response": {
+      "error": {
+        "code": "ORGANIZATION_ACCESS_DENIED",
+        "message": "You do not have access to this organization."
+      }
+    }
+  },
+  {
+    "id": "L14",
+    "name": "Owner lists joined volunteers",
+    "status": "PASS",
+    "at": "2026-09-27T12:47:18.522Z",
+    "request": {
+      "method": "GET",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/participants"
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 3322,
+    "response": {
+      "data": {
+        "event": {
+          "id": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+          "title": "SMOKE TEST direct cleanup",
+          "lifecycleStatus": "PUBLISHED",
+          "startsAt": "2026-09-27T12:48:39.783Z",
+          "capacity": 5
+        },
+        "participants": [
+          {
+            "id": "a5a7f134-6195-4e10-a870-343ffa098888",
+            "status": "JOINED",
+            "attendanceStatus": "UNMARKED",
+            "attendanceMarkedAt": null,
+            "joinedAt": "2026-09-27T12:47:08.595Z",
+            "removedAt": null,
+            "volunteer": {
+              "id": "3a5019d7-7666-4f72-8e7a-d6efb39e8716",
+              "fullName": "Smoke Lifecycle volunteer",
+              "phoneNumber": "+94700000000"
+            }
+          }
+        ],
+        "nextCursor": null
+      }
+    }
+  },
+  {
+    "id": "L15",
+    "name": "Advance synthetic event fixture to ongoing",
+    "status": "PASS",
+    "at": "2026-09-27T12:47:19.412Z",
+    "kind": "Fixture preparation, not a product test",
+    "eventId": "e658a939-e6aa-46e9-817d-1e5e628f182c"
+  },
+  {
+    "id": "L16",
+    "name": "Record volunteer attendance",
+    "status": "PASS",
+    "at": "2026-09-27T12:47:27.360Z",
+    "request": {
+      "method": "PATCH",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/participants/a5a7f134-6195-4e10-a870-343ffa098888/attendance",
+      "body": {
+        "status": "ATTENDED"
+      }
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 7941,
+    "response": {
+      "data": {
+        "id": "a5a7f134-6195-4e10-a870-343ffa098888",
+        "status": "JOINED",
+        "attendanceStatus": "ATTENDED",
+        "attendanceMarkedAt": "2026-09-27T12:47:23.784Z",
+        "joinedAt": "2026-09-27T12:47:08.595Z",
+        "removedAt": null,
+        "volunteer": {
+          "id": "3a5019d7-7666-4f72-8e7a-d6efb39e8716",
+          "fullName": "Smoke Lifecycle volunteer",
+          "phoneNumber": "+94700000000"
+        }
+      }
+    }
+  },
+  {
+    "id": "L17",
+    "name": "Post participant update",
+    "status": "PASS",
+    "at": "2026-09-27T12:47:37.800Z",
+    "request": {
+      "method": "POST",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/notes",
+      "body": {
+        "visibility": "PARTICIPANTS",
+        "noteText": "Synthetic smoke test participant update."
+      }
+    },
+    "expectedStatus": [
+      200,
+      201
+    ],
+    "httpStatus": 201,
+    "durationMs": 10427,
+    "response": {
+      "data": {
+        "id": "b73ef195-cc87-4d9a-851c-0fe418e3d2eb",
+        "visibility": "PARTICIPANTS",
+        "noteText": "Synthetic smoke test participant update.",
+        "author": {
+          "id": "19b7aada-5c97-4df8-86fe-673d2ac24a8d",
+          "fullName": "Smoke Lifecycle owner"
+        },
+        "createdAt": "2026-09-27T12:47:35.473Z"
+      }
+    }
+  },
+  {
+    "id": "L18",
+    "name": "Create event evidence upload intent",
+    "status": "PASS",
+    "at": "2026-09-27T12:47:44.531Z",
+    "request": {
+      "method": "POST",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/evidence/upload-intents",
+      "body": {
+        "files": [
+          {
+            "originalFileName": "smoke-event-after.png",
+            "contentType": "image/png",
+            "sizeBytes": 68
+          }
+        ]
+      }
+    },
+    "expectedStatus": 201,
+    "httpStatus": 201,
+    "durationMs": 6722,
+    "response": {
+      "data": [
+        {
+          "token": "[REDACTED]",
+          "signedUrl": "[REDACTED]",
+          "storagePath": "events/0c2f58ea-6733-4eff-9912-46ba4d6469fc/e658a939-e6aa-46e9-817d-1e5e628f182c/6fb16d28-1aec-44c1-b68c-3c6f5ee93513/fe389aee-f0e8-4f93-b1f9-588838f69889.png",
+          "originalFileName": "smoke-event-after.png",
+          "contentType": "image/png",
+          "sizeBytes": 68
+        }
+      ]
+    }
+  },
+  {
+    "id": "L19",
+    "name": "Upload event evidence photo",
+    "status": "PASS",
+    "at": "2026-09-27T12:47:45.341Z",
+    "httpStatus": 200
+  },
+  {
+    "id": "L20",
+    "name": "Register AFTER evidence",
+    "status": "PASS",
+    "at": "2026-09-27T12:47:57.263Z",
+    "request": {
+      "method": "POST",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/evidence",
+      "body": {
+        "originalFileName": "smoke-event-after.png",
+        "contentType": "image/png",
+        "sizeBytes": 68,
+        "storagePath": "events/0c2f58ea-6733-4eff-9912-46ba4d6469fc/e658a939-e6aa-46e9-817d-1e5e628f182c/6fb16d28-1aec-44c1-b68c-3c6f5ee93513/fe389aee-f0e8-4f93-b1f9-588838f69889.png",
+        "type": "AFTER",
+        "caption": "Synthetic smoke evidence"
+      }
+    },
+    "expectedStatus": 201,
+    "httpStatus": 201,
+    "durationMs": 11899,
+    "response": {
+      "data": {
+        "id": "df54f38f-4250-4e73-8589-c93ab1c3326d",
+        "type": "AFTER",
+        "caption": "Synthetic smoke evidence",
+        "url": "[SIGNED URL REDACTED]",
+        "uploadedBy": {
+          "id": "6fb16d28-1aec-44c1-b68c-3c6f5ee93513",
+          "fullName": "Smoke Lifecycle owner"
+        },
+        "uploadedAt": "2026-09-27T12:47:55.271Z"
+      }
+    }
+  },
+  {
+    "id": "L21",
+    "name": "Completion readiness",
+    "status": "PASS",
+    "at": "2026-09-27T12:48:01.225Z",
+    "request": {
+      "method": "GET",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/completion-readiness"
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 3953,
+    "response": {
+      "data": {
+        "eventId": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+        "ready": true,
+        "checks": [
+          {
+            "code": "WORKFLOW_COMPLETION",
+            "ready": true,
+            "message": "The configured workflow permits completion."
+          },
+          {
+            "code": "EVENT_STARTED",
+            "ready": true,
+            "message": "The cleanup start time has passed."
+          },
+          {
+            "code": "ATTENDANCE_FINAL",
+            "ready": true,
+            "message": "Every active volunteer has final attendance."
+          },
+          {
+            "code": "AFTER_EVIDENCE",
+            "ready": true,
+            "message": "After-cleanup evidence is available."
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "L22",
+    "name": "Complete cleanup event",
+    "status": "FAIL",
+    "at": "2026-09-27T12:48:10.214Z",
+    "request": {
+      "method": "POST",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/complete",
+      "body": {
+        "expectedUpdatedAt": "2026-09-27T12:47:19.784Z",
+        "notes": "Synthetic smoke test completed."
+      }
+    },
+    "expectedStatus": 200,
+    "httpStatus": 409,
+    "durationMs": 8524,
+    "response": {
+      "error": {
+        "code": "EVENT_STATE_CONFLICT",
+        "message": "The event changed in another request. Refresh and retry."
+      }
+    }
+  },
+  {
+    "id": "L23",
+    "name": "Volunteer receives in-app event notifications",
+    "status": "PASS",
+    "at": "2026-09-27T12:48:11.694Z",
+    "request": {
+      "method": "GET",
+      "route": "/api/v1/notifications"
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 1473,
+    "response": {
+      "data": {
+        "items": [
+          {
+            "id": "758902b1-afcb-4ac3-9b1a-c2b793c3def1",
+            "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+            "type": "EVENT_UPDATED",
+            "title": "Cleanup event update",
+            "message": "A new participant update is available for SMOKE TEST direct cleanup.",
+            "data": {
+              "eventId": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+              "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc"
+            },
+            "readAt": null,
+            "createdAt": "2026-09-27T12:47:37.636Z"
+          },
+          {
+            "id": "ccb06e91-bb52-48f2-981b-a346b9822920",
+            "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+            "type": "EVENT_UPDATED",
+            "title": "Cleanup attendance confirmed",
+            "message": "Your attendance for SMOKE TEST direct cleanup was recorded as attended.",
+            "data": {
+              "eventId": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+              "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+              "status": "ATTENDED"
+            },
+            "readAt": null,
+            "createdAt": "2026-09-27T12:47:26.583Z"
+          },
+          {
+            "id": "5dd3cc2c-babb-461a-b494-2f55a1e50cd1",
+            "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+            "type": "EVENT_JOINED",
+            "title": "You volunteered for a cleanup",
+            "message": "You are volunteering for SMOKE TEST direct cleanup.",
+            "data": {
+              "eventId": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+              "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+              "status": "JOINED"
+            },
+            "readAt": null,
+            "createdAt": "2026-09-27T12:47:09.531Z"
+          }
+        ],
+        "nextCursor": null
+      }
+    }
+  },
+  {
+    "id": "L24",
+    "name": "Completed participation appears in history",
+    "status": "PASS",
+    "at": "2026-09-27T12:48:13.792Z",
+    "request": {
+      "method": "GET",
+      "route": "/api/v1/event-participations/me?scope=history"
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 2088,
+    "response": {
+      "data": {
+        "items": [],
+        "nextCursor": null
+      }
+    }
+  },
+  {
+    "id": "L25",
+    "name": "Create disposable draft",
+    "status": "PASS",
+    "at": "2026-09-27T12:48:18.073Z",
+    "request": {
+      "method": "POST",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/drafts",
+      "body": {
+        "title": "SMOKE TEST deletable draft",
+        "description": "Synthetic event for hosted lifecycle smoke testing only.",
+        "publicInstructions": "Test fixtures only. Do not attend.",
+        "eventLatitude": 6.8376425,
+        "eventLongitude": 79.9611312062937,
+        "eventAddress": "Smoke test location in official GN area",
+        "startsAt": "2026-09-27T13:48:13.795Z",
+        "capacity": 5
+      }
+    },
+    "expectedStatus": 201,
+    "httpStatus": 201,
+    "durationMs": 4278,
+    "response": {
+      "data": {
+        "id": "7f436da0-d102-4ddf-a644-232919d3ab0f",
+        "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+        "incidentId": null,
+        "lifecycleStatus": "DRAFT",
+        "displayStatus": "DRAFT",
+        "title": "SMOKE TEST deletable draft",
+        "description": "Synthetic event for hosted lifecycle smoke testing only.",
+        "publicInstructions": "Test fixtures only. Do not attend.",
+        "eventLatitude": 6.837643,
+        "eventLongitude": 79.961131,
+        "eventAddress": "Smoke test location in official GN area",
+        "meetingLatitude": null,
+        "meetingLongitude": null,
+        "meetingAddress": null,
+        "startsAt": "2026-09-27T13:48:13.795Z",
+        "capacity": 5,
+        "locationLockedToIncident": false,
+        "createdAt": "2026-09-27T12:48:16.580Z",
+        "updatedAt": "2026-09-27T12:48:16.580Z",
+        "coordinators": []
+      }
+    }
+  },
+  {
+    "id": "L26",
+    "name": "Delete own draft",
+    "status": "PASS",
+    "at": "2026-09-27T12:48:20.132Z",
+    "request": {
+      "method": "DELETE",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/drafts/7f436da0-d102-4ddf-a644-232919d3ab0f"
+    },
+    "expectedStatus": [
+      200,
+      204
+    ],
+    "httpStatus": 204,
+    "durationMs": 2052,
+    "response": ""
+  },
+  {
+    "id": "L27",
+    "name": "Event final database state",
+    "status": "PASS",
+    "at": "2026-09-27T12:48:20.573Z",
+    "rows": [
+      {
+        "id": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+        "lifecycle_status": "PUBLISHED"
+      }
+    ]
+  },
+  {
+    "id": "CLEANUP-6fb16d28-1aec-44c1-b68c-3c6f5ee93513",
+    "name": "Remove synthetic lifecycle Auth identity",
+    "status": "PASS",
+    "at": "2026-09-27T12:48:20.913Z"
+  },
+  {
+    "id": "CLEANUP-3a5019d7-7666-4f72-8e7a-d6efb39e8716",
+    "name": "Remove synthetic lifecycle Auth identity",
+    "status": "PASS",
+    "at": "2026-09-27T12:48:21.189Z"
+  }
+]

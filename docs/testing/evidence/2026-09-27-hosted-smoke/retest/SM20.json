@@ -1,0 +1,12 @@
+{
+  "id": "SM20",
+  "name": "Incident and PostGIS point persisted in test database",
+  "status": "PASS",
+  "at": "2026-09-27T12:37:44.538Z",
+  "rows": [
+    {
+      "id": "0e1c6b71-d78a-4aa5-9a6b-463c6a93ba4f",
+      "point": "POINT(79.94 6.795)"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "SM12",
+  "name": "Citizen cannot access platform admin",
+  "status": "PASS",
+  "at": "2026-09-27T12:37:27.984Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/dashboards/platform"
+  },
+  "expectedStatus": 403,
+  "httpStatus": 403,
+  "durationMs": 1119,
+  "response": {
+    "error": {
+      "code": "AUTHORIZATION_DENIED",
+      "message": "You do not have permission to perform this action."
+    }
+  }
+}

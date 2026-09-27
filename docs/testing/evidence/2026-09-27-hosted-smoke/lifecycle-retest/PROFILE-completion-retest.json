@@ -1,0 +1,28 @@
+{
+  "id": "PROFILE-completion-retest",
+  "name": "Complete completion-retest profile",
+  "status": "PASS",
+  "at": "2026-09-27T12:49:48.767Z",
+  "request": {
+    "method": "PUT",
+    "route": "/api/v1/profile/complete",
+    "body": {
+      "fullName": "Smoke Lifecycle completion-retest",
+      "phoneNumber": "+94700000000"
+    }
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1418,
+  "response": {
+    "data": {
+      "id": "6ce62e6b-b837-499b-8eb0-907fe570069f",
+      "email": "ecotrack-life-completion-retest-1790513384268@example.com",
+      "fullName": "Smoke Lifecycle completion-retest",
+      "phoneNumber": "+94700000000",
+      "profileCompletedAt": "2026-09-27T12:49:48.902Z",
+      "platformRole": "USER",
+      "accountStatus": "ACTIVE"
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "id": "SM27",
+  "name": "Rewards summary",
+  "status": "PASS",
+  "at": "2026-09-27T12:35:25.477Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/rewards/me/summary"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 2254,
+  "response": {
+    "data": {
+      "totalPoints": 0,
+      "contributionCount": 0,
+      "breakdown": [
+        {
+          "type": "VERIFIED_INCIDENT_REPORT",
+          "label": "Verified incident report",
+          "points": 0,
+          "count": 0
+        },
+        {
+          "type": "EVENT_ATTENDED",
+          "label": "Cleanup event attended",
+          "points": 0,
+          "count": 0
+        },
+        {
+          "type": "EVENT_COMPLETED",
+          "label": "Cleanup event completed",
+          "points": 0,
+          "count": 0
+        },
+        {
+          "type": "SPECIAL_CONTRIBUTION",
+          "label": "Approved special contribution",
+          "points": 0,
+          "count": 0
+        }
+      ],
+      "achievements": []
+    }
+  }
+}

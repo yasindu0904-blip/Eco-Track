@@ -1,0 +1,27 @@
+{
+  "id": "SM30",
+  "name": "Super-admin dashboard",
+  "status": "PASS",
+  "at": "2026-09-27T12:38:06.161Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/dashboards/platform"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1740,
+  "response": {
+    "data": {
+      "users": {
+        "total": 4,
+        "active": 4
+      },
+      "organizationsByState": {},
+      "incidentsByState": {
+        "ACTIVE": 2
+      },
+      "eventsByLifecycle": {},
+      "pendingOrganizationApplications": 0
+    }
+  }
+}

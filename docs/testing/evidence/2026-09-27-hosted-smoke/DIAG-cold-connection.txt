@@ -1,0 +1,1 @@
+Local repository diagnostic (not a hosted API result): first createIncidentRecord attempt returned Prisma P2028: Unable to start a transaction in the given time. A second attempt after SELECT 1 succeeded. Initial API HTTP 500 root cause remains unconfirmed pending Northflank server logs.

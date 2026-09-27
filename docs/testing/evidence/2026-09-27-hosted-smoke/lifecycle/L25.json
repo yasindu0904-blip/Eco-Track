@@ -1,0 +1,47 @@
+{
+  "id": "L25",
+  "name": "Create disposable draft",
+  "status": "PASS",
+  "at": "2026-09-27T12:48:18.073Z",
+  "request": {
+    "method": "POST",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/drafts",
+    "body": {
+      "title": "SMOKE TEST deletable draft",
+      "description": "Synthetic event for hosted lifecycle smoke testing only.",
+      "publicInstructions": "Test fixtures only. Do not attend.",
+      "eventLatitude": 6.8376425,
+      "eventLongitude": 79.9611312062937,
+      "eventAddress": "Smoke test location in official GN area",
+      "startsAt": "2026-09-27T13:48:13.795Z",
+      "capacity": 5
+    }
+  },
+  "expectedStatus": 201,
+  "httpStatus": 201,
+  "durationMs": 4278,
+  "response": {
+    "data": {
+      "id": "7f436da0-d102-4ddf-a644-232919d3ab0f",
+      "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+      "incidentId": null,
+      "lifecycleStatus": "DRAFT",
+      "displayStatus": "DRAFT",
+      "title": "SMOKE TEST deletable draft",
+      "description": "Synthetic event for hosted lifecycle smoke testing only.",
+      "publicInstructions": "Test fixtures only. Do not attend.",
+      "eventLatitude": 6.837643,
+      "eventLongitude": 79.961131,
+      "eventAddress": "Smoke test location in official GN area",
+      "meetingLatitude": null,
+      "meetingLongitude": null,
+      "meetingAddress": null,
+      "startsAt": "2026-09-27T13:48:13.795Z",
+      "capacity": 5,
+      "locationLockedToIncident": false,
+      "createdAt": "2026-09-27T12:48:16.580Z",
+      "updatedAt": "2026-09-27T12:48:16.580Z",
+      "coordinators": []
+    }
+  }
+}

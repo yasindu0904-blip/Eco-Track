@@ -1,0 +1,9 @@
+{
+  "id": "SM19",
+  "name": "Download stored incident image",
+  "status": "PASS",
+  "at": "2026-09-27T12:37:44.149Z",
+  "httpStatus": 200,
+  "bytes": 68,
+  "expectedBytes": 68
+}

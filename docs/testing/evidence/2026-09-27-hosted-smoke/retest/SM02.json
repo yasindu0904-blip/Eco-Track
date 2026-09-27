@@ -1,0 +1,17 @@
+{
+  "id": "SM02",
+  "name": "Hosted backend health",
+  "status": "PASS",
+  "at": "2026-09-27T12:37:19.572Z",
+  "request": {
+    "method": "GET",
+    "route": "/health"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 794,
+  "response": {
+    "status": "ok",
+    "service": "ecotrack-backend"
+  }
+}

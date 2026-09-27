@@ -1,0 +1,27 @@
+{
+  "id": "RT08",
+  "name": "Cancel published cleanup event",
+  "status": "PASS",
+  "at": "2026-09-27T12:50:39.537Z",
+  "request": {
+    "method": "POST",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/2f9d1cc1-e8e1-43b7-be5c-27852c98b484/cancel",
+    "body": {
+      "expectedUpdatedAt": "2026-09-27T12:50:26.089Z",
+      "reason": "Synthetic smoke test cancellation; no real event."
+    }
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 10133,
+  "response": {
+    "data": {
+      "eventId": "2f9d1cc1-e8e1-43b7-be5c-27852c98b484",
+      "lifecycleStatus": "CANCELLED",
+      "updatedAt": "2026-09-27T12:50:37.799Z",
+      "incidentStatus": null,
+      "rewardsAwarded": 0,
+      "idempotentReplay": false
+    }
+  }
+}

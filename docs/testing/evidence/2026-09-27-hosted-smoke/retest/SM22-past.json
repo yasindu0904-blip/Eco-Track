@@ -1,0 +1,19 @@
+{
+  "id": "SM22-past",
+  "name": "Cleanup discovery past",
+  "status": "PASS",
+  "at": "2026-09-27T12:37:51.395Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/events?section=past"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1758,
+  "response": {
+    "data": {
+      "items": [],
+      "nextCursor": null
+    }
+  }
+}

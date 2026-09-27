@@ -1,0 +1,28 @@
+{
+  "id": "PROFILE-owner",
+  "name": "Complete owner profile",
+  "status": "PASS",
+  "at": "2026-09-27T12:46:26.865Z",
+  "request": {
+    "method": "PUT",
+    "route": "/api/v1/profile/complete",
+    "body": {
+      "fullName": "Smoke Lifecycle owner",
+      "phoneNumber": "+94700000000"
+    }
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1462,
+  "response": {
+    "data": {
+      "id": "6fb16d28-1aec-44c1-b68c-3c6f5ee93513",
+      "email": "ecotrack-life-owner-1790513181892@example.com",
+      "fullName": "Smoke Lifecycle owner",
+      "phoneNumber": "+94700000000",
+      "profileCompletedAt": "2026-09-27T12:46:27.005Z",
+      "platformRole": "USER",
+      "accountStatus": "ACTIVE"
+    }
+  }
+}

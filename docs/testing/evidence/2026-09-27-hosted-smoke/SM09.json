@@ -1,0 +1,23 @@
+{
+  "id": "SM09",
+  "name": "Invalid profile rejected",
+  "status": "PASS",
+  "at": "2026-09-27T12:34:53.605Z",
+  "request": {
+    "method": "PUT",
+    "route": "/api/v1/profile/complete",
+    "body": {
+      "fullName": "X",
+      "phoneNumber": "invalid"
+    }
+  },
+  "expectedStatus": 400,
+  "httpStatus": 400,
+  "durationMs": 1238,
+  "response": {
+    "error": {
+      "code": "PROFILE_INPUT_INVALID",
+      "message": "Too small: expected string to have >=2 characters"
+    }
+  }
+}

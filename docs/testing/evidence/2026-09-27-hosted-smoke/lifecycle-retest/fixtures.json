@@ -1,0 +1,7 @@
+{
+  "organizations": [],
+  "events": [
+    "2f9d1cc1-e8e1-43b7-be5c-27852c98b484"
+  ],
+  "source": "Direct SQL setup of synthetic organizations/memberships on test DB; registration/approval flow not covered."
+}

@@ -1,0 +1,6 @@
+{
+  "id": "CLEANUP",
+  "name": "Remove temporary Supabase Auth identity",
+  "status": "PASS",
+  "at": "2026-09-27T12:35:31.248Z"
+}

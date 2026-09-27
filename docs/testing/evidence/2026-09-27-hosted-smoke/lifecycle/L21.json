@@ -1,0 +1,41 @@
+{
+  "id": "L21",
+  "name": "Completion readiness",
+  "status": "PASS",
+  "at": "2026-09-27T12:48:01.225Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/completion-readiness"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 3953,
+  "response": {
+    "data": {
+      "eventId": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+      "ready": true,
+      "checks": [
+        {
+          "code": "WORKFLOW_COMPLETION",
+          "ready": true,
+          "message": "The configured workflow permits completion."
+        },
+        {
+          "code": "EVENT_STARTED",
+          "ready": true,
+          "message": "The cleanup start time has passed."
+        },
+        {
+          "code": "ATTENDANCE_FINAL",
+          "ready": true,
+          "message": "Every active volunteer has final attendance."
+        },
+        {
+          "code": "AFTER_EVIDENCE",
+          "ready": true,
+          "message": "After-cleanup evidence is available."
+        }
+      ]
+    }
+  }
+}

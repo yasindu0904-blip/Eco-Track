@@ -1,0 +1,38 @@
+{
+  "id": "SM16",
+  "name": "Create incident with uploaded evidence",
+  "status": "FAIL",
+  "at": "2026-09-27T12:35:06.530Z",
+  "request": {
+    "method": "POST",
+    "route": "/api/v1/incidents",
+    "body": {
+      "submissionId": "9c8b8af6-0d84-4471-acd7-4422924c869c",
+      "categoryId": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+      "title": "SMOKE TEST 2026-09-27 - synthetic incident",
+      "description": "Automated hosted smoke test fixture. This is not a real environmental incident.",
+      "severity": "LOW",
+      "latitude": 6.795,
+      "longitude": 79.94,
+      "evidence": [
+        {
+          "originalFileName": "smoke-test-pixel.png",
+          "contentType": "image/png",
+          "sizeBytes": 68,
+          "storagePath": "incidents/e80026ce-137d-478d-9b73-ed7483b6e4d1/9c8b8af6-0d84-4471-acd7-4422924c869c/797de6df-82ee-48e7-adbd-691be87bbbef.png",
+          "sortOrder": 0,
+          "caption": "Synthetic smoke-test image"
+        }
+      ]
+    }
+  },
+  "expectedStatus": 201,
+  "httpStatus": 500,
+  "durationMs": 4178,
+  "response": {
+    "error": {
+      "code": "INTERNAL_SERVER_ERROR",
+      "message": "An unexpected error occurred."
+    }
+  }
+}

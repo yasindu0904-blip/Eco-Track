@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-09-27T11:54:57.284Z",
+  "targetProject": "eco-track-test",
+  "targetProjectReference": "zkiciluuktuzkidjaiaz",
+  "connectionCheck": "PASS",
+  "migrationsApplied": true,
+  "migrations": {
+    "total": 20,
+    "finished": 20
+  },
+  "publicTables": {
+    "total": 30,
+    "rls_enabled": 29
+  },
+  "geoTriggers": [
+    {
+      "tgname": "incidents_sync_geo_point"
+    },
+    {
+      "tgname": "cleanup_events_sync_geo_points"
+    }
+  ],
+  "seedCompleted": true,
+  "databaseChangesMade": true,
+  "hostedDeploymentChanged": false,
+  "nextSteps": [
+    "Import official GN reference geography",
+    "Prepare test accounts and fixtures",
+    "User to switch Northflank backend and worker runtime settings"
+  ]
+}

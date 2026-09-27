@@ -1,0 +1,51 @@
+{
+  "id": "L08",
+  "name": "Publish readiness",
+  "status": "PASS",
+  "at": "2026-09-27T12:46:52.641Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/publish-readiness"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 3981,
+  "response": {
+    "data": {
+      "eventId": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+      "ready": true,
+      "checks": [
+        {
+          "code": "PUBLIC_DETAILS",
+          "ready": true,
+          "message": "Public description, instructions, and location are complete."
+        },
+        {
+          "code": "EVENT_TIME",
+          "ready": true,
+          "message": "The event has one future starting date and time."
+        },
+        {
+          "code": "ACTIVE_COORDINATOR",
+          "ready": true,
+          "message": "At least one active coordinator is assigned."
+        },
+        {
+          "code": "WORKFLOW_TRANSITION",
+          "ready": true,
+          "message": "The configured workflow allows publication."
+        },
+        {
+          "code": "INCIDENT_REVIEW",
+          "ready": true,
+          "message": "This direct event does not require an incident review."
+        },
+        {
+          "code": "INCIDENT_AVAILABLE",
+          "ready": true,
+          "message": "This direct event does not claim an incident."
+        }
+      ]
+    }
+  }
+}

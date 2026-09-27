@@ -1,0 +1,34 @@
+{
+  "id": "L18",
+  "name": "Create event evidence upload intent",
+  "status": "PASS",
+  "at": "2026-09-27T12:47:44.531Z",
+  "request": {
+    "method": "POST",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/evidence/upload-intents",
+    "body": {
+      "files": [
+        {
+          "originalFileName": "smoke-event-after.png",
+          "contentType": "image/png",
+          "sizeBytes": 68
+        }
+      ]
+    }
+  },
+  "expectedStatus": 201,
+  "httpStatus": 201,
+  "durationMs": 6722,
+  "response": {
+    "data": [
+      {
+        "token": "[REDACTED]",
+        "signedUrl": "[REDACTED]",
+        "storagePath": "events/0c2f58ea-6733-4eff-9912-46ba4d6469fc/e658a939-e6aa-46e9-817d-1e5e628f182c/6fb16d28-1aec-44c1-b68c-3c6f5ee93513/fe389aee-f0e8-4f93-b1f9-588838f69889.png",
+        "originalFileName": "smoke-event-after.png",
+        "contentType": "image/png",
+        "sizeBytes": 68
+      }
+    ]
+  }
+}

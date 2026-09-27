@@ -1,0 +1,35 @@
+{
+  "id": "SM14",
+  "name": "Create signed incident photo upload intent",
+  "status": "PASS",
+  "at": "2026-09-27T12:35:01.658Z",
+  "request": {
+    "method": "POST",
+    "route": "/api/v1/incidents/evidence/upload-intents",
+    "body": {
+      "submissionId": "9c8b8af6-0d84-4471-acd7-4422924c869c",
+      "files": [
+        {
+          "originalFileName": "smoke-test-pixel.png",
+          "contentType": "image/png",
+          "sizeBytes": 68
+        }
+      ]
+    }
+  },
+  "expectedStatus": 201,
+  "httpStatus": 201,
+  "durationMs": 2652,
+  "response": {
+    "data": [
+      {
+        "storagePath": "incidents/e80026ce-137d-478d-9b73-ed7483b6e4d1/9c8b8af6-0d84-4471-acd7-4422924c869c/797de6df-82ee-48e7-adbd-691be87bbbef.png",
+        "token": "[REDACTED]",
+        "signedUrl": "[REDACTED]",
+        "originalFileName": "smoke-test-pixel.png",
+        "contentType": "image/png",
+        "sizeBytes": 68
+      }
+    ]
+  }
+}

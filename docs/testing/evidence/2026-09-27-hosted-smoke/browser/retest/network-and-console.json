@@ -1,0 +1,57 @@
+[
+  {
+    "kind": "api",
+    "route": "/api/v1/auth/me",
+    "status": 200
+  },
+  {
+    "kind": "api",
+    "route": "/api/v1/auth/me",
+    "status": 200
+  },
+  {
+    "kind": "api",
+    "route": "/api/v1/notifications/unread-count",
+    "status": 200
+  },
+  {
+    "kind": "api",
+    "route": "/api/v1/dashboards/citizen",
+    "status": 200
+  },
+  {
+    "kind": "api",
+    "route": "/api/v1/organization-memberships/me/active",
+    "status": 200
+  },
+  {
+    "kind": "api",
+    "route": "/api/v1/incident-categories",
+    "status": 200
+  },
+  {
+    "kind": "api",
+    "route": "/api/v1/incident-categories",
+    "status": 200
+  },
+  {
+    "kind": "api",
+    "route": "/api/v1/events/nearby",
+    "status": 200
+  },
+  {
+    "kind": "api",
+    "route": "/api/v1/incidents/nearby",
+    "status": 200
+  },
+  {
+    "kind": "api",
+    "route": "/api/v1/incident-categories",
+    "status": 200
+  },
+  {
+    "kind": "api",
+    "route": "/api/v1/incidents/me",
+    "status": 200
+  }
+]

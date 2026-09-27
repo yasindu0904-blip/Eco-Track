@@ -1,0 +1,22 @@
+{
+  "id": "SM13",
+  "name": "Malformed incident rejected",
+  "status": "PASS",
+  "at": "2026-09-27T12:37:29.107Z",
+  "request": {
+    "method": "POST",
+    "route": "/api/v1/incidents",
+    "body": {
+      "title": "x"
+    }
+  },
+  "expectedStatus": 400,
+  "httpStatus": 400,
+  "durationMs": 1121,
+  "response": {
+    "error": {
+      "code": "INCIDENT_REQUEST_INVALID",
+      "message": "submissionId: Invalid input: expected string, received undefined"
+    }
+  }
+}

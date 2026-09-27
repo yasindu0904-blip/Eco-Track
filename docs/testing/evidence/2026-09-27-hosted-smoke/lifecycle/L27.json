@@ -1,0 +1,12 @@
+{
+  "id": "L27",
+  "name": "Event final database state",
+  "status": "PASS",
+  "at": "2026-09-27T12:48:20.573Z",
+  "rows": [
+    {
+      "id": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+      "lifecycle_status": "PUBLISHED"
+    }
+  ]
+}

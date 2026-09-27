@@ -1,0 +1,19 @@
+{
+  "id": "SM04",
+  "name": "Unknown route returns controlled 404",
+  "status": "PASS",
+  "at": "2026-09-27T12:37:20.036Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/smoke-nonexistent"
+  },
+  "expectedStatus": 404,
+  "httpStatus": 404,
+  "durationMs": 232,
+  "response": {
+    "error": {
+      "code": "ROUTE_NOT_FOUND",
+      "message": "The requested route was not found."
+    }
+  }
+}

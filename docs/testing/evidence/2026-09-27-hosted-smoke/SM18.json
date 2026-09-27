@@ -1,0 +1,5 @@
+{
+  "id": "SM18",
+  "status": "BLOCKED",
+  "reason": "Initial incident creation failed (SM16); dependent step not executed. See retest for subsequent execution."
+}

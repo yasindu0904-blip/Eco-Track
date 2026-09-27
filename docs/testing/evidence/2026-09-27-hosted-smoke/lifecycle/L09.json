@@ -1,0 +1,42 @@
+{
+  "id": "L09",
+  "name": "Publish cleanup event",
+  "status": "PASS",
+  "at": "2026-09-27T12:47:02.664Z",
+  "request": {
+    "method": "POST",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/publish",
+    "body": {}
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 10015,
+  "response": {
+    "data": {
+      "event": {
+        "id": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+        "organization": {
+          "id": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+          "name": "SMOKE TEST Organization A"
+        },
+        "incidentId": null,
+        "title": "SMOKE TEST direct cleanup",
+        "description": "Synthetic event for hosted lifecycle smoke testing only.",
+        "lifecycleStatus": "PUBLISHED",
+        "displayStatus": "UPCOMING",
+        "eventLatitude": 6.837643,
+        "eventLongitude": 79.961131,
+        "eventAddress": "Smoke test location in official GN area",
+        "startsAt": "2026-09-27T12:48:39.783Z",
+        "capacity": 5,
+        "publishedAt": "2026-09-27T12:47:00.169Z",
+        "publicInstructions": "Test fixtures only. Do not attend.",
+        "meetingLatitude": null,
+        "meetingLongitude": null,
+        "meetingAddress": null,
+        "joinedVolunteerCount": 0
+      },
+      "incidentUpdated": false
+    }
+  }
+}

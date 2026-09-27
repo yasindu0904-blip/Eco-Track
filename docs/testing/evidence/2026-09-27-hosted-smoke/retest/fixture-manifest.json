@@ -1,0 +1,9 @@
+{
+  "profileId": "6f8f58b3-1571-48fd-b726-1f6d9366121b",
+  "incidentId": "0e1c6b71-d78a-4aa5-9a6b-463c6a93ba4f",
+  "authUserId": "e3329399-e36b-47bb-9ed0-258b1beaf005",
+  "storagePaths": [
+    "incidents/6f8f58b3-1571-48fd-b726-1f6d9366121b/e79d3b03-86e2-40ba-987e-3b9da6cbfd84/bcc0f0de-7625-4fec-b46b-c3d02ffc84f7.png"
+  ],
+  "note": "Synthetic test database records retained; temporary Auth user deleted after run."
+}

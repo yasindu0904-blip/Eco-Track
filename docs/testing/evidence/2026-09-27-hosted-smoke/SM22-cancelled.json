@@ -1,0 +1,19 @@
+{
+  "id": "SM22-cancelled",
+  "name": "Cleanup discovery cancelled",
+  "status": "PASS",
+  "at": "2026-09-27T12:35:15.572Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/events?section=cancelled"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1765,
+  "response": {
+    "data": {
+      "items": [],
+      "nextCursor": null
+    }
+  }
+}

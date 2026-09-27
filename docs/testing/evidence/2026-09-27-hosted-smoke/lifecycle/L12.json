@@ -1,0 +1,51 @@
+{
+  "id": "L12",
+  "name": "Joined events list",
+  "status": "PASS",
+  "at": "2026-09-27T12:47:13.414Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/event-participations/me"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 2143,
+  "response": {
+    "data": {
+      "items": [
+        {
+          "id": "a5a7f134-6195-4e10-a870-343ffa098888",
+          "status": "JOINED",
+          "attendanceStatus": "UNMARKED",
+          "attendanceMarkedAt": null,
+          "joinedAt": "2026-09-27T12:47:08.595Z",
+          "withdrawnAt": null,
+          "event": {
+            "id": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+            "organization": {
+              "id": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+              "name": "SMOKE TEST Organization A"
+            },
+            "incidentId": null,
+            "title": "SMOKE TEST direct cleanup",
+            "description": "Synthetic event for hosted lifecycle smoke testing only.",
+            "lifecycleStatus": "PUBLISHED",
+            "displayStatus": "UPCOMING",
+            "eventLatitude": 6.837643,
+            "eventLongitude": 79.961131,
+            "eventAddress": "Smoke test location in official GN area",
+            "startsAt": "2026-09-27T12:48:39.783Z",
+            "capacity": 5,
+            "publishedAt": "2026-09-27T12:47:00.169Z",
+            "publicInstructions": "Test fixtures only. Do not attend.",
+            "meetingLatitude": null,
+            "meetingLongitude": null,
+            "meetingAddress": null,
+            "joinedVolunteerCount": 1
+          }
+        }
+      ],
+      "nextCursor": null
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "SM23",
+  "name": "Nearby cleanup event map",
+  "status": "PASS",
+  "at": "2026-09-27T12:37:54.559Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/events/nearby?latitude=6.795&longitude=79.94&radiusMeters=2000"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1424,
+  "response": {
+    "data": {
+      "type": "FeatureCollection",
+      "features": [],
+      "nextCursor": null
+    }
+  }
+}

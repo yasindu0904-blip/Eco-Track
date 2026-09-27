@@ -1,0 +1,27 @@
+{
+  "id": "SM24",
+  "name": "Citizen dashboard",
+  "status": "PASS",
+  "at": "2026-09-27T12:37:57.745Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/dashboards/citizen"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 3184,
+  "response": {
+    "data": {
+      "reportsByState": {
+        "ACTIVE": 1
+      },
+      "joinedEvents": 0,
+      "upcomingEvents": 0,
+      "unreadNotifications": 0,
+      "contributions": {
+        "count": 0,
+        "points": 0
+      }
+    }
+  }
+}
