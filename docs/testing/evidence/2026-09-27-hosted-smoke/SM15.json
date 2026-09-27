@@ -1,0 +1,10 @@
+{
+  "id": "SM15",
+  "name": "Upload actual PNG through signed Storage URL",
+  "status": "PASS",
+  "at": "2026-09-27T12:35:02.350Z",
+  "httpStatus": 200,
+  "durationMs": 690,
+  "response": "{\"Key\":\"incident-evidence/incidents/e80026ce-137d-478d-9b73-ed7483b6e4d1/9c8b8af6-0d84-4471-acd7-4422924c869c/797de6df-82ee-48e7-adbd-691be87bbbef.png\"}",
+  "asset": "Synthetic 1x1 PNG, not camera evidence"
+}

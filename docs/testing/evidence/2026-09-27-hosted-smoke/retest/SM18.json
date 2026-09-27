@@ -1,0 +1,53 @@
+{
+  "id": "SM18",
+  "name": "Retrieve incident and signed photo link",
+  "status": "PASS",
+  "at": "2026-09-27T12:37:43.484Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/incidents/me/0e1c6b71-d78a-4aa5-9a6b-463c6a93ba4f"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 2065,
+  "response": {
+    "data": {
+      "id": "0e1c6b71-d78a-4aa5-9a6b-463c6a93ba4f",
+      "title": "SMOKE TEST 2026-09-27 - synthetic incident",
+      "description": "Automated hosted smoke test fixture. This is not a real environmental incident.",
+      "category": {
+        "id": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+        "name": "Environmental Damage",
+        "description": "Damage to trees, waterways, public green space, or ecosystems."
+      },
+      "severity": "LOW",
+      "status": "ACTIVE",
+      "latitude": 6.795,
+      "longitude": 79.94,
+      "addressText": null,
+      "reportedAt": "2026-09-27T12:37:35.169Z",
+      "highlightUntil": "2026-09-29T12:37:35.169Z",
+      "archiveAfter": "2026-10-06T12:37:35.169Z",
+      "resolvedAt": null,
+      "archivedAt": null,
+      "thumbnailUrl": "[SIGNED URL REDACTED]",
+      "photos": [
+        {
+          "id": "7a1f5d4b-e31e-481f-9063-b8294471f0ab",
+          "url": "[SIGNED URL REDACTED]",
+          "caption": "Synthetic smoke-test image",
+          "sortOrder": 0
+        }
+      ],
+      "statusHistory": [
+        {
+          "id": "afd79e08-e2f2-487d-9d5d-bcdac3327313",
+          "fromStatus": null,
+          "toStatus": "ACTIVE",
+          "reason": "Incident reported.",
+          "changedAt": "2026-09-27T12:37:35.230Z"
+        }
+      ]
+    }
+  }
+}

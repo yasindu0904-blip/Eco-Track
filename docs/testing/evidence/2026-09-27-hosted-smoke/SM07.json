@@ -1,0 +1,24 @@
+{
+  "id": "SM07",
+  "name": "Hosted API verifies Supabase identity",
+  "status": "PASS",
+  "at": "2026-09-27T12:34:52.033Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/auth/me"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1167,
+  "response": {
+    "data": {
+      "id": "e80026ce-137d-478d-9b73-ed7483b6e4d1",
+      "email": "ecotrack-smoke-1790512489812@example.com",
+      "fullName": null,
+      "phoneNumber": null,
+      "profileCompletedAt": null,
+      "platformRole": "USER",
+      "accountStatus": "ACTIVE"
+    }
+  }
+}

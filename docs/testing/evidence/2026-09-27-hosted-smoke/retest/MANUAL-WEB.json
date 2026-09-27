@@ -1,0 +1,7 @@
+{
+  "id": "MANUAL-WEB",
+  "name": "Web UI rendering and browser interactions",
+  "status": "NOT_RUN",
+  "at": "2026-09-27T12:38:08.741Z",
+  "reason": "No authenticated browser session available; API checks do not establish UI correctness."
+}

@@ -1,0 +1,23 @@
+{
+  "id": "L22",
+  "name": "Complete cleanup event",
+  "status": "FAIL",
+  "at": "2026-09-27T12:48:10.214Z",
+  "request": {
+    "method": "POST",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/complete",
+    "body": {
+      "expectedUpdatedAt": "2026-09-27T12:47:19.784Z",
+      "notes": "Synthetic smoke test completed."
+    }
+  },
+  "expectedStatus": 200,
+  "httpStatus": 409,
+  "durationMs": 8524,
+  "response": {
+    "error": {
+      "code": "EVENT_STATE_CONFLICT",
+      "message": "The event changed in another request. Refresh and retry."
+    }
+  }
+}

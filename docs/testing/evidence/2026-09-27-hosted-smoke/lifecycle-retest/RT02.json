@@ -1,0 +1,81 @@
+{
+  "id": "RT02",
+  "name": "Refresh event operations before completion",
+  "status": "PASS",
+  "at": "2026-09-27T12:49:56.585Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/operations"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 6475,
+  "response": {
+    "data": {
+      "event": {
+        "id": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+        "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+        "incidentId": null,
+        "title": "SMOKE TEST direct cleanup",
+        "lifecycleStatus": "PUBLISHED",
+        "startsAt": "2026-09-27T12:46:19.784Z",
+        "updatedAt": "2026-09-27T12:47:19.784Z",
+        "completedAt": null,
+        "cancelledAt": null,
+        "cancellationReason": null,
+        "currentWorkflowStatus": {
+          "id": "5c31b6b2-9839-4e1b-97b6-a3ddabf0c13e",
+          "code": "PUBLISHED",
+          "label": "Published",
+          "lifecycleStatus": "PUBLISHED"
+        }
+      },
+      "notes": [
+        {
+          "id": "b73ef195-cc87-4d9a-851c-0fe418e3d2eb",
+          "visibility": "PARTICIPANTS",
+          "noteText": "Synthetic smoke test participant update.",
+          "author": {
+            "id": "19b7aada-5c97-4df8-86fe-673d2ac24a8d",
+            "fullName": "Smoke Lifecycle owner"
+          },
+          "createdAt": "2026-09-27T12:47:35.473Z"
+        }
+      ],
+      "evidence": [
+        {
+          "id": "df54f38f-4250-4e73-8589-c93ab1c3326d",
+          "type": "AFTER",
+          "caption": "Synthetic smoke evidence",
+          "url": "[SIGNED URL REDACTED]",
+          "uploadedBy": {
+            "id": "6fb16d28-1aec-44c1-b68c-3c6f5ee93513",
+            "fullName": "Smoke Lifecycle owner"
+          },
+          "uploadedAt": "2026-09-27T12:47:55.271Z"
+        }
+      ],
+      "history": [
+        {
+          "id": "9754495a-c2fd-4da4-9239-62258aa0a1c2",
+          "fromStatus": {
+            "id": "884d0963-5094-435b-b2e8-668c498dc646",
+            "label": "Draft",
+            "lifecycleStatus": "DRAFT"
+          },
+          "toStatus": {
+            "id": "5c31b6b2-9839-4e1b-97b6-a3ddabf0c13e",
+            "label": "Published",
+            "lifecycleStatus": "PUBLISHED"
+          },
+          "changedBy": {
+            "id": "19b7aada-5c97-4df8-86fe-673d2ac24a8d",
+            "fullName": "Smoke Lifecycle owner"
+          },
+          "notes": "Cleanup event published.",
+          "changedAt": "2026-09-27T12:47:00.169Z"
+        }
+      ]
+    }
+  }
+}

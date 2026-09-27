@@ -1,0 +1,20 @@
+{
+  "organizations": [
+    {
+      "id": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+      "membership": "19b7aada-5c97-4df8-86fe-673d2ac24a8d",
+      "ownerProfile": "6fb16d28-1aec-44c1-b68c-3c6f5ee93513",
+      "areaId": "6783fd92-c3e6-454f-bb92-1e3fe429dd32"
+    },
+    {
+      "id": "a2bf1687-2b9e-49b3-8329-ea41fe32d4f5",
+      "membership": "d0ee4ccc-d03e-49d5-b7ee-1ca9945b88b1",
+      "ownerProfile": "3a5019d7-7666-4f72-8e7a-d6efb39e8716",
+      "areaId": "358a3dc3-91d4-428c-94c2-29266a9f8c84"
+    }
+  ],
+  "events": [
+    "e658a939-e6aa-46e9-817d-1e5e628f182c"
+  ],
+  "source": "Direct SQL setup of synthetic organizations/memberships on test DB; registration/approval flow not covered."
+}

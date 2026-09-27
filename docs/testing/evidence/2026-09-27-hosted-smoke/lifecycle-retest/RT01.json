@@ -1,0 +1,12 @@
+{
+  "id": "RT01",
+  "name": "Inspect fixture timestamp precision",
+  "status": "PASS",
+  "at": "2026-09-27T12:49:49.495Z",
+  "kind": "Harness diagnostic",
+  "before": {
+    "precise_timestamp": "2026-09-27 12:47:19.784275+00",
+    "lifecycle_status": "PUBLISHED"
+  },
+  "initialRequest": "2026-09-27T12:47:19.784Z"
+}

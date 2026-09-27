@@ -1,0 +1,28 @@
+{
+  "id": "SM10",
+  "name": "Complete test profile",
+  "status": "PASS",
+  "at": "2026-09-27T12:34:55.048Z",
+  "request": {
+    "method": "PUT",
+    "route": "/api/v1/profile/complete",
+    "body": {
+      "fullName": "Smoke Test Temporary User",
+      "phoneNumber": "+94700000000"
+    }
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1441,
+  "response": {
+    "data": {
+      "id": "e80026ce-137d-478d-9b73-ed7483b6e4d1",
+      "email": "ecotrack-smoke-1790512489812@example.com",
+      "fullName": "Smoke Test Temporary User",
+      "phoneNumber": "+94700000000",
+      "profileCompletedAt": "2026-09-27T12:34:55.184Z",
+      "platformRole": "USER",
+      "accountStatus": "ACTIVE"
+    }
+  }
+}

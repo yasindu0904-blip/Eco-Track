@@ -1,0 +1,16 @@
+{
+  "id": "SM28",
+  "name": "GN division search",
+  "status": "PASS",
+  "at": "2026-09-27T12:38:03.995Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/administrative-areas?search=Kesbewa"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1118,
+  "response": {
+    "data": []
+  }
+}

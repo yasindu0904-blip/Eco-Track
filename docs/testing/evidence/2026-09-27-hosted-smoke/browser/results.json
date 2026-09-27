@@ -1,0 +1,70 @@
+[
+  {
+    "id": "WEB01",
+    "status": "PASS",
+    "at": "2026-09-27T12:39:46.156Z",
+    "name": "Hosted login page renders",
+    "url": "https://eco-track-ctd.pages.dev/",
+    "screenshot": "WEB01-login.png"
+  },
+  {
+    "id": "WEB02",
+    "status": "PASS",
+    "at": "2026-09-27T12:40:01.579Z",
+    "name": "Authenticated citizen dashboard renders against hosted API",
+    "screenshot": "WEB02-dashboard.png",
+    "setup": "Injected real Supabase session for synthetic confirmed user; email magic-link delivery NOT tested"
+  },
+  {
+    "id": "WEB03",
+    "status": "PASS",
+    "at": "2026-09-27T12:40:01.744Z",
+    "name": "Report incident page navigation/render",
+    "screenshot": "WEB03.png",
+    "visibleText": "Opening EcoTrack\n\nLoading this feature securely…"
+  },
+  {
+    "id": "WEB04",
+    "status": "PASS",
+    "at": "2026-09-27T12:40:01.984Z",
+    "name": "Find cleanup activity page navigation/render",
+    "screenshot": "WEB04.png",
+    "visibleText": "Report incident\nMy Reports\nUse my location\nRefresh events\nUpcoming\nOngoing\nPast\nCancelled\nAwaiting cleanup\nSearch radius\n1 km\n2 km\n3 km\nLocation is required before events are loaded\nFind a GN Division\n+\n−\n Leaflet | © OpenStreetMap contributors\nUse your location to begin"
+  },
+  {
+    "id": "WEB04-awaiting",
+    "status": "PASS",
+    "at": "2026-09-27T12:40:02.142Z",
+    "name": "Awaiting cleanup tab opens",
+    "screenshot": "WEB04-awaiting.png"
+  },
+  {
+    "id": "WEB05",
+    "status": "PASS",
+    "at": "2026-09-27T12:40:02.314Z",
+    "name": "My Reports page navigation/render",
+    "screenshot": "WEB05.png",
+    "visibleText": "Report incident\nMy Reports\nYOUR ACTIVITY\nMy Reports\n＋ New report\nActive\nResolved\nAll\nLoading your reports…\nPrevious page\nPage 1\nNext page\nRefresh"
+  },
+  {
+    "id": "WEB06",
+    "status": "PASS",
+    "at": "2026-09-27T12:40:02.484Z",
+    "name": "Notifications page navigation/render",
+    "screenshot": "WEB06.png",
+    "visibleText": "Opening EcoTrack\n\nLoading this feature securely…"
+  },
+  {
+    "id": "WEB07",
+    "status": "PASS",
+    "at": "2026-09-27T12:40:02.485Z",
+    "name": "No uncaught browser JavaScript errors",
+    "errors": []
+  },
+  {
+    "id": "WEB-CLEANUP",
+    "status": "PASS",
+    "at": "2026-09-27T12:40:02.801Z",
+    "name": "Delete synthetic Auth identity"
+  }
+]

@@ -1,0 +1,24 @@
+{
+  "id": "SETUP-owner",
+  "name": "Provision owner",
+  "status": "PASS",
+  "at": "2026-09-27T12:46:24.887Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/auth/me"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1803,
+  "response": {
+    "data": {
+      "id": "6fb16d28-1aec-44c1-b68c-3c6f5ee93513",
+      "email": "ecotrack-life-owner-1790513181892@example.com",
+      "fullName": null,
+      "phoneNumber": null,
+      "profileCompletedAt": null,
+      "platformRole": "USER",
+      "accountStatus": "ACTIVE"
+    }
+  }
+}

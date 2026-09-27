@@ -1,0 +1,29 @@
+{
+  "id": "RT06",
+  "name": "Assign cancellation test coordinator",
+  "status": "PASS",
+  "at": "2026-09-27T12:50:18.661Z",
+  "request": {
+    "method": "POST",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/2f9d1cc1-e8e1-43b7-be5c-27852c98b484/coordinators",
+    "body": {
+      "membershipId": "126b5369-7448-44c4-8ddb-a0d3b9dcaac6"
+    }
+  },
+  "expectedStatus": [
+    200,
+    201
+  ],
+  "httpStatus": 201,
+  "durationMs": 2742,
+  "response": {
+    "data": {
+      "id": "a3b32e9f-09cc-4796-aa89-8731b59562d1",
+      "cleanupEventId": "2f9d1cc1-e8e1-43b7-be5c-27852c98b484",
+      "membershipId": "126b5369-7448-44c4-8ddb-a0d3b9dcaac6",
+      "assignedByMembershipId": "126b5369-7448-44c4-8ddb-a0d3b9dcaac6",
+      "assignedAt": "2026-09-27T12:50:18.784Z",
+      "removedAt": null
+    }
+  }
+}

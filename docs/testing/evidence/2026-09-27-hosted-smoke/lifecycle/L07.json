@@ -1,0 +1,29 @@
+{
+  "id": "L07",
+  "name": "Assign event coordinator",
+  "status": "PASS",
+  "at": "2026-09-27T12:46:48.651Z",
+  "request": {
+    "method": "POST",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/coordinators",
+    "body": {
+      "membershipId": "19b7aada-5c97-4df8-86fe-673d2ac24a8d"
+    }
+  },
+  "expectedStatus": [
+    200,
+    201
+  ],
+  "httpStatus": 201,
+  "durationMs": 2711,
+  "response": {
+    "data": {
+      "id": "bc35d326-0b3b-433b-a9df-5a448dfc91b7",
+      "cleanupEventId": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+      "membershipId": "19b7aada-5c97-4df8-86fe-673d2ac24a8d",
+      "assignedByMembershipId": "19b7aada-5c97-4df8-86fe-673d2ac24a8d",
+      "assignedAt": "2026-09-27T12:46:48.783Z",
+      "removedAt": null
+    }
+  }
+}

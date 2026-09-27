@@ -1,0 +1,22 @@
+{
+  "id": "L13",
+  "name": "Other organization cannot manage event",
+  "status": "PASS",
+  "at": "2026-09-27T12:47:15.191Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/operations"
+  },
+  "expectedStatus": [
+    403,
+    404
+  ],
+  "httpStatus": 403,
+  "durationMs": 1765,
+  "response": {
+    "error": {
+      "code": "ORGANIZATION_ACCESS_DENIED",
+      "message": "You do not have access to this organization."
+    }
+  }
+}

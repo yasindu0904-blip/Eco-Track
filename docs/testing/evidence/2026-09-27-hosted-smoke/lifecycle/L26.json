@@ -1,0 +1,17 @@
+{
+  "id": "L26",
+  "name": "Delete own draft",
+  "status": "PASS",
+  "at": "2026-09-27T12:48:20.132Z",
+  "request": {
+    "method": "DELETE",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/drafts/7f436da0-d102-4ddf-a644-232919d3ab0f"
+  },
+  "expectedStatus": [
+    200,
+    204
+  ],
+  "httpStatus": 204,
+  "durationMs": 2052,
+  "response": ""
+}

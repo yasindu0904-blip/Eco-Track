@@ -1,0 +1,19 @@
+{
+  "id": "SM05",
+  "name": "Invalid bearer token rejected",
+  "status": "PASS",
+  "at": "2026-09-27T12:34:49.811Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/auth/me"
+  },
+  "expectedStatus": 401,
+  "httpStatus": 401,
+  "durationMs": 675,
+  "response": {
+    "error": {
+      "code": "AUTH_TOKEN_INVALID",
+      "message": "The access token is invalid or expired."
+    }
+  }
+}

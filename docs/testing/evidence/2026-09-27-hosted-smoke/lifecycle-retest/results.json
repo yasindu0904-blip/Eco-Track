@@ -1,0 +1,344 @@
+[
+  {
+    "id": "SETUP-completion-retest",
+    "name": "Provision completion-retest",
+    "status": "PASS",
+    "at": "2026-09-27T12:49:46.942Z",
+    "request": {
+      "method": "GET",
+      "route": "/api/v1/auth/me"
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 1796,
+    "response": {
+      "data": {
+        "id": "6ce62e6b-b837-499b-8eb0-907fe570069f",
+        "email": "ecotrack-life-completion-retest-1790513384268@example.com",
+        "fullName": null,
+        "phoneNumber": null,
+        "profileCompletedAt": null,
+        "platformRole": "USER",
+        "accountStatus": "ACTIVE"
+      }
+    }
+  },
+  {
+    "id": "PROFILE-completion-retest",
+    "name": "Complete completion-retest profile",
+    "status": "PASS",
+    "at": "2026-09-27T12:49:48.767Z",
+    "request": {
+      "method": "PUT",
+      "route": "/api/v1/profile/complete",
+      "body": {
+        "fullName": "Smoke Lifecycle completion-retest",
+        "phoneNumber": "+94700000000"
+      }
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 1418,
+    "response": {
+      "data": {
+        "id": "6ce62e6b-b837-499b-8eb0-907fe570069f",
+        "email": "ecotrack-life-completion-retest-1790513384268@example.com",
+        "fullName": "Smoke Lifecycle completion-retest",
+        "phoneNumber": "+94700000000",
+        "profileCompletedAt": "2026-09-27T12:49:48.902Z",
+        "platformRole": "USER",
+        "accountStatus": "ACTIVE"
+      }
+    }
+  },
+  {
+    "id": "RT01",
+    "name": "Inspect fixture timestamp precision",
+    "status": "PASS",
+    "at": "2026-09-27T12:49:49.495Z",
+    "kind": "Harness diagnostic",
+    "before": {
+      "precise_timestamp": "2026-09-27 12:47:19.784275+00",
+      "lifecycle_status": "PUBLISHED"
+    },
+    "initialRequest": "2026-09-27T12:47:19.784Z"
+  },
+  {
+    "id": "RT02",
+    "name": "Refresh event operations before completion",
+    "status": "PASS",
+    "at": "2026-09-27T12:49:56.585Z",
+    "request": {
+      "method": "GET",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/operations"
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 6475,
+    "response": {
+      "data": {
+        "event": {
+          "id": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+          "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+          "incidentId": null,
+          "title": "SMOKE TEST direct cleanup",
+          "lifecycleStatus": "PUBLISHED",
+          "startsAt": "2026-09-27T12:46:19.784Z",
+          "updatedAt": "2026-09-27T12:47:19.784Z",
+          "completedAt": null,
+          "cancelledAt": null,
+          "cancellationReason": null,
+          "currentWorkflowStatus": {
+            "id": "5c31b6b2-9839-4e1b-97b6-a3ddabf0c13e",
+            "code": "PUBLISHED",
+            "label": "Published",
+            "lifecycleStatus": "PUBLISHED"
+          }
+        },
+        "notes": [
+          {
+            "id": "b73ef195-cc87-4d9a-851c-0fe418e3d2eb",
+            "visibility": "PARTICIPANTS",
+            "noteText": "Synthetic smoke test participant update.",
+            "author": {
+              "id": "19b7aada-5c97-4df8-86fe-673d2ac24a8d",
+              "fullName": "Smoke Lifecycle owner"
+            },
+            "createdAt": "2026-09-27T12:47:35.473Z"
+          }
+        ],
+        "evidence": [
+          {
+            "id": "df54f38f-4250-4e73-8589-c93ab1c3326d",
+            "type": "AFTER",
+            "caption": "Synthetic smoke evidence",
+            "url": "[SIGNED URL REDACTED]",
+            "uploadedBy": {
+              "id": "6fb16d28-1aec-44c1-b68c-3c6f5ee93513",
+              "fullName": "Smoke Lifecycle owner"
+            },
+            "uploadedAt": "2026-09-27T12:47:55.271Z"
+          }
+        ],
+        "history": [
+          {
+            "id": "9754495a-c2fd-4da4-9239-62258aa0a1c2",
+            "fromStatus": {
+              "id": "884d0963-5094-435b-b2e8-668c498dc646",
+              "label": "Draft",
+              "lifecycleStatus": "DRAFT"
+            },
+            "toStatus": {
+              "id": "5c31b6b2-9839-4e1b-97b6-a3ddabf0c13e",
+              "label": "Published",
+              "lifecycleStatus": "PUBLISHED"
+            },
+            "changedBy": {
+              "id": "19b7aada-5c97-4df8-86fe-673d2ac24a8d",
+              "fullName": "Smoke Lifecycle owner"
+            },
+            "notes": "Cleanup event published.",
+            "changedAt": "2026-09-27T12:47:00.169Z"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "RT03",
+    "name": "Complete cleanup after fixture timestamp correction",
+    "status": "PASS",
+    "at": "2026-09-27T12:50:10.483Z",
+    "request": {
+      "method": "POST",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/complete",
+      "body": {
+        "expectedUpdatedAt": "2026-09-27T12:47:19.784Z",
+        "notes": "Synthetic smoke completion retest after fixture timestamp precision correction."
+      }
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 13527,
+    "response": {
+      "data": {
+        "eventId": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+        "lifecycleStatus": "COMPLETED",
+        "updatedAt": "2026-09-27T12:50:05.304Z",
+        "incidentStatus": null,
+        "rewardsAwarded": 1,
+        "idempotentReplay": false
+      }
+    }
+  },
+  {
+    "id": "RT04",
+    "name": "Completed lifecycle state persisted",
+    "status": "PASS",
+    "at": "2026-09-27T12:50:10.887Z",
+    "row": {
+      "id": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+      "lifecycle_status": "COMPLETED"
+    }
+  },
+  {
+    "id": "RT05",
+    "name": "Create cancellation test draft",
+    "status": "PASS",
+    "at": "2026-09-27T12:50:15.552Z",
+    "request": {
+      "method": "POST",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/drafts",
+      "body": {
+        "title": "SMOKE TEST cancellation",
+        "description": "Synthetic smoke cancellation test only.",
+        "publicInstructions": "Test only, do not attend.",
+        "eventLatitude": 6.8376425,
+        "eventLongitude": 79.9611312062937,
+        "eventAddress": "Synthetic fixture official GN location",
+        "startsAt": "2026-09-27T13:50:11.265Z"
+      }
+    },
+    "expectedStatus": 201,
+    "httpStatus": 201,
+    "durationMs": 4287,
+    "response": {
+      "data": {
+        "id": "2f9d1cc1-e8e1-43b7-be5c-27852c98b484",
+        "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+        "incidentId": null,
+        "lifecycleStatus": "DRAFT",
+        "displayStatus": "DRAFT",
+        "title": "SMOKE TEST cancellation",
+        "description": "Synthetic smoke cancellation test only.",
+        "publicInstructions": "Test only, do not attend.",
+        "eventLatitude": 6.837643,
+        "eventLongitude": 79.961131,
+        "eventAddress": "Synthetic fixture official GN location",
+        "meetingLatitude": null,
+        "meetingLongitude": null,
+        "meetingAddress": null,
+        "startsAt": "2026-09-27T13:50:11.265Z",
+        "capacity": null,
+        "locationLockedToIncident": false,
+        "createdAt": "2026-09-27T12:50:14.141Z",
+        "updatedAt": "2026-09-27T12:50:14.141Z",
+        "coordinators": []
+      }
+    }
+  },
+  {
+    "id": "RT06",
+    "name": "Assign cancellation test coordinator",
+    "status": "PASS",
+    "at": "2026-09-27T12:50:18.661Z",
+    "request": {
+      "method": "POST",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/2f9d1cc1-e8e1-43b7-be5c-27852c98b484/coordinators",
+      "body": {
+        "membershipId": "126b5369-7448-44c4-8ddb-a0d3b9dcaac6"
+      }
+    },
+    "expectedStatus": [
+      200,
+      201
+    ],
+    "httpStatus": 201,
+    "durationMs": 2742,
+    "response": {
+      "data": {
+        "id": "a3b32e9f-09cc-4796-aa89-8731b59562d1",
+        "cleanupEventId": "2f9d1cc1-e8e1-43b7-be5c-27852c98b484",
+        "membershipId": "126b5369-7448-44c4-8ddb-a0d3b9dcaac6",
+        "assignedByMembershipId": "126b5369-7448-44c4-8ddb-a0d3b9dcaac6",
+        "assignedAt": "2026-09-27T12:50:18.784Z",
+        "removedAt": null
+      }
+    }
+  },
+  {
+    "id": "RT07",
+    "name": "Publish cancellation test event",
+    "status": "PASS",
+    "at": "2026-09-27T12:50:29.052Z",
+    "request": {
+      "method": "POST",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/2f9d1cc1-e8e1-43b7-be5c-27852c98b484/publish",
+      "body": {}
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 10383,
+    "response": {
+      "data": {
+        "event": {
+          "id": "2f9d1cc1-e8e1-43b7-be5c-27852c98b484",
+          "organization": {
+            "id": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+            "name": "SMOKE TEST Organization A"
+          },
+          "incidentId": null,
+          "title": "SMOKE TEST cancellation",
+          "description": "Synthetic smoke cancellation test only.",
+          "lifecycleStatus": "PUBLISHED",
+          "displayStatus": "UPCOMING",
+          "eventLatitude": 6.837643,
+          "eventLongitude": 79.961131,
+          "eventAddress": "Synthetic fixture official GN location",
+          "startsAt": "2026-09-27T13:50:11.265Z",
+          "capacity": null,
+          "publishedAt": "2026-09-27T12:50:26.088Z",
+          "publicInstructions": "Test only, do not attend.",
+          "meetingLatitude": null,
+          "meetingLongitude": null,
+          "meetingAddress": null,
+          "joinedVolunteerCount": 0
+        },
+        "incidentUpdated": false
+      }
+    }
+  },
+  {
+    "id": "RT08",
+    "name": "Cancel published cleanup event",
+    "status": "PASS",
+    "at": "2026-09-27T12:50:39.537Z",
+    "request": {
+      "method": "POST",
+      "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/2f9d1cc1-e8e1-43b7-be5c-27852c98b484/cancel",
+      "body": {
+        "expectedUpdatedAt": "2026-09-27T12:50:26.089Z",
+        "reason": "Synthetic smoke test cancellation; no real event."
+      }
+    },
+    "expectedStatus": 200,
+    "httpStatus": 200,
+    "durationMs": 10133,
+    "response": {
+      "data": {
+        "eventId": "2f9d1cc1-e8e1-43b7-be5c-27852c98b484",
+        "lifecycleStatus": "CANCELLED",
+        "updatedAt": "2026-09-27T12:50:37.799Z",
+        "incidentStatus": null,
+        "rewardsAwarded": 0,
+        "idempotentReplay": false
+      }
+    }
+  },
+  {
+    "id": "RT09",
+    "name": "Cancelled state persisted",
+    "status": "PASS",
+    "at": "2026-09-27T12:50:39.984Z",
+    "row": {
+      "id": "2f9d1cc1-e8e1-43b7-be5c-27852c98b484",
+      "lifecycle_status": "CANCELLED"
+    }
+  },
+  {
+    "id": "CLEANUP-6ce62e6b-b837-499b-8eb0-907fe570069f",
+    "name": "Remove retest Auth identity",
+    "status": "PASS",
+    "at": "2026-09-27T12:50:40.558Z"
+  }
+]

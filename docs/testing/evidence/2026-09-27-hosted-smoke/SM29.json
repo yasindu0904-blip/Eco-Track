@@ -1,0 +1,8 @@
+{
+  "id": "SM29",
+  "name": "Organization application and event lifecycle prerequisites",
+  "status": "BLOCKED",
+  "at": "2026-09-27T12:35:26.971Z",
+  "administrativeAreaCount": 0,
+  "reason": "No official GN boundaries imported; organization coverage and event lifecycle cannot be meaningfully smoke-tested yet."
+}

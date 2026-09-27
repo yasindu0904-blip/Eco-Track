@@ -25,7 +25,13 @@ Copy `.env.example` to `.env.local` and provide:
 - `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (never the service-role key)
 - `EXPO_PUBLIC_API_BASE_URL`
 
-For a physical Android phone, `EXPO_PUBLIC_API_BASE_URL` must use the development computer's LAN IPv4 address, for example:
+For the hosted backend, use:
+
+```text
+https://p01--eco-track--xnjn7t9fk69n.code.run/api/v1
+```
+
+For local backend development on a physical Android phone, use the development computer's LAN IPv4 address, for example:
 
 ```text
 http://192.168.1.100:5000/api/v1
@@ -40,6 +46,24 @@ ecotrack://auth/callback
 ```
 
 ## Commands
+
+### Downloadable APK using the hosted backend
+
+The `preview` profile in `eas.json` includes the hosted API URL and public Supabase
+authentication settings. These are public client settings; database passwords,
+Redis credentials, and Supabase service-role keys must never be added here.
+
+From `mobile`, authenticate with the Expo account that has access to this project
+and start the cloud build:
+
+```powershell
+npx eas-cli login
+npx eas-cli build --platform android --profile preview
+```
+
+EAS provides an APK download link when the build succeeds. This APK uses Northflank
+and runs without Metro or a laptop backend. A successful build and installation
+are still required after changing the profile's environment values.
 
 ### Standalone APK with the laptop backend (Windows)
 

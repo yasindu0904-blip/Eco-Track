@@ -3,6 +3,20 @@
     "appVersionSource": "local"
   },
   "build": {
+    "preview": {
+      "developmentClient": false,
+      "distribution": "internal",
+      "environment": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_MAP_PREVIEW": "false",
+        "EXPO_PUBLIC_API_BASE_URL": "https://p01--eco-track--xnjn7t9fk69n.code.run/api/v1",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://jnbkbbhpbdfuzyezpqvo.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_N0mib8_9nkap6oVo7gLdEg_GBdN06T-"
+      }
+    },
     "development": {
       "developmentClient": true,
       "distribution": "internal",

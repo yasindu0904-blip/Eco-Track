@@ -1,0 +1,20 @@
+{
+  "id": "SM31",
+  "name": "Notification worker live heartbeat",
+  "status": "PASS",
+  "at": "2026-09-27T12:35:30.184Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/super-admin/notification-worker"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1122,
+  "response": {
+    "data": {
+      "online": true,
+      "waiting": 0,
+      "failed": 0
+    }
+  }
+}

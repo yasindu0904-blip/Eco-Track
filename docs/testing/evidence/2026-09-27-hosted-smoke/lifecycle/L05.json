@@ -1,0 +1,47 @@
+{
+  "id": "L05",
+  "name": "Create direct cleanup draft",
+  "status": "PASS",
+  "at": "2026-09-27T12:46:44.071Z",
+  "request": {
+    "method": "POST",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/drafts",
+    "body": {
+      "title": "SMOKE TEST direct cleanup",
+      "description": "Synthetic event for hosted lifecycle smoke testing only.",
+      "publicInstructions": "Test fixtures only. Do not attend.",
+      "eventLatitude": 6.8376425,
+      "eventLongitude": 79.9611312062937,
+      "eventAddress": "Smoke test location in official GN area",
+      "startsAt": "2026-09-27T12:48:39.783Z",
+      "capacity": 5
+    }
+  },
+  "expectedStatus": 201,
+  "httpStatus": 201,
+  "durationMs": 4281,
+  "response": {
+    "data": {
+      "id": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+      "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+      "incidentId": null,
+      "lifecycleStatus": "DRAFT",
+      "displayStatus": "DRAFT",
+      "title": "SMOKE TEST direct cleanup",
+      "description": "Synthetic event for hosted lifecycle smoke testing only.",
+      "publicInstructions": "Test fixtures only. Do not attend.",
+      "eventLatitude": 6.837643,
+      "eventLongitude": 79.961131,
+      "eventAddress": "Smoke test location in official GN area",
+      "meetingLatitude": null,
+      "meetingLongitude": null,
+      "meetingAddress": null,
+      "startsAt": "2026-09-27T12:48:39.783Z",
+      "capacity": 5,
+      "locationLockedToIncident": false,
+      "createdAt": "2026-09-27T12:46:42.631Z",
+      "updatedAt": "2026-09-27T12:46:42.631Z",
+      "coordinators": []
+    }
+  }
+}

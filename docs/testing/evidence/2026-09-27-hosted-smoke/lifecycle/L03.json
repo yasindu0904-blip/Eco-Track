@@ -1,0 +1,24 @@
+{
+  "id": "L03",
+  "name": "Organization dashboard",
+  "status": "PASS",
+  "at": "2026-09-27T12:46:37.568Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/dashboard-summary"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 4188,
+  "response": {
+    "data": {
+      "organizationId": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+      "coveringIncidentsByState": {},
+      "reviewsByState": {},
+      "eventsByLifecycle": {},
+      "upcomingEvents": 0,
+      "joinedParticipants": 0,
+      "pendingMembershipRequests": 0
+    }
+  }
+}

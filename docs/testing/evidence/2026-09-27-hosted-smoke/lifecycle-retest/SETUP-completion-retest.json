@@ -1,0 +1,24 @@
+{
+  "id": "SETUP-completion-retest",
+  "name": "Provision completion-retest",
+  "status": "PASS",
+  "at": "2026-09-27T12:49:46.942Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/auth/me"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1796,
+  "response": {
+    "data": {
+      "id": "6ce62e6b-b837-499b-8eb0-907fe570069f",
+      "email": "ecotrack-life-completion-retest-1790513384268@example.com",
+      "fullName": null,
+      "phoneNumber": null,
+      "profileCompletedAt": null,
+      "platformRole": "USER",
+      "accountStatus": "ACTIVE"
+    }
+  }
+}

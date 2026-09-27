@@ -1,0 +1,40 @@
+{
+  "id": "L14",
+  "name": "Owner lists joined volunteers",
+  "status": "PASS",
+  "at": "2026-09-27T12:47:18.522Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/participants"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 3322,
+  "response": {
+    "data": {
+      "event": {
+        "id": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+        "title": "SMOKE TEST direct cleanup",
+        "lifecycleStatus": "PUBLISHED",
+        "startsAt": "2026-09-27T12:48:39.783Z",
+        "capacity": 5
+      },
+      "participants": [
+        {
+          "id": "a5a7f134-6195-4e10-a870-343ffa098888",
+          "status": "JOINED",
+          "attendanceStatus": "UNMARKED",
+          "attendanceMarkedAt": null,
+          "joinedAt": "2026-09-27T12:47:08.595Z",
+          "removedAt": null,
+          "volunteer": {
+            "id": "3a5019d7-7666-4f72-8e7a-d6efb39e8716",
+            "fullName": "Smoke Lifecycle volunteer",
+            "phoneNumber": "+94700000000"
+          }
+        }
+      ],
+      "nextCursor": null
+    }
+  }
+}

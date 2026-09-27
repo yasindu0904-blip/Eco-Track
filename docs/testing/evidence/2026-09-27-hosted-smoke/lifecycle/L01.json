@@ -1,0 +1,21 @@
+{
+  "id": "L01",
+  "name": "Official GN reference areas available",
+  "status": "PASS",
+  "at": "2026-09-27T12:46:21.878Z",
+  "count": 73,
+  "fixtureAreas": [
+    {
+      "id": "6783fd92-c3e6-454f-bb92-1e3fe429dd32",
+      "name_en": "Bangalawatta",
+      "latitude": 6.8376425,
+      "longitude": 79.9611312062937
+    },
+    {
+      "id": "358a3dc3-91d4-428c-94c2-29266a9f8c84",
+      "name_en": "Batakettara North",
+      "latitude": 6.785302,
+      "longitude": 79.9218364976486
+    }
+  ]
+}

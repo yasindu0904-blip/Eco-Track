@@ -1,0 +1,12 @@
+{
+  "id": "SM01",
+  "name": "Test database migrations and reference prerequisites",
+  "status": "PASS",
+  "at": "2026-09-27T12:34:47.837Z",
+  "observed": {
+    "migrations": 20,
+    "reminders": "cleanup_event_reminders",
+    "areas": 0,
+    "categories": 4
+  }
+}

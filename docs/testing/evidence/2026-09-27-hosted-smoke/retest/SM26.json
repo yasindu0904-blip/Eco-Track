@@ -1,0 +1,18 @@
+{
+  "id": "SM26",
+  "name": "Notification unread count",
+  "status": "PASS",
+  "at": "2026-09-27T12:38:00.639Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/notifications/unread-count"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1443,
+  "response": {
+    "data": {
+      "unreadCount": 0
+    }
+  }
+}

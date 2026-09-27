@@ -1,0 +1,19 @@
+{
+  "id": "SM25",
+  "name": "Notifications list",
+  "status": "PASS",
+  "at": "2026-09-27T12:37:59.192Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/notifications"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1444,
+  "response": {
+    "data": {
+      "items": [],
+      "nextCursor": null
+    }
+  }
+}

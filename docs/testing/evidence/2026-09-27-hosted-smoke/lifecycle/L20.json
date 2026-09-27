@@ -1,0 +1,34 @@
+{
+  "id": "L20",
+  "name": "Register AFTER evidence",
+  "status": "PASS",
+  "at": "2026-09-27T12:47:57.263Z",
+  "request": {
+    "method": "POST",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/e658a939-e6aa-46e9-817d-1e5e628f182c/evidence",
+    "body": {
+      "originalFileName": "smoke-event-after.png",
+      "contentType": "image/png",
+      "sizeBytes": 68,
+      "storagePath": "events/0c2f58ea-6733-4eff-9912-46ba4d6469fc/e658a939-e6aa-46e9-817d-1e5e628f182c/6fb16d28-1aec-44c1-b68c-3c6f5ee93513/fe389aee-f0e8-4f93-b1f9-588838f69889.png",
+      "type": "AFTER",
+      "caption": "Synthetic smoke evidence"
+    }
+  },
+  "expectedStatus": 201,
+  "httpStatus": 201,
+  "durationMs": 11899,
+  "response": {
+    "data": {
+      "id": "df54f38f-4250-4e73-8589-c93ab1c3326d",
+      "type": "AFTER",
+      "caption": "Synthetic smoke evidence",
+      "url": "[SIGNED URL REDACTED]",
+      "uploadedBy": {
+        "id": "6fb16d28-1aec-44c1-b68c-3c6f5ee93513",
+        "fullName": "Smoke Lifecycle owner"
+      },
+      "uploadedAt": "2026-09-27T12:47:55.271Z"
+    }
+  }
+}

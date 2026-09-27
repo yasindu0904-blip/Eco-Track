@@ -1,0 +1,54 @@
+{
+  "id": "SM21",
+  "name": "Nearby awaiting-cleanup incidents",
+  "status": "PASS",
+  "at": "2026-09-27T12:37:46.125Z",
+  "request": {
+    "method": "GET",
+    "route": "/api/v1/incidents/nearby?latitude=6.795&longitude=79.94&radiusMeters=2000&awaitingCleanup=true"
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 1585,
+  "response": {
+    "data": {
+      "items": [
+        {
+          "id": "0e1c6b71-d78a-4aa5-9a6b-463c6a93ba4f",
+          "title": "SMOKE TEST 2026-09-27 - synthetic incident",
+          "category": {
+            "id": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+            "name": "Environmental Damage",
+            "description": "Damage to trees, waterways, public green space, or ecosystems."
+          },
+          "severity": "LOW",
+          "status": "ACTIVE",
+          "latitude": 6.795,
+          "longitude": 79.94,
+          "addressText": null,
+          "reportedAt": "2026-09-27T12:37:35.169Z",
+          "falseReviewCount": 0,
+          "isOwnReport": true
+        },
+        {
+          "id": "e174594d-1fd0-4dc4-96cc-2305b0107ce9",
+          "title": "SMOKE TEST 2026-09-27 - synthetic incident",
+          "category": {
+            "id": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+            "name": "Environmental Damage",
+            "description": "Damage to trees, waterways, public green space, or ecosystems."
+          },
+          "severity": "LOW",
+          "status": "ACTIVE",
+          "latitude": 6.795,
+          "longitude": 79.94,
+          "addressText": null,
+          "reportedAt": "2026-09-27T12:36:55.286Z",
+          "falseReviewCount": 0,
+          "isOwnReport": false
+        }
+      ],
+      "nextCursor": null
+    }
+  }
+}

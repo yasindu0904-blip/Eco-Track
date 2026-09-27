@@ -1,0 +1,24 @@
+{
+  "capturedAtUTC": "2026-09-27T12:43:06.153334+00:00",
+  "api": "https://p01--eco-track--xnjn7t9fk69n.code.run",
+  "web": "https://eco-track-ctd.pages.dev",
+  "databaseProject": "zkiciluuktuzkidjaiaz",
+  "authStorageProject": "jnbkbbhpbdfuzyezpqvo",
+  "localSourceCommit": "69145fbebb525e5fae6a7c9b3f5503d92e59dff5",
+  "deployedCommit": "Not verified; Northflank authenticated access unavailable",
+  "tools": [
+    "Node.js fetch HTTP client",
+    "Supabase JavaScript SDK",
+    "node-postgres SQL client",
+    "Prisma repository diagnostic",
+    "Playwright with installed Microsoft Edge (headless)"
+  ],
+  "browserViewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "browserLocation": "Simulated latitude 6.795, longitude 79.94; not physical GPS",
+  "credentialHandling": "Runtime memory only; no passwords, bearer tokens or signed access URLs retained in evidence.",
+  "authMethod": "Temporary confirmed Auth users; password login for API and real session injection for browser. Email magic-link delivery not tested.",
+  "loadScope": "Sequential smoke checks; not performance/load testing"
+}

@@ -1,0 +1,7 @@
+{
+  "id": "SM06",
+  "name": "Supabase password login with temporary confirmed user",
+  "status": "PASS",
+  "at": "2026-09-27T12:37:21.636Z",
+  "fixture": "Temporary smoke user; credentials excluded"
+}

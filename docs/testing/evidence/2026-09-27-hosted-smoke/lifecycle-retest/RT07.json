@@ -1,0 +1,42 @@
+{
+  "id": "RT07",
+  "name": "Publish cancellation test event",
+  "status": "PASS",
+  "at": "2026-09-27T12:50:29.052Z",
+  "request": {
+    "method": "POST",
+    "route": "/api/v1/organizations/0c2f58ea-6733-4eff-9912-46ba4d6469fc/events/2f9d1cc1-e8e1-43b7-be5c-27852c98b484/publish",
+    "body": {}
+  },
+  "expectedStatus": 200,
+  "httpStatus": 200,
+  "durationMs": 10383,
+  "response": {
+    "data": {
+      "event": {
+        "id": "2f9d1cc1-e8e1-43b7-be5c-27852c98b484",
+        "organization": {
+          "id": "0c2f58ea-6733-4eff-9912-46ba4d6469fc",
+          "name": "SMOKE TEST Organization A"
+        },
+        "incidentId": null,
+        "title": "SMOKE TEST cancellation",
+        "description": "Synthetic smoke cancellation test only.",
+        "lifecycleStatus": "PUBLISHED",
+        "displayStatus": "UPCOMING",
+        "eventLatitude": 6.837643,
+        "eventLongitude": 79.961131,
+        "eventAddress": "Synthetic fixture official GN location",
+        "startsAt": "2026-09-27T13:50:11.265Z",
+        "capacity": null,
+        "publishedAt": "2026-09-27T12:50:26.088Z",
+        "publicInstructions": "Test only, do not attend.",
+        "meetingLatitude": null,
+        "meetingLongitude": null,
+        "meetingAddress": null,
+        "joinedVolunteerCount": 0
+      },
+      "incidentUpdated": false
+    }
+  }
+}

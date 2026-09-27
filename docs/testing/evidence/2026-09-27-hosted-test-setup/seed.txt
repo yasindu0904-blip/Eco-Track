@@ -1,0 +1,67 @@
+EcoTrack super-admin profile is ready:
+{
+  "superAdminProfile": {
+    "platformRole": "SUPER_ADMIN",
+    "accountStatus": "ACTIVE"
+  },
+  "platformSettings": {
+    "id": 1,
+    "incidentHighlightHours": 48,
+    "incidentUnaddressedDays": 7
+  },
+  "incidentCategories": [
+    {
+      "id": "6ab4841b-0768-492e-8908-a33528daab55",
+      "name": "Litter and Waste",
+      "description": "Dumped rubbish, litter, plastics, or unmanaged solid waste.",
+      "isActive": true
+    },
+    {
+      "id": "24dda9d8-1577-4ec8-a167-3ade4d93aff3",
+      "name": "Pollution",
+      "description": "Air, water, soil, smoke, chemical, or drainage pollution.",
+      "isActive": true
+    },
+    {
+      "id": "d34b13f0-af8d-41f5-8254-ae9922997b4d",
+      "name": "Wildlife Issue",
+      "description": "Wildlife hazards, injured animals, or damage to natural habitats.",
+      "isActive": true
+    },
+    {
+      "id": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+      "name": "Environmental Damage",
+      "description": "Damage to trees, waterways, public green space, or ecosystems.",
+      "isActive": true
+    }
+  ],
+  "achievementDefinitions": [
+    {
+      "id": "00000000-0000-4000-9000-000000000020",
+      "code": "GREEN_STARTER",
+      "name": "Green Starter",
+      "description": "Earned after reaching 20 verified EcoTrack contribution points.",
+      "thresholdPoints": 20,
+      "highlightOnMap": false,
+      "isActive": true
+    },
+    {
+      "id": "00000000-0000-4000-9000-000000000100",
+      "code": "COMMUNITY_HELPER",
+      "name": "Community Helper",
+      "description": "Earned after reaching 100 verified EcoTrack contribution points.",
+      "thresholdPoints": 100,
+      "highlightOnMap": false,
+      "isActive": true
+    },
+    {
+      "id": "00000000-0000-4000-9000-000000000500",
+      "code": "ECO_CHAMPION",
+      "name": "Eco Champion",
+      "description": "Earned after reaching 500 verified EcoTrack contribution points.",
+      "thresholdPoints": 500,
+      "highlightOnMap": true,
+      "isActive": true
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "WEB01",
+    "status": "PASS",
+    "at": "2026-09-27T12:40:52.750Z",
+    "name": "Hosted login page renders",
+    "url": "https://eco-track-ctd.pages.dev/",
+    "screenshot": "WEB01-login.png"
+  },
+  {
+    "id": "WEB02",
+    "status": "PASS",
+    "at": "2026-09-27T12:41:09.304Z",
+    "name": "Authenticated citizen dashboard renders against hosted API",
+    "screenshot": "WEB02-dashboard.png",
+    "setup": "Injected real Supabase session for synthetic confirmed user; email magic-link delivery NOT tested"
+  },
+  {
+    "id": "WEB03",
+    "status": "PASS",
+    "at": "2026-09-27T12:41:10.266Z",
+    "name": "Report incident page navigation/render",
+    "screenshot": "WEB03.png",
+    "visibleText": "Report incident\nMy Reports\nCOMMUNITY REPORT\nReport an environmental incident\n01\nWhat did you find?\nSeverity\nLow\nLimited impact\nMedium\nNeeds attention\nHigh\nSerious local hazard\nCritical\nImmediate danger\n02\nDescribe the incident\nIncident title\nDescription\nAddress or landmark\n(optional)\n03\nConfirm the location\n\nUse the location button or move the map beneath the center pin, then confirm it.\n\nFind a GN Division\n+\n−\n Leaflet | © OpenStreetMap contributors\n◎\nMy location\n\nMove the map to position the black pin.\n\nConfirm incident location\n04\nAdd photo evidence\n\nOptional for web. Add up to 5 JPEG, PNG, or WebP photos, 8 MB each.\n\nChoose photos\nSelect one or several images. 5 remaining.\nLocation confirmation required\nSubmit incident report"
+  },
+  {
+    "id": "WEB04",
+    "status": "PASS",
+    "at": "2026-09-27T12:41:12.974Z",
+    "name": "Find cleanup activity page navigation/render",
+    "screenshot": "WEB04.png",
+    "visibleText": "Report incident\nMy Reports\nUse my location\nRefresh events\nUpcoming\nOngoing\nPast\nCancelled\nAwaiting cleanup\nSearch radius\n1 km\n2 km\n3 km\n0 published events loaded\nFind a GN Division\n+\n−\n Leaflet | © OpenStreetMap contributors\nNo published cleanup events found\n\nTry a larger search radius or refresh the search.\n\nPrevious page\nPage 1\nNext page"
+  },
+  {
+    "id": "WEB04-awaiting",
+    "status": "PASS",
+    "at": "2026-09-27T12:41:16.462Z",
+    "name": "Awaiting cleanup tab opens",
+    "screenshot": "WEB04-awaiting.png"
+  },
+  {
+    "id": "WEB05",
+    "status": "PASS",
+    "at": "2026-09-27T12:41:19.171Z",
+    "name": "My Reports page navigation/render",
+    "screenshot": "WEB05.png",
+    "visibleText": "Report incident\nMy Reports\nYOUR ACTIVITY\nMy Reports\n＋ New report\nActive\nResolved\nAll\nNo incident reports yet\nReport an incident\nPrevious page\nPage 1\nNext page\nRefresh"
+  },
+  {
+    "id": "WEB06",
+    "status": "PASS",
+    "at": "2026-09-27T12:41:19.996Z",
+    "name": "Notifications page navigation/render",
+    "screenshot": "WEB06.png",
+    "visibleText": "PERSONAL INBOX\nNotifications\n0 unread\nUnread\nAll\nMark all as read\nLoading your notifications…"
+  },
+  {
+    "id": "WEB07",
+    "status": "PASS",
+    "at": "2026-09-27T12:41:19.997Z",
+    "name": "No uncaught browser JavaScript errors",
+    "errors": []
+  },
+  {
+    "id": "WEB-CLEANUP",
+    "status": "PASS",
+    "at": "2026-09-27T12:41:20.316Z",
+    "name": "Delete synthetic Auth identity"
+  }
+]

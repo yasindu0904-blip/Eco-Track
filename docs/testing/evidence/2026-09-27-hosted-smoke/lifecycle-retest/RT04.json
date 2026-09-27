@@ -1,0 +1,10 @@
+{
+  "id": "RT04",
+  "name": "Completed lifecycle state persisted",
+  "status": "PASS",
+  "at": "2026-09-27T12:50:10.887Z",
+  "row": {
+    "id": "e658a939-e6aa-46e9-817d-1e5e628f182c",
+    "lifecycle_status": "COMPLETED"
+  }
+}
