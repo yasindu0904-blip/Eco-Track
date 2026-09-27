@@ -1,0 +1,37 @@
+{
+  "timestamp_utc": "2026-09-27T16:33:57.144Z",
+  "method": "GET",
+  "route": "/events/327878e3-9476-467a-acea-1928e69baea6/participant-updates",
+  "request": null,
+  "http_status": 200,
+  "response": {
+    "data": {
+      "event": {
+        "id": "327878e3-9476-467a-acea-1928e69baea6",
+        "title": "M2-completion-20260927-201125",
+        "lifecycleStatus": "PUBLISHED",
+        "completedAt": null,
+        "cancelledAt": null,
+        "cancellationReason": null
+      },
+      "notes": [
+        {
+          "id": "7299a1f4-4259-45ad-a4a6-a2bcf79403d0",
+          "visibility": "PARTICIPANTS",
+          "noteText": "M2 participant update 20260927-201125",
+          "author": {
+            "id": "cbdcc52a-26c4-4bdd-a887-ec46403e2c16",
+            "fullName": "M2-A02-20260927-201125"
+          },
+          "createdAt": "2026-09-27T16:33:50.871Z"
+        }
+      ]
+    }
+  },
+  "duration_ms": 3478,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

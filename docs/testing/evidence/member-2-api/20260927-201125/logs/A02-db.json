@@ -1,0 +1,13 @@
+{
+  "query": "SELECT id,auth_user_id,full_name,profile_completed_at FROM public.user_profiles WHERE auth_user_id=$1",
+  "authUserId": "ec49195c-29f4-4658-85a9-b85afc54ae8d",
+  "rows": [
+    {
+      "id": "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+      "auth_user_id": "ec49195c-29f4-4658-85a9-b85afc54ae8d",
+      "full_name": "M2-A02-20260927-201125",
+      "profile_completed_at": "2026-09-27T16:04:52.533Z"
+    }
+  ],
+  "hosted_target_proven": true
+}

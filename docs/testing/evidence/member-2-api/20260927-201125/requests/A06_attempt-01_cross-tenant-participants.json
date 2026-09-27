@@ -1,0 +1,20 @@
+{
+  "timestamp_utc": "2026-09-27T16:19:05.160Z",
+  "method": "GET",
+  "route": "/organizations/7b832c2f-03e7-445b-ba62-8ce08736b113/events/1c919b94-805f-4c00-8a50-5d5e1a83697d/participants",
+  "request": null,
+  "http_status": 403,
+  "response": {
+    "error": {
+      "code": "ORGANIZATION_ACCESS_DENIED",
+      "message": "You do not have access to this organization."
+    }
+  },
+  "duration_ms": 1754,
+  "assertions": {
+    "status": true,
+    "code": true,
+    "noData": true
+  },
+  "status": "PASS"
+}

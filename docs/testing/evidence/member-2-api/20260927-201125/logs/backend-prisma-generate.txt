@@ -1,0 +1,14 @@
+Started UTC: 2026-09-27T15:02:15.023Z
+Docker command: exec m2-20260927201125-runner npm run prisma:generate
+
+> ecotrack-backend@0.1.0 prisma:generate
+> prisma generate
+
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+
+✔ Generated Prisma Client (7.10.0) to ./src/generated/prisma in 283ms
+
+
+Exit code: 0

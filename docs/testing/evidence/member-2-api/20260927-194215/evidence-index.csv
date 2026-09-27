@@ -1,0 +1,6 @@
+"evidence_path","case_id","caption","source","timestamp_utc"
+"requests/A01_attempt-01_health.json","A01","health HTTP assertion","Node fetch","2026-09-27T14:12:15.232Z"
+"requests/A01_attempt-01_missing-bearer.json","A01","missing-bearer HTTP assertion","Node fetch","2026-09-27T14:12:16.733Z"
+"requests/A01_attempt-01_invalid-bearer.json","A01","invalid-bearer HTTP assertion","Node fetch","2026-09-27T14:12:16.982Z"
+"requests/A01_attempt-01_unknown-route.json","A01","unknown-route HTTP assertion","Node fetch","2026-09-27T14:12:17.600Z"
+"requests/ENV-northflank-services.json","ENV","Deployment revisions and configured instances","Northflank GET service details","2026-09-27T14:13:53.098Z"

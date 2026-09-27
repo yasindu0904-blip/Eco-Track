@@ -1,0 +1,27 @@
+{
+  "timestamp_utc": "2026-09-27T16:18:30.535Z",
+  "method": "PUT",
+  "route": "/profile/complete",
+  "request": {
+    "fullName": "M2-volunteer-20260927-201125",
+    "phoneNumber": "[REDACTED]"
+  },
+  "http_status": 200,
+  "response": {
+    "data": {
+      "id": "73fb6bb5-41ee-4aa3-af84-2980c6a28dfb",
+      "email": "[REDACTED]",
+      "fullName": "M2-volunteer-20260927-201125",
+      "phoneNumber": "[REDACTED]",
+      "profileCompletedAt": "2026-09-27T16:18:30.211Z",
+      "platformRole": "USER",
+      "accountStatus": "ACTIVE"
+    }
+  },
+  "duration_ms": 1537,
+  "assertions": {
+    "status": true,
+    "name": true
+  },
+  "status": "PASS"
+}

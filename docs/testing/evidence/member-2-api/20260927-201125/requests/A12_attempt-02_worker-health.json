@@ -1,0 +1,20 @@
+{
+  "timestamp_utc": "2026-09-27T16:57:39.821Z",
+  "setup": "User-authorized temporary elevation of labeled M2 fixture only",
+  "profileId": "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+  "http_status": 200,
+  "duration_ms": 2356,
+  "response": {
+    "data": {
+      "online": true,
+      "waiting": 0,
+      "failed": 0
+    }
+  },
+  "assertions": {
+    "http200": true,
+    "online": true,
+    "counts": true
+  },
+  "restored": true
+}

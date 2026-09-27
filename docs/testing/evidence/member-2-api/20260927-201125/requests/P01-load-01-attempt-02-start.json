@@ -1,0 +1,217 @@
+{
+  "timestamp_utc": "2026-09-27T17:00:35.297Z",
+  "services": {
+    "eco-track": {
+      "containers": {
+        "containers": [
+          {
+            "name": "eco-track-75d8b58bff-6n6s2",
+            "createdAt": 1790515244,
+            "status": "TASK_RUNNING",
+            "updatedAt": 1790515248
+          },
+          {
+            "name": "eco-track-79d4d856f-hmrqv",
+            "createdAt": 1790511503,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790515281
+          },
+          {
+            "name": "eco-track-7c75f4f6dc-6ttgw",
+            "createdAt": 1790436363,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790511541
+          },
+          {
+            "name": "eco-track-6df79f658b-bjnjk",
+            "createdAt": 1790421906,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790436399
+          },
+          {
+            "name": "eco-track-54668fd78c-l2rcv",
+            "createdAt": 1790419820,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790421953
+          },
+          {
+            "name": "eco-track-58464f5b6f-qvwdj",
+            "createdAt": 1790417463,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790419857
+          },
+          {
+            "name": "eco-track-84cd5d6f54-ffdhv",
+            "createdAt": 1790414195,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790417499
+          },
+          {
+            "name": "eco-track-5bdc86f9b9-hqp25",
+            "createdAt": 1790409269,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790414231
+          },
+          {
+            "name": "eco-track-6c449d8bb-wwgjm",
+            "createdAt": 1790407153,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790409305
+          },
+          {
+            "name": "eco-track-cdd888b4d-5ng5t",
+            "createdAt": 1790405029,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790407188
+          },
+          {
+            "name": "eco-track-78f96f7f8f-8vpss",
+            "createdAt": 1790404774,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790405070
+          },
+          {
+            "name": "eco-track-6f67dc78f6-dl65x",
+            "createdAt": 1790404378,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790404780
+          }
+        ]
+      },
+      "metrics": {
+        "cpu": {
+          "metricInfo": {
+            "metricId": "cpu",
+            "metricUnit": "pct"
+          },
+          "values": [
+            {
+              "metadata": {
+                "containerId": "eco-track-75d8b58bff-6n6s2"
+              },
+              "data": [
+                {
+                  "ts": "2026-09-27T17:00:37.538Z",
+                  "value": 4.677531553296954
+                }
+              ]
+            }
+          ]
+        },
+        "memory": {
+          "metricInfo": {
+            "metricId": "memory",
+            "metricUnit": "pct"
+          },
+          "values": [
+            {
+              "metadata": {
+                "containerId": "eco-track-75d8b58bff-6n6s2"
+              },
+              "data": [
+                {
+                  "ts": "2026-09-27T17:00:37.542Z",
+                  "value": 81.2144
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "ecotrack-notification": {
+      "containers": {
+        "containers": [
+          {
+            "name": "ecotrack-notification-57ff575c7b-f7hgl",
+            "createdAt": 1790515246,
+            "status": "TASK_RUNNING",
+            "updatedAt": 1790515250
+          },
+          {
+            "name": "ecotrack-notification-75bf95dfb8-ln6px",
+            "createdAt": 1790511958,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790515251
+          },
+          {
+            "name": "ecotrack-notification-68c859dcb7-tzmg7",
+            "createdAt": 1790511512,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790511964
+          },
+          {
+            "name": "ecotrack-notification-6b58bd97d7-bftkv",
+            "createdAt": 1790436363,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790511517
+          },
+          {
+            "name": "ecotrack-notification-6fff4bbc86-cw7bq",
+            "createdAt": 1790426450,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790436368
+          },
+          {
+            "name": "ecotrack-notification-68745bb6bb-x5wmh",
+            "createdAt": 1790426327,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790426457
+          },
+          {
+            "name": "ecotrack-notification-7d4fdd8457-r8vlq",
+            "createdAt": 1790417474,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790426333
+          },
+          {
+            "name": "ecotrack-notification-85ccddbf4f-cpj5m",
+            "createdAt": 1790416927,
+            "status": "TASK_KILLED",
+            "updatedAt": 1790417508
+          }
+        ]
+      },
+      "metrics": {
+        "cpu": {
+          "metricInfo": {
+            "metricId": "cpu",
+            "metricUnit": "pct"
+          },
+          "values": [
+            {
+              "metadata": {
+                "containerId": "ecotrack-notification-57ff575c7b-f7hgl"
+              },
+              "data": [
+                {
+                  "ts": "2026-09-27T17:00:40.007Z",
+                  "value": 0.8979147325573092
+                }
+              ]
+            }
+          ]
+        },
+        "memory": {
+          "metricInfo": {
+            "metricId": "memory",
+            "metricUnit": "pct"
+          },
+          "values": [
+            {
+              "metadata": {
+                "containerId": "ecotrack-notification-57ff575c7b-f7hgl"
+              },
+              "data": [
+                {
+                  "ts": "2026-09-27T17:00:40.011Z",
+                  "value": 73.03840000000001
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

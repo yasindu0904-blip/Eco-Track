@@ -1,0 +1,77 @@
+Started UTC: 2026-09-27T15:02:13.132Z
+Docker command: exec m2-20260927201125-runner npx prisma migrate deploy
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+Datasource "db": PostgreSQL database "ecotrack_m2_isolated", schema "public" at "m2-db:5432"
+
+20 migrations found in prisma/migrations
+
+Applying migration `20260727094824_init_identity_and_tenancy`
+Applying migration `20260727130000_enable_rls`
+Applying migration `20260809112727_align_identity_and_organization_foundation`
+Applying migration `20260809170000_add_incident_categories`
+Applying migration `20260810063140_add_organization_service_areas`
+Applying migration `20260811120000_add_administrative_area_references`
+Applying migration `20260811133000_add_administrative_area_search_indexes`
+Applying migration `20260811143000_add_organization_review_notifications`
+Applying migration `20260811150000_secure_new_tables_with_rls`
+Applying migration `20260813120000_add_incident_and_cleanup_event_foundation`
+Applying migration `20260815090000_add_notification_unread_index`
+Applying migration `20260816120000_add_incident_submission_idempotency`
+Applying migration `20260816123000_seed_incident_categories`
+Applying migration `20260817120000_add_reward_idempotency_and_achievements`
+Applying migration `20260820140000_add_map_event_query_indexes`
+Applying migration `20260820150000_add_service_area_map_cursor_index`
+Applying migration `20260821120000_add_event_participant_operation_indexes`
+Applying migration `20260822100000_add_dashboard_summary_indexes`
+Applying migration `20260901120000_simplify_cleanup_event_workflow`
+Applying migration `20260902100000_add_push_delivery_foundation`
+
+The following migration(s) have been applied:
+
+migrations/
+  └─ 20260727094824_init_identity_and_tenancy/
+    └─ migration.sql
+  └─ 20260727130000_enable_rls/
+    └─ migration.sql
+  └─ 20260809112727_align_identity_and_organization_foundation/
+    └─ migration.sql
+  └─ 20260809170000_add_incident_categories/
+    └─ migration.sql
+  └─ 20260810063140_add_organization_service_areas/
+    └─ migration.sql
+  └─ 20260811120000_add_administrative_area_references/
+    └─ migration.sql
+  └─ 20260811133000_add_administrative_area_search_indexes/
+    └─ migration.sql
+  └─ 20260811143000_add_organization_review_notifications/
+    └─ migration.sql
+  └─ 20260811150000_secure_new_tables_with_rls/
+    └─ migration.sql
+  └─ 20260813120000_add_incident_and_cleanup_event_foundation/
+    └─ migration.sql
+  └─ 20260815090000_add_notification_unread_index/
+    └─ migration.sql
+  └─ 20260816120000_add_incident_submission_idempotency/
+    └─ migration.sql
+  └─ 20260816123000_seed_incident_categories/
+    └─ migration.sql
+  └─ 20260817120000_add_reward_idempotency_and_achievements/
+    └─ migration.sql
+  └─ 20260820140000_add_map_event_query_indexes/
+    └─ migration.sql
+  └─ 20260820150000_add_service_area_map_cursor_index/
+    └─ migration.sql
+  └─ 20260821120000_add_event_participant_operation_indexes/
+    └─ migration.sql
+  └─ 20260822100000_add_dashboard_summary_indexes/
+    └─ migration.sql
+  └─ 20260901120000_simplify_cleanup_event_workflow/
+    └─ migration.sql
+  └─ 20260902100000_add_push_delivery_foundation/
+    └─ migration.sql
+
+All migrations have been successfully applied.
+
+Exit code: 0

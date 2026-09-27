@@ -1,0 +1,21 @@
+{
+  "timestamp_utc": "2026-09-27T16:28:29.211Z",
+  "query": "SELECT lifecycle_status,(SELECT status FROM public.incidents WHERE id=$2) AS incident_status,(SELECT count(*)::int FROM public.event_status_history WHERE cleanup_event_id=$1) AS history_count FROM public.cleanup_events WHERE id=$1",
+  "parameters": [
+    "327878e3-9476-467a-acea-1928e69baea6",
+    "8edee030-a439-4d90-8480-5f7ce6b848ad"
+  ],
+  "rows": [
+    {
+      "lifecycle_status": "DRAFT",
+      "incident_status": "ACTIVE",
+      "history_count": 0
+    }
+  ],
+  "assertions": {
+    "stillDraft": true,
+    "incidentActive": true,
+    "noHistory": true
+  },
+  "status": "PASS"
+}

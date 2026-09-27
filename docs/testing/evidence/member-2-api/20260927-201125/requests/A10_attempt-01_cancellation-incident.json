@@ -1,0 +1,58 @@
+{
+  "timestamp_utc": "2026-09-27T16:32:07.475Z",
+  "method": "POST",
+  "route": "/incidents",
+  "request": {
+    "submissionId": "c69cc67f-0c5a-4baf-a1ba-e9649d2c27f9",
+    "categoryId": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+    "title": "M2-cancellation-incident-20260927-201125",
+    "description": "Synthetic Member 2 lifecycle fixture created through HTTP.",
+    "severity": "LOW",
+    "latitude": 6.837643,
+    "longitude": 79.961131,
+    "evidence": []
+  },
+  "http_status": 201,
+  "response": {
+    "data": {
+      "id": "6aca80ee-8ed5-439e-b958-21bd006d8f4a",
+      "title": "M2-cancellation-incident-20260927-201125",
+      "description": "Synthetic Member 2 lifecycle fixture created through HTTP.",
+      "category": {
+        "id": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+        "name": "Environmental Damage",
+        "description": "Damage to trees, waterways, public green space, or ecosystems."
+      },
+      "severity": "LOW",
+      "status": "ACTIVE",
+      "latitude": 6.837643,
+      "longitude": 79.961131,
+      "addressText": null,
+      "reportedAt": "2026-09-27T16:32:05.102Z",
+      "highlightUntil": "2026-09-29T16:32:05.102Z",
+      "archiveAfter": "2026-10-06T16:32:05.102Z",
+      "resolvedAt": null,
+      "archivedAt": null,
+      "thumbnailUrl": "[REDACTED]",
+      "photos": [],
+      "statusHistory": [
+        {
+          "id": "8f31d576-7db4-461d-8a7d-51e30e4cb1ac",
+          "fromStatus": null,
+          "toStatus": "ACTIVE",
+          "reason": "Incident reported.",
+          "changedAt": "2026-09-27T16:32:05.102Z"
+        }
+      ]
+    },
+    "meta": {
+      "idempotentReplay": false
+    }
+  },
+  "duration_ms": 5684,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

@@ -1,0 +1,311 @@
+
+> ecotrack-backend@0.1.0 test
+> tsx --test --test-concurrency=1 "src/**/*.test.ts"
+
+? queue options preserve a remote Redis endpoint and encoded credentials (1.179809ms)
+? TLS Redis URLs enable TLS in the options consumed by ioredis (0.279957ms)
+? Redis shares limits and refreshes cached reads after invalidation (56.988163ms)
+? draft validation accepts direct and incident-linked drafts (2.29845ms)
+? draft validation rejects invalid coordinates and incomplete meeting coordinates (1.484598ms)
+? draft listing validation coerces query strings and applies safe limits (0.601805ms)
+(node:1126) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+? section lists paginate by event date and keep public, nearby, and joined results scoped (620.225104ms)
+? ORG_ADMIN can manage organization drafts while ORG_MEMBER and other tenants cannot (30.958166ms)
+? linked drafts require real organization visibility and DRAFT never claims the incident (42.875174ms)
+? one event date and capacity replace the obsolete session API (21.240969ms)
+? coordinators must be active same-organization members and can be removed and reassigned (46.934889ms)
+? discard removes only a tenant-owned private DRAFT (23.704557ms)
+? publish readiness is server-derived and only ORG_ADMIN can publish (36.68143ms)
+? a direct event publishes atomically and exposes only public-safe detail (232.59873ms)
+{"event":"spatial_query","operation":"incidents.organization","projection":"ORGANIZATION","mode":"VIEWPORT","durationMs":15.94,"resultCount":4}
+{"event":"spatial_query","operation":"incidents.organization","projection":"ORGANIZATION","mode":"VIEWPORT","durationMs":1.71,"resultCount":4}
+? linked publication requires VALID review and updates incident, histories, audit, and notification (135.99703ms)
+prisma:error 
+Invalid `prisma.cleanupEvent.updateMany()` invocation in
+/work/src/modules/cleanupEvents/repositories/cleanupEvent.repository.ts:418:45
+
+  415     publishedAt: Date;
+  416   },
+  417 ): Promise<boolean> {
+? 418   const updated = await prisma.cleanupEvent.updateMany(
+Unique constraint failed on the fields: (`incident_id`)
+? concurrent linked publication produces one winner and one stable 409 (104.027149ms)
+? a citizen volunteers with one action, retries idempotently, withdraws, and rejoins (107.873892ms)
+? participation rejects private drafts and request bodies from the removed session flow (58.680989ms)
+? event-level attendance is tenant-safe, idempotent, rewarded once, and private (191.88293ms)
+? EVT-06 protects notes/evidence and atomically completes an event with its linked incident (273.339783ms)
+? a due event reminder reaches volunteers, coordinators, and organization admins once (66.51376ms)
+{"event":"spatial_query","operation":"incidents.organization","projection":"ORGANIZATION","mode":"VIEWPORT","durationMs":2.42,"resultCount":3}
+? EVT-06 cancellation preserves history and releases a linked incident claim (96.570791ms)
+? past and cancelled sections expose only matching public records, newest event first (19.753591ms)
+? review maps include only owned drafts and public active events before pagination (107.497533ms)
+{"event":"spatial_query","operation":"incidents.public","projection":"PUBLIC","mode":"RADIUS","durationMs":1.74,"resultCount":1}
+{"event":"spatial_query","operation":"incidents.public","projection":"PUBLIC","mode":"RADIUS","durationMs":1,"resultCount":1}
+{"event":"spatial_query","operation":"incidents.public","projection":"PUBLIC","mode":"RADIUS","durationMs":0.89,"resultCount":0}
+? awaiting cleanup includes cancelled claims and private drafts but excludes published, resolved, and distant incidents (30.190955ms)
+? EVT-06 validation keeps notes, evidence, completion, and cancellation bounded (3.212899ms)
+? participant operation validation applies bounded paging (2.107761ms)
+? event attendance accepts only final event-level states (0.408593ms)
+? participant removal requires a useful reason (0.422053ms)
+? default workflow initialization is idempotent (211.7393ms)
+? an existing organization with missing protected defaults is safely repaired (26.260768ms)
+? protected lifecycle flags are repaired without replacing custom codes and labels (29.55259ms)
+? the real route lists only the verified active tenant workflow (35.169395ms)
+? configured transitions are tenant-bound and direct cross-organization IDs fail (19.573581ms)
+? citizen summary contains only the authenticated user's records (280.293707ms)
+? organization summaries remain isolated across service areas and tenant data (25.985339ms)
+? platform summary exposes aggregates without tenant-private records (11.017175ms)
+? citizen aggregates scope every private query to the authenticated user (1.404922ms)
+? platform summary returns aggregates without record collections (0.274684ms)
+? citizen and platform routes use the CASL dashboard contract (45.097675ms)
+? organization route requires the exact active tenant (6.495898ms)
+? dashboard routes reject missing authentication and incomplete profiles (6.049759ms)
+? dashboard routes reject unsafe date ranges (3.44539ms)
+? dashboard ranges accept bounded ISO windows (1.837222ms)
+? dashboard ranges reject reversed and overlong windows (1.019328ms)
+? lists active categories (225.311954ms)
+(node:1218) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+? creates evidence intent and one incident/history record (63.031503ms)
+? lists own reports and protects the own-detail route (15.429173ms)
+? public viewport and nearby discovery are bounded, private-safe, and paginated (54.463214ms)
+? organization discovery includes covered boundary incidents and active area outlines (44.13753ms)
+? two-organization discovery preserves tenant-safe spatial and historical access (159.401836ms)
+? organization review detail and mutation remain tenant-private and idempotent (116.583379ms)
+? INT-02 full workflow preserves tenant isolation and updates notifications, rewards, and dashboards (533.249089ms)
+? cancelling an elapsed linked event restores the incident from stored deadlines (34.188784ms)
+? rejects invalid coordinates and inactive categories (6.05255ms)
+? accepts a valid Sri Lankan incident payload (2.514799ms)
+? rejects coordinates outside the supported map area (0.571489ms)
+? rejects unknown fields including organization ownership (0.310425ms)
+? rejects unsafe evidence metadata (0.749819ms)
+? accepts bounded public viewport and radius discovery queries (2.423493ms)
+? rejects unbounded organization and public discovery (0.782009ms)
+? allows an authorized organization to request its complete service-area overlay (1.109946ms)
+? accepts named Sri Lankan coordinates and preserves GeoJSON order (1.736965ms)
+? rejects invalid coordinate ranges (0.520342ms)
+? accepts a bounded viewport and applies the default page size (0.623311ms)
+? rejects reversed, antimeridian, and excessive bounds (0.274469ms)
+? enforces radius and page-size limits (0.616303ms)
+? accepts locations inside the supported Sri Lanka map range (0.380181ms)
+? rejects globally valid coordinates outside the Sri Lanka map range (0.145453ms)
+? keeps viewport and radius searches inside the Sri Lanka map range (0.95644ms)
+? checked-in MAP-03 plans independently prove every primary query (7.657971ms)
+? includes interior and boundary points but excludes outside points (154.114599ms)
+? inactive service areas do not authorize location coverage (14.538149ms)
+? returns an organization-scoped GeoJSON service-area overlay (3.654179ms)
+? routes enforce authentication, profile completion, tenant isolation, and ORG_ADMIN ability (318.812203ms)
+? active workspace memberships are user-owned, active-only, and role-specific (9.364714ms)
+? pending request listing is paginated and never exposes another tenant (32.324931ms)
+? approval atomically reviews, creates one member, audits, and notifies (39.161635ms)
+? decline requires and records a useful reason without creating membership (21.635177ms)
+? concurrent request review has one winner and one stable conflict (21.904868ms)
+? admins add eligible existing users but cannot bypass pending review or duplicate membership (35.187121ms)
+? role and status management is tenant-bound and preserves final active admins (122.844722ms)
+prisma:error 
+Invalid `prisma.organizationMembership.findFirst()` invocation in
+/work/src/modules/memberships/administration/repositories/membershipAdministration.repository.ts:393:40
+
+  390   organizationId: string,
+  391   membershipId: string,
+  392 ) {
+? 393   return prisma.organizationMembership.findFirst(
+Transaction failed due to a write conflict or a deadlock. Please retry your transaction
+? concurrent admin demotions never leave an organization without an active admin (34.545813ms)
+? recognizes direct and adapter-wrapped transaction conflicts (0.61446ms)
+? recognizes Prisma's stable transaction-conflict message only (0.13254ms)
+? routes require authentication, completed profiles, and active accounts (205.954721ms)
+? active organization search exposes safe fields and stable pagination (31.368148ms)
+? creation permits ORG_MEMBER intent only and rejects inactive organizations and existing members (31.807391ms)
+? submission creates one pending request, safe admin notifications, and rejects duplicates (36.415257ms)
+? the database-backed pending constraint makes concurrent duplicate requests safe (25.065192ms)
+? request history is requester-owned and withdrawal is pending-only (32.319695ms)
+? notification routes enforce authentication and profile completion (204.242961ms)
+? the inbox is user-owned, privacy-safe, newest-first, and cursor paginated (50.237403ms)
+? unread filtering, count, mark-one, and mark-all remain consistent and idempotent (41.460652ms)
+? another user's notification ID cannot be read or mutated (19.398383ms)
+? the reusable internal creation service creates normalized safe rows (11.236494ms)
+? push device registration is user-owned and transfers a rotated token safely (36.869238ms)
+? new notifications create durable deliveries without replaying old notifications (40.126622ms)
+prisma:error 
+Invalid `transaction.userDevice.upsert()` invocation in
+/work/src/modules/notifications/repositories/pushDevice.repository.ts:52:39
+
+  49   },
+  50 });
+  51 
+? 52 return transaction.userDevice.upsert(
+Transaction failed due to a write conflict or a deadlock. Please retry your transaction
+prisma:error 
+Invalid `transaction.userDevice.upsert()` invocation in
+/work/src/modules/notifications/repositories/pushDevice.repository.ts:52:39
+
+  49   },
+  50 });
+  51 
+? 52 return transaction.userDevice.upsert(
+Transaction failed due to a write conflict or a deadlock. Please retry your transaction
+prisma:error 
+Invalid `transaction.userDevice.upsert()` invocation in
+/work/src/modules/notifications/repositories/pushDevice.repository.ts:52:39
+
+  49   },
+  50 });
+  51 
+? 52 return transaction.userDevice.upsert(
+Transaction failed due to a write conflict or a deadlock. Please retry your transaction
+prisma:error 
+Invalid `transaction.userDevice.upsert()` invocation in
+/work/src/modules/notifications/repositories/pushDevice.repository.ts:52:39
+
+  49   },
+  50 });
+  51 
+? 52 return transaction.userDevice.upsert(
+Transaction failed due to a write conflict or a deadlock. Please retry your transaction
+? concurrent push registration retries and token transfers remain idempotent and user-owned (226.560149ms)
+? rejects a missing bearer token (177.039651ms)
+? searches active GN Division references for the authenticated user (30.197281ms)
+? rejects requester-controlled security fields (5.342803ms)
+? rejects an unknown GN Division without creating an organization (11.685702ms)
+? creates pending records and no membership (36.850987ms)
+? lists only applications owned by the authenticated requester (8.008844ms)
+? reads an owned application and hides another requester's application (9.145813ms)
+? application sections remain requester-scoped and validate page cursors (15.599298ms)
+? a normal user cannot open the Super Admin review queue (209.35159ms)
+? a Super Admin can list pending applications (35.370148ms)
+? review queue pages without repeats and rejects invalid limits and cursors (25.728004ms)
+? approval activates the organization and creates its first admin atomically (74.246832ms)
+? an application cannot be reviewed twice (5.549581ms)
+? decline requires notes and creates no membership (25.487492ms)
+? a first-time user completes name and phone only once (425.102654ms)
+? reward routes require authentication and a completed profile (222.807462ms)
+? a VALID incident awards once, earns an achievement once, and notifies once (40.918183ms)
+? report submission without a VALID review cannot award points (9.714799ms)
+? attendance rewards require ATTENDED state and remain idempotent (14.43777ms)
+? completed-event rewards derive the volunteer from an eligible participant (12.388953ms)
+? approved special contributions use a stable source key for retries (18.592989ms)
+? users receive only their own privacy-safe summary and history (38.267734ms)
+? earning points never changes CASL permissions (12.257956ms)
+? contribution-list validation applies safe limits (2.185112ms)
+? special contribution keys must be stable backend identifiers (0.43568ms)
+? production composition mounts every approved router before the 404 handler (66.83984ms)
+? global middleware order preserves health, security, CORS, and final 404 handling (3.05222ms)
+? GET /health is public (56.187454ms)
+? GET /api/v1/auth/me rejects a missing token (7.911759ms)
+? GET /api/v1/auth/me rejects an invalid token (3.99656ms)
+? GET /api/v1/auth/me returns safe profile fields (6.159469ms)
+? GET /api/v1/auth/me rejects an inactive account (6.75709ms)
+? a normal user cannot access the Super Admin endpoint (4.500981ms)
+? an incomplete profile cannot bypass onboarding through a protected endpoint (3.979532ms)
+? an active Super Admin can access the Super Admin endpoint (3.556573ms)
+? a malformed Authorization header is rejected (4.131528ms)
+? unexpected authentication errors return a safe response (4.113428ms)
+? an unknown route returns a consistent 404 response (2.967843ms)
+? an active completed user receives citizen and volunteer permissions (1.832409ms)
+? notification abilities are restricted to the authenticated user's records (0.260462ms)
+? an active Super Admin receives oversight but no ordinary operations (0.385169ms)
+? an incomplete profile can update itself but receives no domain permissions (0.229646ms)
+? an Org Admin membership is limited to its own organization (0.402785ms)
+? a suspended profile receives no protected permissions (0.224866ms)
+? an archived profile receives no protected permissions (0.162047ms)
+? an assigned Org Member coordinator receives only event-scoped operations (0.461009ms)
+? an ordinary Org Member receives no event operation permissions (0.333826ms)
+? an Org Admin can enter their own organization membership route (45.2041ms)
+? changing the route ID cannot grant cross-organization access (7.707408ms)
+? an Org Member cannot manage organization memberships (3.682468ms)
+? tenant middleware rejects a malformed organization ID (4.713916ms)
+? an assigned coordinator can enter only the verified event route (4.407256ms)
+? an ordinary Org Member cannot gain coordinator operations (2.927002ms)
+? changing the event ID cannot grant access to another event (3.093419ms)
+? event authorization middleware rejects a malformed event ID (4.010374ms)
+? new organizations receive the required default cleanup workflow (212.470731ms)
+? incident coordinates create a PostGIS point and find every covering organization (16.662818ms)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `23503`. Message: `insert or update on table "cleanup_events" violates foreign key constraint "cleanup_events_created_by_membership_fkey"`
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `23514`. Message: `cleanup event workflow status must be active, tenant-safe, and match lifecycle status`
+? cleanup events reject cross-organization creators and mismatched lifecycle statuses (26.810026ms)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `23505`. Message: `duplicate key value violates unique constraint "cleanup_events_one_active_incident_claim_idx"`
+? only one claiming cleanup event can be active for an incident (32.386044ms)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `23514`. Message: `new row for relation "event_participants" violates check constraint "event_participants_attendance_details_check"`
+? event-level attendance requires a complete, internally consistent marker (19.879872ms)
+? every new domain table has RLS and no frontend-role table privileges (2.011741ms)
+? notification unread lookups use a dedicated partial index (2.039903ms)
+prisma:error 
+Invalid `prisma.notificationDelivery.create()` invocation in
+/work/src/tests/domainSchema.integration.test.ts:622:33
+
+  619 assert.equal(delivery.attemptCount, 0);
+  620 
+  621 await assert.rejects(
+? 622   prisma.notificationDelivery.create(
+Unique constraint failed on the fields: (`notification_id`, `device_id`)
+prisma:error 
+Invalid `prisma.notificationDelivery.create()` invocation in
+/work/src/tests/domainSchema.integration.test.ts:632:33
+
+  629 );
+  630 
+  631 await assert.rejects(
+? 632   prisma.notificationDelivery.create(
+Foreign key constraint violated on the constraint: `notification_deliveries_user_device_fkey`
+prisma:error 
+Invalid `prisma.userDevice.create()` invocation in
+/work/src/tests/domainSchema.integration.test.ts:642:23
+
+  639 );
+  640 
+  641 await assert.rejects(
+? 642   prisma.userDevice.create(
+Unique constraint failed on the fields: (`installation_id`)
+prisma:error 
+Invalid `prisma.userDevice.create()` invocation in
+/work/src/tests/domainSchema.integration.test.ts:653:23
+
+  650 );
+  651 
+  652 await assert.rejects(
+? 653   prisma.userDevice.create(
+Unique constraint failed on the fields: (`expo_push_token`)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `23514`. Message: `new row for relation "user_devices" violates check constraint "user_devices_active_state_check"`
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `23514`. Message: `new row for relation "notification_deliveries" violates check constraint "notification_deliveries_attempt_count_check"`
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `23514`. Message: `new row for relation "notification_deliveries" violates check constraint "notification_deliveries_retry_time_check"`
+? push devices and deliveries enforce durable ownership and idempotency (61.359141ms)
+? push-delivery retry work uses a dedicated partial index (7.463024ms)
+? tests 163
+? suites 0
+? pass 163
+? fail 0
+? cancelled 0
+? skipped 0
+? todo 0
+? duration_ms 17660.134672
+Exit code: 0

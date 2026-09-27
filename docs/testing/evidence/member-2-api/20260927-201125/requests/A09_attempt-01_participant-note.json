@@ -1,0 +1,28 @@
+{
+  "timestamp_utc": "2026-09-27T16:33:53.661Z",
+  "method": "POST",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/327878e3-9476-467a-acea-1928e69baea6/notes",
+  "request": {
+    "visibility": "PARTICIPANTS",
+    "noteText": "M2 participant update 20260927-201125"
+  },
+  "http_status": 201,
+  "response": {
+    "data": {
+      "id": "7299a1f4-4259-45ad-a4a6-a2bcf79403d0",
+      "visibility": "PARTICIPANTS",
+      "noteText": "M2 participant update 20260927-201125",
+      "author": {
+        "id": "cbdcc52a-26c4-4bdd-a887-ec46403e2c16",
+        "fullName": "M2-A02-20260927-201125"
+      },
+      "createdAt": "2026-09-27T16:33:50.871Z"
+    }
+  },
+  "duration_ms": 10518,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

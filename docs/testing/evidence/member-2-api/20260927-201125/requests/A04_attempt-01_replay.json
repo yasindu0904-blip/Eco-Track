@@ -1,0 +1,74 @@
+{
+  "started_at_utc": "2026-09-27T16:11:08.106Z",
+  "method": "POST",
+  "route": "/incidents",
+  "request": {
+    "submissionId": "0cd903c7-4e15-4a85-9fde-7c5ff2775c07",
+    "categoryId": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+    "title": "M2-A04-20260927-201125",
+    "description": "Synthetic Member 2 incident for upload and idempotency testing.",
+    "severity": "LOW",
+    "latitude": 6.795,
+    "longitude": 79.94,
+    "evidence": [
+      {
+        "originalFileName": "M2-A04-test.png",
+        "contentType": "image/png",
+        "sizeBytes": 68,
+        "storagePath": "incidents/aec80483-fa4b-4cba-bc70-5f8d6ce75efe/0cd903c7-4e15-4a85-9fde-7c5ff2775c07/46f7d973-b918-4a4d-abf3-6ad1d7d04808.png",
+        "sortOrder": 0
+      }
+    ]
+  },
+  "response": {
+    "data": {
+      "id": "c87b8cb6-1113-4b24-b913-ee6d329705b8",
+      "title": "M2-A04-20260927-201125",
+      "description": "Synthetic Member 2 incident for upload and idempotency testing.",
+      "category": {
+        "id": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+        "name": "Environmental Damage",
+        "description": "Damage to trees, waterways, public green space, or ecosystems."
+      },
+      "severity": "LOW",
+      "status": "ACTIVE",
+      "latitude": 6.795,
+      "longitude": 79.94,
+      "addressText": null,
+      "reportedAt": "2026-09-27T16:10:59.882Z",
+      "highlightUntil": "2026-09-29T16:10:59.882Z",
+      "archiveAfter": "2026-10-06T16:10:59.882Z",
+      "resolvedAt": null,
+      "archivedAt": null,
+      "thumbnailUrl": "[REDACTED]",
+      "photos": [
+        {
+          "id": "3075fc59-3950-40f1-8b21-5c04effe8931",
+          "url": "[REDACTED]",
+          "caption": null,
+          "sortOrder": 0
+        }
+      ],
+      "statusHistory": [
+        {
+          "id": "a0c77ca7-69d2-435a-a2b9-8bfffe87542f",
+          "fromStatus": null,
+          "toStatus": "ACTIVE",
+          "reason": "Incident reported.",
+          "changedAt": "2026-09-27T16:10:59.885Z"
+        }
+      ]
+    },
+    "meta": {
+      "idempotentReplay": true
+    }
+  },
+  "http_status": 200,
+  "duration_ms": 2189,
+  "assertions": {
+    "status": true,
+    "sameId": true,
+    "replay": true
+  },
+  "status": "PASS"
+}

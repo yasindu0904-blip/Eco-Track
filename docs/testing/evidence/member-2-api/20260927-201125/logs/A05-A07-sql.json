@@ -1,0 +1,537 @@
+[
+  {
+    "sql": "SELECT id FROM public.user_profiles WHERE id=$1 AND auth_user_id=$2",
+    "parameters": [
+      "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+      "ec49195c-29f4-4658-85a9-b85afc54ae8d"
+    ]
+  },
+  {
+    "sql": "SELECT id,name_en,official_code,source_name,round(extensions.ST_Y(extensions.ST_PointOnSurface(boundary::extensions.geometry))::numeric,6)::float8 AS lat,round(extensions.ST_X(extensions.ST_PointOnSurface(boundary::extensions.geometry))::numeric,6)::float8 AS lon FROM public.administrative_areas WHERE is_active=true AND divisional_secretariat_name ILIKE '%Kesbewa%' ORDER BY name_en LIMIT 2",
+    "parameters": []
+  },
+  {
+    "sql": "BEGIN",
+    "parameters": []
+  },
+  {
+    "sql": "INSERT INTO public.organizations(id,requested_by_user_id,name,slug,official_email,official_phone,official_address,status,activated_at,updated_at) VALUES($1,$2,$3,$4,$5,'0770000000','Synthetic test organization','ACTIVE',date_trunc('milliseconds',now()),date_trunc('milliseconds',now()))",
+    "parameters": [
+      "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+      "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+      "M2-org-a-20260927-201125",
+      "m2-org-a-20260927-201125",
+      "m2-org-a-20260927-201125@example.com"
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.organization_memberships(id,organization_id,user_id,role,status,source) VALUES($1,$2,$3,'ORG_ADMIN','ACTIVE','FIRST_ADMIN')",
+    "parameters": [
+      "cbdcc52a-26c4-4bdd-a887-ec46403e2c16",
+      "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+      "aec80483-fa4b-4cba-bc70-5f8d6ce75efe"
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.organization_service_areas(id,organization_id,administrative_area_id,status,updated_at) VALUES($1,$2,$3,'ACTIVE',date_trunc('milliseconds',now()))",
+    "parameters": [
+      "3146af42-450e-4be6-a38a-a41ff761d4c0",
+      "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+      "6783fd92-c3e6-454f-bb92-1e3fe429dd32"
+    ]
+  },
+  {
+    "sql": "SELECT id,code FROM public.cleanup_workflow_statuses WHERE organization_id=$1",
+    "parameters": [
+      "5bd7613b-8dad-45d4-9933-f1ec124417c9"
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.organizations(id,requested_by_user_id,name,slug,official_email,official_phone,official_address,status,activated_at,updated_at) VALUES($1,$2,$3,$4,$5,'0770000000','Synthetic test organization','ACTIVE',date_trunc('milliseconds',now()),date_trunc('milliseconds',now()))",
+    "parameters": [
+      "7b832c2f-03e7-445b-ba62-8ce08736b113",
+      "919896f3-7a20-46ae-b1fb-549b54326b11",
+      "M2-org-b-20260927-201125",
+      "m2-org-b-20260927-201125",
+      "m2-org-b-20260927-201125@example.com"
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.organization_memberships(id,organization_id,user_id,role,status,source) VALUES($1,$2,$3,'ORG_ADMIN','ACTIVE','FIRST_ADMIN')",
+    "parameters": [
+      "09bed8ef-9305-412e-938e-58df5cb4ae47",
+      "7b832c2f-03e7-445b-ba62-8ce08736b113",
+      "919896f3-7a20-46ae-b1fb-549b54326b11"
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.organization_service_areas(id,organization_id,administrative_area_id,status,updated_at) VALUES($1,$2,$3,'ACTIVE',date_trunc('milliseconds',now()))",
+    "parameters": [
+      "4bd3c03d-5d1d-4c93-a772-6d3411ecaac0",
+      "7b832c2f-03e7-445b-ba62-8ce08736b113",
+      "358a3dc3-91d4-428c-94c2-29266a9f8c84"
+    ]
+  },
+  {
+    "sql": "SELECT id,code FROM public.cleanup_workflow_statuses WHERE organization_id=$1",
+    "parameters": [
+      "7b832c2f-03e7-445b-ba62-8ce08736b113"
+    ]
+  },
+  {
+    "sql": "SELECT id FROM public.incident_categories WHERE is_active=true ORDER BY name LIMIT 1",
+    "parameters": []
+  },
+  {
+    "sql": "SELECT round(extensions.ST_Y(p::extensions.geometry)::numeric,6)::float8 AS lat,round(extensions.ST_X(p::extensions.geometry)::numeric,6)::float8 AS lon FROM (SELECT extensions.ST_Project(extensions.ST_SetSRID(extensions.ST_MakePoint(79.94,6.795),4326)::extensions.geography,$1::float8,0) AS p) q",
+    "parameters": [
+      500
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.incidents(id,reporter_user_id,submission_id,category_id,title,description,severity,status,latitude,longitude,highlight_until,archive_after,reported_at,updated_at,resolved_at) VALUES($1,$2,$3,$4,$5,'Synthetic spatial prerequisite','LOW',$6::\"IncidentStatus\",$7,$8,now()+interval '48 hours',now()+interval '7 days',date_trunc('milliseconds',now()),date_trunc('milliseconds',now()),CASE WHEN $6='RESOLVED' THEN now() ELSE NULL END)",
+    "parameters": [
+      "318f949e-cdd9-49bd-adc5-ab69026f35b6",
+      "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+      "49aa10ba-cdf2-428f-9dca-b0fa28a0401b",
+      "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+      "M2-radius-500-20260927-201125",
+      "ACTIVE",
+      6.799521,
+      79.94
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.cleanup_events(id,organization_id,incident_id,current_workflow_status_id,lifecycle_status,created_by_membership_id,title,description,event_latitude,event_longitude,starts_at,published_at,updated_at) VALUES($1,$2,$3,$4,$5::\"CleanupLifecycleStatus\",$6,$7,'Synthetic spatial and isolation prerequisite',$8,$9,now()+interval '1 day',CASE WHEN $5='PUBLISHED' THEN date_trunc('milliseconds',now()) ELSE NULL END,date_trunc('milliseconds',now()))",
+    "parameters": [
+      "91d76e2b-a993-472f-93e6-e1bdb3fbc8f4",
+      "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+      null,
+      "8838a25b-d6b0-4533-b470-ce1cae83030e",
+      "PUBLISHED",
+      "cbdcc52a-26c4-4bdd-a887-ec46403e2c16",
+      "M2-radius-500-20260927-201125",
+      6.799521,
+      79.94
+    ]
+  },
+  {
+    "sql": "SELECT round(extensions.ST_Y(p::extensions.geometry)::numeric,6)::float8 AS lat,round(extensions.ST_X(p::extensions.geometry)::numeric,6)::float8 AS lon FROM (SELECT extensions.ST_Project(extensions.ST_SetSRID(extensions.ST_MakePoint(79.94,6.795),4326)::extensions.geography,$1::float8,0) AS p) q",
+    "parameters": [
+      1500
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.incidents(id,reporter_user_id,submission_id,category_id,title,description,severity,status,latitude,longitude,highlight_until,archive_after,reported_at,updated_at,resolved_at) VALUES($1,$2,$3,$4,$5,'Synthetic spatial prerequisite','LOW',$6::\"IncidentStatus\",$7,$8,now()+interval '48 hours',now()+interval '7 days',date_trunc('milliseconds',now()),date_trunc('milliseconds',now()),CASE WHEN $6='RESOLVED' THEN now() ELSE NULL END)",
+    "parameters": [
+      "c8e1d382-7e89-4f4c-9df7-93664ad506ef",
+      "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+      "c6805b82-5c29-48df-820a-d30c98e7ba5b",
+      "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+      "M2-radius-1500-20260927-201125",
+      "ACTIVE",
+      6.808564,
+      79.94
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.cleanup_events(id,organization_id,incident_id,current_workflow_status_id,lifecycle_status,created_by_membership_id,title,description,event_latitude,event_longitude,starts_at,published_at,updated_at) VALUES($1,$2,$3,$4,$5::\"CleanupLifecycleStatus\",$6,$7,'Synthetic spatial and isolation prerequisite',$8,$9,now()+interval '1 day',CASE WHEN $5='PUBLISHED' THEN date_trunc('milliseconds',now()) ELSE NULL END,date_trunc('milliseconds',now()))",
+    "parameters": [
+      "e3120d2f-0091-4aa1-9882-f6dc119ecc21",
+      "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+      null,
+      "8838a25b-d6b0-4533-b470-ce1cae83030e",
+      "PUBLISHED",
+      "cbdcc52a-26c4-4bdd-a887-ec46403e2c16",
+      "M2-radius-1500-20260927-201125",
+      6.808564,
+      79.94
+    ]
+  },
+  {
+    "sql": "SELECT round(extensions.ST_Y(p::extensions.geometry)::numeric,6)::float8 AS lat,round(extensions.ST_X(p::extensions.geometry)::numeric,6)::float8 AS lon FROM (SELECT extensions.ST_Project(extensions.ST_SetSRID(extensions.ST_MakePoint(79.94,6.795),4326)::extensions.geography,$1::float8,0) AS p) q",
+    "parameters": [
+      2500
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.incidents(id,reporter_user_id,submission_id,category_id,title,description,severity,status,latitude,longitude,highlight_until,archive_after,reported_at,updated_at,resolved_at) VALUES($1,$2,$3,$4,$5,'Synthetic spatial prerequisite','LOW',$6::\"IncidentStatus\",$7,$8,now()+interval '48 hours',now()+interval '7 days',date_trunc('milliseconds',now()),date_trunc('milliseconds',now()),CASE WHEN $6='RESOLVED' THEN now() ELSE NULL END)",
+    "parameters": [
+      "e9d45be8-af03-4d22-a5f9-37f948b55211",
+      "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+      "51cb5307-1b34-49d3-8fcd-d016ce1a889d",
+      "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+      "M2-radius-2500-20260927-201125",
+      "ACTIVE",
+      6.817606,
+      79.94
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.cleanup_events(id,organization_id,incident_id,current_workflow_status_id,lifecycle_status,created_by_membership_id,title,description,event_latitude,event_longitude,starts_at,published_at,updated_at) VALUES($1,$2,$3,$4,$5::\"CleanupLifecycleStatus\",$6,$7,'Synthetic spatial and isolation prerequisite',$8,$9,now()+interval '1 day',CASE WHEN $5='PUBLISHED' THEN date_trunc('milliseconds',now()) ELSE NULL END,date_trunc('milliseconds',now()))",
+    "parameters": [
+      "142c6f4f-1cfc-4c64-b29f-5827bb79a637",
+      "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+      null,
+      "8838a25b-d6b0-4533-b470-ce1cae83030e",
+      "PUBLISHED",
+      "cbdcc52a-26c4-4bdd-a887-ec46403e2c16",
+      "M2-radius-2500-20260927-201125",
+      6.817606,
+      79.94
+    ]
+  },
+  {
+    "sql": "SELECT round(extensions.ST_Y(p::extensions.geometry)::numeric,6)::float8 AS lat,round(extensions.ST_X(p::extensions.geometry)::numeric,6)::float8 AS lon FROM (SELECT extensions.ST_Project(extensions.ST_SetSRID(extensions.ST_MakePoint(79.94,6.795),4326)::extensions.geography,$1::float8,0) AS p) q",
+    "parameters": [
+      3500
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.incidents(id,reporter_user_id,submission_id,category_id,title,description,severity,status,latitude,longitude,highlight_until,archive_after,reported_at,updated_at,resolved_at) VALUES($1,$2,$3,$4,$5,'Synthetic spatial prerequisite','LOW',$6::\"IncidentStatus\",$7,$8,now()+interval '48 hours',now()+interval '7 days',date_trunc('milliseconds',now()),date_trunc('milliseconds',now()),CASE WHEN $6='RESOLVED' THEN now() ELSE NULL END)",
+    "parameters": [
+      "ba0fbd5c-1b94-4452-9519-0a3324a4ffc5",
+      "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+      "1f6727e6-c378-4bc7-9a21-3ae19f6fe33b",
+      "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+      "M2-radius-3500-20260927-201125",
+      "ACTIVE",
+      6.826648,
+      79.94
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.cleanup_events(id,organization_id,incident_id,current_workflow_status_id,lifecycle_status,created_by_membership_id,title,description,event_latitude,event_longitude,starts_at,published_at,updated_at) VALUES($1,$2,$3,$4,$5::\"CleanupLifecycleStatus\",$6,$7,'Synthetic spatial and isolation prerequisite',$8,$9,now()+interval '1 day',CASE WHEN $5='PUBLISHED' THEN date_trunc('milliseconds',now()) ELSE NULL END,date_trunc('milliseconds',now()))",
+    "parameters": [
+      "1b8de8e4-9e71-44cc-8985-efa89e97656e",
+      "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+      null,
+      "8838a25b-d6b0-4533-b470-ce1cae83030e",
+      "PUBLISHED",
+      "cbdcc52a-26c4-4bdd-a887-ec46403e2c16",
+      "M2-radius-3500-20260927-201125",
+      6.826648,
+      79.94
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.incidents(id,reporter_user_id,submission_id,category_id,title,description,severity,status,latitude,longitude,highlight_until,archive_after,reported_at,updated_at,resolved_at) VALUES($1,$2,$3,$4,$5,'Synthetic spatial prerequisite','LOW',$6::\"IncidentStatus\",$7,$8,now()+interval '48 hours',now()+interval '7 days',date_trunc('milliseconds',now()),date_trunc('milliseconds',now()),CASE WHEN $6='RESOLVED' THEN now() ELSE NULL END)",
+    "parameters": [
+      "f8c5207b-dfbc-47b3-84fa-337d61381123",
+      "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+      "3c1845aa-05e6-41d5-a898-d8ea192bc11e",
+      "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+      "M2-radius-resolved-20260927-201125",
+      "RESOLVED",
+      6.795,
+      79.94
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.incidents(id,reporter_user_id,submission_id,category_id,title,description,severity,status,latitude,longitude,highlight_until,archive_after,reported_at,updated_at,resolved_at) VALUES($1,$2,$3,$4,$5,'Synthetic spatial prerequisite','LOW',$6::\"IncidentStatus\",$7,$8,now()+interval '48 hours',now()+interval '7 days',date_trunc('milliseconds',now()),date_trunc('milliseconds',now()),CASE WHEN $6='RESOLVED' THEN now() ELSE NULL END)",
+    "parameters": [
+      "7c55d958-92a7-446d-8897-e633c8e285dd",
+      "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+      "63e050cc-7720-4235-8b2c-87de9ae3fa21",
+      "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+      "M2-area-0-unlinked-20260927-201125",
+      "ACTIVE",
+      6.837643,
+      79.961131
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.incidents(id,reporter_user_id,submission_id,category_id,title,description,severity,status,latitude,longitude,highlight_until,archive_after,reported_at,updated_at,resolved_at) VALUES($1,$2,$3,$4,$5,'Synthetic spatial prerequisite','LOW',$6::\"IncidentStatus\",$7,$8,now()+interval '48 hours',now()+interval '7 days',date_trunc('milliseconds',now()),date_trunc('milliseconds',now()),CASE WHEN $6='RESOLVED' THEN now() ELSE NULL END)",
+    "parameters": [
+      "f1d940b5-a025-48f7-8329-23d31eb553f8",
+      "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+      "c52a10da-48ae-4dc1-beaf-284e3da37c3f",
+      "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+      "M2-area-0-resolved-20260927-201125",
+      "RESOLVED",
+      6.837643,
+      79.961131
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.incidents(id,reporter_user_id,submission_id,category_id,title,description,severity,status,latitude,longitude,highlight_until,archive_after,reported_at,updated_at,resolved_at) VALUES($1,$2,$3,$4,$5,'Synthetic spatial prerequisite','LOW',$6::\"IncidentStatus\",$7,$8,now()+interval '48 hours',now()+interval '7 days',date_trunc('milliseconds',now()),date_trunc('milliseconds',now()),CASE WHEN $6='RESOLVED' THEN now() ELSE NULL END)",
+    "parameters": [
+      "a92fb738-339d-489c-bc0d-0c8b933fa65f",
+      "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+      "8ab30ecb-5c14-4b67-80ea-e70f18f75f29",
+      "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+      "M2-area-0-linked-20260927-201125",
+      "CLEANUP_ORGANIZED",
+      6.837643,
+      79.961131
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.cleanup_events(id,organization_id,incident_id,current_workflow_status_id,lifecycle_status,created_by_membership_id,title,description,event_latitude,event_longitude,starts_at,published_at,updated_at) VALUES($1,$2,$3,$4,$5::\"CleanupLifecycleStatus\",$6,$7,'Synthetic spatial and isolation prerequisite',$8,$9,now()+interval '1 day',CASE WHEN $5='PUBLISHED' THEN date_trunc('milliseconds',now()) ELSE NULL END,date_trunc('milliseconds',now()))",
+    "parameters": [
+      "21f67744-6726-49af-922c-6ca706c45847",
+      "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+      "7c55d958-92a7-446d-8897-e633c8e285dd",
+      "be87918e-281a-4e1e-8577-1140f7083d35",
+      "DRAFT",
+      "cbdcc52a-26c4-4bdd-a887-ec46403e2c16",
+      "M2-area-0-own-draft-20260927-201125",
+      6.837643,
+      79.961131
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.cleanup_events(id,organization_id,incident_id,current_workflow_status_id,lifecycle_status,created_by_membership_id,title,description,event_latitude,event_longitude,starts_at,published_at,updated_at) VALUES($1,$2,$3,$4,$5::\"CleanupLifecycleStatus\",$6,$7,'Synthetic spatial and isolation prerequisite',$8,$9,now()+interval '1 day',CASE WHEN $5='PUBLISHED' THEN date_trunc('milliseconds',now()) ELSE NULL END,date_trunc('milliseconds',now()))",
+    "parameters": [
+      "78029c3e-29c4-4148-bd92-c5670469996b",
+      "7b832c2f-03e7-445b-ba62-8ce08736b113",
+      null,
+      "afb09e3b-e3af-46ac-a4a7-939299d8df42",
+      "DRAFT",
+      "09bed8ef-9305-412e-938e-58df5cb4ae47",
+      "M2-area-0-other-draft-20260927-201125",
+      6.837643,
+      79.961131
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.cleanup_events(id,organization_id,incident_id,current_workflow_status_id,lifecycle_status,created_by_membership_id,title,description,event_latitude,event_longitude,starts_at,published_at,updated_at) VALUES($1,$2,$3,$4,$5::\"CleanupLifecycleStatus\",$6,$7,'Synthetic spatial and isolation prerequisite',$8,$9,now()+interval '1 day',CASE WHEN $5='PUBLISHED' THEN date_trunc('milliseconds',now()) ELSE NULL END,date_trunc('milliseconds',now()))",
+    "parameters": [
+      "b48cae0d-0881-46d7-a727-56dedd812afe",
+      "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+      null,
+      "8838a25b-d6b0-4533-b470-ce1cae83030e",
+      "PUBLISHED",
+      "cbdcc52a-26c4-4bdd-a887-ec46403e2c16",
+      "M2-area-0-direct-public-20260927-201125",
+      6.837643,
+      79.961131
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.cleanup_events(id,organization_id,incident_id,current_workflow_status_id,lifecycle_status,created_by_membership_id,title,description,event_latitude,event_longitude,starts_at,published_at,updated_at) VALUES($1,$2,$3,$4,$5::\"CleanupLifecycleStatus\",$6,$7,'Synthetic spatial and isolation prerequisite',$8,$9,now()+interval '1 day',CASE WHEN $5='PUBLISHED' THEN date_trunc('milliseconds',now()) ELSE NULL END,date_trunc('milliseconds',now()))",
+    "parameters": [
+      "c322a9b1-c76d-4921-bbf8-bb8fd46d51c5",
+      "7b832c2f-03e7-445b-ba62-8ce08736b113",
+      "a92fb738-339d-489c-bc0d-0c8b933fa65f",
+      "cc33abef-41ff-4ab3-9640-be6f7d8761ab",
+      "PUBLISHED",
+      "09bed8ef-9305-412e-938e-58df5cb4ae47",
+      "M2-area-0-other-linked-public-20260927-201125",
+      6.837643,
+      79.961131
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.incidents(id,reporter_user_id,submission_id,category_id,title,description,severity,status,latitude,longitude,highlight_until,archive_after,reported_at,updated_at,resolved_at) VALUES($1,$2,$3,$4,$5,'Synthetic spatial prerequisite','LOW',$6::\"IncidentStatus\",$7,$8,now()+interval '48 hours',now()+interval '7 days',date_trunc('milliseconds',now()),date_trunc('milliseconds',now()),CASE WHEN $6='RESOLVED' THEN now() ELSE NULL END)",
+    "parameters": [
+      "bd5defb7-1ba4-471f-9670-b7c08b0c0964",
+      "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+      "e5ff43d2-397d-455d-ae32-dca754d278ad",
+      "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+      "M2-area-1-unlinked-20260927-201125",
+      "ACTIVE",
+      6.785302,
+      79.921836
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.incidents(id,reporter_user_id,submission_id,category_id,title,description,severity,status,latitude,longitude,highlight_until,archive_after,reported_at,updated_at,resolved_at) VALUES($1,$2,$3,$4,$5,'Synthetic spatial prerequisite','LOW',$6::\"IncidentStatus\",$7,$8,now()+interval '48 hours',now()+interval '7 days',date_trunc('milliseconds',now()),date_trunc('milliseconds',now()),CASE WHEN $6='RESOLVED' THEN now() ELSE NULL END)",
+    "parameters": [
+      "f3bf60c2-bf9c-4513-af37-7d7fac1167ce",
+      "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+      "322bdf40-4390-44cc-8d44-46d68d0891db",
+      "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+      "M2-area-1-resolved-20260927-201125",
+      "RESOLVED",
+      6.785302,
+      79.921836
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.incidents(id,reporter_user_id,submission_id,category_id,title,description,severity,status,latitude,longitude,highlight_until,archive_after,reported_at,updated_at,resolved_at) VALUES($1,$2,$3,$4,$5,'Synthetic spatial prerequisite','LOW',$6::\"IncidentStatus\",$7,$8,now()+interval '48 hours',now()+interval '7 days',date_trunc('milliseconds',now()),date_trunc('milliseconds',now()),CASE WHEN $6='RESOLVED' THEN now() ELSE NULL END)",
+    "parameters": [
+      "bec3762b-4d77-4da0-bfe1-e40e6298761e",
+      "aec80483-fa4b-4cba-bc70-5f8d6ce75efe",
+      "fedf30cc-efae-4a61-9b8d-3ce20fc55b9c",
+      "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+      "M2-area-1-linked-20260927-201125",
+      "CLEANUP_ORGANIZED",
+      6.785302,
+      79.921836
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.cleanup_events(id,organization_id,incident_id,current_workflow_status_id,lifecycle_status,created_by_membership_id,title,description,event_latitude,event_longitude,starts_at,published_at,updated_at) VALUES($1,$2,$3,$4,$5::\"CleanupLifecycleStatus\",$6,$7,'Synthetic spatial and isolation prerequisite',$8,$9,now()+interval '1 day',CASE WHEN $5='PUBLISHED' THEN date_trunc('milliseconds',now()) ELSE NULL END,date_trunc('milliseconds',now()))",
+    "parameters": [
+      "1c919b94-805f-4c00-8a50-5d5e1a83697d",
+      "7b832c2f-03e7-445b-ba62-8ce08736b113",
+      "bd5defb7-1ba4-471f-9670-b7c08b0c0964",
+      "afb09e3b-e3af-46ac-a4a7-939299d8df42",
+      "DRAFT",
+      "09bed8ef-9305-412e-938e-58df5cb4ae47",
+      "M2-area-1-own-draft-20260927-201125",
+      6.785302,
+      79.921836
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.cleanup_events(id,organization_id,incident_id,current_workflow_status_id,lifecycle_status,created_by_membership_id,title,description,event_latitude,event_longitude,starts_at,published_at,updated_at) VALUES($1,$2,$3,$4,$5::\"CleanupLifecycleStatus\",$6,$7,'Synthetic spatial and isolation prerequisite',$8,$9,now()+interval '1 day',CASE WHEN $5='PUBLISHED' THEN date_trunc('milliseconds',now()) ELSE NULL END,date_trunc('milliseconds',now()))",
+    "parameters": [
+      "63ee9015-146b-4acd-925b-efaf77a95e67",
+      "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+      null,
+      "be87918e-281a-4e1e-8577-1140f7083d35",
+      "DRAFT",
+      "cbdcc52a-26c4-4bdd-a887-ec46403e2c16",
+      "M2-area-1-other-draft-20260927-201125",
+      6.785302,
+      79.921836
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.cleanup_events(id,organization_id,incident_id,current_workflow_status_id,lifecycle_status,created_by_membership_id,title,description,event_latitude,event_longitude,starts_at,published_at,updated_at) VALUES($1,$2,$3,$4,$5::\"CleanupLifecycleStatus\",$6,$7,'Synthetic spatial and isolation prerequisite',$8,$9,now()+interval '1 day',CASE WHEN $5='PUBLISHED' THEN date_trunc('milliseconds',now()) ELSE NULL END,date_trunc('milliseconds',now()))",
+    "parameters": [
+      "d777743b-2023-4071-89f1-2a2851afbf11",
+      "7b832c2f-03e7-445b-ba62-8ce08736b113",
+      null,
+      "cc33abef-41ff-4ab3-9640-be6f7d8761ab",
+      "PUBLISHED",
+      "09bed8ef-9305-412e-938e-58df5cb4ae47",
+      "M2-area-1-direct-public-20260927-201125",
+      6.785302,
+      79.921836
+    ]
+  },
+  {
+    "sql": "INSERT INTO public.cleanup_events(id,organization_id,incident_id,current_workflow_status_id,lifecycle_status,created_by_membership_id,title,description,event_latitude,event_longitude,starts_at,published_at,updated_at) VALUES($1,$2,$3,$4,$5::\"CleanupLifecycleStatus\",$6,$7,'Synthetic spatial and isolation prerequisite',$8,$9,now()+interval '1 day',CASE WHEN $5='PUBLISHED' THEN date_trunc('milliseconds',now()) ELSE NULL END,date_trunc('milliseconds',now()))",
+    "parameters": [
+      "933f080b-3561-43e5-9cab-93b785170d0d",
+      "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+      "bec3762b-4d77-4da0-bfe1-e40e6298761e",
+      "8838a25b-d6b0-4533-b470-ce1cae83030e",
+      "PUBLISHED",
+      "cbdcc52a-26c4-4bdd-a887-ec46403e2c16",
+      "M2-area-1-other-linked-public-20260927-201125",
+      6.785302,
+      79.921836
+    ]
+  },
+  {
+    "sql": "COMMIT",
+    "parameters": []
+  },
+  {
+    "sql": "SELECT id,extensions.ST_Distance(geo_point,extensions.ST_SetSRID(extensions.ST_MakePoint(79.94,6.795),4326)::extensions.geography) AS meters FROM public.incidents WHERE id=ANY($1::uuid[])",
+    "parameters": [
+      [
+        "318f949e-cdd9-49bd-adc5-ab69026f35b6",
+        "c8e1d382-7e89-4f4c-9df7-93664ad506ef",
+        "e9d45be8-af03-4d22-a5f9-37f948b55211",
+        "ba0fbd5c-1b94-4452-9519-0a3324a4ffc5",
+        "f8c5207b-dfbc-47b3-84fa-337d61381123"
+      ]
+    ]
+  },
+  {
+    "sql": "SELECT id,extensions.ST_Distance(event_geo_point,extensions.ST_SetSRID(extensions.ST_MakePoint(79.94,6.795),4326)::extensions.geography) AS meters FROM public.cleanup_events WHERE id=ANY($1::uuid[])",
+    "parameters": [
+      [
+        "91d76e2b-a993-472f-93e6-e1bdb3fbc8f4",
+        "e3120d2f-0091-4aa1-9882-f6dc119ecc21",
+        "142c6f4f-1cfc-4c64-b29f-5827bb79a637",
+        "1b8de8e4-9e71-44cc-8985-efa89e97656e"
+      ]
+    ]
+  },
+  {
+    "sql": "SELECT to_jsonb(e) AS row FROM public.cleanup_events e WHERE id=$1",
+    "parameters": [
+      "1c919b94-805f-4c00-8a50-5d5e1a83697d"
+    ]
+  },
+  {
+    "sql": "SELECT to_jsonb(e) AS row FROM public.cleanup_events e WHERE id=$1",
+    "parameters": [
+      "1c919b94-805f-4c00-8a50-5d5e1a83697d"
+    ]
+  },
+  {
+    "sql": "SELECT i.id,extensions.ST_Covers(a.boundary,i.geo_point) AS covered FROM public.incidents i CROSS JOIN public.administrative_areas a WHERE a.id=$1 AND i.id=ANY($2::uuid[])",
+    "parameters": [
+      "6783fd92-c3e6-454f-bb92-1e3fe429dd32",
+      [
+        "318f949e-cdd9-49bd-adc5-ab69026f35b6",
+        "c8e1d382-7e89-4f4c-9df7-93664ad506ef",
+        "e9d45be8-af03-4d22-a5f9-37f948b55211",
+        "ba0fbd5c-1b94-4452-9519-0a3324a4ffc5",
+        "f8c5207b-dfbc-47b3-84fa-337d61381123",
+        "7c55d958-92a7-446d-8897-e633c8e285dd",
+        "f1d940b5-a025-48f7-8329-23d31eb553f8",
+        "a92fb738-339d-489c-bc0d-0c8b933fa65f",
+        "bd5defb7-1ba4-471f-9670-b7c08b0c0964",
+        "f3bf60c2-bf9c-4513-af37-7d7fac1167ce",
+        "bec3762b-4d77-4da0-bfe1-e40e6298761e"
+      ]
+    ]
+  },
+  {
+    "sql": "SELECT e.id,extensions.ST_Covers(a.boundary,e.event_geo_point) AS covered FROM public.cleanup_events e CROSS JOIN public.administrative_areas a WHERE a.id=$1 AND e.id=ANY($2::uuid[])",
+    "parameters": [
+      "6783fd92-c3e6-454f-bb92-1e3fe429dd32",
+      [
+        "91d76e2b-a993-472f-93e6-e1bdb3fbc8f4",
+        "e3120d2f-0091-4aa1-9882-f6dc119ecc21",
+        "142c6f4f-1cfc-4c64-b29f-5827bb79a637",
+        "1b8de8e4-9e71-44cc-8985-efa89e97656e",
+        "21f67744-6726-49af-922c-6ca706c45847",
+        "78029c3e-29c4-4148-bd92-c5670469996b",
+        "b48cae0d-0881-46d7-a727-56dedd812afe",
+        "c322a9b1-c76d-4921-bbf8-bb8fd46d51c5",
+        "1c919b94-805f-4c00-8a50-5d5e1a83697d",
+        "63ee9015-146b-4acd-925b-efaf77a95e67",
+        "d777743b-2023-4071-89f1-2a2851afbf11",
+        "933f080b-3561-43e5-9cab-93b785170d0d"
+      ]
+    ]
+  },
+  {
+    "sql": "SELECT i.id,extensions.ST_Covers(a.boundary,i.geo_point) AS covered FROM public.incidents i CROSS JOIN public.administrative_areas a WHERE a.id=$1 AND i.id=ANY($2::uuid[])",
+    "parameters": [
+      "358a3dc3-91d4-428c-94c2-29266a9f8c84",
+      [
+        "318f949e-cdd9-49bd-adc5-ab69026f35b6",
+        "c8e1d382-7e89-4f4c-9df7-93664ad506ef",
+        "e9d45be8-af03-4d22-a5f9-37f948b55211",
+        "ba0fbd5c-1b94-4452-9519-0a3324a4ffc5",
+        "f8c5207b-dfbc-47b3-84fa-337d61381123",
+        "7c55d958-92a7-446d-8897-e633c8e285dd",
+        "f1d940b5-a025-48f7-8329-23d31eb553f8",
+        "a92fb738-339d-489c-bc0d-0c8b933fa65f",
+        "bd5defb7-1ba4-471f-9670-b7c08b0c0964",
+        "f3bf60c2-bf9c-4513-af37-7d7fac1167ce",
+        "bec3762b-4d77-4da0-bfe1-e40e6298761e"
+      ]
+    ]
+  },
+  {
+    "sql": "SELECT e.id,extensions.ST_Covers(a.boundary,e.event_geo_point) AS covered FROM public.cleanup_events e CROSS JOIN public.administrative_areas a WHERE a.id=$1 AND e.id=ANY($2::uuid[])",
+    "parameters": [
+      "358a3dc3-91d4-428c-94c2-29266a9f8c84",
+      [
+        "91d76e2b-a993-472f-93e6-e1bdb3fbc8f4",
+        "e3120d2f-0091-4aa1-9882-f6dc119ecc21",
+        "142c6f4f-1cfc-4c64-b29f-5827bb79a637",
+        "1b8de8e4-9e71-44cc-8985-efa89e97656e",
+        "21f67744-6726-49af-922c-6ca706c45847",
+        "78029c3e-29c4-4148-bd92-c5670469996b",
+        "b48cae0d-0881-46d7-a727-56dedd812afe",
+        "c322a9b1-c76d-4921-bbf8-bb8fd46d51c5",
+        "1c919b94-805f-4c00-8a50-5d5e1a83697d",
+        "63ee9015-146b-4acd-925b-efaf77a95e67",
+        "d777743b-2023-4071-89f1-2a2851afbf11",
+        "933f080b-3561-43e5-9cab-93b785170d0d"
+      ]
+    ]
+  }
+]

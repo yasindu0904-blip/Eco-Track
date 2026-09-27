@@ -1,0 +1,83 @@
+timeStamp,elapsed,label,responseCode,responseMessage,threadName,dataType,success,failureMessage,bytes,sentBytes,grpThreads,allThreads,Latency,IdleTime,Connect
+1790528516149,3023,Categories,200,OK,Bounded reads 1-1,text,true,,1585,1112,2,2,3017,0,1320
+1790528522003,1944,Categories,200,OK,Bounded reads 1-2,text,true,,1584,1112,3,3,1943,0,770
+1790528525418,1458,Nearby incidents,200,OK,Bounded reads 1-1,text,true,,3156,1158,3,3,1457,0,0
+1790528527991,1964,Categories,200,OK,Bounded reads 1-3,text,true,,1584,1112,4,4,1964,0,721
+1790528528960,1446,Nearby incidents,200,OK,Bounded reads 1-2,text,true,,3155,1158,4,4,1446,0,0
+1790528531990,1502,Nearby events,200,OK,Bounded reads 1-1,text,true,,2251,1155,4,4,1502,0,0
+1790528533989,2037,Categories,200,OK,Bounded reads 1-4,text,true,,1584,1112,5,5,2037,0,843
+1790528534968,1494,Nearby incidents,200,OK,Bounded reads 1-3,text,true,,3155,1158,5,5,1494,0,0
+1790528535420,1179,Nearby events,200,OK,Bounded reads 1-2,text,true,,2250,1155,5,5,1179,0,0
+1790528538543,1178,Categories,200,OK,Bounded reads 1-1,text,true,,1584,1112,5,5,1178,0,0
+1790528539984,1656,Categories,200,OK,Bounded reads 1-5,text,true,,1584,1112,5,5,1656,0,488
+1790528541034,1776,Nearby incidents,200,OK,Bounded reads 1-4,text,true,,3156,1158,5,5,1776,0,0
+1790528541482,1330,Nearby events,200,OK,Bounded reads 1-3,text,true,,2250,1155,5,5,1330,0,0
+1790528541604,1223,Categories,200,OK,Bounded reads 1-2,text,true,,1584,1112,5,5,1223,0,0
+1790528544737,1248,Nearby incidents,200,OK,Bounded reads 1-1,text,true,,3155,1158,5,5,1248,0,0
+1790528546651,1246,Nearby incidents,200,OK,Bounded reads 1-5,text,true,,3155,1158,5,5,1246,0,0
+1790528547829,1228,Categories,200,OK,Bounded reads 1-3,text,true,,1584,1112,5,5,1228,0,0
+1790528547831,1226,Nearby incidents,200,OK,Bounded reads 1-2,text,true,,3155,1158,5,5,1226,0,0
+1790528547829,1534,Nearby events,200,OK,Bounded reads 1-4,text,true,,2251,1155,5,5,1534,0,0
+1790528550991,1239,Nearby events,200,OK,Bounded reads 1-1,text,true,,2250,1155,5,5,1239,0,0
+1790528552915,1192,Nearby events,200,OK,Bounded reads 1-5,text,true,,2250,1155,5,5,1192,0,0
+1790528554066,1145,Nearby incidents,200,OK,Bounded reads 1-3,text,true,,3155,1158,5,5,1145,0,0
+1790528554066,1223,Nearby events,200,OK,Bounded reads 1-2,text,true,,2250,1155,5,5,1222,0,0
+1790528554367,1123,Categories,200,OK,Bounded reads 1-4,text,true,,1584,1112,5,5,1123,0,0
+1790528557239,1440,Categories,200,OK,Bounded reads 1-1,text,true,,1585,1112,5,5,1440,0,0
+1790528559118,1164,Categories,200,OK,Bounded reads 1-5,text,true,,1584,1112,5,5,1164,0,0
+1790528560217,1229,Nearby events,200,OK,Bounded reads 1-3,text,true,,2250,1155,5,5,1229,0,0
+1790528560296,1171,Categories,200,OK,Bounded reads 1-2,text,true,,1584,1112,5,5,1171,0,0
+1790528560501,3264,Nearby incidents,200,OK,Bounded reads 1-4,text,true,,3156,1158,5,5,3264,0,0
+1790528563683,1553,Nearby incidents,200,OK,Bounded reads 1-1,text,true,,3155,1158,5,5,1553,0,0
+1790528565285,1179,Nearby incidents,200,OK,Bounded reads 1-5,text,true,,3155,1158,5,5,1179,0,0
+1790528566451,1146,Categories,200,OK,Bounded reads 1-3,text,true,,1584,1112,5,5,1146,0,0
+1790528566483,1189,Nearby incidents,200,OK,Bounded reads 1-2,text,true,,3155,1158,5,5,1188,0,0
+1790528568770,1507,Nearby events,200,OK,Bounded reads 1-4,text,true,,2251,1155,5,5,1507,0,0
+1790528570239,1503,Nearby events,200,OK,Bounded reads 1-1,text,true,,2251,1155,5,5,1503,0,0
+1790528571481,1161,Nearby events,200,OK,Bounded reads 1-5,text,true,,2250,1155,5,5,1161,0,0
+1790528572685,1380,Nearby events,200,OK,Bounded reads 1-2,text,true,,2251,1155,5,5,1380,0,0
+1790528572607,2152,Nearby incidents,200,OK,Bounded reads 1-3,text,true,,3156,1158,5,5,2152,0,0
+1790528575286,1215,Categories,200,OK,Bounded reads 1-4,text,true,,1584,1112,5,5,1214,0,0
+1790528576751,1784,Categories,200,OK,Bounded reads 1-1,text,true,,1584,1112,5,5,1784,0,679
+1790528577652,1206,Categories,200,OK,Bounded reads 1-5,text,true,,1584,1112,5,5,1206,0,0
+1790528579070,1189,Categories,200,OK,Bounded reads 1-2,text,true,,1584,1112,5,5,1189,0,0
+1790528579772,1438,Nearby events,200,OK,Bounded reads 1-3,text,true,,2250,1155,5,5,1438,0,0
+1790528581514,1232,Nearby incidents,200,OK,Bounded reads 1-4,text,true,,3155,1158,5,5,1232,0,0
+1790528583538,1223,Nearby incidents,200,OK,Bounded reads 1-1,text,true,,3155,1158,5,5,1223,0,0
+1790528583868,1411,Nearby incidents,200,OK,Bounded reads 1-5,text,true,,3155,1158,5,5,1411,0,0
+1790528585270,1778,Nearby incidents,200,OK,Bounded reads 1-2,text,true,,3155,1158,5,5,1778,0,558
+1790528586216,1200,Categories,200,OK,Bounded reads 1-3,text,true,,1584,1112,5,5,1200,0,0
+1790528587749,1756,Nearby events,200,OK,Bounded reads 1-4,text,true,,2251,1155,5,5,1756,0,0
+1790528589769,1375,Nearby events,200,OK,Bounded reads 1-1,text,true,,2250,1155,5,5,1374,0,0
+1790528590283,1167,Nearby events,200,OK,Bounded reads 1-5,text,true,,2250,1155,5,5,1167,0,0
+1790528592052,1240,Nearby events,200,OK,Bounded reads 1-2,text,true,,2250,1155,5,5,1240,0,0
+1790528592428,2162,Nearby incidents,200,OK,Bounded reads 1-3,text,true,,3156,1158,5,5,2162,0,666
+1790528594518,2258,Categories,200,OK,Bounded reads 1-4,text,true,,1584,1112,5,5,2258,0,1133
+1790528596151,1163,Categories,200,OK,Bounded reads 1-1,text,true,,1584,1112,5,5,1163,0,0
+1790528596457,1341,Categories,200,OK,Bounded reads 1-5,text,true,,1584,1112,5,5,1341,0,0
+1790528598300,1194,Categories,200,OK,Bounded reads 1-2,text,true,,1584,1112,5,5,1194,0,0
+1790528599595,1365,Nearby events,200,OK,Bounded reads 1-3,text,true,,2250,1155,5,5,1365,0,0
+1790528601784,1236,Nearby incidents,200,OK,Bounded reads 1-4,text,true,,3155,1158,5,5,1236,0,0
+1790528602318,1318,Nearby incidents,200,OK,Bounded reads 1-1,text,true,,3155,1158,5,5,1318,0,0
+1790528602806,2187,Nearby incidents,200,OK,Bounded reads 1-5,text,true,,3155,1158,5,5,2187,0,834
+1790528604499,1545,Nearby incidents,200,OK,Bounded reads 1-2,text,true,,3155,1158,5,5,1545,0,0
+1790528605971,1248,Categories,200,OK,Bounded reads 1-3,text,true,,1584,1112,5,5,1248,0,0
+1790528608037,1540,Nearby events,200,OK,Bounded reads 1-4,text,true,,2251,1155,5,5,1540,0,0
+1790528608648,1417,Nearby events,200,OK,Bounded reads 1-1,text,true,,2250,1155,5,5,1417,0,0
+1790528610008,1177,Nearby events,200,OK,Bounded reads 1-5,text,true,,2250,1155,5,5,1177,0,0
+1790528611055,1327,Nearby events,200,OK,Bounded reads 1-2,text,true,,2251,1155,5,5,1326,0,0
+1790528612233,1950,Nearby incidents,200,OK,Bounded reads 1-3,text,true,,3156,1158,5,5,1950,0,0
+1790528614588,1540,Categories,200,OK,Bounded reads 1-4,text,true,,1584,1112,5,5,1540,0,0
+1790528615071,1140,Categories,200,OK,Bounded reads 1-1,text,true,,1584,1112,5,5,1140,0,0
+1790528616198,1201,Categories,200,OK,Bounded reads 1-5,text,true,,1584,1112,5,5,1201,0,0
+1790528617391,1298,Categories,200,OK,Bounded reads 1-2,text,true,,1584,1112,5,5,1297,0,0
+1790528619186,1346,Nearby events,200,OK,Bounded reads 1-3,text,true,,2250,1155,5,5,1345,0,0
+1790528621215,1162,Nearby incidents,200,OK,Bounded reads 1-1,text,true,,3155,1158,5,5,1162,0,0
+1790528621135,1242,Nearby incidents,200,OK,Bounded reads 1-4,text,true,,3155,1158,5,5,1242,0,0
+1790528622412,1307,Nearby incidents,200,OK,Bounded reads 1-5,text,true,,3155,1158,5,5,1307,0,0
+1790528623695,1152,Nearby incidents,200,OK,Bounded reads 1-2,text,true,,3155,1158,5,5,1152,0,0
+1790528625536,1154,Categories,200,OK,Bounded reads 1-3,text,true,,1584,1112,5,5,1154,0,0
+1790528627395,1514,Nearby events,200,OK,Bounded reads 1-4,text,true,,2251,1155,4,4,1514,0,0
+1790528627394,1515,Nearby events,200,OK,Bounded reads 1-1,text,true,,2251,1155,4,4,1515,0,0
+1790528628726,1214,Nearby events,200,OK,Bounded reads 1-5,text,true,,2250,1155,2,2,1214,0,0
+1790528629853,1225,Nearby events,200,OK,Bounded reads 1-2,text,true,,2250,1155,1,1,1225,0,0

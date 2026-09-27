@@ -1,0 +1,19 @@
+{
+  "timestamp_utc": "2026-09-27T16:31:34.743Z",
+  "method": "POST",
+  "route": "/events/327878e3-9476-467a-acea-1928e69baea6/participation/withdraw",
+  "request": {},
+  "http_status": 500,
+  "response": {
+    "error": {
+      "code": "INTERNAL_SERVER_ERROR",
+      "message": "An unexpected error occurred."
+    }
+  },
+  "duration_ms": 8118,
+  "assertions": {
+    "status": false,
+    "contract": false
+  },
+  "status": "FAIL"
+}

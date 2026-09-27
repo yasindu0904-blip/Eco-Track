@@ -1,0 +1,64 @@
+{
+  "retrieved_at_utc": "2026-09-27T14:56:00.686Z",
+  "window": {
+    "start": "2026-09-27T12:34:30Z",
+    "end": "2026-09-27T12:36:00Z"
+  },
+  "source": "Northflank GET eco-track/logs",
+  "http_status": 200,
+  "logs": [
+    {
+      "timestamp_utc": "2026-09-27T12:35:17.606Z",
+      "log": "2026-09-27T12:35:17.478716116Z stdout F {\"event\":\"spatial_query\",\"operation\":\"cleanup_events.public\",\"projection\":\"PUBLIC\",\"mode\":\"RADIUS\",\"durationMs\":316.7,\"resultCount\":0}"
+    },
+    {
+      "timestamp_utc": "2026-09-27T12:35:08.779Z",
+      "log": "2026-09-27T12:35:08.751352146Z stdout F {\"event\":\"spatial_query\",\"operation\":\"incidents.public\",\"projection\":\"PUBLIC\",\"mode\":\"RADIUS\",\"durationMs\":607.76,\"resultCount\":0}"
+    },
+    {
+      "timestamp_utc": "2026-09-27T12:35:07.026Z",
+      "log": "2026-09-27T12:35:06.984688912Z stderr F     at async Proxy._transactionWithCallback (/app/node_modules/@prisma/client/runtime/client.js:99:4678)"
+    },
+    {
+      "timestamp_utc": "2026-09-27T12:35:07.026Z",
+      "log": "2026-09-27T12:35:06.984690907Z stderr F     at async createIncident (file:///app/dist/modules/incidents/services/incident.service.js:124:24)"
+    },
+    {
+      "timestamp_utc": "2026-09-27T12:35:07.026Z",
+      "log": "2026-09-27T12:35:06.984692705Z stderr F     at async file:///app/dist/modules/incidents/controllers/incident.controllers.js:40:28 {"
+    },
+    {
+      "timestamp_utc": "2026-09-27T12:35:07.026Z",
+      "log": "2026-09-27T12:35:06.984694598Z stderr F   code: 'P2028',"
+    },
+    {
+      "timestamp_utc": "2026-09-27T12:35:07.026Z",
+      "log": "2026-09-27T12:35:06.984696618Z stderr F   meta: {},"
+    },
+    {
+      "timestamp_utc": "2026-09-27T12:35:07.026Z",
+      "log": "2026-09-27T12:35:06.984698651Z stderr F   clientVersion: '7.10.0'"
+    },
+    {
+      "timestamp_utc": "2026-09-27T12:35:07.026Z",
+      "log": "2026-09-27T12:35:06.984700861Z stderr F }"
+    },
+    {
+      "timestamp_utc": "2026-09-27T12:35:07.025Z",
+      "log": "2026-09-27T12:35:06.984633157Z stderr F Unexpected EcoTrack API error: PrismaClientKnownRequestError: Transaction API error: Unable to start a transaction in the given time."
+    },
+    {
+      "timestamp_utc": "2026-09-27T12:35:07.025Z",
+      "log": "2026-09-27T12:35:06.984682902Z stderr F     at #c (/app/node_modules/@prisma/client/runtime/client.js:57:14128)"
+    },
+    {
+      "timestamp_utc": "2026-09-27T12:35:07.025Z",
+      "log": "2026-09-27T12:35:06.984686544Z stderr F     at Ut.transaction (/app/node_modules/@prisma/client/runtime/client.js:58:1816)"
+    }
+  ],
+  "pagination": {
+    "hasNextPage": false,
+    "count": 12
+  },
+  "conclusion": "Time-correlated createIncident transaction start timeout P2028. Underlying resource/connection cause unconfirmed; no corrective change verified."
+}

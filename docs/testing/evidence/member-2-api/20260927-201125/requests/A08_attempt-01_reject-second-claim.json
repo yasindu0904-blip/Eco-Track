@@ -1,0 +1,22 @@
+{
+  "timestamp_utc": "2026-09-27T16:29:56.778Z",
+  "method": "POST",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/00baa061-9974-4e58-8f17-2dac05be2867/publish",
+  "request": {},
+  "http_status": 409,
+  "response": {
+    "error": {
+      "code": "INCIDENT_ALREADY_CLAIMED",
+      "message": "Another cleanup event has already been published for this incident.",
+      "details": {
+        "eventId": "327878e3-9476-467a-acea-1928e69baea6"
+      }
+    }
+  },
+  "duration_ms": 7633,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

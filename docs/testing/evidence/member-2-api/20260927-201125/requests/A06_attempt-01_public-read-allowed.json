@@ -1,0 +1,38 @@
+{
+  "timestamp_utc": "2026-09-27T16:19:15.485Z",
+  "method": "GET",
+  "route": "/events/d777743b-2023-4071-89f1-2a2851afbf11",
+  "request": null,
+  "http_status": 200,
+  "response": {
+    "data": {
+      "id": "d777743b-2023-4071-89f1-2a2851afbf11",
+      "organization": {
+        "id": "7b832c2f-03e7-445b-ba62-8ce08736b113",
+        "name": "M2-org-b-20260927-201125"
+      },
+      "incidentId": null,
+      "title": "M2-area-1-direct-public-20260927-201125",
+      "description": "Synthetic spatial and isolation prerequisite",
+      "lifecycleStatus": "PUBLISHED",
+      "displayStatus": "UPCOMING",
+      "eventLatitude": 6.785302,
+      "eventLongitude": 79.921836,
+      "eventAddress": null,
+      "startsAt": "2026-09-28T16:18:31.411Z",
+      "capacity": null,
+      "publishedAt": "2026-09-27T16:18:31.411Z",
+      "publicInstructions": "",
+      "meetingLatitude": null,
+      "meetingLongitude": null,
+      "meetingAddress": null,
+      "joinedVolunteerCount": 0
+    }
+  },
+  "duration_ms": 1832,
+  "assertions": {
+    "status": true,
+    "id": true
+  },
+  "status": "PASS"
+}

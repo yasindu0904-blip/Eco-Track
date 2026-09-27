@@ -1,0 +1,22 @@
+{
+  "timestamp_utc": "2026-09-27T16:30:00.275Z",
+  "query": "SELECT id,lifecycle_status FROM public.cleanup_events WHERE incident_id=$1 ORDER BY id",
+  "parameters": [
+    "8edee030-a439-4d90-8480-5f7ce6b848ad"
+  ],
+  "rows": [
+    {
+      "id": "00baa061-9974-4e58-8f17-2dac05be2867",
+      "lifecycle_status": "DRAFT"
+    },
+    {
+      "id": "327878e3-9476-467a-acea-1928e69baea6",
+      "lifecycle_status": "PUBLISHED"
+    }
+  ],
+  "assertions": {
+    "onePublished": true,
+    "competingStillDraft": true
+  },
+  "status": "PASS"
+}

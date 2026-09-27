@@ -1,0 +1,36 @@
+{
+  "started_at_utc": "2026-09-27T16:11:12.031Z",
+  "method": "POST",
+  "route": "/incidents",
+  "request": {
+    "submissionId": "58bebdad-8efa-410a-9fcd-35ef05c7f53f",
+    "categoryId": "882322db-f8fa-44c6-aa8a-0b4cd343ebad",
+    "title": "M2-A04-20260927-201125",
+    "description": "Synthetic Member 2 incident for upload and idempotency testing.",
+    "severity": "LOW",
+    "latitude": 6.795,
+    "longitude": 79.94,
+    "evidence": [
+      {
+        "originalFileName": "M2-A04-test.png",
+        "contentType": "image/png",
+        "sizeBytes": 68,
+        "storagePath": "incidents/5d1ad108-929d-46f4-9221-0eb7f7930f62/58bebdad-8efa-410a-9fcd-35ef05c7f53f/missing.png",
+        "sortOrder": 0
+      }
+    ]
+  },
+  "response": {
+    "error": {
+      "code": "INCIDENT_EVIDENCE_PATH_INVALID",
+      "message": "A photo does not belong to this report submission."
+    }
+  },
+  "http_status": 422,
+  "duration_ms": 1806,
+  "assertions": {
+    "status": true,
+    "code": true
+  },
+  "status": "PASS"
+}

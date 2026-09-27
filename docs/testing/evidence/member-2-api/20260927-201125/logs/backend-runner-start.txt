@@ -1,0 +1,5 @@
+Started UTC: 2026-09-27T15:00:38.740Z
+Docker command: run -d --name m2-20260927201125-runner --network m2-20260927201125 -e NODE_ENV=test -e DATABASE_URL=[LOCAL_DISPOSABLE_DATABASE_URL] -e SUPABASE_URL=https://ci-placeholder.supabase.co -e SUPABASE_PUBLISHABLE_KEY=ci-placeholder-publishable-key -e SUPABASE_SERVICE_ROLE_KEY= -e REDIS_URL=redis://m2-redis:6379 -e TEST_REDIS_URL=redis://m2-redis:6379 -e REDIS_KEY_PREFIX=m2-20260927201125 -e EXPO_ACCESS_TOKEN= -e DOTENV_CONFIG_PATH=/nonexistent-member2.env --mount type=bind,source=C:\Users\chira\OneDrive\Desktop\Banking-Management-System-main\Eco-Track\backend,target=/source,readonly -w /work node:24-bookworm sleep infinity
+27668968cd800c49b3ae2c73d23572cb5d241c47c9bb7bc5beb2301d2d8fef8a
+
+Exit code: 0

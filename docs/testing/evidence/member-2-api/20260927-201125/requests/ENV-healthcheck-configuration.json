@@ -1,0 +1,30 @@
+{
+  "source": "Northflank service-details snapshots from earlier inspection in this session",
+  "services": [
+    {
+      "id": "eco-track",
+      "healthChecks": [
+        {
+          "protocol": "HTTP",
+          "type": "readinessProbe",
+          "port": 5000,
+          "path": "/health",
+          "initialDelaySeconds": 30,
+          "periodSeconds": 15,
+          "timeoutSeconds": 15,
+          "failureThreshold": 3,
+          "successThreshold": 1
+        }
+      ],
+      "deploymentPlan": "nf-compute-10",
+      "instances": 1
+    },
+    {
+      "id": "ecotrack-notification",
+      "healthChecks": [],
+      "deploymentPlan": "nf-compute-10",
+      "instances": 1
+    }
+  ],
+  "note": "Plan IDs are configuration, not measured resource limits. No plan changed."
+}

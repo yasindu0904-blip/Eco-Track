@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "assertions": {
+    "uploadAccepted": true
+  },
+  "storagePath": "incidents/aec80483-fa4b-4cba-bc70-5f8d6ce75efe/0cd903c7-4e15-4a85-9fde-7c5ff2775c07/46f7d973-b918-4a4d-abf3-6ad1d7d04808.png",
+  "bytes": 68
+}

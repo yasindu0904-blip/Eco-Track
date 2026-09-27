@@ -1,0 +1,47 @@
+{
+  "timestamp_utc": "2026-09-27T16:28:12.481Z",
+  "method": "POST",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/drafts",
+  "request": {
+    "title": "M2-competing-20260927-201125",
+    "description": "Synthetic Member 2 lifecycle test, no real-world cleanup.",
+    "publicInstructions": "Synthetic test only; no actual attendance requested.",
+    "eventAddress": "Official GN test point",
+    "eventLatitude": 6.837643,
+    "eventLongitude": 79.961131,
+    "incidentId": "8edee030-a439-4d90-8480-5f7ce6b848ad",
+    "startsAt": "2026-09-27T17:28:07.932Z",
+    "capacity": 5
+  },
+  "http_status": 201,
+  "response": {
+    "data": {
+      "id": "00baa061-9974-4e58-8f17-2dac05be2867",
+      "organizationId": "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+      "incidentId": "8edee030-a439-4d90-8480-5f7ce6b848ad",
+      "lifecycleStatus": "DRAFT",
+      "displayStatus": "DRAFT",
+      "title": "M2-competing-20260927-201125",
+      "description": "Synthetic Member 2 lifecycle test, no real-world cleanup.",
+      "publicInstructions": "Synthetic test only; no actual attendance requested.",
+      "eventLatitude": 6.837643,
+      "eventLongitude": 79.961131,
+      "eventAddress": "Official GN test point",
+      "meetingLatitude": 6.837643,
+      "meetingLongitude": 79.961131,
+      "meetingAddress": null,
+      "startsAt": "2026-09-27T17:28:07.932Z",
+      "capacity": 5,
+      "locationLockedToIncident": true,
+      "createdAt": "2026-09-27T16:28:10.692Z",
+      "updatedAt": "2026-09-27T16:28:10.692Z",
+      "coordinators": []
+    }
+  },
+  "duration_ms": 4548,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

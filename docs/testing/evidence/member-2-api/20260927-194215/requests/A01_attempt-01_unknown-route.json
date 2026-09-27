@@ -1,0 +1,25 @@
+{
+  "case_id": "A01",
+  "check": "unknown-route",
+  "started_at_utc": "2026-09-27T14:12:17.600Z",
+  "url": "https://p01--eco-track--xnjn7t9fk69n.code.run/api/v1/m2-nonexistent-route",
+  "duration_ms": 265,
+  "expected": {
+    "status": 404,
+    "code": "ROUTE_NOT_FOUND"
+  },
+  "http_status": 404,
+  "body": {
+    "error": {
+      "code": "ROUTE_NOT_FOUND",
+      "message": "The requested route was not found."
+    }
+  },
+  "assertions": {
+    "status": true,
+    "json": true,
+    "contract": true,
+    "no_stack_or_sql": true
+  },
+  "status": "PASS"
+}

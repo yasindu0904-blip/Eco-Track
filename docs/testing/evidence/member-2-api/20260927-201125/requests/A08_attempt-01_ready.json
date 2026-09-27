@@ -1,0 +1,51 @@
+{
+  "timestamp_utc": "2026-09-27T16:28:47.937Z",
+  "method": "GET",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/327878e3-9476-467a-acea-1928e69baea6/publish-readiness",
+  "request": null,
+  "http_status": 200,
+  "response": {
+    "data": {
+      "eventId": "327878e3-9476-467a-acea-1928e69baea6",
+      "ready": true,
+      "checks": [
+        {
+          "code": "PUBLIC_DETAILS",
+          "ready": true,
+          "message": "Public description, instructions, and location are complete."
+        },
+        {
+          "code": "EVENT_TIME",
+          "ready": true,
+          "message": "The event has one future starting date and time."
+        },
+        {
+          "code": "ACTIVE_COORDINATOR",
+          "ready": true,
+          "message": "At least one active coordinator is assigned."
+        },
+        {
+          "code": "WORKFLOW_TRANSITION",
+          "ready": true,
+          "message": "The configured workflow allows publication."
+        },
+        {
+          "code": "INCIDENT_REVIEW",
+          "ready": true,
+          "message": "This organization has validated the linked incident."
+        },
+        {
+          "code": "INCIDENT_AVAILABLE",
+          "ready": true,
+          "message": "The linked incident is available to claim."
+        }
+      ]
+    }
+  },
+  "duration_ms": 4248,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

@@ -1,0 +1,71 @@
+{
+  "timestamp_utc": "2026-09-27T16:19:20.545Z",
+  "method": "GET",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/map?west=79.891836&south=6.7553019999999995&east=79.991131&north=6.867643&zoom=13&limit=100&includePublic=true",
+  "pages": [
+    {
+      "http_status": 200,
+      "count": 3,
+      "duration_ms": 2137
+    }
+  ],
+  "returnedIds": [
+    "c322a9b1-c76d-4921-bbf8-bb8fd46d51c5",
+    "b48cae0d-0881-46d7-a727-56dedd812afe",
+    "21f67744-6726-49af-922c-6ca706c45847"
+  ],
+  "expected": [
+    {
+      "id": "21f67744-6726-49af-922c-6ca706c45847",
+      "label": "area-0-own-draft",
+      "included": true
+    },
+    {
+      "id": "78029c3e-29c4-4148-bd92-c5670469996b",
+      "label": "area-0-other-draft",
+      "included": false
+    },
+    {
+      "id": "b48cae0d-0881-46d7-a727-56dedd812afe",
+      "label": "area-0-direct-public",
+      "included": true
+    },
+    {
+      "id": "c322a9b1-c76d-4921-bbf8-bb8fd46d51c5",
+      "label": "area-0-other-linked-public",
+      "included": true
+    },
+    {
+      "id": "1c919b94-805f-4c00-8a50-5d5e1a83697d",
+      "label": "area-1-own-draft",
+      "included": false
+    },
+    {
+      "id": "63ee9015-146b-4acd-925b-efaf77a95e67",
+      "label": "area-1-other-draft",
+      "included": false
+    },
+    {
+      "id": "d777743b-2023-4071-89f1-2a2851afbf11",
+      "label": "area-1-direct-public",
+      "included": false
+    },
+    {
+      "id": "933f080b-3561-43e5-9cab-93b785170d0d",
+      "label": "area-1-other-linked-public",
+      "included": false
+    }
+  ],
+  "assertions": {
+    "paginationComplete": true,
+    "area-0-own-draft": true,
+    "area-0-other-draft": true,
+    "area-0-direct-public": true,
+    "area-0-other-linked-public": true,
+    "area-1-own-draft": true,
+    "area-1-other-draft": true,
+    "area-1-direct-public": true,
+    "area-1-other-linked-public": true
+  },
+  "status": "PASS"
+}

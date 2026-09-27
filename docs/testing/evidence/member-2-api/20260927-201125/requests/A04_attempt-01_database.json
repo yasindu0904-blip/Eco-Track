@@ -1,0 +1,25 @@
+{
+  "status": "PASS",
+  "rows": [
+    {
+      "id": "c87b8cb6-1113-4b24-b913-ee6d329705b8",
+      "latitude": 6.795,
+      "longitude": 79.94,
+      "x": 79.94,
+      "y": 6.795,
+      "photos": 1
+    }
+  ],
+  "invalidRows": 0,
+  "submissionId": "0cd903c7-4e15-4a85-9fde-7c5ff2775c07",
+  "negativeSubmissionIds": [
+    "2fabc3e3-e64c-4f5a-ae16-8e12be434308",
+    "58bebdad-8efa-410a-9fcd-35ef05c7f53f"
+  ],
+  "assertions": {
+    "oneIncident": true,
+    "onePhoto": true,
+    "spatialPoint": true,
+    "noInvalidRows": true
+  }
+}

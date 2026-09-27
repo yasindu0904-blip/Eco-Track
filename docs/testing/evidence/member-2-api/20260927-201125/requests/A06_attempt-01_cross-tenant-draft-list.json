@@ -1,0 +1,20 @@
+{
+  "timestamp_utc": "2026-09-27T16:19:01.527Z",
+  "method": "GET",
+  "route": "/organizations/7b832c2f-03e7-445b-ba62-8ce08736b113/events/drafts",
+  "request": null,
+  "http_status": 403,
+  "response": {
+    "error": {
+      "code": "ORGANIZATION_ACCESS_DENIED",
+      "message": "You do not have access to this organization."
+    }
+  },
+  "duration_ms": 1807,
+  "assertions": {
+    "status": true,
+    "code": true,
+    "noData": true
+  },
+  "status": "PASS"
+}

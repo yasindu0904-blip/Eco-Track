@@ -1,0 +1,25 @@
+{
+  "timestamp_utc": "2026-09-27T16:28:26.216Z",
+  "method": "POST",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/327878e3-9476-467a-acea-1928e69baea6/publish",
+  "request": {},
+  "http_status": 409,
+  "response": {
+    "error": {
+      "code": "CLEANUP_EVENT_NOT_READY",
+      "message": "Assign at least one active member as an event coordinator.",
+      "details": {
+        "failedChecks": [
+          "ACTIVE_COORDINATOR",
+          "INCIDENT_REVIEW"
+        ]
+      }
+    }
+  },
+  "duration_ms": 7703,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

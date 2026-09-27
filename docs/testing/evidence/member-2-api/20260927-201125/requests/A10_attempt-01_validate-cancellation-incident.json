@@ -1,0 +1,31 @@
+{
+  "timestamp_utc": "2026-09-27T16:32:26.727Z",
+  "method": "PATCH",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/incidents/6aca80ee-8ed5-439e-b958-21bd006d8f4a/review",
+  "request": {
+    "status": "VALID"
+  },
+  "http_status": 200,
+  "response": {
+    "data": {
+      "review": {
+        "id": "a460771c-790b-400c-bc62-392609efdc8b",
+        "status": "VALID",
+        "reasonCode": null,
+        "privateNotes": null,
+        "reviewerName": "M2-A02-20260927-201125",
+        "firstViewedAt": "2026-09-27T16:32:21.425Z",
+        "reviewedAt": "2026-09-27T16:32:21.116Z",
+        "updatedAt": "2026-09-27T16:32:21.425Z"
+      },
+      "rewardAwarded": true,
+      "idempotentReplay": false
+    }
+  },
+  "duration_ms": 8701,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

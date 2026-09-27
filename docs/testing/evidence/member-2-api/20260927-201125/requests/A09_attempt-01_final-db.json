@@ -1,0 +1,28 @@
+{
+  "timestamp_utc": "2026-09-27T16:35:08.689Z",
+  "query": "SELECT e.lifecycle_status,i.status AS incident_status,p.attendance_status,(SELECT count(*)::int FROM public.contribution_events c WHERE c.cleanup_event_id=e.id AND c.user_id=$2) AS rewards,(SELECT count(*)::int FROM public.event_evidence x WHERE x.cleanup_event_id=e.id AND x.type='AFTER') AS after_photos,(SELECT count(*)::int FROM public.notifications n WHERE n.user_id=$2 AND n.type='EVENT_COMPLETED' AND n.data->>'eventId'=e.id::text) AS notifications FROM public.cleanup_events e JOIN public.incidents i ON i.id=e.incident_id JOIN public.event_participants p ON p.cleanup_event_id=e.id AND p.user_id=$2 WHERE e.id=$1",
+  "parameters": [
+    "327878e3-9476-467a-acea-1928e69baea6",
+    "73fb6bb5-41ee-4aa3-af84-2980c6a28dfb"
+  ],
+  "rows": [
+    {
+      "lifecycle_status": "COMPLETED",
+      "incident_status": "RESOLVED",
+      "attendance_status": "ATTENDED",
+      "rewards": 1,
+      "after_photos": 1,
+      "notifications": 1
+    }
+  ],
+  "assertions": {
+    "oneRow": true,
+    "complete": true,
+    "resolved": true,
+    "attended": true,
+    "oneReward": true,
+    "after": true,
+    "notification": true
+  },
+  "status": "PASS"
+}

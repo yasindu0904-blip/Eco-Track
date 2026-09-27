@@ -1,0 +1,26 @@
+{
+  "timestamp_utc": "2026-09-27T16:34:58.233Z",
+  "method": "POST",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/327878e3-9476-467a-acea-1928e69baea6/complete",
+  "request": {
+    "expectedUpdatedAt": "2026-09-27T16:28:55.372Z",
+    "notes": "Synthetic lifecycle validation complete."
+  },
+  "http_status": 200,
+  "response": {
+    "data": {
+      "eventId": "327878e3-9476-467a-acea-1928e69baea6",
+      "lifecycleStatus": "COMPLETED",
+      "updatedAt": "2026-09-27T16:34:51.510Z",
+      "incidentStatus": "RESOLVED",
+      "rewardsAwarded": 1,
+      "idempotentReplay": false
+    }
+  },
+  "duration_ms": 14700,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

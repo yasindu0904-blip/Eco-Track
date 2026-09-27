@@ -1,0 +1,22 @@
+Started UTC: 2026-09-27T15:00:37.920Z
+Docker command: exec -i m2-20260927201125-db psql -v ON_ERROR_STOP=1 -U postgres -d ecotrack_m2_isolated
+DO
+   current_database   | inet_server_addr 
+----------------------+------------------
+ ecotrack_m2_isolated | 
+(1 row)
+
+DROP EXTENSION
+DROP EXTENSION
+DROP EXTENSION
+CREATE SCHEMA
+CREATE EXTENSION
+CREATE ROLE
+CREATE ROLE
+                                                                                                                                                                   postgis_full_version                                                                                                                                                                    
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ POSTGIS="3.5.2 dea6d0a" [EXTENSION] PGSQL="170" GEOS="3.9.0-CAPI-1.16.2" PROJ="7.2.1 NETWORK_ENABLED=OFF URL_ENDPOINT=https://cdn.proj.org USER_WRITABLE_DIRECTORY=/var/lib/postgresql/.local/share/proj DATABASE_PATH=/usr/share/proj/proj.db" (compiled against PROJ 7.2.1) LIBXML="2.9.10" LIBJSON="0.15" LIBPROTOBUF="1.3.3" WAGYU="0.5.0 (Internal)"
+(1 row)
+
+
+Exit code: 0

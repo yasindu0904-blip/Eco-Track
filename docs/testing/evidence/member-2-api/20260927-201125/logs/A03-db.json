@@ -1,0 +1,13 @@
+{
+  "query": "SELECT count(*) FROM public.incidents WHERE submission_id=ANY($1::uuid[])",
+  "submissionIds": [
+    "27838d3e-6cf3-4307-9da5-4309993490f0",
+    "eccbec33-a875-4e83-be28-1759dc26c526",
+    "40910ba6-b8b3-4304-8f2e-d954f2d0b62b"
+  ],
+  "rows": [
+    {
+      "count": 0
+    }
+  ]
+}

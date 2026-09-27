@@ -1,0 +1,27 @@
+{
+  "case_id": "A01",
+  "check": "health",
+  "started_at_utc": "2026-09-27T14:41:25.628Z",
+  "url": "https://p01--eco-track--xnjn7t9fk69n.code.run/health",
+  "duration_ms": 1089,
+  "expected": {
+    "status": 200,
+    "code": null,
+    "fields": {
+      "status": "ok",
+      "service": "ecotrack-backend"
+    }
+  },
+  "http_status": 200,
+  "body": {
+    "status": "ok",
+    "service": "ecotrack-backend"
+  },
+  "assertions": {
+    "status": true,
+    "json": true,
+    "contract": true,
+    "no_stack_or_sql": true
+  },
+  "status": "PASS"
+}

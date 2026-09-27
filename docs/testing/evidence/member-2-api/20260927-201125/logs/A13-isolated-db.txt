@@ -1,0 +1,243 @@
+BEGIN
+DO
+       database       |   role   |                                                                                                                                                                   postgis_full_version                                                                                                                                                                    
+----------------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ ecotrack_m2_isolated | postgres | POSTGIS="3.5.2 dea6d0a" [EXTENSION] PGSQL="170" GEOS="3.9.0-CAPI-1.16.2" PROJ="7.2.1 NETWORK_ENABLED=OFF URL_ENDPOINT=https://cdn.proj.org USER_WRITABLE_DIRECTORY=/var/lib/postgresql/.local/share/proj DATABASE_PATH=/usr/share/proj/proj.db" (compiled against PROJ 7.2.1) LIBXML="2.9.10" LIBJSON="0.15" LIBPROTOBUF="1.3.3" WAGYU="0.5.0 (Internal)"
+(1 row)
+
+                      migration_name                       | finished | rolled_back_at 
+-----------------------------------------------------------+----------+----------------
+ 20260727094824_init_identity_and_tenancy                  | t        | 
+ 20260727130000_enable_rls                                 | t        | 
+ 20260809112727_align_identity_and_organization_foundation | t        | 
+ 20260809170000_add_incident_categories                    | t        | 
+ 20260810063140_add_organization_service_areas             | t        | 
+ 20260811120000_add_administrative_area_references         | t        | 
+ 20260811133000_add_administrative_area_search_indexes     | t        | 
+ 20260811143000_add_organization_review_notifications      | t        | 
+ 20260811150000_secure_new_tables_with_rls                 | t        | 
+ 20260813120000_add_incident_and_cleanup_event_foundation  | t        | 
+ 20260815090000_add_notification_unread_index              | t        | 
+ 20260816120000_add_incident_submission_idempotency        | t        | 
+ 20260816123000_seed_incident_categories                   | t        | 
+ 20260817120000_add_reward_idempotency_and_achievements    | t        | 
+ 20260820140000_add_map_event_query_indexes                | t        | 
+ 20260820150000_add_service_area_map_cursor_index          | t        | 
+ 20260821120000_add_event_participant_operation_indexes    | t        | 
+ 20260822100000_add_dashboard_summary_indexes              | t        | 
+ 20260901120000_simplify_cleanup_event_workflow            | t        | 
+ 20260902100000_add_push_delivery_foundation               | t        | 
+(20 rows)
+
+               relname               | relrowsecurity | anon_any_data_privilege | authenticated_any_data_privilege 
+-------------------------------------+----------------+-------------------------+----------------------------------
+ achievement_definitions             | t              | f                       | f
+ administrative_areas                | t              | f                       | f
+ audit_logs                          | t              | f                       | f
+ cleanup_event_reminders             | t              | f                       | f
+ cleanup_events                      | t              | f                       | f
+ cleanup_workflow_statuses           | t              | f                       | f
+ cleanup_workflow_transitions        | t              | f                       | f
+ contribution_events                 | t              | f                       | f
+ event_coordinators                  | t              | f                       | f
+ event_evidence                      | t              | f                       | f
+ event_notes                         | t              | f                       | f
+ event_participants                  | t              | f                       | f
+ event_status_history                | t              | f                       | f
+ incident_categories                 | t              | f                       | f
+ incident_photos                     | t              | f                       | f
+ incident_reviews                    | t              | f                       | f
+ incident_status_history             | t              | f                       | f
+ incidents                           | t              | f                       | f
+ notification_deliveries             | t              | f                       | f
+ notifications                       | t              | f                       | f
+ organization_membership_requests    | t              | f                       | f
+ organization_memberships            | t              | f                       | f
+ organization_service_areas          | t              | f                       | f
+ organization_verification_documents | t              | f                       | f
+ organizations                       | t              | f                       | f
+ platform_settings                   | t              | f                       | f
+ user_achievements                   | t              | f                       | f
+ user_devices                        | t              | f                       | f
+ user_profiles                       | t              | f                       | f
+(29 rows)
+
+             table_name              |                             conname                             | contype |                                                                                                                                                                                                                                                                                                                                                                                                      definition                                                                                                                                                                                                                                                                                                                                                                                                       
+-------------------------------------+-----------------------------------------------------------------+---------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ achievement_definitions             | achievement_definitions_pkey                                    | p       | PRIMARY KEY (id)
+ achievement_definitions             | achievement_definitions_threshold_check                         | c       | CHECK (((threshold_points IS NULL) OR (threshold_points > 0)))
+ administrative_areas                | administrative_areas_pkey                                       | p       | PRIMARY KEY (id)
+ audit_logs                          | audit_logs_actor_user_id_fkey                                   | f       | FOREIGN KEY (actor_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE SET NULL
+ audit_logs                          | audit_logs_organization_id_fkey                                 | f       | FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE SET NULL
+ audit_logs                          | audit_logs_pkey                                                 | p       | PRIMARY KEY (id)
+ cleanup_event_reminders             | cleanup_event_reminders_cleanup_event_id_fkey                   | f       | FOREIGN KEY (cleanup_event_id) REFERENCES cleanup_events(id) ON UPDATE CASCADE ON DELETE CASCADE
+ cleanup_event_reminders             | cleanup_event_reminders_pkey                                    | p       | PRIMARY KEY (id)
+ cleanup_event_reminders             | cleanup_event_reminders_state_check                             | c       | CHECK ((NOT ((processed_at IS NOT NULL) AND (cancelled_at IS NOT NULL))))
+ cleanup_events                      | cleanup_events_cancellation_fields_check                        | c       | CHECK (((lifecycle_status <> 'CANCELLED'::"CleanupLifecycleStatus") OR ((cancelled_at IS NOT NULL) AND (cancellation_reason IS NOT NULL))))
+ cleanup_events                      | cleanup_events_capacity_check                                   | c       | CHECK (((capacity IS NULL) OR (capacity > 0)))
+ cleanup_events                      | cleanup_events_completion_fields_check                          | c       | CHECK (((lifecycle_status <> 'COMPLETED'::"CleanupLifecycleStatus") OR (completed_at IS NOT NULL)))
+ cleanup_events                      | cleanup_events_created_by_membership_fkey                       | f       | FOREIGN KEY (organization_id, created_by_membership_id) REFERENCES organization_memberships(organization_id, id) ON UPDATE CASCADE ON DELETE RESTRICT
+ cleanup_events                      | cleanup_events_current_workflow_status_fkey                     | f       | FOREIGN KEY (organization_id, current_workflow_status_id) REFERENCES cleanup_workflow_statuses(organization_id, id) ON UPDATE CASCADE ON DELETE RESTRICT
+ cleanup_events                      | cleanup_events_event_latitude_check                             | c       | CHECK (((event_latitude >= ('-90'::integer)::numeric) AND (event_latitude <= (90)::numeric)))
+ cleanup_events                      | cleanup_events_event_longitude_check                            | c       | CHECK (((event_longitude >= ('-180'::integer)::numeric) AND (event_longitude <= (180)::numeric)))
+ cleanup_events                      | cleanup_events_incident_id_fkey                                 | f       | FOREIGN KEY (incident_id) REFERENCES incidents(id) ON UPDATE CASCADE ON DELETE SET NULL
+ cleanup_events                      | cleanup_events_meeting_coordinate_pair_check                    | c       | CHECK (((meeting_latitude IS NULL) = (meeting_longitude IS NULL)))
+ cleanup_events                      | cleanup_events_meeting_latitude_check                           | c       | CHECK (((meeting_latitude IS NULL) OR ((meeting_latitude >= ('-90'::integer)::numeric) AND (meeting_latitude <= (90)::numeric))))
+ cleanup_events                      | cleanup_events_meeting_longitude_check                          | c       | CHECK (((meeting_longitude IS NULL) OR ((meeting_longitude >= ('-180'::integer)::numeric) AND (meeting_longitude <= (180)::numeric))))
+ cleanup_events                      | cleanup_events_organization_id_fkey                             | f       | FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ cleanup_events                      | cleanup_events_pkey                                             | p       | PRIMARY KEY (id)
+ cleanup_events                      | cleanup_events_publication_fields_check                         | c       | CHECK (((lifecycle_status <> ALL (ARRAY['PUBLISHED'::"CleanupLifecycleStatus", 'SCHEDULED'::"CleanupLifecycleStatus", 'IN_PROGRESS'::"CleanupLifecycleStatus", 'COMPLETION_SUBMITTED'::"CleanupLifecycleStatus", 'COMPLETED'::"CleanupLifecycleStatus"])) OR (published_at IS NOT NULL)))
+ cleanup_workflow_statuses           | cleanup_workflow_statuses_organization_id_fkey                  | f       | FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE CASCADE
+ cleanup_workflow_statuses           | cleanup_workflow_statuses_pkey                                  | p       | PRIMARY KEY (id)
+ cleanup_workflow_statuses           | cleanup_workflow_statuses_position_check                        | c       | CHECK (("position" >= 0))
+ cleanup_workflow_transitions        | cleanup_workflow_transitions_distinct_status_check              | c       | CHECK ((from_status_id <> to_status_id))
+ cleanup_workflow_transitions        | cleanup_workflow_transitions_from_status_fkey                   | f       | FOREIGN KEY (organization_id, from_status_id) REFERENCES cleanup_workflow_statuses(organization_id, id) ON UPDATE CASCADE ON DELETE CASCADE
+ cleanup_workflow_transitions        | cleanup_workflow_transitions_organization_id_fkey               | f       | FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE CASCADE
+ cleanup_workflow_transitions        | cleanup_workflow_transitions_pkey                               | p       | PRIMARY KEY (id)
+ cleanup_workflow_transitions        | cleanup_workflow_transitions_to_status_fkey                     | f       | FOREIGN KEY (organization_id, to_status_id) REFERENCES cleanup_workflow_statuses(organization_id, id) ON UPDATE CASCADE ON DELETE CASCADE
+ contribution_events                 | contribution_events_cleanup_event_id_fkey                       | f       | FOREIGN KEY (cleanup_event_id) REFERENCES cleanup_events(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ contribution_events                 | contribution_events_event_participant_id_fkey                   | f       | FOREIGN KEY (event_participant_id) REFERENCES event_participants(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ contribution_events                 | contribution_events_incident_id_fkey                            | f       | FOREIGN KEY (incident_id) REFERENCES incidents(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ contribution_events                 | contribution_events_pkey                                        | p       | PRIMARY KEY (id)
+ contribution_events                 | contribution_events_points_check                                | c       | CHECK ((points > 0))
+ contribution_events                 | contribution_events_recorded_by_user_id_fkey                    | f       | FOREIGN KEY (recorded_by_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE SET NULL
+ contribution_events                 | contribution_events_source_check                                | c       | CHECK ((((type = 'VERIFIED_INCIDENT_REPORT'::"ContributionType") AND (incident_id IS NOT NULL) AND (event_participant_id IS NULL) AND (cleanup_event_id IS NULL) AND (source_key IS NULL)) OR ((type = 'EVENT_ATTENDED'::"ContributionType") AND (incident_id IS NULL) AND (event_participant_id IS NOT NULL) AND (cleanup_event_id IS NULL) AND (source_key IS NULL)) OR ((type = 'EVENT_COMPLETED'::"ContributionType") AND (incident_id IS NULL) AND (event_participant_id IS NULL) AND (cleanup_event_id IS NOT NULL) AND (source_key IS NULL)) OR ((type = 'SPECIAL_CONTRIBUTION'::"ContributionType") AND (incident_id IS NULL) AND (event_participant_id IS NULL) AND (cleanup_event_id IS NULL) AND (source_key IS NOT NULL) AND ((length(btrim(source_key)) >= 1) AND (length(btrim(source_key)) <= 200)))))
+ contribution_events                 | contribution_events_user_id_fkey                                | f       | FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE CASCADE
+ event_coordinators                  | event_coordinators_assigned_by_membership_id_fkey               | f       | FOREIGN KEY (assigned_by_membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ event_coordinators                  | event_coordinators_cleanup_event_id_fkey                        | f       | FOREIGN KEY (cleanup_event_id) REFERENCES cleanup_events(id) ON UPDATE CASCADE ON DELETE CASCADE
+ event_coordinators                  | event_coordinators_membership_id_fkey                           | f       | FOREIGN KEY (membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ event_coordinators                  | event_coordinators_pkey                                         | p       | PRIMARY KEY (id)
+ event_evidence                      | event_evidence_cleanup_event_id_fkey                            | f       | FOREIGN KEY (cleanup_event_id) REFERENCES cleanup_events(id) ON UPDATE CASCADE ON DELETE CASCADE
+ event_evidence                      | event_evidence_pkey                                             | p       | PRIMARY KEY (id)
+ event_evidence                      | event_evidence_uploaded_by_user_id_fkey                         | f       | FOREIGN KEY (uploaded_by_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ event_notes                         | event_notes_author_membership_id_fkey                           | f       | FOREIGN KEY (author_membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ event_notes                         | event_notes_cleanup_event_id_fkey                               | f       | FOREIGN KEY (cleanup_event_id) REFERENCES cleanup_events(id) ON UPDATE CASCADE ON DELETE CASCADE
+ event_notes                         | event_notes_pkey                                                | p       | PRIMARY KEY (id)
+ event_participants                  | event_participants_attendance_details_check                     | c       | CHECK ((((attendance_status = 'UNMARKED'::"AttendanceStatus") AND (attendance_marked_at IS NULL) AND (attendance_marked_by_membership_id IS NULL)) OR ((attendance_status = ANY (ARRAY['ATTENDED'::"AttendanceStatus", 'ABSENT'::"AttendanceStatus"])) AND (attendance_marked_at IS NOT NULL) AND (attendance_marked_by_membership_id IS NOT NULL))))
+ event_participants                  | event_participants_attendance_marker_fkey                       | f       | FOREIGN KEY (attendance_marked_by_membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ event_participants                  | event_participants_cleanup_event_id_fkey                        | f       | FOREIGN KEY (cleanup_event_id) REFERENCES cleanup_events(id) ON UPDATE CASCADE ON DELETE CASCADE
+ event_participants                  | event_participants_pkey                                         | p       | PRIMARY KEY (id)
+ event_participants                  | event_participants_removed_by_membership_id_fkey                | f       | FOREIGN KEY (removed_by_membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE SET NULL
+ event_participants                  | event_participants_status_details_check                         | c       | CHECK ((((status = 'JOINED'::"ParticipantStatus") AND (withdrawn_at IS NULL) AND (removed_at IS NULL)) OR ((status = 'WITHDRAWN'::"ParticipantStatus") AND (withdrawn_at IS NOT NULL) AND (removed_at IS NULL)) OR ((status = 'REMOVED'::"ParticipantStatus") AND (removed_at IS NOT NULL) AND (removed_by_membership_id IS NOT NULL) AND (removal_reason IS NOT NULL))))
+ event_participants                  | event_participants_user_id_fkey                                 | f       | FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ event_status_history                | event_status_history_changed_by_membership_id_fkey              | f       | FOREIGN KEY (changed_by_membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ event_status_history                | event_status_history_cleanup_event_id_fkey                      | f       | FOREIGN KEY (cleanup_event_id) REFERENCES cleanup_events(id) ON UPDATE CASCADE ON DELETE CASCADE
+ event_status_history                | event_status_history_distinct_status_check                      | c       | CHECK (((from_workflow_status_id IS NULL) OR (from_workflow_status_id <> to_workflow_status_id)))
+ event_status_history                | event_status_history_from_workflow_status_id_fkey               | f       | FOREIGN KEY (from_workflow_status_id) REFERENCES cleanup_workflow_statuses(id) ON UPDATE CASCADE ON DELETE SET NULL
+ event_status_history                | event_status_history_pkey                                       | p       | PRIMARY KEY (id)
+ event_status_history                | event_status_history_to_workflow_status_id_fkey                 | f       | FOREIGN KEY (to_workflow_status_id) REFERENCES cleanup_workflow_statuses(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ incident_categories                 | incident_categories_pkey                                        | p       | PRIMARY KEY (id)
+ incident_photos                     | incident_photos_incident_id_fkey                                | f       | FOREIGN KEY (incident_id) REFERENCES incidents(id) ON UPDATE CASCADE ON DELETE CASCADE
+ incident_photos                     | incident_photos_pkey                                            | p       | PRIMARY KEY (id)
+ incident_photos                     | incident_photos_sort_order_check                                | c       | CHECK ((sort_order >= 0))
+ incident_reviews                    | incident_reviews_incident_id_fkey                               | f       | FOREIGN KEY (incident_id) REFERENCES incidents(id) ON UPDATE CASCADE ON DELETE CASCADE
+ incident_reviews                    | incident_reviews_organization_id_fkey                           | f       | FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE CASCADE
+ incident_reviews                    | incident_reviews_pkey                                           | p       | PRIMARY KEY (id)
+ incident_reviews                    | incident_reviews_reviewed_by_membership_id_fkey                 | f       | FOREIGN KEY (reviewed_by_membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ incidents                           | incidents_category_id_fkey                                      | f       | FOREIGN KEY (category_id) REFERENCES incident_categories(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ incidents                           | incidents_deadline_order_check                                  | c       | CHECK (((highlight_until > reported_at) AND (archive_after > highlight_until)))
+ incidents                           | incidents_latitude_check                                        | c       | CHECK (((latitude >= ('-90'::integer)::numeric) AND (latitude <= (90)::numeric)))
+ incidents                           | incidents_longitude_check                                       | c       | CHECK (((longitude >= ('-180'::integer)::numeric) AND (longitude <= (180)::numeric)))
+ incidents                           | incidents_pkey                                                  | p       | PRIMARY KEY (id)
+ incidents                           | incidents_reporter_user_id_fkey                                 | f       | FOREIGN KEY (reporter_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ incident_status_history             | incident_status_history_changed_by_user_id_fkey                 | f       | FOREIGN KEY (changed_by_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE SET NULL
+ incident_status_history             | incident_status_history_incident_id_fkey                        | f       | FOREIGN KEY (incident_id) REFERENCES incidents(id) ON UPDATE CASCADE ON DELETE CASCADE
+ incident_status_history             | incident_status_history_pkey                                    | p       | PRIMARY KEY (id)
+ incident_status_history             | incident_status_history_related_cleanup_event_id_fkey           | f       | FOREIGN KEY (related_cleanup_event_id) REFERENCES cleanup_events(id) ON UPDATE CASCADE ON DELETE SET NULL
+ notification_deliveries             | notification_deliveries_attempt_count_check                     | c       | CHECK ((attempt_count >= 0))
+ notification_deliveries             | notification_deliveries_pkey                                    | p       | PRIMARY KEY (id)
+ notification_deliveries             | notification_deliveries_provider_accepted_check                 | c       | CHECK (((status <> 'PROVIDER_ACCEPTED'::"NotificationDeliveryStatus") OR ((expo_ticket_id IS NOT NULL) AND (receipt_checked_at IS NOT NULL))))
+ notification_deliveries             | notification_deliveries_receipt_pending_check                   | c       | CHECK (((status <> 'RECEIPT_PENDING'::"NotificationDeliveryStatus") OR ((expo_ticket_id IS NOT NULL) AND (sent_at IS NOT NULL))))
+ notification_deliveries             | notification_deliveries_retry_time_check                        | c       | CHECK (((status <> 'RETRY_PENDING'::"NotificationDeliveryStatus") OR (next_retry_at IS NOT NULL)))
+ notification_deliveries             | notification_deliveries_user_device_fkey                        | f       | FOREIGN KEY (user_id, device_id) REFERENCES user_devices(user_id, id) ON UPDATE CASCADE ON DELETE RESTRICT
+ notification_deliveries             | notification_deliveries_user_notification_fkey                  | f       | FOREIGN KEY (user_id, notification_id) REFERENCES notifications(user_id, id) ON UPDATE CASCADE ON DELETE CASCADE
+ notifications                       | notifications_organization_id_fkey                              | f       | FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE SET NULL
+ notifications                       | notifications_pkey                                              | p       | PRIMARY KEY (id)
+ notifications                       | notifications_user_id_fkey                                      | f       | FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE CASCADE
+ notifications                       | notifications_user_id_id_key                                    | u       | UNIQUE (user_id, id)
+ organization_membership_requests    | organization_membership_requests_organization_id_fkey           | f       | FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE CASCADE
+ organization_membership_requests    | organization_membership_requests_pkey                           | p       | PRIMARY KEY (id)
+ organization_membership_requests    | organization_membership_requests_requester_user_id_fkey         | f       | FOREIGN KEY (requester_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE CASCADE
+ organization_membership_requests    | organization_membership_requests_reviewed_by_membership_id_fkey | f       | FOREIGN KEY (reviewed_by_membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE SET NULL
+ organization_memberships            | organization_memberships_added_or_approved_by_membership_i_fkey | f       | FOREIGN KEY (added_or_approved_by_membership_id) REFERENCES organization_memberships(id) ON UPDATE CASCADE ON DELETE SET NULL
+ organization_memberships            | organization_memberships_organization_id_fkey                   | f       | FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ organization_memberships            | organization_memberships_pkey                                   | p       | PRIMARY KEY (id)
+ organization_memberships            | organization_memberships_source_request_id_fkey                 | f       | FOREIGN KEY (source_request_id) REFERENCES organization_membership_requests(id) ON UPDATE CASCADE ON DELETE SET NULL
+ organization_memberships            | organization_memberships_user_id_fkey                           | f       | FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ organizations                       | organizations_pkey                                              | p       | PRIMARY KEY (id)
+ organizations                       | organizations_requested_by_user_id_fkey                         | f       | FOREIGN KEY (requested_by_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ organizations                       | organizations_reviewed_by_user_id_fkey                          | f       | FOREIGN KEY (reviewed_by_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE SET NULL
+ organization_service_areas          | organization_service_areas_administrative_area_id_fkey          | f       | FOREIGN KEY (administrative_area_id) REFERENCES administrative_areas(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ organization_service_areas          | organization_service_areas_organization_id_fkey                 | f       | FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE CASCADE
+ organization_service_areas          | organization_service_areas_pkey                                 | p       | PRIMARY KEY (id)
+ organization_service_areas          | organization_service_areas_reference_or_legacy_boundary_check   | c       | CHECK (((administrative_area_id IS NOT NULL) OR ((area_name IS NOT NULL) AND (boundary IS NOT NULL))))
+ organization_service_areas          | organization_service_areas_reviewed_by_user_id_fkey             | f       | FOREIGN KEY (reviewed_by_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE SET NULL
+ organization_verification_documents | organization_verification_documents_organization_id_fkey        | f       | FOREIGN KEY (organization_id) REFERENCES organizations(id) ON UPDATE CASCADE ON DELETE CASCADE
+ organization_verification_documents | organization_verification_documents_pkey                        | p       | PRIMARY KEY (id)
+ organization_verification_documents | organization_verification_documents_reviewed_by_user_id_fkey    | f       | FOREIGN KEY (reviewed_by_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE SET NULL
+ platform_settings                   | platform_settings_highlight_hours_check                         | c       | CHECK ((incident_highlight_hours > 0))
+ platform_settings                   | platform_settings_pkey                                          | p       | PRIMARY KEY (id)
+ platform_settings                   | platform_settings_singleton_check                               | c       | CHECK ((id = 1))
+ platform_settings                   | platform_settings_unaddressed_days_check                        | c       | CHECK ((incident_unaddressed_days > 0))
+ platform_settings                   | platform_settings_updated_by_user_id_fkey                       | f       | FOREIGN KEY (updated_by_user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE SET NULL
+ _prisma_migrations                  | _prisma_migrations_pkey                                         | p       | PRIMARY KEY (id)
+ user_achievements                   | user_achievements_achievement_id_fkey                           | f       | FOREIGN KEY (achievement_id) REFERENCES achievement_definitions(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ user_achievements                   | user_achievements_awarded_from_contribution_id_fkey             | f       | FOREIGN KEY (awarded_from_contribution_id) REFERENCES contribution_events(id) ON UPDATE CASCADE ON DELETE RESTRICT
+ user_achievements                   | user_achievements_pkey                                          | p       | PRIMARY KEY (id)
+ user_achievements                   | user_achievements_user_id_fkey                                  | f       | FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE CASCADE
+ user_devices                        | user_devices_active_state_check                                 | c       | CHECK ((((is_active = true) AND (expo_push_token IS NOT NULL) AND (deactivated_at IS NULL)) OR ((is_active = false) AND (deactivated_at IS NOT NULL))))
+ user_devices                        | user_devices_installation_id_not_blank_check                    | c       | CHECK ((btrim(installation_id) <> ''::text))
+ user_devices                        | user_devices_pkey                                               | p       | PRIMARY KEY (id)
+ user_devices                        | user_devices_push_token_not_blank_check                         | c       | CHECK (((expo_push_token IS NULL) OR (btrim(expo_push_token) <> ''::text)))
+ user_devices                        | user_devices_user_id_fkey                                       | f       | FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON UPDATE CASCADE ON DELETE CASCADE
+ user_profiles                       | user_profiles_pkey                                              | p       | PRIMARY KEY (id)
+(127 rows)
+
+            tablename             |                    indexname                     |                                                                                                                                                                                indexdef                                                                                                                                                                                 
+----------------------------------+--------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ administrative_areas             | administrative_areas_boundary_gist_idx           | CREATE INDEX administrative_areas_boundary_gist_idx ON public.administrative_areas USING gist (boundary)
+ cleanup_events                   | cleanup_events_event_geo_point_gist_idx          | CREATE INDEX cleanup_events_event_geo_point_gist_idx ON public.cleanup_events USING gist (event_geo_point)
+ cleanup_events                   | cleanup_events_meeting_geo_point_gist_idx        | CREATE INDEX cleanup_events_meeting_geo_point_gist_idx ON public.cleanup_events USING gist (meeting_geo_point)
+ cleanup_events                   | cleanup_events_one_active_incident_claim_idx     | CREATE UNIQUE INDEX cleanup_events_one_active_incident_claim_idx ON public.cleanup_events USING btree (incident_id) WHERE ((incident_id IS NOT NULL) AND (lifecycle_status = 'PUBLISHED'::"CleanupLifecycleStatus"))
+ cleanup_events                   | cleanup_events_public_map_published_idx          | CREATE INDEX cleanup_events_public_map_published_idx ON public.cleanup_events USING btree (published_at DESC, id DESC) WHERE ((published_at IS NOT NULL) AND (lifecycle_status = ANY (ARRAY['PUBLISHED'::"CleanupLifecycleStatus", 'SCHEDULED'::"CleanupLifecycleStatus", 'IN_PROGRESS'::"CleanupLifecycleStatus", 'COMPLETION_SUBMITTED'::"CleanupLifecycleStatus"])))
+ contribution_events              | contribution_events_event_attendance_once_idx    | CREATE UNIQUE INDEX contribution_events_event_attendance_once_idx ON public.contribution_events USING btree (user_id, type, event_participant_id) WHERE (type = 'EVENT_ATTENDED'::"ContributionType")
+ contribution_events              | contribution_events_event_completion_once_idx    | CREATE UNIQUE INDEX contribution_events_event_completion_once_idx ON public.contribution_events USING btree (user_id, type, cleanup_event_id) WHERE (type = 'EVENT_COMPLETED'::"ContributionType")
+ contribution_events              | contribution_events_special_source_once_idx      | CREATE UNIQUE INDEX contribution_events_special_source_once_idx ON public.contribution_events USING btree (user_id, type, source_key) WHERE (type = 'SPECIAL_CONTRIBUTION'::"ContributionType")
+ contribution_events              | contribution_events_verified_incident_once_idx   | CREATE UNIQUE INDEX contribution_events_verified_incident_once_idx ON public.contribution_events USING btree (user_id, type, incident_id) WHERE (type = 'VERIFIED_INCIDENT_REPORT'::"ContributionType")
+ incidents                        | incidents_geo_point_gist_idx                     | CREATE INDEX incidents_geo_point_gist_idx ON public.incidents USING gist (geo_point)
+ notification_deliveries          | notification_deliveries_retryable_idx            | CREATE INDEX notification_deliveries_retryable_idx ON public.notification_deliveries USING btree (status, next_retry_at, created_at) WHERE (status = ANY (ARRAY['PENDING'::"NotificationDeliveryStatus", 'RETRY_PENDING'::"NotificationDeliveryStatus"]))
+ notifications                    | notifications_unread_user_created_at_idx         | CREATE INDEX notifications_unread_user_created_at_idx ON public.notifications USING btree (user_id, created_at DESC) WHERE (read_at IS NULL)
+ organization_membership_requests | organization_membership_requests_one_pending_idx | CREATE UNIQUE INDEX organization_membership_requests_one_pending_idx ON public.organization_membership_requests USING btree (organization_id, requester_user_id) WHERE (status = 'PENDING'::"MembershipRequestStatus")
+ organization_service_areas       | organization_service_areas_boundary_gist_idx     | CREATE INDEX organization_service_areas_boundary_gist_idx ON public.organization_service_areas USING gist (boundary)
+(14 rows)
+
+  event_object_table  |               trigger_name                | action_timing | event_manipulation 
+----------------------+-------------------------------------------+---------------+--------------------
+ cleanup_events       | cleanup_events_sync_geo_points            | BEFORE        | UPDATE
+ cleanup_events       | cleanup_events_sync_geo_points            | BEFORE        | INSERT
+ cleanup_events       | cleanup_events_validate_workflow_status   | BEFORE        | UPDATE
+ cleanup_events       | cleanup_events_validate_workflow_status   | BEFORE        | INSERT
+ event_coordinators   | event_coordinators_validate_tenant        | BEFORE        | UPDATE
+ event_coordinators   | event_coordinators_validate_tenant        | BEFORE        | INSERT
+ event_notes          | event_notes_validate_tenant               | BEFORE        | INSERT
+ event_notes          | event_notes_validate_tenant               | BEFORE        | UPDATE
+ event_participants   | event_participants_validate_remover       | BEFORE        | UPDATE
+ event_participants   | event_participants_validate_remover       | BEFORE        | INSERT
+ event_status_history | event_status_history_validate_context     | BEFORE        | INSERT
+ event_status_history | event_status_history_validate_context     | BEFORE        | UPDATE
+ incident_reviews     | incident_reviews_validate_tenant          | BEFORE        | UPDATE
+ incident_reviews     | incident_reviews_validate_tenant          | BEFORE        | INSERT
+ incidents            | incidents_sync_geo_point                  | BEFORE        | UPDATE
+ incidents            | incidents_sync_geo_point                  | BEFORE        | INSERT
+ organizations        | organizations_initialize_cleanup_workflow | AFTER         | INSERT
+(17 rows)
+
+NOTICE:  PASS: platform_settings invalid user FK rejected
+NOTICE:  PASS: duplicate settings primary key rejected
+DO
+ROLLBACK
+ settings_count | no_invalid_fk_residue 
+----------------+-----------------------
+              1 | t
+(1 row)
+

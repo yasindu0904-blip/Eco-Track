@@ -1,0 +1,11 @@
+{
+  "timestamp_utc": "2026-09-27T16:31:03.459Z",
+  "rows": [
+    {
+      "id": "7cbd39f7-dbb9-4a23-b5cb-18eb85b74e83",
+      "status": "JOINED",
+      "attendance_status": "UNMARKED",
+      "withdrawn_at": null
+    }
+  ]
+}

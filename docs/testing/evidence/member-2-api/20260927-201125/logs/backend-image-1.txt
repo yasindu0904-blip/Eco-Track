@@ -1,0 +1,31 @@
+Started UTC: 2026-09-27T14:50:38.478Z
+Docker command: pull redis:8.2-alpine
+8.2-alpine: Pulling from library/redis
+bade5a2d3b18: Pulling fs layer
+8f1419acb6d9: Pulling fs layer
+4f4fb700ef54: Pulling fs layer
+9bff8ab217e3: Pulling fs layer
+ef071b2137c4: Pulling fs layer
+53f8f5e03afd: Pulling fs layer
+ff9a03b76cdb: Pulling fs layer
+4f4fb700ef54: Already exists
+e80d39165682: Download complete
+ff9a03b76cdb: Download complete
+bade5a2d3b18: Download complete
+8f1419acb6d9: Download complete
+9bff8ab217e3: Download complete
+d68a229177d5: Download complete
+53f8f5e03afd: Download complete
+ff9a03b76cdb: Pull complete
+53f8f5e03afd: Pull complete
+9bff8ab217e3: Pull complete
+ef071b2137c4: Download complete
+ef071b2137c4: Pull complete
+4f4fb700ef54: Pull complete
+bade5a2d3b18: Pull complete
+8f1419acb6d9: Pull complete
+Digest: sha256:b51665e66f00759be7c3152ad5ac3c66fb2f619c13ef62dea7cc1f9914524635
+Status: Downloaded newer image for redis:8.2-alpine
+docker.io/library/redis:8.2-alpine
+
+Exit code: 0

@@ -1,0 +1,58 @@
+{
+  "timestamp_utc": "2026-09-27T16:33:22.649Z",
+  "method": "GET",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/327878e3-9476-467a-acea-1928e69baea6/operations",
+  "request": null,
+  "http_status": 200,
+  "response": {
+    "data": {
+      "event": {
+        "id": "327878e3-9476-467a-acea-1928e69baea6",
+        "organizationId": "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+        "incidentId": "8edee030-a439-4d90-8480-5f7ce6b848ad",
+        "title": "M2-completion-20260927-201125",
+        "lifecycleStatus": "PUBLISHED",
+        "startsAt": "2026-09-27T16:31:03.302Z",
+        "updatedAt": "2026-09-27T16:28:55.372Z",
+        "completedAt": null,
+        "cancelledAt": null,
+        "cancellationReason": null,
+        "currentWorkflowStatus": {
+          "id": "8838a25b-d6b0-4533-b470-ce1cae83030e",
+          "code": "PUBLISHED",
+          "label": "Published",
+          "lifecycleStatus": "PUBLISHED"
+        }
+      },
+      "notes": [],
+      "evidence": [],
+      "history": [
+        {
+          "id": "2f4b6ac7-0b05-4d4f-95ae-c6c3ff6d9221",
+          "fromStatus": {
+            "id": "be87918e-281a-4e1e-8577-1140f7083d35",
+            "label": "Draft",
+            "lifecycleStatus": "DRAFT"
+          },
+          "toStatus": {
+            "id": "8838a25b-d6b0-4533-b470-ce1cae83030e",
+            "label": "Published",
+            "lifecycleStatus": "PUBLISHED"
+          },
+          "changedBy": {
+            "id": "cbdcc52a-26c4-4bdd-a887-ec46403e2c16",
+            "fullName": "M2-A02-20260927-201125"
+          },
+          "notes": "Cleanup event published.",
+          "changedAt": "2026-09-27T16:28:55.371Z"
+        }
+      ]
+    }
+  },
+  "duration_ms": 4008,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

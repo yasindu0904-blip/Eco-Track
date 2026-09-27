@@ -1,0 +1,55 @@
+{
+  "timestamp_utc": "2026-09-27T16:18:51.425Z",
+  "method": "GET",
+  "route": "/incidents/nearby?latitude=6.795&longitude=79.94&radiusMeters=2000&limit=100",
+  "pages": [
+    {
+      "http_status": 200,
+      "count": 5,
+      "duration_ms": 1525
+    }
+  ],
+  "returnedIds": [
+    "c8e1d382-7e89-4f4c-9df7-93664ad506ef",
+    "318f949e-cdd9-49bd-adc5-ab69026f35b6",
+    "c87b8cb6-1113-4b24-b913-ee6d329705b8",
+    "0e1c6b71-d78a-4aa5-9a6b-463c6a93ba4f",
+    "e174594d-1fd0-4dc4-96cc-2305b0107ce9"
+  ],
+  "expected": [
+    {
+      "id": "318f949e-cdd9-49bd-adc5-ab69026f35b6",
+      "label": "radius-500",
+      "included": true
+    },
+    {
+      "id": "c8e1d382-7e89-4f4c-9df7-93664ad506ef",
+      "label": "radius-1500",
+      "included": true
+    },
+    {
+      "id": "e9d45be8-af03-4d22-a5f9-37f948b55211",
+      "label": "radius-2500",
+      "included": false
+    },
+    {
+      "id": "ba0fbd5c-1b94-4452-9519-0a3324a4ffc5",
+      "label": "radius-3500",
+      "included": false
+    },
+    {
+      "id": "f8c5207b-dfbc-47b3-84fa-337d61381123",
+      "label": "radius-resolved",
+      "included": false
+    }
+  ],
+  "assertions": {
+    "paginationComplete": true,
+    "radius-500": true,
+    "radius-1500": true,
+    "radius-2500": true,
+    "radius-3500": true,
+    "radius-resolved": true
+  },
+  "status": "PASS"
+}

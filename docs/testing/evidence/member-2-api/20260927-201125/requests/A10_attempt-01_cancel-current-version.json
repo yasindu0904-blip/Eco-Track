@@ -1,0 +1,26 @@
+{
+  "timestamp_utc": "2026-09-27T16:33:11.986Z",
+  "method": "POST",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/36719764-41e3-4f1a-b537-8f271c2590e7/cancel",
+  "request": {
+    "expectedUpdatedAt": "2026-09-27T16:32:37.093Z",
+    "reason": "Synthetic Member 2 cancellation test."
+  },
+  "http_status": 200,
+  "response": {
+    "data": {
+      "eventId": "36719764-41e3-4f1a-b537-8f271c2590e7",
+      "lifecycleStatus": "CANCELLED",
+      "updatedAt": "2026-09-27T16:33:08.643Z",
+      "incidentStatus": "ACTIVE",
+      "rewardsAwarded": 0,
+      "idempotentReplay": false
+    }
+  },
+  "duration_ms": 11350,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

@@ -1,0 +1,41 @@
+{
+  "timestamp_utc": "2026-09-27T16:29:49.139Z",
+  "method": "POST",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/327878e3-9476-467a-acea-1928e69baea6/publish",
+  "request": {},
+  "http_status": 200,
+  "response": {
+    "data": {
+      "event": {
+        "id": "327878e3-9476-467a-acea-1928e69baea6",
+        "organization": {
+          "id": "5bd7613b-8dad-45d4-9933-f1ec124417c9",
+          "name": "M2-org-a-20260927-201125"
+        },
+        "incidentId": "8edee030-a439-4d90-8480-5f7ce6b848ad",
+        "title": "M2-completion-20260927-201125",
+        "description": "Synthetic Member 2 lifecycle test, no real-world cleanup.",
+        "lifecycleStatus": "PUBLISHED",
+        "displayStatus": "UPCOMING",
+        "eventLatitude": 6.837643,
+        "eventLongitude": 79.961131,
+        "eventAddress": "Official GN test point",
+        "startsAt": "2026-09-27T16:31:03.302Z",
+        "capacity": 5,
+        "publishedAt": "2026-09-27T16:28:55.371Z",
+        "publicInstructions": "Synthetic test only; no actual attendance requested.",
+        "meetingLatitude": 6.837643,
+        "meetingLongitude": 79.961131,
+        "meetingAddress": null,
+        "joinedVolunteerCount": 0
+      },
+      "incidentUpdated": true
+    }
+  },
+  "duration_ms": 6684,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

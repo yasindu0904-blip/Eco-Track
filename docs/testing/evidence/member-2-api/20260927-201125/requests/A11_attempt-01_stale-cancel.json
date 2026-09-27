@@ -1,0 +1,22 @@
+{
+  "timestamp_utc": "2026-09-27T16:32:53.492Z",
+  "method": "POST",
+  "route": "/organizations/5bd7613b-8dad-45d4-9933-f1ec124417c9/events/36719764-41e3-4f1a-b537-8f271c2590e7/cancel",
+  "request": {
+    "expectedUpdatedAt": "2026-09-27T16:32:10.300Z",
+    "reason": "Synthetic stale-version rejection test."
+  },
+  "http_status": 409,
+  "response": {
+    "error": {
+      "code": "EVENT_STATE_CONFLICT",
+      "message": "The event changed in another request. Refresh and retry."
+    }
+  },
+  "duration_ms": 8731,
+  "assertions": {
+    "status": true,
+    "contract": true
+  },
+  "status": "PASS"
+}

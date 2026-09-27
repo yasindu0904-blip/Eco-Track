@@ -1,0 +1,46 @@
+{
+  "timestamp_utc": "2026-09-27T16:18:52.928Z",
+  "method": "GET",
+  "route": "/events/nearby?latitude=6.795&longitude=79.94&radiusMeters=2000&limit=100",
+  "pages": [
+    {
+      "http_status": 200,
+      "count": 2,
+      "duration_ms": 1500
+    }
+  ],
+  "returnedIds": [
+    "e3120d2f-0091-4aa1-9882-f6dc119ecc21",
+    "91d76e2b-a993-472f-93e6-e1bdb3fbc8f4"
+  ],
+  "expected": [
+    {
+      "id": "91d76e2b-a993-472f-93e6-e1bdb3fbc8f4",
+      "label": "radius-500",
+      "included": true
+    },
+    {
+      "id": "e3120d2f-0091-4aa1-9882-f6dc119ecc21",
+      "label": "radius-1500",
+      "included": true
+    },
+    {
+      "id": "142c6f4f-1cfc-4c64-b29f-5827bb79a637",
+      "label": "radius-2500",
+      "included": false
+    },
+    {
+      "id": "1b8de8e4-9e71-44cc-8985-efa89e97656e",
+      "label": "radius-3500",
+      "included": false
+    }
+  ],
+  "assertions": {
+    "paginationComplete": true,
+    "radius-500": true,
+    "radius-1500": true,
+    "radius-2500": true,
+    "radius-3500": true
+  },
+  "status": "PASS"
+}
