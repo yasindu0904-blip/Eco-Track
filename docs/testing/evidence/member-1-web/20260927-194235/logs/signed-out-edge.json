@@ -1,0 +1,29 @@
+{
+  "initial": {
+    "url": "https://eco-track-ctd.pages.dev/",
+    "httpStatus": 200,
+    "heading": "Sign in",
+    "browserVersion": "154.0.4258.37",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "capturedAtUtc": "2026-09-27T14:26:49.361Z"
+  },
+  "invalid": {
+    "typeMismatch": true,
+    "validationMessage": "Please include an '@' in the email address. 'not-an-email' is missing an '@'."
+  },
+  "stillSignedOut": true,
+  "focus": {
+    "tag": "BUTTON",
+    "text": "Send magic link",
+    "outlineStyle": "solid"
+  },
+  "mobile": {
+    "viewportWidth": 390,
+    "documentWidth": 390,
+    "horizontalOverflow": false
+  },
+  "errors": []
+}

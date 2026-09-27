@@ -1,0 +1,7 @@
+{
+  "lint_initial_npm_run": 1,
+  "lint_equivalent_larger_heap_retry": 0,
+  "tests_initial_restricted_environment": 1,
+  "tests_retry": 0,
+  "build": 0
+}

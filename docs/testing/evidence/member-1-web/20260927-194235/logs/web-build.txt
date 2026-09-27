@@ -1,0 +1,5 @@
+Command: npm run build
+Working directory: D:\Eco-Track\web
+Exit code: 0
+Output summary: TypeScript project build and Vite 8.2.1 production build completed; 187 modules transformed; `built in 2.04s`.
+Interpretation: local build success, not hosted deployment verification.

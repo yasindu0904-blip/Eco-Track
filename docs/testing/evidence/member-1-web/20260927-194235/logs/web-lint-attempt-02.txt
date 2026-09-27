@@ -1,0 +1,5 @@
+Command: node --max-old-space-size=1536 .\node_modules\eslint\bin\eslint.js .
+Working directory: D:\Eco-Track\web
+Exit code: 0
+Output: no errors or warnings.
+Interpretation: equivalent ESLint target to the `npm run lint` script, run with a larger Node heap after the first attempt terminated from memory exhaustion.

@@ -1,0 +1,4 @@
+Command: npm test
+Working directory: D:\Eco-Track\web
+Exit code: 1
+Observed: Vite config startup failed because `spawn EPERM` blocked a required child process in the earlier restricted execution environment. No tests executed. This is a harness failure.

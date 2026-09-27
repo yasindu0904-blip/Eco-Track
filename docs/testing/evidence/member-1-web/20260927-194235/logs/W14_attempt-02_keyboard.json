@@ -1,0 +1,49 @@
+{
+  "capturedAtUtc": "2026-09-27T14:56:48.224Z",
+  "httpStatus": 200,
+  "browserVersion": "154.0.4258.37",
+  "firstTab": {
+    "tag": "INPUT",
+    "role": null,
+    "type": "email",
+    "text": null,
+    "accessibleLabel": null,
+    "outlineStyle": "none",
+    "outlineWidth": "3px"
+  },
+  "secondTab": {
+    "tag": "BUTTON",
+    "role": null,
+    "type": "submit",
+    "text": "Send magic link",
+    "accessibleLabel": null,
+    "outlineStyle": "solid",
+    "outlineWidth": "3px"
+  },
+  "reverseTab": {
+    "tag": "INPUT",
+    "role": null,
+    "type": "email",
+    "text": null,
+    "accessibleLabel": null,
+    "outlineStyle": "none",
+    "outlineWidth": "3px"
+  },
+  "association": {
+    "type": "email",
+    "required": true,
+    "id": "email",
+    "associatedLabels": [
+      "Email address"
+    ],
+    "ariaDescribedBy": null,
+    "typeMismatch": true
+  },
+  "afterInvalidEnter": {
+    "url": "https://eco-track-ctd.pages.dev/",
+    "signInVisible": true,
+    "emailValidationMessage": "Please include an '@' in the email address. 'not-an-email' is missing an '@'.",
+    "apiRequests": [],
+    "pageErrors": []
+  }
+}

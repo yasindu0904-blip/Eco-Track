@@ -1,0 +1,5 @@
+Command: npm run lint
+Working directory: D:\Eco-Track\web
+Exit code: 1
+Observed output: ESLint started, then Node terminated after roughly 60 seconds with `FATAL ERROR: Zone Allocation failed - process out of memory` (heap around 390 MB).
+Classification: local tool/runtime failure. No lint verdict established by this attempt.

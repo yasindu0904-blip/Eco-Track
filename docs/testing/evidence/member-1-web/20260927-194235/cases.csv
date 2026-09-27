@@ -1,0 +1,18 @@
+case_id,priority,objective,steps,expected,status
+W01,P0,Magic link login,"Open hosted web signed out; submit malformed email; request link for test email; human opens link",Malformed email blocked and verified link establishes session,BLOCKED
+W02,P0,Profile completion,"With incomplete account submit blank name and invalid phone; then valid details; reload",Validation appears and saved profile persists without repeated onboarding,NOT_RUN
+W03,P0,Incident form validation,"Inspect live categories; submit missing required fields and unconfirmed location; inspect file limits",Invalid input is blocked or controlled with no new record,NOT_RUN
+W04,P0,Incident creation with image,"Choose category and severity; enter M1-W04 run title; confirm official area location; attach safe image; submit once",One correct report with visible image and readable caption,NOT_RUN
+W05,P0,My Reports persistence and privacy,"Open created report; reload and return; inspect another ordinary account",Own report persists with matching details; other user's private reports absent,NOT_RUN
+W06,P0,Discovery filters and distance,"Set location; select 1/2/3 km and each activity section; compare against known fixtures",Controls and populated results match filter and distance,NOT_RUN
+W07,P0,Linked and unlinked discovery,"Open unlinked awaiting incident and linked event; inspect resolved exclusion",Correct linked/unlinked detail and resolved exclusion,NOT_RUN
+W08,P0,Organization application and approval,"Try missing service selection; submit valid application; superadmin reviews and approves",Validation and pending/approved states match actual role access,NOT_RUN
+W09,P0,Organization draft editing and deletion,"Create draft; leave and reopen; update; create second draft; cancel then confirm deletion",Persistence and cancel/confirm behavior correct,NOT_RUN
+W10,P0,Two organization incident map,"Using known A/B boundary and draft fixtures inspect markers and detail",Coverage privacy and marker colors match fixture states,NOT_RUN
+W11,P0,Event lifecycle through completion,"Prepare/publish draft; volunteer joins; admin records attendance and AFTER evidence; complete",All transitions and evidence persist with correct readiness,NOT_RUN
+W12,P1,Linked event cancellation,"Publish separate incident linked event then cancel with reason",Cancelled event and unresolved incident discovery correct,NOT_RUN
+W13,P0,Notification inbox,"Trigger volunteer update; switch Unread/All; mark read; follow target",Recipient target and unread count correct and persistent,NOT_RUN
+W14,P1,Keyboard and responsive UI,"Use keyboard on login form and modal; inspect 1440x1000 and 390x844",Operable focus and readable unclipped controls,BLOCKED
+W15,P1,Second browser comparison,"Repeat session restoration report view and discovery in a second browser",Core behavior matches and versions recorded,BLOCKED
+W16,P1,Offline failure and recovery,"Toggle offline for read and controlled save; restore and retry",Clear error and recovery without duplicate or lost confirmed data,NOT_RUN
+W17,P0,Sign out and protected access,"Sign out; try browser back and reload on protected content",Protected data unavailable and API rejects unauthorized request,BLOCKED

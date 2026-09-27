@@ -1,0 +1,10 @@
+{
+  "caseId": "W17",
+  "attempt": 1,
+  "checkedAtUtc": "2026-09-27T14:33:06Z",
+  "method": "GET",
+  "url": "https://p01--eco-track--xnjn7t9fk69n.code.run/api/v1/auth/me",
+  "authorizationHeader": "absent",
+  "httpStatus": 401,
+  "interpretation": "Unauthenticated API access rejected. Browser sign-out and back/reload behavior remain untested."
+}

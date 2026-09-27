@@ -1,0 +1,11 @@
+evidence_path,case_id,caption,source,timestamp_utc
+screenshots/W01_attempt-01_login.png,W01,Hosted EcoTrack signed-out login in Edge at 1440x1000,Playwright screenshot,2026-09-27T14:26:49Z
+screenshots/W01_attempt-01_invalid-email.png,W01,Native browser validation blocks malformed email and keeps login visible,Playwright screenshot,2026-09-27T14:26:50Z
+screenshots/W14_attempt-01_focus.png,W14,Keyboard focused submit button on hosted login,Playwright screenshot,2026-09-27T14:26:50Z
+screenshots/W14_attempt-01_narrow.png,W14,Hosted login at 390x844 with no measured horizontal document overflow,Playwright screenshot,2026-09-27T14:26:50Z
+screenshots/W15_attempt-01_chrome-login.png,W15,Signed-out login rendered in Chrome 153,Playwright screenshot,2026-09-27T14:27:01Z
+logs/signed-out-edge.json,"W01;W14",Edge version and measured form validity focus and width,Playwright JSON observations,2026-09-27T14:26:50Z
+logs/signed-out-chrome.json,W15,Chrome version and login navigation result,Playwright JSON observations,2026-09-27T14:27:01Z
+requests/W17_attempt-01_unauthenticated-me.json,W17,Hosted API rejected missing bearer authorization with HTTP 401,PowerShell HTTP check,2026-09-27T14:33:06Z
+screenshots/W14_attempt-02_keyboard-invalid-enter.png,W14,Keyboard Enter on malformed email shows native validation and retains sign-in,Playwright screenshot,2026-09-27T14:56:48Z
+logs/W14_attempt-02_keyboard.json,W14,Tab order label association and no auth request after invalid Enter,Playwright JSON observations,2026-09-27T14:56:48Z

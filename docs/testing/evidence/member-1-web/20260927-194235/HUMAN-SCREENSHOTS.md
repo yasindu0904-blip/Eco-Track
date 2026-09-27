@@ -1,0 +1,10 @@
+# Sahanya's remaining human screenshots
+
+Browser screenshots from automated checks are already saved in `screenshots/`. Use these steps only when a human must observe an inbox, approval decision, or physical device. Keep each original image under this run's `screenshots/` directory, then add its actual capture time and a factual caption to `evidence-index.csv`.
+
+1. **W01 email receipt:** After requesting a magic link for the volunteer test address, use Windows **Win + Shift + S** on the test inbox. Capture the message subject, sender, and received time. Crop or mask the recipient address and the entire clickable link or token. Save as `W01_attempt-02_email-received.png`. Record whether the email actually arrived; the web “Check your email” screen alone does not prove delivery.
+2. **W01 callback:** Open the link in the same test Edge window. Once the profile screen or dashboard has fully loaded, tell Codex. Codex can capture `W01_attempt-02_signed-in.png`; if the test window is unavailable to automation, use **Win + Shift + S** and save that filename yourself. Do not paste the link into chat.
+3. **W08 approval:** When the superadmin has the test application open, capture the visible pending application and its selected official Kesbewa service divisions as `W08_attempt-01_review.png`. After actual approval, capture the approved status and the applicant's accessible workspace separately as `W08_attempt-01_workspace.png`. Crop private document numbers and contact details.
+4. **W13 phone receipt:** Member 3 owns the physical phone evidence. If a real test notification appears, capture the Android notification with timestamp and a separate image after opening it. Keep those in Member 3's evidence folder and provide only a reference here.
+
+For every screenshot, wait for the final result or error to load. Keep failures and retests as separate images. Do not include credentials, token URLs, other users' private records, or generated replacement images. If using Snipping Tool, click the save icon and choose this run's `screenshots/` folder; do not rely on the clipboard alone.

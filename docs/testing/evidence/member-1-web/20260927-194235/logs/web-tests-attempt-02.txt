@@ -1,0 +1,9 @@
+Command: npm test
+Working directory: D:\Eco-Track\web
+Exit code: 0
+Output:
+ Test Files  16 passed (16)
+      Tests  48 passed (48)
+   Start at  19:54:13 Asia/Colombo
+   Duration  53.23s (transform 8.07s, setup 0ms, import 94.65s, tests 14.00s, environment 232.39s)
+Interpretation: local automated web checks passed. This does not establish hosted UI acceptance.
