@@ -1,0 +1,5 @@
+
+> ecotrack-mobile@0.1.0 security:check
+> node scripts/verifyMetroImageSecurity.cjs
+
+Metro image security: image-size parsers are not installed or reachable.

@@ -1,0 +1,52 @@
+[
+  {
+    "id": "LOCAL-01",
+    "script": "security:check",
+    "startedAt": "2026-09-27T13:27:00.192Z",
+    "finishedAt": "2026-09-27T13:27:00.862Z",
+    "exitCode": 0,
+    "status": "PASS",
+    "source": "Local source checks, not installed APK tests",
+    "evidence": "logs/mobile-security.txt"
+  },
+  {
+    "id": "LOCAL-02",
+    "script": "security:map",
+    "startedAt": "2026-09-27T13:27:00.864Z",
+    "finishedAt": "2026-09-27T13:27:02.479Z",
+    "exitCode": 0,
+    "status": "PASS",
+    "source": "Local source checks, not installed APK tests",
+    "evidence": "logs/mobile-map-privacy.txt"
+  },
+  {
+    "id": "LOCAL-03",
+    "script": "test",
+    "startedAt": "2026-09-27T13:27:02.480Z",
+    "finishedAt": "2026-09-27T13:27:07.287Z",
+    "exitCode": 0,
+    "status": "PASS",
+    "source": "Local source checks, not installed APK tests",
+    "evidence": "logs/mobile-tests.txt"
+  },
+  {
+    "id": "LOCAL-04",
+    "script": "typecheck",
+    "startedAt": "2026-09-27T13:27:07.288Z",
+    "finishedAt": "2026-09-27T13:27:11.898Z",
+    "exitCode": 0,
+    "status": "PASS",
+    "source": "Local source checks, not installed APK tests",
+    "evidence": "logs/mobile-typecheck.txt"
+  },
+  {
+    "id": "LOCAL-05",
+    "script": "doctor",
+    "startedAt": "2026-09-27T13:27:11.898Z",
+    "finishedAt": "2026-09-27T13:27:20.355Z",
+    "exitCode": 0,
+    "status": "PASS",
+    "source": "Local source checks, not installed APK tests",
+    "evidence": "logs/mobile-doctor.txt"
+  }
+]

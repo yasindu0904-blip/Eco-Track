@@ -1,0 +1,5 @@
+
+> ecotrack-mobile@0.1.0 security:map
+> node scripts/verifyMapPrivacy.cjs
+
+EcoTrack mobile map uses one-shot foreground location and payload-safe logging.

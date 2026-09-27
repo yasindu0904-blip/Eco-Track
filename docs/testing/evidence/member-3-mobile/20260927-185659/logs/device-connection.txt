@@ -1,0 +1,11 @@
+
+## Connected-device verification (2026-09-27T19:23:26.0938636+05:30)
+ADB status: device (authorized USB connection).
+Model: Samsung SM-A236E.
+Android: 14.
+Package: com.ecotrack.mobile.
+Installed version: 0.1.0; versionCode: 1.
+Device-reported last update: 2026-09-27 18:32:36.
+Tester reports installed APK is the latest Expo-downloaded APK.
+Exact EAS build ID/source revision is not yet verified; version alone is insufficient.
+M01 real login and session persistence: pending human execution. No physical case marked PASS.

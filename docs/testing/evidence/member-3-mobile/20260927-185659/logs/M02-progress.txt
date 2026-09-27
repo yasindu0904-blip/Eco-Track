@@ -1,0 +1,4 @@
+2026-09-27T14:15:36.0644202Z Camera permission prompt observed on Report an incident. Denial, recovery, capture, preview and removal remain pending; M02 not yet PASS.
+2026-09-27T14:17:46.4748907Z After instructed denial, incident form remains visible with Take photo and Choose from library. No error message visible in captured viewport; transient/off-screen message unknown. Recovery and capture pending; overall case not PASS.
+2026-09-27T14:20:09.5820408Z Tester confirms no denial message appeared. Native camera now visibly open. Photo acceptance, preview and removal remain pending.
+2026-09-27T14:21:15.9328974Z Photo preview and Remove button visually verified in incident form. No raw photo ID displayed. Removal still pending; missing denial feedback remains M3-DEF-001. No incident submission performed.

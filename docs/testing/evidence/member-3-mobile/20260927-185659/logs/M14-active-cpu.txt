@@ -1,0 +1,6 @@
+﻿
+Load: 0.0 / 0.0 / 0.0
+CPU usage from 474912ms to 174802ms ago (2026-09-27 22:50:43.600 to 2026-09-27 22:55:43.710):
+  26% 20384/com.ecotrack.mobile: 19% user + 6.8% kernel / faults: 64238 minor 1019 major
+
+
