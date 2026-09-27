@@ -1,0 +1,13 @@
+
+> ecotrack-mobile@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.11 C:/campus/projects/Eco-Track/mobile
+
+
+ Test Files  22 passed (22)
+      Tests  71 passed (71)
+   Start at  18:57:05
+   Duration  2.02s (transform 3.47s, setup 0ms, import 7.97s, tests 1.11s, environment 3ms)
+

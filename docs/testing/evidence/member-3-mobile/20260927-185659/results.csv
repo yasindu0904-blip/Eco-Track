@@ -1,0 +1,6 @@
+case_id,attempt,priority,tester,started_at_utc,environment,preconditions,steps,expected,actual,status,evidence_paths,defect_id,notes
+LOCAL-01,1,P0,Yasindu,2026-09-27T13:27:00.192Z,Local source; Windows/Node; not physical APK,Dependencies present,npm run security:check,Exit 0,Exit 0,PASS,logs/mobile-security.txt,,
+LOCAL-02,1,P0,Yasindu,2026-09-27T13:27:00.864Z,Local source; Windows/Node; not physical APK,Dependencies present,npm run security:map,Exit 0,Exit 0,PASS,logs/mobile-map-privacy.txt,,
+LOCAL-03,1,P0,Yasindu,2026-09-27T13:27:02.480Z,Local source; Windows/Node; not physical APK,Dependencies present,npm run test,Exit 0,Exit 0,PASS,logs/mobile-tests.txt,,71 tests in 22 files passed
+LOCAL-04,1,P0,Yasindu,2026-09-27T13:27:07.288Z,Local source; Windows/Node; not physical APK,Dependencies present,npm run typecheck,Exit 0,Exit 0,PASS,logs/mobile-typecheck.txt,,
+LOCAL-05,1,P0,Yasindu,2026-09-27T13:27:11.898Z,Local source; Windows/Node; not physical APK,Dependencies present,npm run doctor,Exit 0,Exit 0,PASS,logs/mobile-doctor.txt,,

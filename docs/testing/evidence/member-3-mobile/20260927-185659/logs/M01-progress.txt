@@ -1,0 +1,9 @@
+M01 interim observation:
+User supplied screenshots in conversation showing sign-in request confirmation (19:26 device time) and authenticated Yasindu dashboard (19:27).
+These establish visible UI states, not independently verified email delivery or session persistence.
+ADB capture at 19:29 showed another app rather than EcoTrack. That accidental capture was discarded and is not test evidence.
+Next: confirm real email-link login; capture EcoTrack dashboard while foreground; close/reopen and check persistence.
+M01 remains incomplete; no PASS recorded.
+2026-09-27T14:04:20.2492172Z Attempt 02 restarted from user-confirmed signed-out state. Captured and visually verified Check your email screen. Email receipt, callback login and session persistence remain pending. Screenshot contains tester email; anonymize a report copy before publication.
+2026-09-27T14:07:40.0098687Z Attempt 02: authenticated dashboard captured and visually verified. User requested capture after email-link instructions; explicit email receipt confirmation and close/reopen persistence still pending. M01 not yet marked PASS.
+2026-09-27T14:08:29.8625687Z Authenticated dashboard visible in reopened screenshot. Capture requested following close/reopen instructions; explicit confirmation of email-link and physical reopen steps pending. No overall PASS yet.
