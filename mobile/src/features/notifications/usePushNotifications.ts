@@ -3,6 +3,7 @@ import * as Notifications from "expo-notifications";
 
 import type { NotificationItem } from "./notification.types";
 import { markNotificationRead } from "./notification.api";
+import { publishNotificationCount } from "./notificationUpdates";
 import {
   notificationItemFromResponse,
   registerCurrentInstallationForPush,
@@ -57,6 +58,9 @@ export function usePushNotifications({
     const tokenSubscription = Notifications.addPushTokenListener((devicePushToken) => {
       register(devicePushToken);
     });
+    const receivedSubscription = Notifications.addNotificationReceivedListener(() => {
+      if (active) publishNotificationCount(accessToken);
+    });
 
     return () => {
       active = false;
@@ -64,6 +68,7 @@ export function usePushNotifications({
       if (registrationController.current === controller) registrationController.current = null;
       responseSubscription.remove();
       tokenSubscription.remove();
+      receivedSubscription.remove();
     };
   }, [accessToken, enabled, onNotificationResponse, userId]);
 

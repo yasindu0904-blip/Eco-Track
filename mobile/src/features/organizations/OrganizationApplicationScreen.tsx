@@ -1,6 +1,6 @@
 import { useInvalidateLists } from "../../components/lists/usePagedList";
-import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Keyboard, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { ApiRequestError } from "../../api/apiClient";
 import { Button, Field, Notice, PageHeader, Screen, sharedStyles } from "../../components/ui";
@@ -57,9 +57,13 @@ export function OrganizationApplicationScreen({
   const [search, setSearch] = useState("");
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<AdministrativeArea[]>([]);
+  const [resultsExpanded, setResultsExpanded] = useState(false);
+  const [selectedExpanded, setSelectedExpanded] = useState(false);
   const [selectedAreas, setSelectedAreas] = useState<AdministrativeArea[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const searchGeneration = useRef(0);
+  useEffect(() => () => { searchGeneration.current += 1; }, []);
 
   const selectedIds = useMemo(
     () => new Set(selectedAreas.map((area) => area.id)),
@@ -71,15 +75,20 @@ export function OrganizationApplicationScreen({
   };
 
   const searchAreas = async () => {
+    Keyboard.dismiss();
+    const request = ++searchGeneration.current;
     setSearching(true);
     setError(null);
 
     try {
-      setResults(await listAdministrativeAreas(accessToken, search));
+      const areas = await listAdministrativeAreas(accessToken, search);
+      if (request !== searchGeneration.current) return;
+      setResults(areas);
+      setResultsExpanded(true);
     } catch (caughtError) {
-      setError(errorMessage(caughtError));
+      if (request === searchGeneration.current) setError(errorMessage(caughtError));
     } finally {
-      setSearching(false);
+      if (request === searchGeneration.current) setSearching(false);
     }
   };
 
@@ -99,6 +108,7 @@ export function OrganizationApplicationScreen({
   };
 
   const submit = async () => {
+    Keyboard.dismiss();
     setError(null);
 
     if (
@@ -149,7 +159,7 @@ export function OrganizationApplicationScreen({
   };
 
   return (
-    <Screen>
+    <Screen keyboardAware>
       <PageHeader
         eyebrow="Organization onboarding"
         title="Request a workspace"
@@ -177,16 +187,34 @@ export function OrganizationApplicationScreen({
         <Field
           label="Search official areas"
           value={search}
-          onChangeText={setSearch}
+          onChangeText={value => {
+            searchGeneration.current += 1;
+            setSearch(value);
+            setSearching(false);
+            setResults([]);
+            setResultsExpanded(false);
+          }}
           placeholder="Example: Polgasowita or Kesbewa"
+          returnKeyType="search"
+          onSubmitEditing={() => void searchAreas()}
         />
         <Button label="Search GN Divisions" onPress={() => void searchAreas()} loading={searching} />
 
         {selectedAreas.length > 0 ? (
           <View style={styles.selectedGroup}>
-            <Text style={styles.groupTitle}>Selected areas</Text>
+            <Pressable
+              style={styles.groupHeader}
+              accessibilityRole="button"
+              accessibilityLabel={`${selectedExpanded ? "Hide" : "Show"} selected GN Divisions`}
+              accessibilityState={{ expanded: selectedExpanded }}
+              onPress={() => { Keyboard.dismiss(); setSelectedExpanded(value => !value); }}
+            >
+              <Text style={styles.groupTitle}>Selected areas ({selectedAreas.length})</Text>
+              <View style={[styles.chevron, selectedExpanded && styles.chevronExpanded]} />
+            </Pressable>
+            {selectedExpanded && <ScrollView style={styles.areaList} contentContainerStyle={styles.areaListContent} nestedScrollEnabled keyboardShouldPersistTaps="handled">
             {selectedAreas.map((area) => (
-              <Pressable key={area.id} onPress={() => toggleArea(area)} style={styles.selectedArea}>
+              <Pressable key={area.id} onPress={() => toggleArea(area)} style={styles.selectedArea} accessibilityRole="button" accessibilityLabel={`Remove ${area.name} from selected GN Divisions`}>
                 <View style={styles.areaCopy}>
                   <Text style={styles.areaName}>{area.name}</Text>
                   <Text style={styles.areaMeta}>{area.officialCode} · {area.divisionalSecretariatName ?? "DS not listed"}</Text>
@@ -194,18 +222,32 @@ export function OrganizationApplicationScreen({
                 <Text style={styles.removeText}>Remove</Text>
               </Pressable>
             ))}
+            </ScrollView>}
           </View>
         ) : null}
 
         {results.length > 0 ? (
           <View style={styles.resultsGroup}>
-            <Text style={styles.groupTitle}>Search results</Text>
+            <Pressable
+              style={styles.groupHeader}
+              accessibilityRole="button"
+              accessibilityLabel={`${resultsExpanded ? "Hide" : "Show"} GN Division search results`}
+              accessibilityState={{ expanded: resultsExpanded }}
+              onPress={() => { Keyboard.dismiss(); setResultsExpanded(value => !value); }}
+            >
+              <Text style={styles.groupTitle}>Search results ({results.length})</Text>
+              <View style={[styles.chevron, resultsExpanded && styles.chevronExpanded]} />
+            </Pressable>
+            {resultsExpanded && <ScrollView style={styles.areaList} contentContainerStyle={styles.areaListContent} nestedScrollEnabled keyboardShouldPersistTaps="handled">
             {results.map((area) => {
               const selected = selectedIds.has(area.id);
 
               return (
                 <Pressable
                   key={area.id}
+                  accessibilityRole="checkbox"
+                  accessibilityLabel={`Select ${area.name}, ${area.divisionalSecretariatName ?? "Unknown DS"}, ${area.districtName ?? "Unknown district"}`}
+                  accessibilityState={{ checked: selected }}
                   onPress={() => toggleArea(area)}
                   style={[styles.resultArea, selected && styles.resultAreaSelected]}
                 >
@@ -222,6 +264,7 @@ export function OrganizationApplicationScreen({
                 </Pressable>
               );
             })}
+            </ScrollView>}
           </View>
         ) : null}
       </View>
@@ -237,6 +280,11 @@ const styles = StyleSheet.create({
   selectedGroup: { gap: spacing.sm },
   resultsGroup: { gap: spacing.sm },
   groupTitle: { color: colors.text, fontSize: 14, fontWeight: "800" },
+  groupHeader: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+  chevron: { width: 10, height: 10, marginRight: 6, borderRightWidth: 2, borderBottomWidth: 2, borderColor: colors.primary, transform: [{ rotate: "45deg" }] },
+  chevronExpanded: { transform: [{ rotate: "225deg" }] },
+  areaList: { maxHeight: 240 },
+  areaListContent: { gap: spacing.sm, paddingBottom: spacing.sm },
   selectedArea: {
     flexDirection: "row",
     alignItems: "center",

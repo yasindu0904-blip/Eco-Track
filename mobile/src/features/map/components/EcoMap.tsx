@@ -37,6 +37,7 @@ import type {
 } from "../map.types";
 import { markerLocation } from "../map.types";
 import { useDebouncedViewport } from "../hooks/useDebouncedViewport";
+import { getForegroundPosition } from "../foregroundPosition";
 
 const clusterFilter: FilterSpecification = ["has", "point_count"];
 const unclusteredFilter: FilterSpecification = ["!", ["has", "point_count"]];
@@ -70,6 +71,9 @@ export interface EcoMapProps {
   showMarkerCoordinates?: boolean;
   listTitle?: string;
   showCurrentLocation?: boolean;
+  compactLocationButton?: boolean;
+  currentLocationBusy?: boolean;
+  onCurrentLocationPress?: () => void | Promise<void>;
   onMarkerSelect?: (marker: MapMarkerFeature) => void;
   markerActionLabel?: (marker: MapMarkerFeature) => string | undefined;
   onMarkerAction?: (marker: MapMarkerFeature) => void;
@@ -191,6 +195,9 @@ export function EcoMap({
   showMarkerCoordinates = true,
   listTitle = "Locations in this view",
   showCurrentLocation = true,
+  compactLocationButton = false,
+  currentLocationBusy = false,
+  onCurrentLocationPress,
   onMarkerSelect,
   markerActionLabel,
   onMarkerAction,
@@ -202,6 +209,8 @@ export function EcoMap({
   const markerSourceRef = useRef<GeoJSONSourceRef>(null);
   const lastMapCenterRef = useRef<MapLocation | null>(initialCenter);
   const lastFocusedBoundarySet = useRef("");
+  const mountedRef = useRef(true);
+  const locationRequestRef = useRef(false);
   const [locationBusy, setLocationBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [viewportTooWide, setViewportTooWide] = useState(false);
@@ -210,6 +219,10 @@ export function EcoMap({
     onViewportChange,
     MAP_REQUEST_LIMITS.debounceMilliseconds,
   );
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   const markerCollection = useMemo<GeoJSON.FeatureCollection>(
     () => ({
       type: "FeatureCollection",
@@ -362,15 +375,17 @@ export function EcoMap({
   );
 
   const useCurrentLocation = async () => {
-    if (locationBusy) {
+    if (locationRequestRef.current) {
       return;
     }
 
+    locationRequestRef.current = true;
     setLocationBusy(true);
     setMessage(null);
 
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
+      if (!mountedRef.current) return;
 
       if (!permission.granted) {
         setMessage(
@@ -379,9 +394,8 @@ export function EcoMap({
         return;
       }
 
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      const position = await getForegroundPosition();
+      if (!mountedRef.current) return;
       const location = {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
@@ -402,11 +416,12 @@ export function EcoMap({
       });
       onLocationSelect?.(location);
     } catch {
-      setMessage(
+      if (mountedRef.current) setMessage(
         "Current location is unavailable. Move the map or enter coordinates manually.",
       );
     } finally {
-      setLocationBusy(false);
+      locationRequestRef.current = false;
+      if (mountedRef.current) setLocationBusy(false);
     }
   };
 
@@ -415,6 +430,7 @@ export function EcoMap({
       NonNullable<React.ComponentProps<typeof GeoJSONSource>["onPress"]>
     >[0],
   ) => {
+    if (!mountedRef.current) return;
     const feature = event.nativeEvent.features[0];
 
     if (!feature || feature.geometry.type !== "Point") {
@@ -425,10 +441,15 @@ export function EcoMap({
     const properties = feature.properties;
 
     if (properties?.cluster && properties.cluster_id != null) {
-      const expansionZoom =
-        await markerSourceRef.current?.getClusterExpansionZoom(
+      let expansionZoom: number | undefined;
+      try {
+        expansionZoom = await markerSourceRef.current?.getClusterExpansionZoom(
           Number(properties.cluster_id),
         );
+      } catch {
+        return;
+      }
+      if (!mountedRef.current) return;
       cameraRef.current?.easeTo({
         center: [Number(coordinates[0]), Number(coordinates[1])],
         zoom: expansionZoom ?? 14,
@@ -716,19 +737,21 @@ export function EcoMap({
           <Pressable
             style={({ pressed }) => [
               styles.locationButton,
+              compactLocationButton && styles.locationButtonCompact,
               pressed && styles.buttonPressed,
             ]}
             accessibilityRole="button"
             accessibilityLabel="Use my current location"
-            disabled={locationBusy}
-            onPress={() => void useCurrentLocation()}
+            accessibilityState={{ disabled: locationBusy || currentLocationBusy, busy: locationBusy || currentLocationBusy }}
+            disabled={locationBusy || currentLocationBusy}
+            onPress={onCurrentLocationPress ?? useCurrentLocation}
           >
-            {locationBusy ? (
+            {locationBusy || currentLocationBusy ? (
               <ActivityIndicator color={colors.primaryDark} size="small" />
             ) : (
               <Text style={styles.locationButtonIcon}>◎</Text>
             )}
-            <Text style={styles.locationButtonText}>My location</Text>
+            {!compactLocationButton && <Text style={styles.locationButtonText}>My location</Text>}
           </Pressable>
         )}
 
@@ -908,6 +931,12 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontSize: 21,
     lineHeight: 22,
+  },
+  locationButtonCompact: {
+    width: 44,
+    height: 44,
+    paddingHorizontal: 0,
+    justifyContent: "center",
   },
   locationButtonText: {
     color: colors.primaryDark,

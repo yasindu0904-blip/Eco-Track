@@ -34,6 +34,15 @@ The normal `npm start` command continues to load the regular EcoTrack app.
 
 Location is requested only when the user presses **My location**. The feature
 does not call a location watcher and does not request background permission.
+After permission succeeds, it reuses a position at most 30 seconds old with
+reported accuracy within 100 metres, or requests a fresh balanced-accuracy fix.
+The lookup stops waiting after 15 seconds and displays a retry/fallback message.
+Find cleanup activity uses a 44-pixel location icon inside the map. Its location
+spinner ends when the position is found; nearby results have their own loading
+state and a 20-second request deadline. Foreground refresh skips in-flight
+location/search requests. Search section changes preserve the native map.
+The shared Screen keeps Android's refresh wrapper mounted and disables refresh
+during map gestures, avoiding native-map destruction when scrolling toggles.
 Citizen and organization discovery refresh the last bounded query once when
 the app returns to the foreground. This refresh is throttled and does not read
 location again.

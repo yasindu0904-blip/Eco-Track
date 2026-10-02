@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import * as Location from "expo-location";
+import { getForegroundPosition } from "../map/foregroundPosition";
 
 import { describeApiFailure } from "../../api/apiError";
 import {
@@ -96,6 +97,8 @@ export function CitizenIncidentDiscoveryScreen({
   const requestController = useRef<AbortController | undefined>(undefined);
   const detailController = useRef<AbortController | undefined>(undefined);
   const selectedIdRef = useRef<string | undefined>(undefined);
+  const mountedRef = useRef(true);
+  const locationRequestRef = useRef(false);
 
   const selectEvent = useCallback((id?: string) => {
     if (selectedIdRef.current === id) return;
@@ -105,13 +108,14 @@ export function CitizenIncidentDiscoveryScreen({
     setIncidentDetail(undefined);
   }, []);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
       requestController.current?.abort();
       detailController.current?.abort();
-    },
-    [],
-  );
+    };
+  }, []);
 
   const runSearch = useCallback(
     async (
@@ -121,6 +125,11 @@ export function CitizenIncidentDiscoveryScreen({
       requestController.current?.abort();
       const controller = new AbortController();
       requestController.current = controller;
+      let timedOut = false;
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, 20_000);
 
       setLoading(true);
       setError(undefined);
@@ -169,21 +178,27 @@ export function CitizenIncidentDiscoveryScreen({
             : undefined,
         );
       } catch (requestError) {
+        if (!mountedRef.current || requestController.current !== controller) return;
+        if (timedOut) {
+          setError("The nearby search took too long. Check your connection and refresh to try again.");
+          return;
+        }
         if (controller.signal.aborted) return;
         setError(
           describeApiFailure(requestError, "Unable to discover nearby activity.")
             .message,
         );
       } finally {
-        if (requestController.current === controller) setLoading(false);
+        clearTimeout(timeout);
+        if (mountedRef.current && requestController.current === controller) setLoading(false);
       }
     },
     [accessToken, events, selectEvent, section, setEvents, setNextCursor],
   );
 
   const refreshAfterForeground = useCallback(() => {
-    if (search) void runSearch(search);
-  }, [runSearch, search]);
+    if (search && !locationRequestRef.current && !loading) void runSearch(search);
+  }, [loading, runSearch, search]);
   useRefreshOnForeground(refreshAfterForeground);
 
   useEffect(() => {
@@ -221,20 +236,21 @@ export function CitizenIncidentDiscoveryScreen({
   }, [accessToken, selectedId, section]);
 
   const findNearMe = async () => {
-    if (locating) return;
+    if (locationRequestRef.current) return;
+    locationRequestRef.current = true;
     setLocating(true);
     setError(undefined);
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
+      if (!mountedRef.current) return;
       if (!permission.granted) {
         setError(
           "Foreground location permission is required for a nearby search.",
         );
         return;
       }
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      const position = await getForegroundPosition();
+      if (!mountedRef.current) return;
       const location = {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
@@ -248,13 +264,14 @@ export function CitizenIncidentDiscoveryScreen({
       const nextSearch: SearchContext = { location, radiusMeters };
       setFocusLocation(location);
       setSearch(nextSearch);
-      await runSearch(nextSearch);
+      void runSearch(nextSearch);
     } catch {
-      setError(
-        "Your current position is unavailable. Move the map to browse instead.",
+      if (mountedRef.current) setError(
+        "Your current position is unavailable. Check that phone location is enabled, then try again.",
       );
     } finally {
-      setLocating(false);
+      locationRequestRef.current = false;
+      if (mountedRef.current) setLocating(false);
     }
   };
 
@@ -283,7 +300,7 @@ export function CitizenIncidentDiscoveryScreen({
 
   return (
     <Screen
-      rememberKey={"nearby:" + section}
+      rememberKey="nearby:map"
       scrollEnabled={!mapInteracting}
       onRefresh={search ? () => runSearch(search) : undefined}
     >
@@ -294,11 +311,6 @@ export function CitizenIncidentDiscoveryScreen({
         backLabel="Dashboard"
       />
 
-      <Button
-        label={locating ? "Finding your location..." : "Use my location"}
-        loading={locating}
-        onPress={() => void findNearMe()}
-      />
       <Button
         label={section === "awaiting" ? "Refresh incidents" : "Refresh events"}
         variant="secondary"
@@ -368,7 +380,9 @@ export function CitizenIncidentDiscoveryScreen({
         showListFallback
         showMarkerCoordinates={false}
         listTitle={`${section === "awaiting" ? "Incidents awaiting cleanup" : "Cleanup events"} within ${radiusMeters / 1_000} km`}
-        showCurrentLocation={false}
+        compactLocationButton
+        currentLocationBusy={locating}
+        onCurrentLocationPress={findNearMe}
         height={430}
         accessibleLabel={section === "awaiting" ? "Incidents awaiting cleanup map" : "Published cleanup event discovery map"}
         onMarkerSelect={(marker) => selectEvent(marker.properties.id)}
@@ -450,7 +464,7 @@ export function CitizenIncidentDiscoveryScreen({
       {!search ? (
         <View style={sharedStyles.card}>
           <Text style={sharedStyles.sectionTitle}>
-            Use your location to begin
+            Tap the location icon on the map to begin
           </Text>
         </View>
       ) : !loading && events.length === 0 ? (

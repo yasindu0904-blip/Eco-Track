@@ -14,6 +14,7 @@ vi.mock("expo-location", () => ({
   Accuracy: { Balanced: 3 },
   PermissionStatus: { DENIED: "denied", GRANTED: "granted" },
   getCurrentPositionAsync: vi.fn(),
+  getLastKnownPositionAsync: vi.fn(),
   requestForegroundPermissionsAsync: vi.fn(),
 }));
 
@@ -63,6 +64,7 @@ function currentLocationButton(renderer: TestRenderer.ReactTestRenderer) {
 describe("EcoMap location fallback", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(Location.getLastKnownPositionAsync).mockResolvedValue(null);
   });
 
   test("granted foreground location selects the position without starting a watcher", async () => {

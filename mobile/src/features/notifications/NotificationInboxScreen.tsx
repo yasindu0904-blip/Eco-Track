@@ -14,6 +14,7 @@ import {
   markNotificationRead,
 } from "./notification.api";
 import type { NotificationItem } from "./notification.types";
+import { publishNotificationCount, subscribeNotificationCount } from "./notificationUpdates";
 
 type InboxProps = {
   accessToken: string;
@@ -36,17 +37,28 @@ export function NotificationButton({
 
   useEffect(() => {
     let active = true;
+    let generation = 0;
+    setCount(0);
     const refresh = () => {
+      const request = ++generation;
       void getUnreadNotificationCount(accessToken)
-        .then((value) => { if (active) setCount(value); })
+        .then((value) => { if (active && request === generation) setCount(value); })
         .catch(() => undefined);
     };
+    const unsubscribe = subscribeNotificationCount(accessToken, value => {
+      if (value === undefined) refresh();
+      else {
+        generation += 1;
+        setCount(value);
+      }
+    });
     refresh();
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") refresh();
     });
     return () => {
       active = false;
+      unsubscribe();
       subscription.remove();
     };
   }, [accessToken]);
@@ -76,6 +88,8 @@ export function NotificationInboxScreen({
   const [notice, setNotice] = useState<string | null>(null);
 
   const generation = useRef(0);
+  const pendingReadIds = useRef(new Set<string>());
+  const markingAll = useRef(false);
   const load = useCallback(async () => {
     const request = ++generation.current;
     setLoadingMore(false);
@@ -90,6 +104,7 @@ export function NotificationInboxScreen({
       setItems(page.items);
       setNextCursor(page.nextCursor);
       setUnreadCount(count);
+      publishNotificationCount(accessToken, count);
     } catch (caughtError) {
       if (request !== generation.current) return;
       setError(describeApiFailure(caughtError, "Unable to load notifications.").message);
@@ -101,10 +116,16 @@ export function NotificationInboxScreen({
   useEffect(() => { void load(); return () => { generation.current += 1; }; }, [load]);
 
   const openItem = async (item: NotificationItem) => {
+    if (markingAll.current || pendingReadIds.current.has(item.id)) return;
     setError(null);
     if (!item.readAt) {
+      pendingReadIds.current.add(item.id);
       try {
         const updated = await markNotificationRead(accessToken, item.id);
+        // A refresh started before this write must not restore unread rows/counts.
+        generation.current += 1;
+        setLoading(false);
+        setLoadingMore(false);
         setUnreadCount((count) => Math.max(0, count - 1));
         setItems((current) => unreadOnly
           ? current.filter(({ id }) => id !== item.id)
@@ -112,6 +133,8 @@ export function NotificationInboxScreen({
       } catch (caughtError) {
         setError(describeApiFailure(caughtError).message);
         return;
+      } finally {
+        pendingReadIds.current.delete(item.id);
       }
     }
 
@@ -120,11 +143,17 @@ export function NotificationInboxScreen({
   };
 
   const markAll = async () => {
+    if (markingAll.current) return;
+    markingAll.current = true;
     setMutating(true);
     setError(null);
     try {
       const result = await markAllNotificationsRead(accessToken);
+      generation.current += 1;
+      setLoading(false);
+      setLoadingMore(false);
       setUnreadCount(0);
+      if (unreadOnly) setNextCursor(null);
       setItems((current) => unreadOnly
         ? []
         : current.map((item) => item.readAt ? item : { ...item, readAt: result.readAt }));
@@ -132,6 +161,7 @@ export function NotificationInboxScreen({
     } catch (caughtError) {
       setError(describeApiFailure(caughtError).message);
     } finally {
+      markingAll.current = false;
       setMutating(false);
     }
   };

@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { SafeAreaHandledContext, ScreenDepthContext, usePageHeader } from "./appHeaderContext";
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -62,20 +63,49 @@ type ScreenProps = {
   scrollEnabled?: boolean;
   rememberKey?: string;
   onRefresh?: () => void | Promise<void>;
+  keyboardAware?: boolean;
 };
 
 type ScreenRefreshHandler = () => void | Promise<void>;
 type RegisterScreenRefresh = (handler: ScreenRefreshHandler) => () => void;
 
 const ScreenRefreshContext = createContext<RegisterScreenRefresh | null>(null);
+const FocusedFieldContext = createContext<((input: TextInput | null) => void) | null>(null);
 
 export function useRegisterScreenRefresh(handler: ScreenRefreshHandler) {
   const register = useContext(ScreenRefreshContext);
   useEffect(() => register?.(handler), [handler, register]);
 }
 
-export function Screen({ children, contentStyle, scrollEnabled = true, rememberKey, onRefresh }: ScreenProps) {
+export function Screen({ children, contentStyle, scrollEnabled = true, rememberKey, onRefresh, keyboardAware = false }: ScreenProps) {
   const scrollMemory = useScrollMemory(rememberKey);
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollOffset = useRef(scrollMemory.read());
+  const focusedInput = useRef<TextInput | null>(null);
+  const keyboardTop = useRef<number | null>(null);
+  const revealFocusedField = useCallback(() => {
+    const input = focusedInput.current;
+    const top = keyboardTop.current;
+    if (!input || top === null) return;
+    input.measureInWindow((_x, y, _width, height) => {
+      if (focusedInput.current !== input || keyboardTop.current !== top) return;
+      const overlap = y + height + 16 - top;
+      if (overlap > 0) scrollRef.current?.scrollTo({ y: scrollOffset.current + overlap, animated: true });
+    });
+  }, []);
+  const focusField = useCallback((input: TextInput | null) => {
+    focusedInput.current = input;
+    revealFocusedField();
+  }, [revealFocusedField]);
+  useEffect(() => {
+    if (!keyboardAware) return;
+    const shown = Keyboard.addListener("keyboardDidShow", event => {
+      keyboardTop.current = event.endCoordinates.screenY;
+      revealFocusedField();
+    });
+    const hidden = Keyboard.addListener("keyboardDidHide", () => { keyboardTop.current = null; });
+    return () => { shown.remove(); hidden.remove(); focusedInput.current = null; };
+  }, [keyboardAware, revealFocusedField]);
   const safeAreaHandled = useContext(SafeAreaHandledContext);
   const depth = useContext(ScreenDepthContext);
   const refreshHandlers = useRef(new Set<ScreenRefreshHandler>());
@@ -90,7 +120,7 @@ export function Screen({ children, contentStyle, scrollEnabled = true, rememberK
     };
   }, []);
   const handleRefresh = useCallback(async () => {
-    if (refreshing) return;
+    if (refreshing || !scrollEnabled || (!onRefresh && refreshHandlers.current.size === 0)) return;
     setRefreshing(true);
     const handlers = [
       ...(onRefresh ? [onRefresh] : []),
@@ -103,35 +133,42 @@ export function Screen({ children, contentStyle, scrollEnabled = true, rememberK
     } finally {
       setRefreshing(false);
     }
-  }, [onRefresh, refreshing]);
-  const refreshControl = scrollEnabled && (Boolean(onRefresh) || refreshHandlerCount > 0)
-    ? (
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => void handleRefresh()}
-          colors={[memberColors.primary]}
-          tintColor={memberColors.primary}
-          progressBackgroundColor={memberColors.surface}
-        />
-      )
-    : undefined;
+  }, [onRefresh, refreshing, scrollEnabled]);
+  const canRefresh = Boolean(onRefresh) || refreshHandlerCount > 0;
+  // Android wraps ScrollView in RefreshControl. Removing that wrapper during
+  // map gestures destroys and recreates every native child, including MapLibre.
+  const refreshControl = (
+    <RefreshControl
+      enabled={scrollEnabled && canRefresh}
+      refreshing={refreshing}
+      onRefresh={() => void handleRefresh()}
+      colors={[memberColors.primary]}
+      tintColor={memberColors.primary}
+      progressBackgroundColor={memberColors.surface}
+    />
+  );
 
   return (
     <SafeAreaView edges={safeAreaHandled ? [] : ["top", "bottom", "left", "right"]} style={styles.safeArea}>
       <SafeAreaHandledContext.Provider value>
         <ScreenDepthContext.Provider value={depth + 1}>
           <ScreenRefreshContext.Provider value={registerRefresh}>
+            <FocusedFieldContext.Provider value={keyboardAware ? focusField : null}>
             <KeyboardAvoidingView
               style={styles.flex}
               behavior={Platform.OS === "ios" ? "padding" : undefined}
             >
               <ScrollView
+                ref={scrollRef}
                 key={rememberKey}
                 contentOffset={{ x: 0, y: scrollMemory.read() }}
-                onScroll={event => scrollMemory.write(event.nativeEvent.contentOffset.y)}
+                onScroll={event => {
+                  scrollOffset.current = event.nativeEvent.contentOffset.y;
+                  scrollMemory.write(scrollOffset.current);
+                }}
                 scrollEventThrottle={100}
                 scrollEnabled={scrollEnabled}
-                alwaysBounceVertical={Boolean(refreshControl)}
+                alwaysBounceVertical={canRefresh}
                 refreshControl={refreshControl}
                 contentContainerStyle={[styles.screenContent, contentStyle]}
                 keyboardShouldPersistTaps="handled"
@@ -140,6 +177,7 @@ export function Screen({ children, contentStyle, scrollEnabled = true, rememberK
                 {children}
               </ScrollView>
             </KeyboardAvoidingView>
+            </FocusedFieldContext.Provider>
           </ScreenRefreshContext.Provider>
         </ScreenDepthContext.Provider>
       </SafeAreaHandledContext.Provider>
@@ -291,6 +329,8 @@ type FieldProps = {
   autoCapitalize?: TextInputProps["autoCapitalize"];
   multiline?: boolean;
   required?: boolean;
+  returnKeyType?: TextInputProps["returnKeyType"];
+  onSubmitEditing?: TextInputProps["onSubmitEditing"];
 };
 
 export function Field({
@@ -302,13 +342,22 @@ export function Field({
   autoCapitalize,
   multiline = false,
   required = false,
+  returnKeyType,
+  onSubmitEditing,
 }: FieldProps) {
+  const inputRef = useRef<TextInput>(null);
+  const focusField = useContext(FocusedFieldContext);
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.fieldLabel}>
         {label}{required ? <Text style={styles.required}> *</Text> : null}
       </Text>
       <TextInput
+        ref={inputRef}
+        onFocus={() => focusField?.(inputRef.current)}
+        onBlur={() => focusField?.(null)}
+        returnKeyType={returnKeyType}
+        onSubmitEditing={onSubmitEditing}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

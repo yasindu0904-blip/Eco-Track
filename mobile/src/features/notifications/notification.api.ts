@@ -1,5 +1,6 @@
 import { apiRequest } from "../../api/apiClient";
 import type { NotificationItem, NotificationPage } from "./notification.types";
+import { publishNotificationCount } from "./notificationUpdates";
 
 export async function listNotifications(
   accessToken: string,
@@ -27,17 +28,21 @@ export async function markNotificationRead(
   accessToken: string,
   notificationId: string,
 ): Promise<NotificationItem> {
-  return (await apiRequest<{ data: NotificationItem }>(
+  const notification = (await apiRequest<{ data: NotificationItem }>(
     `/notifications/${encodeURIComponent(notificationId)}/read`,
     { method: "PATCH", accessToken },
   )).data;
+  publishNotificationCount(accessToken);
+  return notification;
 }
 
 export async function markAllNotificationsRead(
   accessToken: string,
 ): Promise<{ markedReadCount: number; readAt: string }> {
-  return (await apiRequest<{ data: { markedReadCount: number; readAt: string } }>(
+  const result = (await apiRequest<{ data: { markedReadCount: number; readAt: string } }>(
     "/notifications/read-all",
     { method: "PATCH", accessToken },
   )).data;
+  publishNotificationCount(accessToken, 0);
+  return result;
 }

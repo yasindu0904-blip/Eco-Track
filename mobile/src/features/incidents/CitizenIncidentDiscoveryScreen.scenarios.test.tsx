@@ -1,5 +1,5 @@
 import TestRenderer, { act } from "react-test-renderer";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import * as Location from "expo-location";
 import {
@@ -22,6 +22,7 @@ vi.mock("expo-location", () => ({
   Accuracy: { Balanced: 3 },
   PermissionStatus: { DENIED: "denied", GRANTED: "granted" },
   getCurrentPositionAsync: vi.fn(),
+  getLastKnownPositionAsync: vi.fn(),
   requestForegroundPermissionsAsync: vi.fn(),
 }));
 
@@ -68,8 +69,8 @@ vi.mock("../../components/ui", async () => {
         React.createElement("Text", null, title),
         subtitle ? React.createElement("Text", null, subtitle) : null,
       ),
-    Screen: ({ children }: { children: React.ReactNode }) =>
-      React.createElement("View", null, children),
+    Screen: ({ children, ...props }: { children: React.ReactNode }) =>
+      React.createElement("View", props, children),
     sharedStyles: {
       card: {},
       divider: {},
@@ -185,11 +186,86 @@ function map(renderer: TestRenderer.ReactTestRenderer) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(Location.getLastKnownPositionAsync).mockResolvedValue(null);
   vi.mocked(getPublicIncident).mockResolvedValue(publicIncident);
   vi.mocked(listNearbyPublicIncidents).mockResolvedValue({ items: [], nextCursor: null });
   testState.foregroundRefresh = undefined;
   vi.mocked(getPublicCleanupEvent).mockResolvedValue(undefined as never);
   vi.mocked(listNearbyCleanupEventMap).mockResolvedValue(emptyEventPage);
+});
+afterEach(() => vi.useRealTimers());
+
+test("recent location starts a single search and releases the icon while results load", async () => {
+  vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue({ granted: true } as never);
+  vi.mocked(Location.getLastKnownPositionAsync).mockResolvedValue({
+    coords: { latitude: 6.9271, longitude: 79.8612 }, timestamp: Date.now(),
+  } as never);
+  let resolveSearch!: (page: typeof emptyEventPage) => void;
+  vi.mocked(listNearbyCleanupEventMap).mockReturnValue(new Promise(resolve => { resolveSearch = resolve; }));
+  let renderer: TestRenderer.ReactTestRenderer;
+  await act(async () => { renderer = renderScreen(); });
+  await act(async () => {
+    const locate = map(renderer!).props.onCurrentLocationPress;
+    await Promise.all([locate(), locate()]);
+  });
+  expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalledOnce();
+  expect(Location.getCurrentPositionAsync).not.toHaveBeenCalled();
+  expect(listNearbyCleanupEventMap).toHaveBeenCalledOnce();
+  expect(map(renderer!).props.currentLocationBusy).toBe(false);
+  expect(map(renderer!).props.compactLocationButton).toBe(true);
+  expect(button(renderer!, "Refresh events").props.disabled).toBe(true);
+  await act(async () => testState.foregroundRefresh?.());
+  expect(listNearbyCleanupEventMap).toHaveBeenCalledOnce();
+  await act(async () => resolveSearch(emptyEventPage));
+  expect(button(renderer!, "Refresh events").props.disabled).toBe(false);
+  const screen = renderer!.root.findByProps({ rememberKey: "nearby:map" });
+  await act(async () => map(renderer!).props.onInteractionChange(true));
+  expect(screen.props.scrollEnabled).toBe(false);
+  await act(async () => {
+    renderer!.root.findAllByProps({ accessibilityRole: "tab" }).find(node =>
+      node.findByType("Text" as never).props.children === "Ongoing")!.props.onPress();
+  });
+  expect(screen.props.rememberKey).toBe("nearby:map");
+  await act(async () => renderer!.unmount());
+});
+
+test("leaving the screen while GPS is pending prevents a late search", async () => {
+  vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue({ granted: true } as never);
+  let resolvePosition!: (position: Location.LocationObject) => void;
+  vi.mocked(Location.getCurrentPositionAsync).mockReturnValue(new Promise(resolve => { resolvePosition = resolve; }));
+  let renderer: TestRenderer.ReactTestRenderer;
+  let pending!: Promise<void>;
+  await act(async () => { renderer = renderScreen(); });
+  await act(async () => { pending = map(renderer!).props.onCurrentLocationPress(); });
+  await act(async () => renderer!.unmount());
+  await act(async () => {
+    resolvePosition({ coords: { latitude: 6.9271, longitude: 79.8612 } } as never);
+    await pending;
+  });
+  expect(listNearbyCleanupEventMap).not.toHaveBeenCalled();
+});
+
+test("a stalled nearby API request times out and remains retryable", async () => {
+  vi.useFakeTimers();
+  vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue({ granted: true } as never);
+  vi.mocked(Location.getLastKnownPositionAsync).mockResolvedValue({
+    coords: { latitude: 6.9271, longitude: 79.8612 },
+  } as never);
+  vi.mocked(listNearbyCleanupEventMap).mockImplementationOnce((_token, _query, signal) =>
+    new Promise((_resolve, reject) => {
+      signal!.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+    }),
+  );
+  let renderer: TestRenderer.ReactTestRenderer;
+  await act(async () => { renderer = renderScreen(); });
+  await act(async () => map(renderer!).props.onCurrentLocationPress());
+  await act(async () => { await vi.advanceTimersByTimeAsync(20_000); });
+  expect(textContent(renderer!)).toContain("The nearby search took too long. Check your connection and refresh to try again.");
+  expect(button(renderer!, "Refresh events").props.disabled).toBe(false);
+  await act(async () => button(renderer!, "Refresh events").props.onPress());
+  expect(listNearbyCleanupEventMap).toHaveBeenCalledTimes(2);
+  expect(textContent(renderer!)).not.toContain("The nearby search took too long. Check your connection and refresh to try again.");
+  await act(async () => renderer!.unmount());
 });
 
 describe("mobile citizen cleanup-event discovery", () => {
@@ -208,10 +284,10 @@ describe("mobile citizen cleanup-event discovery", () => {
 
     expect(listNearbyCleanupEventMap).not.toHaveBeenCalled();
     expect(map(renderer!).props.selectedLocation).toBeUndefined();
-    expect(textContent(renderer!)).toContain("Use your location to begin");
+    expect(textContent(renderer!)).toContain("Tap the location icon on the map to begin");
 
     await act(async () => {
-      await button(renderer!, "Use my location").props.onPress();
+      await map(renderer!).props.onCurrentLocationPress();
     });
 
     expect(textContent(renderer!)).toContain(
@@ -248,7 +324,7 @@ describe("mobile citizen cleanup-event discovery", () => {
       renderer = renderScreen();
     });
     await act(async () => {
-      await button(renderer!, "Use my location").props.onPress();
+      await map(renderer!).props.onCurrentLocationPress();
     });
 
     expect(textContent(renderer!)).toContain("weak network");
@@ -290,7 +366,7 @@ describe("mobile citizen cleanup-event discovery", () => {
       renderer = renderScreen();
     });
     await act(async () => {
-      await button(renderer!, "Use my location").props.onPress();
+      await map(renderer!).props.onCurrentLocationPress();
     });
 
     expect(listNearbyCleanupEventMap).toHaveBeenCalledTimes(1);
@@ -381,7 +457,7 @@ describe("mobile citizen cleanup-event discovery", () => {
       renderer = renderScreen(onOpenEvent);
     });
     await act(async () => {
-      await button(renderer!, "Use my location").props.onPress();
+      await map(renderer!).props.onCurrentLocationPress();
     });
 
     expect(map(renderer!).props.markers).toEqual([event]);
@@ -439,7 +515,7 @@ describe("mobile citizen cleanup-event discovery", () => {
       renderer = renderScreen();
     });
     await act(async () => {
-      await button(renderer!, "Use my location").props.onPress();
+      await map(renderer!).props.onCurrentLocationPress();
     });
     expect(listNearbyCleanupEventMap).toHaveBeenCalledTimes(1);
 
@@ -461,7 +537,7 @@ test("Awaiting cleanup shows nearby incidents and evidence without a join action
   const selectSection = (label: string) => renderer!.root.findAllByProps({ accessibilityRole: "tab" }).find(node => node.findByType("Text" as never).props.children === label)!.props.onPress();
   await act(async () => { selectSection("Awaiting cleanup"); });
   expect(listNearbyPublicIncidents).not.toHaveBeenCalled();
-  await act(async () => { await button(renderer!, "Use my location").props.onPress(); });
+  await act(async () => { await map(renderer!).props.onCurrentLocationPress(); });
   expect(listNearbyPublicIncidents).toHaveBeenCalledWith("token", expect.objectContaining({ awaitingCleanup: true, radiusMeters: 2000, limit: 20 }), expect.any(AbortSignal));
   const incidentMarker = map(renderer!).props.markers[0];
   await act(async () => { map(renderer!).props.onMarkerSelect(incidentMarker); });
