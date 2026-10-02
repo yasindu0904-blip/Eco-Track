@@ -720,7 +720,7 @@ export function OrganizationIncidentDiscovery({
       {loading ? (
         <Notice
           tone="info"
-          message="Loading incidents and cleanup events for the current map view. Visible results may change."
+          message="Loading incidents and cleanup events"
         />
       ) : null}
 

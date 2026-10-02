@@ -696,8 +696,7 @@ export function OrganizationIncidentDiscovery({
           aria-live="polite"
         >
           <span aria-hidden="true" />
-          Loading incidents and cleanup events for the current map view. Visible
-          results may change.
+          Loading incidents and cleanup events
         </p>
       )}
 
