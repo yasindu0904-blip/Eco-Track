@@ -36,6 +36,7 @@ export function sanitizeNotificationData(
   const source = data as Record<string, unknown>;
   const safeData: SafeNotificationData = {};
 
+  // Copy only allowlisted fields whose values are strings into the response.
   for (const key of safeNotificationDataKeys) {
     const value = source[key];
 
