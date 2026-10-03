@@ -25,6 +25,7 @@ export function requireActiveSuperAdmin(
     return;
   }
 
+  // Super Admin privileges require an active account as well as the role.
   const { profile } = authentication;
 
   if (
