@@ -14,7 +14,7 @@ export function clusterMarkers(
   markers: MapMarkerFeature[],
   zoom: number,
 ): MarkerCluster[] {
-  // Show individual markers once the map reaches the cluster break zoom.
+  // At or above the break zoom, each marker becomes its own single-marker cluster.
   if (zoom >= CLUSTER_BREAK_ZOOM) {
     return markers.map((marker) => {
       const location = markerLocation(marker);

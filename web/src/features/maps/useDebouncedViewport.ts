@@ -17,7 +17,7 @@ export function useDebouncedViewport(
   );
 
   useEffect(() => scheduler.setCallback(onViewportChange), [onViewportChange, scheduler]);
-  // Cancel pending work when the scheduler changes or the component unmounts.
+  // Dispose the previous scheduler on replacement and the current scheduler on unmount.
   useEffect(() => () => scheduler.dispose(), [scheduler]);
 
   return useCallback((viewport: MapViewport) => scheduler.schedule(viewport), [scheduler]);

@@ -51,7 +51,7 @@ export const mobileScreenTitles: Record<MobileDestination["screen"], string> = {
 export function parentDestination(
   destination: MobileDestination,
 ): MobileDestination | null {
-  // The dashboard is the navigation root and has no parent destination.
+  // Returning null at the dashboard signals that there is no higher-level destination.
   if (destination.screen === "dashboard") return null;
   if (destination.screen === "organizationWorkspace" && destination.tab && destination.tab !== "overview") {
     return {

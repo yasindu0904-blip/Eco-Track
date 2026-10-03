@@ -1,6 +1,6 @@
 export const INCIDENT_EVIDENCE_LIMITS = {
   maxFiles: 5,
-  // Each evidence file is limited to 8 MiB.
+  // The 8 MiB limit applies per evidence file, with the value expressed in bytes.
   maxFileSizeBytes: 8 * 1024 * 1024,
   allowedContentTypes: ["image/jpeg", "image/png", "image/webp"],
 } as const;

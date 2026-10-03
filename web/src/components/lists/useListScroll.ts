@@ -4,7 +4,7 @@ import { useScrollMemory } from "./usePagedList";
 export function useListScroll(key: string, ready = true) {
   const { read, write } = useScrollMemory(key);
   useLayoutEffect(() => {
-    // Wait until the list is ready before restoring its saved scroll position.
+    // Restore scroll and subscribe to position changes only after the list is ready.
     if (!ready) return;
     const saved = read();
     if (saved !== window.scrollY) window.scrollTo({ top: saved, behavior: "instant" });

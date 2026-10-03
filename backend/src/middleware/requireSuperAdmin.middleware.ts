@@ -27,7 +27,7 @@ export function requireActiveSuperAdmin(
 
   const { profile } = authentication;
 
-  // Access requires both the Super Admin role and an active account.
+  // Reject inactive accounts even when their platform role is Super Admin.
   if (
     profile.platformRole !== "SUPER_ADMIN" ||
     profile.accountStatus !== "ACTIVE"
