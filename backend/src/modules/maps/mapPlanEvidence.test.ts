@@ -33,7 +33,7 @@ type PlanEvidence = {
 
 test("checked-in MAP-03 plans independently prove every primary query", async () => {
   const path = new URL(
-    "../../../../docs/team-plans/MAP-03_Query_Plans.json",
+    "../../../../docs/testing/fixtures/MAP-03_Query_Plans.json",
     import.meta.url,
   );
   const evidence = JSON.parse(await readFile(path, "utf8")) as PlanEvidence;

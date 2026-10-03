@@ -2,7 +2,7 @@
 
 EcoTrack is a multi-tenant platform for community-driven environmental incident reporting and cleanup coordination.
 
-See the [documentation index](docs/README.md) for essential references, team contributions and testing materials.
+Testing guides, fixtures, and recorded evidence are under [docs/testing](docs/testing/).
 
 ## Applications
 
@@ -11,7 +11,7 @@ Eco-Track/
 |-- backend/   Express, TypeScript, Prisma and PostgreSQL/PostGIS API
 |-- web/       React, TypeScript and Vite web application
 |-- mobile/    React Native, Expo and TypeScript Android application
-|-- docs/      Project documentation
+|-- docs/testing/  Testing guides, fixtures, materials, and evidence
 `-- docker/    Local container infrastructure
 ```
 
