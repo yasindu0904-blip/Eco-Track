@@ -124,6 +124,7 @@ function appendDiscoveryFilters(
   parameters: URLSearchParams,
   filters: IncidentDiscoveryFilters,
 ): void {
+  if (filters.administrativeAreaId) parameters.set("administrativeAreaId", filters.administrativeAreaId);
   if (filters.limit !== undefined) parameters.set("limit", String(filters.limit));
   if (filters.cursor) parameters.set("cursor", filters.cursor);
   if (filters.status) parameters.set("status", filters.status);

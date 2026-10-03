@@ -129,6 +129,7 @@ export const incidentListQuerySchema = z.object({
 }).strict();
 
 const incidentDiscoveryFilters = {
+  administrativeAreaId: z.uuid().optional(),
   awaitingCleanup: z.enum(["true", "false"]).transform(value => value === "true").optional(),
   status: z.enum([
     "ACTIVE",

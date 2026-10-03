@@ -731,6 +731,72 @@
   opacity: 0.65;
 }
 
+.super-admin-map-card .list-sections {
+  margin: 16px 0;
+}
+
+.super-admin-map-details {
+  scroll-margin-top: 24px;
+}
+
+.super-admin-map-details:not(:empty) {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.super-admin-map-details > button {
+  justify-self: end;
+}
+
+.super-admin-map-details button,
+.super-admin-map-card > p[role="alert"] button {
+  min-height: 44px;
+  padding: 9px 14px;
+  border: 1px solid var(--color-primary);
+  border-radius: 9px;
+  color: var(--color-primary);
+  background: var(--color-surface);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.super-admin-map-details button:hover,
+.super-admin-map-card > p[role="alert"] button:hover {
+  background: var(--color-primary-soft);
+}
+
+.super-admin-map-details button:focus-visible,
+.super-admin-map-card > p[role="alert"] button:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.super-admin-map-details .citizen-discovery-detail {
+  display: block;
+  margin: 0;
+  padding: 20px 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.super-admin-map-details h3 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.super-admin-map-details dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.super-admin-map-details dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 16px;
+}
+
 @media (max-width: 1080px) {
   .super-admin-shell {
     grid-template-columns: 220px minmax(0, 1fr);

@@ -613,12 +613,13 @@ export async function listPublicCleanupEventMap(
   query: ValidatedCleanupEventMapQuery,
   userId: string,
 ): Promise<CleanupEventMapFeatureCollectionDto> {
+  const field = query.section ? "startsAt" : "publishedAt";
   const decoded = query.cursor
-    ? decodeDatedCursor(query.cursor, "publishedAt")
+    ? decodeDatedCursor(query.cursor, field)
     : null;
   const cursor = decoded
     ? ({
-        sortAt: decoded.publishedAt,
+        sortAt: decoded[field],
         id: decoded.id,
       } satisfies CleanupEventMapCursor)
     : null;
@@ -636,7 +637,7 @@ export async function listPublicCleanupEventMap(
         userId,
       }),
   );
-  return toMapPage(records, query.limit, "publishedAt", false);
+  return toMapPage(records, query.limit, field, false);
 }
 
 export async function listNearbyPublicCleanupEventMap(

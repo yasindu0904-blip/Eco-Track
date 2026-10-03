@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient } from "../../../generated/prisma/client.js";
+import { activeAdministrativeAreaFilter } from "../../maps/repositories/mapSpatial.repository.js";
 
 import type { ValidatedCreateIncident } from "../incident.validation.js";
 
@@ -472,6 +473,7 @@ export type PublicIncidentDiscoveryRow = {
 };
 
 type PublicIncidentDiscoveryInput = {
+  administrativeAreaId?: string;
   awaitingCleanup?: boolean;
   limit: number;
   cursor: OrganizationIncidentDiscoveryCursor | null;
@@ -483,6 +485,7 @@ type PublicIncidentDiscoveryInput = {
 
 function incidentDiscoveryFilters(input: PublicIncidentDiscoveryInput) {
   return {
+    area: activeAdministrativeAreaFilter(input.administrativeAreaId, Prisma.sql`incident."geo_point"`),
     status: input.awaitingCleanup
       ? Prisma.sql`AND incident."status" IN ('ACTIVE'::"IncidentStatus", 'EXPIRED'::"IncidentStatus")
           AND NOT EXISTS (
@@ -573,6 +576,7 @@ export async function listPublicIncidentsByViewport(
         incident."geo_point"
       )
       ${filters.status}
+      ${filters.area}
       ${filters.category}
       ${filters.reportedAfter}
       ${filters.cursor}
@@ -633,6 +637,7 @@ export async function listPublicIncidentsByRadius(
         ${input.radiusMeters}::double precision
       )
       ${filters.status}
+      ${filters.area}
       ${filters.category}
       ${filters.reportedAfter}
       ${filters.cursor}

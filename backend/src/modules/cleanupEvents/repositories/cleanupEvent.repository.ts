@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient } from "../../../generated/prisma/client.js";
+import { activeAdministrativeAreaFilter } from "../../maps/repositories/mapSpatial.repository.js";
 
 import type {
   ValidatedCreateDraft,
@@ -606,21 +607,12 @@ export type CleanupEventMapRow = {
 export type CleanupEventMapCursor = { sortAt: Date; id: string };
 
 type PublicCleanupEventMapInput = {
+  administrativeAreaId?: string;
   section?: EventSection;
   limit: number;
   cursor: CleanupEventMapCursor | null;
   userId: string;
 };
-
-const publicMapStatuses = Prisma.sql`
-  'PUBLISHED'::"CleanupLifecycleStatus"
-`;
-
-function publicMapCursor(cursor: CleanupEventMapCursor | null) {
-  return cursor
-    ? Prisma.sql`AND (event."published_at", event."id") < (${cursor.sortAt}, ${cursor.id}::uuid)`
-    : Prisma.empty;
-}
 
 export function listPublicCleanupEventMapRecords(
   prisma: PrismaClient,
@@ -631,7 +623,16 @@ export function listPublicCleanupEventMapRecords(
     north: number;
   },
 ): Promise<CleanupEventMapRow[]> {
-  const cursor = publicMapCursor(query.cursor);
+  const ascending = query.section === "upcoming";
+  const sortColumn = query.section ? Prisma.sql`event."starts_at"` : Prisma.sql`event."published_at"`;
+  const order = ascending ? Prisma.sql`ASC` : Prisma.sql`DESC`;
+  const compare = ascending ? Prisma.sql`>` : Prisma.sql`<`;
+  const cursor = query.cursor ? Prisma.sql`AND (${sortColumn}, event."id") ${compare} (${query.cursor.sortAt}, ${query.cursor.id}::uuid)` : Prisma.empty;
+  const lifecycle = query.section === "past" ? "COMPLETED" : query.section === "cancelled" ? "CANCELLED" : "PUBLISHED";
+  const now = new Date();
+  const timeFilter = query.section === "upcoming" ? Prisma.sql`AND event."starts_at" > ${now}`
+    : query.section === "ongoing" ? Prisma.sql`AND event."starts_at" <= ${now}` : Prisma.empty;
+  const areaFilter = activeAdministrativeAreaFilter(query.administrativeAreaId, Prisma.sql`event."event_geo_point"`);
   return prisma.$queryRaw<CleanupEventMapRow[]>(Prisma.sql`
     SELECT
       event."id",
@@ -655,7 +656,9 @@ export function listPublicCleanupEventMapRecords(
     JOIN "organizations" AS organization
       ON organization."id" = event."organization_id"
      AND organization."status" = 'ACTIVE'::"OrganizationStatus"
-    WHERE event."lifecycle_status" IN (${publicMapStatuses})
+    WHERE event."lifecycle_status" = ${lifecycle}::"CleanupLifecycleStatus"
+      ${timeFilter}
+      ${areaFilter}
       AND event."published_at" IS NOT NULL
       AND extensions.ST_Covers(
         extensions.ST_MakeEnvelope(
@@ -668,7 +671,7 @@ export function listPublicCleanupEventMapRecords(
         event."event_geo_point"
       )
       ${cursor}
-    ORDER BY event."published_at" DESC, event."id" DESC
+    ORDER BY ${sortColumn} ${order}, event."id" ${order}
     LIMIT ${query.limit + 1}
   `);
 }

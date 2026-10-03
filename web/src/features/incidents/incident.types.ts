@@ -52,6 +52,7 @@ export interface PublicIncidentPage {
 }
 
 export interface IncidentDiscoveryFilters {
+  administrativeAreaId?: string;
   awaitingCleanup?: boolean;
   limit?: number;
   cursor?: string;

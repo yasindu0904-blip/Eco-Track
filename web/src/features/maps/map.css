@@ -250,6 +250,29 @@
   font-size: 0.9rem;
 }
 
+.eco-area-search .eco-area-search-clear {
+  width: auto;
+  min-height: 44px;
+  justify-self: start;
+  padding: 9px 14px;
+  border: 1px solid #195f38;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #195f38;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.eco-area-search .eco-area-search-clear:hover {
+  background: #f0f7f1;
+}
+
+.eco-area-search .eco-area-search-clear:focus-visible {
+  outline: 3px solid #195f38;
+  outline-offset: 3px;
+}
+
 .eco-map-list-fallback {
   border-top: 1px solid #dfe8e2;
   background: #ffffff;

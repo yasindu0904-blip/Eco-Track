@@ -163,6 +163,8 @@ export const listCleanupEventsQuerySchema = z
   .strict();
 
 export const cleanupEventMapQuerySchema = sriLankaMapViewportQuerySchema.safeExtend({
+  administrativeAreaId: z.uuid().optional(),
+  section: eventSectionSchema,
   includePublic: z.enum(["true", "false"]).transform(value => value === "true").optional(),
 });
 export const cleanupEventNearbyMapQuerySchema = sriLankaMapRadiusQuerySchema.safeExtend({ section: eventSectionSchema });

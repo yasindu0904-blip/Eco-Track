@@ -8,6 +8,22 @@ import type {
   OrganizationServiceAreaBoundaryFeature,
 } from "../map.types.js";
 
+/** Restrict discovery to the authoritative active GN polygon, before pagination. */
+export function activeAdministrativeAreaFilter(
+  administrativeAreaId: string | undefined,
+  point: Prisma.Sql,
+): Prisma.Sql {
+  return administrativeAreaId
+    ? Prisma.sql`AND EXISTS (
+        SELECT 1 FROM "administrative_areas" AS selected_area
+        WHERE selected_area."id" = ${administrativeAreaId}::uuid
+          AND selected_area."is_active" = true
+          AND selected_area."level" = 'GN_DIVISION'
+          AND extensions.ST_Covers(selected_area."boundary", ${point})
+      )`
+    : Prisma.empty;
+}
+
 type CoverageRow = {
   covered: boolean;
 };

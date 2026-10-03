@@ -250,6 +250,8 @@ export async function listMyEventParticipations(
 }
 
 type EventMapViewport = {
+  administrativeAreaId?: string;
+  section?: EventSection;
   west: number;
   south: number;
   east: number;
