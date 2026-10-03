@@ -15,7 +15,6 @@ export function resolveMobileNotificationDestination(
       return { screen: "myReports", incidentId: data?.incidentId };
     case "NEW_INCIDENT_IN_AREA": {
       const organizationId = data?.organizationId ?? notification.organizationId;
-      // Only open the organization workspace when a matching membership exists.
       if (!organizationId || !memberships.some(
         (membership) => membership.organization.id === organizationId,
       )) return null;

@@ -11,7 +11,6 @@ export function notFoundMiddleware(
   _response: Response,
   next: NextFunction,
 ): void {
-  // Pass the 404 to the shared error handler so it formats the response.
   next(
     new ApplicationError(
       404,
