@@ -166,7 +166,7 @@ Eco-Track/
 ├── screenshots/             Eight SRS interface outputs
 ├── docs/IMPORTANT/          Product and architecture sources of truth
 ├── database_docs/           Final DBML ERD and database safeguards
-└── docs/team-plans/         Three-member integration and ownership plans
+└── docs/TEAM_CONTRIBUTIONS.md  Three-member responsibility summary
 ```
 
 At audit time, the repository contained 51 hand-written backend TypeScript files with approximately 3,503 lines and 23 production-web TypeScript/TSX/CSS files with approximately 4,506 lines. Generated Prisma code is excluded from those backend numbers.

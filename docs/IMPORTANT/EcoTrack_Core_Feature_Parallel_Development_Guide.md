@@ -2,7 +2,7 @@
 
 Status: mandatory for the core incident, map, cleanup-event, membership, notification, reward, and dashboard milestone.
 
-This guide supersedes `docs/team-plans/VERY_IMPORTANT_TEAM_COLLABORATION_RULES.txt` only for new core-feature work. The older file remains the historical guide for the completed organization-onboarding milestone.
+This guide covers core-feature collaboration. The concise responsibility summary for the onboarding, core-feature and testing milestones is in [Team contributions](../TEAM_CONTRIBUTIONS.md). Superseded onboarding plans remain in Git history.
 
 ## 1. Required reading and precedence
 

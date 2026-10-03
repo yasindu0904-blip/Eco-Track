@@ -2,6 +2,8 @@
 
 EcoTrack is a multi-tenant platform for community-driven environmental incident reporting and cleanup coordination.
 
+See the [documentation index](docs/README.md) for essential references, team contributions and testing materials.
+
 ## Applications
 
 ```text
