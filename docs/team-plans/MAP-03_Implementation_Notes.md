@@ -1,6 +1,6 @@
 # MAP-03 Spatial Performance and Security Regression
 
-Captured: 2026-08-20
+Initial implementation: 2026-08-20. Query plans recaptured: 2026-10-03.
 
 ## Scope
 
@@ -76,7 +76,7 @@ status, and stable id-order path. A sequential scan on a tiny bounded table is
 not treated as a failure, and forced planner settings are never accepted as the
 sole evidence for production readiness.
 
-The checked-in local `EXPLAIN (FORMAT JSON)` capture on 2026-08-20 used 32
+The initial local `EXPLAIN (FORMAT JSON)` capture on 2026-08-20 used 32
 incidents, 41 cleanup events, 51 organization service areas, and 13,844
 administrative areas. It showed:
 
@@ -91,6 +91,35 @@ administrative areas. It showed:
   viewport query, matching the tenant/status predicates and stable id order;
   the required service-area and administrative-area spatial indexes are also
   independently verified in the captured catalog.
+
+The current checked-in capture (2026-10-03) uses
+`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` against a disposable local
+PostgreSQL 17 / PostGIS 3.5 database with all 20 migrations applied. Its synthetic
+fixture contains 2,000 incidents, 2,000 published events, 51 service areas and
+13,844 synthetic GN polygons. Only 32 incidents and 41 events are in the
+captured viewport. This is controlled planner evidence, not a production load
+test or an import of official GN data.
+
+All six incident/event plans naturally select the corresponding spatial GiST
+index. The 51-row service-area table naturally uses a bounded sequential scan;
+the corroborating probe selects
+`organization_service_areas_organization_status_id_idx`. All seven existing
+plan checks pass. The capture refreshes the source hashes after the GN filter
+and event-category repository changes; the hash assertion remains enforced.
+
+For reproducibility, `backend/src/tests/mapPlanFixture.sql` supplies this
+fixture. It refuses to run outside a database named `ecotrack_map_check` and
+should be used only in a fresh disposable local database after migrations.
+Load it with `psql -v ON_ERROR_STOP=1 -f src/tests/mapPlanFixture.sql`, then run
+the capture command above with `DATABASE_URL` pointing to that same local
+database. No hosted database was changed during this recapture.
+
+The HTTP/PostGIS GN integration suite separately checks active-polygon
+filtering before incident cursor pagination, inclusive boundary points,
+upcoming/ongoing/completed/cancelled event discovery, malformed input, and
+inactive boundaries. The seven planner queries continue to cover the existing
+primary map paths; they do not constitute separate performance plans for
+every optional GN/category combination.
 
 The event and service-area plans should still be recaptured with
 production-like cardinality before promotion so the planner's selectivity
