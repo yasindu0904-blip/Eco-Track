@@ -16,6 +16,7 @@ export function createViewportRequestScheduler(
   let controller: AbortController | undefined;
   let requestId = 0;
 
+  // Cancel both the debounce timer and any in-flight viewport request.
   const disposePending = () => {
     if (timeout) clearTimeout(timeout);
     timeout = undefined;

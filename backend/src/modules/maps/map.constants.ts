@@ -3,6 +3,7 @@ export const MAP_LIMITS = {
   maxPageSize: 100,
   minZoom: 5,
   maxZoom: 20,
+  // Radius searches are capped at 50 km; the value is stored in meters.
   maxRadiusMeters: 50_000,
   maxLatitudeSpanDegrees: 1.5,
   maxLongitudeSpanDegrees: 1.5,

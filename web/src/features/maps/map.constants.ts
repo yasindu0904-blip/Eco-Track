@@ -23,6 +23,7 @@ export const MAP_REQUEST_LIMITS = {
   maxLongitudeSpanDegrees: 1.5,
 } as const;
 
+// This inclusive rectangle check does not test the exact country boundary.
 export function isWithinSriLankaBounds(location: MapLocation): boolean {
   return (
     location.latitude >= SRI_LANKA_MAP_BOUNDS.south &&
