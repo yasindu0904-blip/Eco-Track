@@ -11,6 +11,7 @@ export function notFoundMiddleware(
   _response: Response,
   next: NextFunction,
 ): void {
+  // Forward unmatched routes to the shared error handling middleware.
   next(
     new ApplicationError(
       404,
