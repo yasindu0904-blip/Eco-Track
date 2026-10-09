@@ -1,0 +1,99 @@
+name: ecotrack
+
+services:
+  redis:
+    image: redis:8.2-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory-policy
+      - noeviction
+    volumes:
+      - ecotrack-redis-data:/data
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      target: runtime
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.docker}
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-5}
+      REDIS_URL: redis://redis:6379
+      REDIS_KEY_PREFIX: ${REDIS_KEY_PREFIX:-ecotrack:production}
+      SUPABASE_URL: ${SUPABASE_URL:?Set SUPABASE_URL in .env.docker}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?Set SUPABASE_PUBLISHABLE_KEY in .env.docker}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      INCIDENT_EVIDENCE_BUCKET: ${INCIDENT_EVIDENCE_BUCKET:-incident-evidence}
+      EVENT_EVIDENCE_BUCKET: ${EVENT_EVIDENCE_BUCKET:-event-evidence}
+      SUPER_ADMIN_AUTH_USER_ID: ${SUPER_ADMIN_AUTH_USER_ID:-}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-superadmin@ecotrack.com}
+      SUPER_ADMIN_FULL_NAME: ${SUPER_ADMIN_FULL_NAME:-EcoTrack Super Admin}
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:5000/health').then(response=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+      retries: 5
+    restart: unless-stopped
+
+  notification-worker:
+    build:
+      context: ./backend
+      target: runtime
+    command:
+      - node
+      - dist/workers/notification.worker.js
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.docker}
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-5}
+      REDIS_URL: redis://redis:6379
+      REDIS_KEY_PREFIX: ${REDIS_KEY_PREFIX:-ecotrack:production}
+      NOTIFICATION_DISPATCH_INTERVAL_MS: ${NOTIFICATION_DISPATCH_INTERVAL_MS:-5000}
+      NOTIFICATION_MAX_ATTEMPTS: ${NOTIFICATION_MAX_ATTEMPTS:-5}
+      EXPO_ACCESS_TOKEN: ${EXPO_ACCESS_TOKEN:-}
+      SUPABASE_URL: ${SUPABASE_URL:?Set SUPABASE_URL in .env.docker}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?Set SUPABASE_PUBLISHABLE_KEY in .env.docker}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      target: runtime
+      args:
+        VITE_SUPABASE_URL: ${SUPABASE_URL:?Set SUPABASE_URL in .env.docker}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?Set SUPABASE_PUBLISHABLE_KEY in .env.docker}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5000/api/v1}
+        VITE_EVENT_EVIDENCE_BUCKET: ${EVENT_EVIDENCE_BUCKET:-event-evidence}
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  ecotrack-redis-data:

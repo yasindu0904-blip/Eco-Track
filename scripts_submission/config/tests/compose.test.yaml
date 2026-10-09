@@ -1,0 +1,29 @@
+name: ecotrack-submission
+services:
+  database:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_DB: ecotrack_submission_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: submission_test
+    ports:
+      - "127.0.0.1:55439:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    volumes:
+      - ./bootstrap.sql:/docker-entrypoint-initdb.d/20-supabase-compat.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ecotrack_submission_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  redis:
+    image: redis:8.2-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:56389:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20

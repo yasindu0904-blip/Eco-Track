@@ -1,0 +1,26 @@
+{
+  "cli": {
+    "appVersionSource": "local"
+  },
+  "build": {
+    "preview": {
+      "developmentClient": false,
+      "distribution": "internal",
+      "environment": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_MAP_PREVIEW": "false",
+        "EXPO_PUBLIC_API_BASE_URL": "https://YOUR_API_HOST/api/v1",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://YOUR_PROJECT_REFERENCE.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "YOUR_PROJECT_PUBLISHABLE_KEY"
+      }
+    },
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development"
+    }
+  }
+}

@@ -1,0 +1,4 @@
+.env.local
+results/**
+!results/README.md
+*.properties

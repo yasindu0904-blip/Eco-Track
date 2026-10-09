@@ -1,0 +1,98 @@
+[
+  {
+    "file": ".easignore",
+    "sha256": "0ae756d012726d73289e015cbdf2c9412c34b28039c0ecd0964fb42a81ebb835"
+  },
+  {
+    "file": ".env.docker.example",
+    "sha256": "39a680fa795df88dccb1f70f805dfcf148386571bbc96ad1b4b0b832975b0ff1"
+  },
+  {
+    "file": ".github/workflows/ci.yml",
+    "sha256": "cc4d1d55d2c14a3ed6374c002b6bdf2312e60f6b4212fc35bcf01df24b199b58"
+  },
+  {
+    "file": "backend/Dockerfile",
+    "sha256": "09b28cabd101920265d646dafc96fe1e2f588e552843fff0bf64b09d698acfad"
+  },
+  {
+    "file": "backend/package.json",
+    "sha256": "c2ad220f0d710185e264c942007147147a36e2ad4f06b920924f35599209562b"
+  },
+  {
+    "file": "backend/prisma.config.ts",
+    "sha256": "f0fa4df99adcffb283086d70c2dead5d33546449191768feba6efdca7dd37c4b"
+  },
+  {
+    "file": "backend/tsconfig.json",
+    "sha256": "7820744e149aa25b0ccdd3e355509d37f4b2e615dad39761214792199bc11925"
+  },
+  {
+    "file": "compose.local-db.yaml",
+    "sha256": "7cc9aff4ae4e052c4b9645d9bdc1feb23b1323117bcf184aee96525798110606"
+  },
+  {
+    "file": "compose.yaml",
+    "sha256": "226d19c2331475962c8acc9cf4e8ef868e596d7d6d627beea8fed906da857a2d"
+  },
+  {
+    "file": "docker/postgres/init/20-supabase-compat.sql",
+    "sha256": "1bfca82a4e46bbe88b08e4350367686d0057e0c1919c9e9772acc9e776c2d2f0"
+  },
+  {
+    "file": "mobile/app.json",
+    "sha256": "6a898fde862295b4b3bacd32b6fc947c78c942c4072d4cf5478868e02e733cff"
+  },
+  {
+    "file": "mobile/eas.json",
+    "sha256": "e283df245c6ee2a15d673a9a69123cf71404dc938966d4d7fa6595bde372deb5"
+  },
+  {
+    "file": "mobile/metro.config.js",
+    "sha256": "4768923afcdef5fbbfe867f79889295a5f9be962c95b3de29812fe469764b65b"
+  },
+  {
+    "file": "mobile/package.json",
+    "sha256": "cfee6d338a931c97833a91024e66f78f39616af9957fb64821a252a0d530a38a"
+  },
+  {
+    "file": "mobile/tsconfig.json",
+    "sha256": "8a1d0be74cce41fbf0d778450af68f7c7df62c64158f7e61ac385f98390a2628"
+  },
+  {
+    "file": "web/Dockerfile",
+    "sha256": "dc77a2a92ebe39484d04d4875a85962aa2059bc95ee84e447142cad75a8d4ccf"
+  },
+  {
+    "file": "web/eslint.config.js",
+    "sha256": "cf80a7510234dcd5ae594b30b44682b8b45ba13c0fcb5bf8928bea143802aa1c"
+  },
+  {
+    "file": "web/nginx.conf",
+    "sha256": "d61e4742984a45e8768d8cd737d7c33d9de4e95f2f7c2d29e428949ab9acffa0"
+  },
+  {
+    "file": "web/package.json",
+    "sha256": "8f20363bf73625378f0527cb0f5efd7ff7bcc5eede648382a42c8d3daf3bb2c1"
+  },
+  {
+    "file": "web/postcss.config.mjs",
+    "sha256": "74a620fe4d9f59bd769ef4e6b33950815566a7206f53a5c85350e449d67de850"
+  },
+  {
+    "file": "web/tsconfig.app.json",
+    "sha256": "8e5d12ba330e7d86409edec74b95451e0db22ee09b9426c94b5bf817571eddb0"
+  },
+  {
+    "file": "web/tsconfig.json",
+    "sha256": "770b4140bbb581e2dfd9ea9946ffc9c75a1d86ba7d2db5f77c83e37cbdf9d808"
+  },
+  {
+    "file": "web/tsconfig.node.json",
+    "sha256": "d366cc0827139db39c61815f22491bbfda56c654354a42ad7795143d314e45e8"
+  },
+  {
+    "file": "web/vite.config.ts",
+    "sha256": "4d36db3522a7b2dd10e0936e1004373c7ee65f10f7cd7920cd76410459c15a45"
+  }
+]

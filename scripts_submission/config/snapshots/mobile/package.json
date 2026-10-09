@@ -1,0 +1,49 @@
+{
+  "name": "ecotrack-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start --dev-client",
+    "test": "vitest run",
+    "start:map": "node scripts/startMapPreview.cjs",
+    "start:go": "expo start",
+    "android": "expo run:android --device",
+    "typecheck": "tsc --noEmit",
+    "doctor": "npx expo-doctor",
+    "security:check": "node scripts/verifyMetroImageSecurity.cjs",
+    "security:map": "node scripts/verifyMapPrivacy.cjs"
+  },
+  "dependencies": {
+    "@expo/log-box": "~57.0.4",
+    "@maplibre/maplibre-react-native": "^11.3.6",
+    "@supabase/supabase-js": "^2.112.3",
+    "expo": "~57.0.26",
+    "expo-build-properties": "~57.0.22",
+    "expo-constants": "~57.0.20",
+    "expo-crypto": "~57.0.3",
+    "expo-dev-client": "~57.0.19",
+    "expo-device": "~57.0.2",
+    "expo-image-manipulator": "~57.0.20",
+    "expo-image-picker": "~57.0.20",
+    "expo-linking": "~57.0.11",
+    "expo-location": "~57.0.20",
+    "expo-notifications": "~57.0.21",
+    "expo-secure-store": "~57.0.4",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-url-polyfill": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.18",
+    "@types/react-test-renderer": "^19.1.0",
+    "react-test-renderer": "^19.2.3",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "uuid": "11.1.1"
+  }
+}

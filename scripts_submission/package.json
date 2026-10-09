@@ -1,0 +1,26 @@
+{
+  "name": "ecotrack-submission-toolkit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "setup": "node scripts/run.mjs setup",
+    "inventory": "node scripts/inventory.mjs",
+    "test:unit": "node scripts/run.mjs unit",
+    "test:integration": "node scripts/run.mjs integration",
+    "test:ui": "node scripts/run.mjs ui",
+    "test:smoke": "node scripts/run.mjs smoke",
+    "test:e2e": "node scripts/run.mjs e2e",
+    "test:performance": "node scripts/run.mjs performance",
+    "test:all": "node scripts/run.mjs all",
+    "test:toolkit": "node scripts/run.mjs toolkit",
+    "build:backend": "node scripts/run.mjs build-backend",
+    "build:web": "node scripts/run.mjs build-web",
+    "build:android": "node scripts/run.mjs build-android",
+    "db:up": "node scripts/run.mjs db-up",
+    "db:prepare": "node scripts/run.mjs db-prepare",
+    "db:down": "node scripts/run.mjs db-down",
+    "start:test-api": "node scripts/start-test-api.mjs"
+  }
+}

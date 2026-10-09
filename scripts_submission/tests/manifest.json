@@ -1,0 +1,380 @@
+{
+  "description": "Generated source inventory. Integration includes HTTP-router and Redis integration. TSX tests are component/UI tests, not live browser E2E.",
+  "files": [
+    {
+      "project": "backend",
+      "file": "backend/src/config/redisConnectionOptions.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/config/redisRuntime.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/cleanupEvents/cleanupEvent.validation.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/cleanupEvents/cleanupEvents.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/cleanupEvents/eventOperations/eventOperations.validation.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/cleanupEvents/participantOperations/participantOperations.validation.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/cleanupWorkflows/cleanupWorkflow.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/dashboards/dashboard.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/dashboards/dashboard.repository.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/dashboards/dashboard.routes.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/dashboards/dashboard.validation.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/incidents/incident.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/incidents/incident.validation.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/maps/map.validation.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/maps/mapPlanEvidence.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/maps/publicMapFilters.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/maps/publicMapFilters.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/maps/repositories/mapSpatial.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/memberships/administration/membershipAdministration.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/memberships/administration/repositories/membershipAdministration.repository.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/memberships/selfService/membershipSelfService.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/notifications/notification.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/organizations/application/application.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/organizations/review/organizationReview.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/profiles/profile.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/rewards/reward.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/modules/rewards/reward.validation.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/tests/appComposition.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/tests/auth.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/tests/authorization.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "backend",
+      "file": "backend/src/tests/domainSchema.integration.test.ts",
+      "category": "integration"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/api/apiClient.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/api/apiError.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/app/clientParity.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/app/navigation.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/auth/auth.api.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/components/AppShell.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/components/memberUi.keyboard.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/components/memberUi.refresh.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/citizen/CitizenDrawer.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/cleanupEvents/CleanupEventDraftScreen.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/cleanupEvents/EventManagement.scenarios.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/cleanupEvents/EventParticipantOperationsScreen.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/cleanupEvents/EventParticipationPanel.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/cleanupEvents/PublicCleanupEventsScreen.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/dashboards/SummaryCards.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/incidents/CitizenIncidentDiscoveryScreen.scenarios.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/incidents/IncidentWorkflow.scenarios.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/map/components/EcoMap.location.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/map/components/LocationPicker.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/map/foregroundPosition.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/map/foregroundRefreshGate.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/map/viewportRequestScheduler.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/notifications/NotificationInboxScreen.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/notifications/pushNotification.service.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/organizations/OrganizationApplicationScreen.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/organizations/OrganizationIncidentDiscovery.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "mobile",
+      "file": "mobile/src/features/organizations/OrganizationWorkspacesScreen.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "web",
+      "file": "web/src/api/apiClient.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "web",
+      "file": "web/src/app/clientParity.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "web",
+      "file": "web/src/app/navigation.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "web",
+      "file": "web/src/components/lists/ListControls.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "web",
+      "file": "web/src/components/lists/usePagedList.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "web",
+      "file": "web/src/features/cleanup-events/CleanupEventDraftEditor.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "web",
+      "file": "web/src/features/cleanup-events/EventParticipantOperations.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "web",
+      "file": "web/src/features/cleanup-events/EventParticipationPanel.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "web",
+      "file": "web/src/features/cleanup-events/ParticipantEventUpdates.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "web",
+      "file": "web/src/features/cleanup-events/PublicCleanupEventsPage.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "web",
+      "file": "web/src/features/dashboards/SummaryPanel.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "web",
+      "file": "web/src/features/incidents/IncidentPage.scenarios.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "web",
+      "file": "web/src/features/mapRoleScenarios.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "web",
+      "file": "web/src/features/maps/LocationPicker.test.tsx",
+      "category": "ui"
+    },
+    {
+      "project": "web",
+      "file": "web/src/features/maps/markerClustering.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "web",
+      "file": "web/src/features/maps/viewportRequestScheduler.test.ts",
+      "category": "unit"
+    },
+    {
+      "project": "web",
+      "file": "web/src/features/super-admin/SuperAdminMapOverview.test.tsx",
+      "category": "ui"
+    }
+  ]
+}
