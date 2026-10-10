@@ -26,6 +26,9 @@ type NotificationRecord = {
   createdAt: Date;
 };
 
+/**
+ * Keeps only allowlisted string fields; returns null when none remain.
+ */
 export function sanitizeNotificationData(
   data: unknown,
 ): SafeNotificationData | null {

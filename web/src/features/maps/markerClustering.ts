@@ -41,6 +41,7 @@ export function clusterMarkers(
   }
 
   return [...groups.entries()].map(([id, groupedMarkers]) => {
+    // Position each cluster at the average coordinates of its members.
     const total = groupedMarkers.reduce(
       (coordinates, marker) => {
         const location = markerLocation(marker);

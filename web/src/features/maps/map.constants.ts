@@ -23,6 +23,9 @@ export const MAP_REQUEST_LIMITS = {
   maxLongitudeSpanDegrees: 1.5,
 } as const;
 
+/**
+ * Checks the inclusive map rectangle, not Sri Lanka's exact boundary.
+ */
 export function isWithinSriLankaBounds(location: MapLocation): boolean {
   return (
     location.latitude >= SRI_LANKA_MAP_BOUNDS.south &&

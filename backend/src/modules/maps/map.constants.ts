@@ -4,6 +4,7 @@ export const MAP_LIMITS = {
   minZoom: 5,
   maxZoom: 20,
   maxRadiusMeters: 50_000,
+  // Viewport requests are limited to 1.5 degrees on each axis.
   maxLatitudeSpanDegrees: 1.5,
   maxLongitudeSpanDegrees: 1.5,
 } as const;
